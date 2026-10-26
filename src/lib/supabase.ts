@@ -5,11 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+// Publishable key (sb_publishable_…): safe to ship in the app, Row Level Security protects the data.
+const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '';
 
-export const supabaseConfigured = Boolean(url && anonKey);
+export const supabaseConfigured = Boolean(url && publishableKey);
 
-export const supabase = createClient(url || 'http://localhost', anonKey || 'missing-key', {
+export const supabase = createClient(url || 'http://localhost', publishableKey || 'missing-key', {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

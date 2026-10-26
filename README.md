@@ -12,7 +12,7 @@ A goal-first money app for Thai Gen Z. Kip, a chrome jelly friend, helps you sav
 
 | Step | What | Status |
 | --- | --- | --- |
-| 1 | Foundation: design tokens, 3-item tab bar with floating +, Supabase schema, email sign-in | In progress |
+| 1 | Foundation: design tokens, 3-item tab bar with floating +, Supabase schema, email sign-in | Done |
 | 2 | Kip: jelly body, eyes in code, 7 moods | |
 | 3 | Setup: intro to paywall | |
 | 4 | Home, Over time, Category detail, Goals, Profile | |
@@ -21,8 +21,8 @@ A goal-first money app for Thai Gen Z. Kip, a chrome jelly friend, helps you sav
 
 ## Run it
 
-1. Copy `.env.example` to `.env` and add the Supabase URL and anon key.
-2. Apply `supabase/migrations/` to the Supabase project.
+1. `.env` already points at the HeyKip Supabase project (public values only).
+2. `supabase/migrations/` is applied to that project.
 3. `npm install`, then `npx expo start` and scan the QR code with Expo Go.
 
 ## Layout

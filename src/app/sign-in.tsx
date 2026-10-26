@@ -74,7 +74,7 @@ export default function SignIn() {
               keyboardType="number-pad"
               autoComplete="one-time-code"
               textContentType="oneTimeCode"
-              maxLength={6}
+              maxLength={10}
               style={[styles.input, { letterSpacing: 6, textAlign: 'center' }]}
               accessibilityLabel="6-digit code"
             />
