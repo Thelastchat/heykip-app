@@ -6,14 +6,14 @@ A goal-first money app for Thai Gen Z. Kip, a chrome jelly friend, helps you sav
 
 - Expo SDK 58 (React Native, TypeScript), Expo Router
 - Supabase (Auth, Postgres with Row Level Security, Storage)
-- Skia + Reanimated for Kip's jelly motion (Step 2)
+- Skia + Reanimated for Kip: one GPU shader bends the body like jelly and paints the eyes (`src/components/kip/`)
 
 ## Build plan
 
 | Step | What | Status |
 | --- | --- | --- |
 | 1 | Foundation: design tokens, 3-item tab bar with floating +, Supabase schema, email sign-in | Done |
-| 2 | Kip: jelly body, eyes in code, 7 moods | |
+| 2 | Kip: jelly body, eyes in code, 7 moods | Done |
 | 3 | Setup: intro to paywall | |
 | 4 | Home, Over time, Category detail, Goals, Profile | |
 | 5 | Logging: Talk, Check, Saved, Slips, Add it yourself, Can I buy? | |
@@ -24,6 +24,7 @@ A goal-first money app for Thai Gen Z. Kip, a chrome jelly friend, helps you sav
 1. `.env` already points at the HeyKip Supabase project (public values only).
 2. `supabase/migrations/` is applied to that project.
 3. `npm install`, then `npx expo start` and scan the QR code with Expo Go.
+4. Web only: `npm run web:skia` once, so Skia's WebAssembly runtime is in `public/`.
 
 ## Layout
 

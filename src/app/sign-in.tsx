@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { KipStill } from '@/components/KipStill';
+import { Kip } from '@/components/Kip';
 import { Button, Muted, T } from '@/components/ui';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { colors, fonts, radius } from '@/theme';
@@ -37,7 +37,7 @@ export default function SignIn() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <View style={styles.top}>
-          <KipStill size={150} />
+          <Kip size={150} />
           <T variant="hero" style={{ textAlign: 'center' }}>
             Hi, I’m Kip.
           </T>

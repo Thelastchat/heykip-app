@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { KipStill } from '@/components/KipStill';
+import { Kip } from '@/components/Kip';
 import { Button, Muted, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -24,7 +24,7 @@ export default function SetupPlaceholder() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.center}>
-        <KipStill size={170} />
+        <Kip mood="happy" size={170} />
         <T variant="hero">Setup comes next</T>
         <Muted variant="body" style={{ textAlign: 'center' }}>
           In Step 3 this becomes the 5 quick steps, Kip’s plan, your promise and the paywall.

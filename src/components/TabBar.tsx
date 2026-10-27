@@ -5,7 +5,7 @@ import { House, Target } from 'phosphor-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { KipStill } from '@/components/KipStill';
+import { Kip } from '@/components/Kip';
 import { colors, shadow } from '@/theme';
 
 // Floating 3-item bar: Home · Kip (centre, opens Talk) · Goals.
@@ -34,7 +34,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
             router.push('/talk');
           }}
           style={styles.kip}>
-          <KipStill size={63} />
+          <Kip size={63} />
         </Pressable>
 
         <TabIcon label="Goals" active={current === 'goals'} onPress={() => go('goals')}>

@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { KipStill } from '@/components/KipStill';
+import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Muted, T } from '@/components/ui';
 import { colors } from '@/theme';
@@ -15,7 +15,7 @@ export default function Talk() {
       <View style={{ alignItems: 'center', gap: 8, marginTop: 24 }}>
         <Muted variant="body">Hey there</Muted>
         <T variant="title" style={{ textAlign: 'center' }}>What did you spend today?</T>
-        <KipStill size={210} />
+        <Kip mood="listen" size={210} />
         <Muted style={{ textAlign: 'center' }}>Talking to Kip arrives in Step 5.</Muted>
       </View>
     </View>
