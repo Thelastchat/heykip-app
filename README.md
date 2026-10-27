@@ -14,7 +14,7 @@ A goal-first money app for Thai Gen Z. Kip, a chrome jelly friend, helps you sav
 | --- | --- | --- |
 | 1 | Foundation: design tokens, 3-item tab bar with floating +, Supabase schema, email sign-in | Done |
 | 2 | Kip: jelly body, eyes in code, 7 moods | Done |
-| 3 | Setup: intro to paywall | |
+| 3 | Setup: intro to paywall | Done |
 | 4 | Home, Over time, Category detail, Goals, Profile | |
 | 5 | Logging: Talk, Check, Saved, Slips, Add it yourself, Can I buy? | |
 | 6 | Kip's brain: Supabase edge function on Claude Haiku 5.5, plans and limits | |

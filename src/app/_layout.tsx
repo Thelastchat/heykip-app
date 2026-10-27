@@ -19,31 +19,34 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { SetupProvider, useSetup } from '@/lib/setup/draft';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootStack() {
   const { session, profile, loading } = useAuth();
+  const { ready } = useSetup();
   const signedIn = Boolean(session);
   const onboarded = Boolean(profile?.onboarded);
+  const waiting = loading || !ready || (signedIn && !profile);
 
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync();
-  }, [loading]);
+    if (!waiting) SplashScreen.hideAsync();
+  }, [waiting]);
 
-  if (loading) return null;
+  if (waiting) return null;
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-      {/* Not signed in: only the sign-in screen. */}
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" />
+      {/* New here (signed in or not): Setup, which starts with "Hi, I'm Kip." */}
+      <Stack.Protected guard={!onboarded}>
+        <Stack.Screen name="setup" />
       </Stack.Protected>
 
-      {/* Signed in, first time: the Setup flow (built in Step 3). */}
-      <Stack.Protected guard={signedIn && !onboarded}>
-        <Stack.Screen name="setup/index" />
+      {/* Not signed in: "Log in" from the intro, or saving the plan after the promise. */}
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="sign-in" />
       </Stack.Protected>
 
       {/* Signed in and set up: the app. */}
@@ -76,8 +79,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <RootStack />
+        <SetupProvider>
+          <StatusBar style="dark" />
+          <RootStack />
+        </SetupProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

@@ -1,15 +1,20 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
+import { BackButton } from '@/components/setup/kit';
 import { Button, Muted, T } from '@/components/ui';
+import { useSetup } from '@/lib/setup/draft';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { colors, fonts, radius } from '@/theme';
 
 // Email + 6-digit code. It works everywhere, including Expo Go, with no deep links.
 // Apple and Google sign-in are added once their keys are set up in Supabase.
 export default function SignIn() {
+  // Arriving from a signed promise: this is "save your plan", not a cold sign-in.
+  const saving = Boolean(useSetup().draft.signature);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -36,13 +41,18 @@ export default function SignIn() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
+        <View style={{ minHeight: 46 }}>{router.canGoBack() && <BackButton size={46} />}</View>
         <View style={styles.top}>
-          <Kip size={150} />
+          <Kip mood={saving ? 'happy' : 'idle'} size={150} />
           <T variant="hero" style={{ textAlign: 'center' }}>
-            Hi, I’m Kip.
+            {saving ? 'Save your plan' : 'Welcome back'}
           </T>
           <Muted variant="body" style={{ textAlign: 'center' }}>
-            {step === 'email' ? 'Sign in with your email. I’ll send you a 6-digit code.' : `I sent a code to ${email.trim()}.`}
+            {step === 'code'
+              ? `I sent a code to ${email.trim()}.`
+              : saving
+                ? 'So your board and your promise stay safe. I’ll email you a 6-digit code.'
+                : 'Log in with your email. I’ll send you a 6-digit code.'}
           </Muted>
         </View>
 
@@ -96,8 +106,8 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  wrap: { flex: 1, paddingHorizontal: 20, paddingBottom: 24, justifyContent: 'space-between' },
-  top: { alignItems: 'center', gap: 10, marginTop: 40 },
+  wrap: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, justifyContent: 'space-between' },
+  top: { alignItems: 'center', gap: 10 },
   input: {
     height: 58,
     borderRadius: radius.field,
