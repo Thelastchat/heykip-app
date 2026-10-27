@@ -23,14 +23,16 @@ export type Plan = {
   dailySpend: number;
   dailySaving: number; // the plan's saving, per day (for the paywall)
   progress: number; // 0–1 today
-  stretch: boolean;
-  suggestDue: Date | null;
+  mode: 'ok' | 'stretch' | 'noRoom'; // fits · needs more than fits · nothing spare yet
+  suggestDue: Date | null; // when it's a stretch: a date that fits
+  incomeBasis: 'salary' | 'slow' | 'average';
   changes: string[];
   stays: string[];
   moment: { title: string; sub: string };
   promiseMain: string;
   promiseBackup: string;
-  firstIsPayday: boolean; // today is payday, so the first amount comes from the new salary
+  firstIsPayday: boolean; // the first saving day is a payday
+  firstIsToday: boolean;
 };
 
 // ---------- dates ----------
@@ -73,7 +75,11 @@ const daysBetween = (a: Date, b: Date) => Math.round((startOfDay(b).getTime() - 
 export function shortName(title: string, kind: GoalKind) {
   const t = title.trim();
   if (kind !== 'trip') return t;
-  return t.replace(/^trip to\s+/i, '').replace(/\s+trip$/i, '').trim() || t;
+  const place = t
+    .replace(/^(?:(?:a|my|our|the)\s+)?(?:trip|holiday|vacation|getaway)\s+(?:to|in|at)\s+/i, '')
+    .replace(/\s+(?:trip|holiday|vacation|getaway)$/i, '')
+    .trim();
+  return place || t;
 }
 
 const CHANGE: Record<Leak, string> = {
@@ -137,27 +143,59 @@ function promise(kind: GoalKind, title: string, short: string, due: Date, target
 
 // ---------- the plan ----------
 
+const MIN_DAILY = 150; // never plan a day below this
+
+/**
+ * How much can comfortably go to goals each month.
+ * Free money = income − rent − 10% for other bills. Kip keeps at least ฿150 a day to live on,
+ * and never asks for more than half of what's free.
+ * Changing income plans on a slow month — unless a slow month can't even cover that,
+ * then it plans on an average of slow and good months.
+ */
+export function savingRoom(d: SetupDraft) {
+  const rent = d.rent ?? 0;
+  const freeOf = (income: number) => income - rent - income * OTHER_BILLS;
+  let basis: 'salary' | 'slow' | 'average' = d.incomeType === 'regular' ? 'salary' : 'slow';
+  let income = plannedIncome(d);
+  if (basis === 'slow' && d.goodMonth && freeOf(income) < MIN_DAILY * DAYS_IN_MONTH) {
+    basis = 'average';
+    income = (income + d.goodMonth) / 2;
+  }
+  const free = freeOf(income);
+  const maxSave = Math.max(0, Math.floor(Math.min(free * 0.5, free - MIN_DAILY * DAYS_IN_MONTH) / 10) * 10);
+  return { income, free, maxSave, basis };
+}
+
 export function makePlan(d: SetupDraft, now = new Date()): Plan {
   const today = startOfDay(now);
   const target = d.goalTarget ?? 0;
   const saved = Math.min(d.goalSaved ?? 0, target);
   const due = d.goalDue ? parseDay(d.goalDue) : today;
-  const income = plannedIncome(d);
-  const rent = d.rent ?? 0;
   const short = shortName(d.goalTitle, d.goalKind);
   const need = Math.max(0, target - saved);
 
-  // The first amount goes in today, from what's in the account now; then every payday
-  // (or, for changing income, the same date each month) up to the goal date.
+  // Saving days: once per pay cycle. The first amount goes in today (from what's in the
+  // account now) unless payday is less than a week away; then every payday up to the goal date.
+  // Changing income has no payday, so it uses today's date each month.
   const day = d.incomeType === 'regular' && d.payday ? d.payday : today.getDate();
-  const dates: Date[] = [today];
-  for (let i = 0; i < 240; i++) {
-    const c = dayInMonth(today.getFullYear(), today.getMonth() + i, day);
-    if (c <= today) continue;
-    if (c > due) break;
+  const nextPayday = dayInMonth(today.getFullYear(), today.getMonth() + (today.getDate() < day ? 0 : 1), day);
+  const startToday = d.incomeType === 'changes' || today.getDate() === day || daysBetween(today, nextPayday) >= 7;
+  const savingDay = (n: number) =>
+    startToday
+      ? n === 0
+        ? today
+        : dayInMonth(nextPayday.getFullYear(), nextPayday.getMonth() + n - 1, day)
+      : dayInMonth(nextPayday.getFullYear(), nextPayday.getMonth() + n, day);
+
+  const dates: Date[] = [];
+  for (let n = 0; n < 240; n++) {
+    const c = savingDay(n);
+    if (c > due && dates.length > 0) break;
     dates.push(c);
+    if (c > due) break;
   }
 
+  const room = savingRoom(d);
   const per = Math.ceil(need / dates.length / 10) * 10;
   let running = saved;
   const deposits = dates.map((date, i) => {
@@ -166,17 +204,13 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
     return { date, amount, pctAfter: target ? Math.min(1, running / target) : 1 };
   });
 
-  const monthlySave = per;
-  const free = income - rent - income * OTHER_BILLS;
-  const dailySpend = Math.max(0, Math.floor((free - monthlySave) / DAYS_IN_MONTH / 10) * 10);
-  const stretch = income > 0 && (monthlySave > free * 0.5 || dailySpend < 100);
+  // ok: fits comfortably · stretch: needs more than fits (Kip suggests a date) · noRoom: nothing spare yet.
+  const mode: Plan['mode'] = need === 0 || per <= room.maxSave ? 'ok' : room.maxSave > 0 ? 'stretch' : 'noRoom';
+  const monthlySave = mode === 'noRoom' ? 0 : per;
+  const dailySpend = Math.max(0, Math.floor((room.free - monthlySave) / DAYS_IN_MONTH / 10) * 10);
 
-  // If it's a stretch, suggest the date that keeps saving under 40% of what's free.
   let suggestDue: Date | null = null;
-  if (stretch && free > 0) {
-    const months = Math.ceil(need / (free * 0.4));
-    suggestDue = dayInMonth(dates[0].getFullYear(), dates[0].getMonth() + months - 1, dates[0].getDate());
-  }
+  if (mode === 'stretch') suggestDue = savingDay(Math.ceil(need / room.maxSave) - 1);
 
   const picked = LEAKS.map((l) => l.key).filter((k) => d.leaks.includes(k));
   // What stays: the most-loved everyday things first.
@@ -197,13 +231,15 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
     dailySpend,
     dailySaving: Math.round(monthlySave / DAYS_IN_MONTH),
     progress: target ? saved / target : 0,
-    stretch,
+    mode,
     suggestDue,
+    incomeBasis: room.basis,
     changes,
     stays,
     moment: moment(d.goalKind, d.goalTitle.trim(), short),
     promiseMain: promise(d.goalKind, d.goalTitle.trim(), short, due, target),
     promiseBackup: `If money gets tight, I’ll cut ${picked.length ? CUT_FIRST[picked[0]] : 'the extras'} first. I won’t touch my savings.`,
-    firstIsPayday: d.incomeType === 'regular' && today.getDate() === day,
+    firstIsToday: startToday,
+    firstIsPayday: d.incomeType === 'regular' && daysBetween(dates[0], dayInMonth(dates[0].getFullYear(), dates[0].getMonth(), day)) === 0,
   };
 }

@@ -64,7 +64,7 @@ export default function SetupPaywall() {
         <BackButton size={46} />
         <View style={styles.chip}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }} numberOfLines={1}>
-            {plan.short} in {plan.daysToGo} days · {baht(plan.monthlySave)}/mo
+            {plan.mode === 'noRoom' ? `${plan.short} · pinned` : `${plan.short} in ${plan.daysToGo} days · ${baht(plan.monthlySave)}/mo`}
           </Text>
         </View>
       </View>
@@ -72,7 +72,14 @@ export default function SetupPaywall() {
       <View style={{ gap: 6 }}>
         <Title>Keep Kip on your side</Title>
         <Text style={styles.sub}>
-          HeyKip costs <Text style={styles.strong}>{price.perDay} a day</Text>. Your plan saves <Text style={styles.strong}>{baht(plan.dailySaving)} a day</Text>.
+          HeyKip costs <Text style={styles.strong}>{price.perDay} a day</Text>.{' '}
+          {plan.mode === 'noRoom' ? (
+            <>Kip finds the small wins that get {plan.short} moving.</>
+          ) : (
+            <>
+              Your plan saves <Text style={styles.strong}>{baht(plan.dailySaving)} a day</Text>.
+            </>
+          )}
         </Text>
       </View>
 

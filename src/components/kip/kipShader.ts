@@ -106,14 +106,13 @@ half4 main(float2 p) {
   float dx = sin(q * 9.0 - t * 5.0) * wob * rise + sin(q * 22.0 + t * 3.1) * 0.0015 * amp;
 
   float2 uv = float2((l.x / size - dx) / sx + 0.5, l.y / (sy * size) + ANCHOR_Y);
-  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    return half4(0.0);
-  }
 
-  // Fade to nothing over the outermost 1% of the artwork, so the square's edge can never show.
+  // Sample first, for every pixel alike: the GPU picks the image's detail level from
+  // neighbouring pixels, and skipping the sample for some of them drew a faint square
+  // around Kip at small sizes. Outside the artwork (and its outer 1%) fades to nothing.
   float2 edge = min(uv, 1.0 - uv);
   float keep = smoothstep(0.0, 0.01, min(edge.x, edge.y));
-  half4 col = body.eval(uv * size) * keep;
+  half4 col = body.eval(clamp(uv, 0.0, 1.0) * size) * keep;
   if (col.a < 0.004) {
     return half4(0.0);
   }

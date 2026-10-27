@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import { AirplaneTilt, Car, Check, Coins, DeviceMobile, House, Plus, Umbrella } from 'phosphor-react-native';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CorkBoard, Polaroid, PostIt } from '@/components/board';
 import { KipSays, SetupScreen } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { baht } from '@/lib/money';
 import { useSetup, type GoalKind } from '@/lib/setup/draft';
-import { makePlan, shortDate } from '@/lib/setup/plan';
+import { isoDay, makePlan, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, pinColors, radius } from '@/theme';
 
 const KIND_ICON: Record<GoalKind, typeof AirplaneTilt> = {
@@ -21,7 +21,7 @@ const KIND_ICON: Record<GoalKind, typeof AirplaneTilt> = {
 
 // Setup 4/5 · Kip's plan, pinned to your board.
 export default function SetupPlan() {
-  const { draft } = useSetup();
+  const { draft, update } = useSetup();
   const plan = makePlan(draft);
   const target = draft.goalTarget ?? 0;
   const saved = draft.goalSaved ?? 0;
@@ -29,16 +29,32 @@ export default function SetupPlan() {
   const first = plan.deposits[0];
   const last = plan.deposits[plan.deposits.length - 1];
   const many = plan.deposits.length;
-  const word = draft.incomeType === 'regular' ? 'Payday' : 'Money in';
+  const regular = draft.incomeType === 'regular';
+  const word = regular ? 'Payday' : 'Money in';
+  const later = many - 2;
   const Moment = KIND_ICON[draft.goalKind];
+
+  const kipLine = {
+    ok: `Good news — ${plan.short} is doable, without giving up your life. I’ve pinned it to your board.`,
+    stretch: `${plan.short} by ${shortDate(plan.due)} would leave you ${baht(plan.dailySpend)} a day — too tight. ${plan.suggestDue ? shortDate(plan.suggestDue) : 'A bit later'} keeps life comfortable.`,
+    noRoom: regular
+      ? `Right now rent and everyday life use up your pay, so there’s nothing spare yet. I’ve pinned ${plan.short} anyway — we’ll find small wins as you log.`
+      : `Right now rent and everyday life use up a typical month, so there’s nothing spare yet. I’ve pinned ${plan.short} anyway — when a good month lands, the extra goes here.`,
+  }[plan.mode];
 
   return (
     <SetupScreen step={4} footer={<Button label="Looks good — write my promise" onPress={() => router.push('/setup/sign')} />}>
-      <KipSays mood={plan.stretch ? 'careful' : 'happy'}>
-        {plan.stretch
-          ? `${plan.short} by ${shortDate(plan.due)} is a stretch on this budget. I’d aim for ${plan.suggestDue ? shortDate(plan.suggestDue) : 'a little later'} — but it’s your call, and I’ve pinned it either way.`
-          : `Good news — ${plan.short} is doable, without giving up your life. I’ve pinned it to your board.`}
-      </KipSays>
+      <KipSays mood={plan.mode === 'ok' ? 'happy' : 'careful'}>{kipLine}</KipSays>
+      {plan.mode === 'stretch' && plan.suggestDue && (
+        <View style={{ flexDirection: 'row', gap: 8, paddingLeft: 54 }}>
+          <Pressable style={[styles.pill, styles.pillOn]} onPress={() => plan.suggestDue && update({ goalDue: isoDay(plan.suggestDue) })} accessibilityRole="button">
+            <Text style={[styles.pillText, { color: '#FFFFFF' }]}>Move it to {shortDate(plan.suggestDue)}</Text>
+          </Pressable>
+          <Pressable style={styles.pill} onPress={() => router.back()} accessibilityRole="button">
+            <Text style={styles.pillText}>Change the goal</Text>
+          </Pressable>
+        </View>
+      )}
 
       <CorkBoard height={318}>
         <View style={styles.boardTop}>
@@ -59,7 +75,7 @@ export default function SetupPlan() {
             <View style={styles.track}>
               <View style={[styles.fill, { width: `${pct}%` }]} />
             </View>
-            <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted }}>
+            <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted }} numberOfLines={1} adjustsFontSizeToFit>
               {baht(saved)} saved · {baht(Math.max(0, target - saved))} to go
             </Text>
           </View>
@@ -74,37 +90,52 @@ export default function SetupPlan() {
 
         <PostIt width={112} style={{ position: 'absolute', right: 16, top: 184 }}>
           <Text style={[styles.hand, { fontSize: 19, lineHeight: 20 }]}>
-            {plan.short} in {plan.daysToGo} days!
+            {plan.mode === 'noRoom' ? `${plan.short}, here I come!` : `${plan.short} in ${plan.daysToGo} days!`}
           </Text>
           <Text style={{ fontFamily: fonts.regular, fontSize: 10, color: 'rgba(17,17,17,0.6)' }}>
-            {shortDate(plan.due)} · {plan.stretch ? 'a stretch' : 'on track'}
+            {shortDate(plan.due)} · {{ ok: 'on track', stretch: 'a stretch', noRoom: 'step by step' }[plan.mode]}
           </Text>
         </PostIt>
       </CorkBoard>
 
       <View style={styles.timeline}>
-        <Step
-          dot={colors.ink}
-          icon={<Coins size={15} color="#FFFFFF" weight="fill" />}
-          label={`Today · ${shortDate(first.date)}${plan.firstIsPayday ? ' · payday' : ''}`}
-          text={many === 1 ? `${baht(first.amount)} goes in → fully saved` : `${baht(first.amount)} goes in → ${Math.round(first.pctAfter * 100)}% there`}
-          line
-        />
-        {many > 1 && (
-          <Step
-            dot={colors.lime}
-            icon={<Check size={15} color={colors.ink} weight="bold" />}
-            label={`${word} · ${shortDate(last.date)}`}
-            text={`Last ${baht(last.amount)} → fully saved`}
-            sub={many > 2 ? `After ${many - 2} more ${many - 2 === 1 ? word.toLowerCase() : `${word.toLowerCase()}s`} of ${baht(first.amount)}` : undefined}
-            line
-          />
+        {plan.mode === 'noRoom' ? (
+          <>
+            <Step dot={colors.ink} icon={<Coins size={15} color="#FFFFFF" weight="fill" />} label={`Today · ${shortDate(new Date())}`} text={`${plan.short} is on your board`} line />
+            <Step
+              dot={colors.lime}
+              icon={<Check size={15} color={colors.ink} weight="bold" />}
+              label={regular ? 'Every small win' : 'Every good month'}
+              text={regular ? 'Spend under your daily number → the rest goes in' : `Money above ${baht(draft.slowMonth ?? 0)} → part goes in`}
+              line
+            />
+          </>
+        ) : (
+          <>
+            <Step
+              dot={colors.ink}
+              icon={<Coins size={15} color="#FFFFFF" weight="fill" />}
+              label={plan.firstIsToday ? `Today · ${shortDate(first.date)}${plan.firstIsPayday ? ' · payday' : ''}` : `${word} · ${shortDate(first.date)}`}
+              text={many === 1 ? `${baht(first.amount)} goes in → fully saved` : `${baht(first.amount)} goes in → ${Math.round(first.pctAfter * 100)}% there`}
+              line
+            />
+            {many > 1 && (
+              <Step
+                dot={colors.lime}
+                icon={<Check size={15} color={colors.ink} weight="bold" />}
+                label={`${word} · ${shortDate(last.date)}`}
+                text={`Last ${baht(last.amount)} → fully saved`}
+                sub={later > 0 ? `After ${later} more ${regular ? (later === 1 ? 'payday' : 'paydays') : later === 1 ? 'month' : 'months'} of ${baht(first.amount)}` : undefined}
+                line
+              />
+            )}
+          </>
         )}
         <Step dot={colors.lavender} icon={<Moment size={15} color={colors.ink} weight="fill" />} label={shortDate(plan.due)} text={plan.moment.title} sub={plan.moment.sub} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Stat label="Save each month" value={baht(plan.monthlySave)} />
+        <Stat label="Save each month" value={plan.mode === 'noRoom' ? (regular ? '฿0 for now' : 'Good months') : baht(plan.monthlySave)} />
         <Stat label="Spend each day" value={baht(plan.dailySpend)} />
       </View>
 
@@ -137,7 +168,9 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
       <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: 'rgba(17,17,17,0.6)' }}>{label}</Text>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 25, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] }}>{value}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: fonts.regular, fontSize: 25, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] }}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -184,6 +217,9 @@ const styles = StyleSheet.create({
   connector: { position: 'absolute', left: 13, top: 30, bottom: -6, width: 2, backgroundColor: 'rgba(17,17,17,0.12)' },
   stepDot: { width: 28, height: 28, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   stepLabel: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.4, color: colors.muted },
+  pill: { height: 34, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
+  pillOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+  pillText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
   stat: { flex: 1, borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.grey },
   notes: { flex: 1, borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, gap: 6, boxShadow: 'inset 0 0 0 1px rgba(17,17,17,0.10)' },
   notesTitle: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: 'rgba(17,17,17,0.6)' },

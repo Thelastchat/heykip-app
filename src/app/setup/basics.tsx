@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { KipSays, MoneyTile, PrivacyNote, Segmented, SetupScreen, Title, ToggleRow } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
-import { basicsDone, useSetup, type IncomeType } from '@/lib/setup/draft';
+import { basicsDone, useSetup, type IncomeType, type SetupDraft } from '@/lib/setup/draft';
 import { ordinal } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
 
@@ -78,10 +78,18 @@ export default function SetupBasics() {
         placeholder="6,500"
         right={<Text style={styles.aside}>Your biggest bill, so your daily budget is right from day one</Text>}
       />
+      {rentWarning(draft) && <Text style={[styles.hint, { color: colors.orange }]}>{rentWarning(draft)}</Text>}
       <Text style={styles.hint}>Other bills? I’ll spot them as you go and ask once.</Text>
       <PrivacyNote />
     </SetupScreen>
   );
+}
+
+function rentWarning(d: SetupDraft): string | null {
+  if (!d.rent) return null;
+  if (d.incomeType === 'regular') return d.monthlyIncome && d.rent >= d.monthlyIncome ? 'That’s more than your monthly income — double-check the numbers?' : null;
+  if (d.slowMonth && d.rent >= d.slowMonth) return d.goodMonth ? 'That’s more than a slow month, so I’ll plan on an average month instead.' : 'That’s more than a slow month — add a good month too, so I can plan on an average.';
+  return null;
 }
 
 function PaydayTile({ value, onChange }: { value: number | null; onChange: (n: number | null) => void }) {
