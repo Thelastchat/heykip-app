@@ -27,8 +27,10 @@ export default function KipJelly({ mood = 'idle', size = 160, style }: KipProps)
 
   // The canvas is 150% of the box so Kip has room to hop and wobble;
   // Kip himself fills 66% of it — the same proportions as the design.
-  const C = size * 1.5;
+  // Snapped to whole device pixels so the canvas edge never lands between pixels.
+  const C = PixelRatio.roundToNearestPixel(size * 1.5);
   const D = C * 0.66;
+  const inset = PixelRatio.roundToNearestPixel(size * 0.25);
   const pixel = 1 / (D * PixelRatio.get());
 
   // JS → UI thread.
@@ -95,12 +97,12 @@ export default function KipJelly({ mood = 'idle', size = 160, style }: KipProps)
       accessible
       accessibilityRole="image"
       accessibilityLabel="Kip">
-      <View pointerEvents="none" style={{ position: 'absolute', left: -size * 0.25, top: -size * 0.25 }}>
+      <View pointerEvents="none" style={{ position: 'absolute', left: -inset, top: -inset }}>
         <Canvas style={{ width: C, height: C }}>
           {image && (
             <Rect x={0} y={0} width={C} height={C}>
               <Shader source={kipShader()} uniforms={placed}>
-                <ImageShader image={image} fit="fill" rect={{ x: 0, y: 0, width: D, height: D }} tx="decal" ty="decal" sampling={sampling} />
+                <ImageShader image={image} fit="fill" rect={{ x: 0, y: 0, width: D, height: D }} tx="clamp" ty="clamp" sampling={sampling} />
               </Shader>
             </Rect>
           )}

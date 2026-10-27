@@ -110,9 +110,12 @@ half4 main(float2 p) {
     return half4(0.0);
   }
 
-  half4 col = body.eval(uv * size);
+  // Fade to nothing over the outermost 1% of the artwork, so the square's edge can never show.
+  float2 edge = min(uv, 1.0 - uv);
+  float keep = smoothstep(0.0, 0.01, min(edge.x, edge.y));
+  half4 col = body.eval(uv * size) * keep;
   if (col.a < 0.004) {
-    return col;
+    return half4(0.0);
   }
   if (happy > 0.5) {
     return smileEye(smileEye(col, uv, EYE_L), uv, EYE_R);
