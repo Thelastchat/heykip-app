@@ -39,7 +39,7 @@ function Choices() {
   const choices: Choice[] = [];
   let say = '';
   if (v.kind === 'noRoom') {
-    say = `Right now rent, bills and real living costs use ${baht(fixed + livingSum)} of your ${baht(inputs.income)} — there’s nothing spare to save yet. Let’s be honest about it, then find the room.`;
+    say = `Let’s start small. Right now rent, bills and real living costs use ${baht(fixed + livingSum)} of your ${baht(inputs.income)}, so there’s nothing spare yet — but every day under budget can go to ${short}. Here’s how we begin:`;
     choices.push(
       {
         key: 'anyway',
@@ -54,7 +54,7 @@ function Choices() {
   } else if (draft.goalKind === 'monthly') {
     const comfy = at(R.comfortable),
       most = at(R.most);
-    say = `${baht(draft.goalMonthly ?? 0)} a month doesn’t fit. After rent, bills, living, a small safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most you can save is ${baht(R.most)}. Here’s what does work:`;
+    say = `You can save ${baht(R.comfortable)} a month comfortably — ${baht(R.comfortable * 12)} in a year. ${baht(draft.goalMonthly ?? 0)} is a stretch: after rent, bills, living, a safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most is ${baht(R.most)}. Pick what suits you:`;
     choices.push(
       {
         key: 'comfy',
@@ -159,7 +159,7 @@ function Choices() {
 
   return (
     <SetupScreen step={3} footer={<Button label={choice?.button ?? 'Next'} onPress={go} />}>
-      <KipSays mood="careful">{say}</KipSays>
+      <KipSays mood={v.kind === 'noRoom' ? 'careful' : 'happy'}>{say}</KipSays>
 
       <View style={styles.where}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>

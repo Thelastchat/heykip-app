@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
@@ -29,7 +29,7 @@ export default function SetupCongrats() {
       </View>
       <View style={{ alignItems: 'center', gap: 8 }}>
         <Text style={styles.h1}>Yay! Your plan is ready</Text>
-        <Text style={styles.sub}>I worked it all out from your numbers.{'\n'}Here’s the short version:</Text>
+        <Text style={styles.sub}>Worked out from your numbers.</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
@@ -41,8 +41,12 @@ export default function SetupCongrats() {
           {draft.goalKind === 'safety_net' ? '' : ' · a safety net growing from day one'}
         </Text>
       </View>
+      <Pressable onPress={() => router.push('/setup/everything')} hitSlop={10} style={{ alignItems: 'center', gap: 2 }} accessibilityRole="link">
+        <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' }}>See what I used →</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>optional · check or change any number</Text>
+      </Pressable>
       <View style={{ marginTop: 'auto' }}>
-        <Button label="See everything" onPress={() => router.replace('/setup/everything')} />
+        <Button label="Pick my plan" onPress={() => router.push('/setup/plan')} />
       </View>
     </View>
   );

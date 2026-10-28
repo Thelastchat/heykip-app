@@ -22,7 +22,7 @@ import type { IconKey } from '@/lib/budget';
 import { T } from '@/components/ui';
 import { colors, fonts, radius, shadow } from '@/theme';
 
-export const STEPS = 6;
+export const STEPS = 5;
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
 export function SetupScreen({

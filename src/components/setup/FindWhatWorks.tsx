@@ -89,10 +89,12 @@ export function FindWhatWorks() {
   // Side work a month that would keep the person's own date, comfortably.
   const neededForDate = askedMonths ? Math.max(0, Math.ceil((left - R.comfortable * askedMonths) / askedMonths / 100) * 100) : 0;
 
+  // Lead with the path, then the gap — same facts, but it starts from what works.
+  const comfyStart = monthYear(monthsFromNow(Math.max(1, Math.ceil(Math.max(0, base.goal.target - base.goal.saved) / Math.max(R0.comfortable, 100))), draft));
   const say =
     v0.kind === 'notByThen'
-      ? `Honest answer: ${short}${asked ? ` by ${fullDate(asked)}` : ''} needs ${baht(v0.need)} a month — ${baht(v0.need - R0.most)} more than you can save. Pick how you’d like to fix it, then tick anything that helps.`
-      : `${short}${asked ? ` by ${fullDate(asked)}` : ''} is possible, but tight — fun money drops to ${baht(v0.kind === 'tight' ? v0.funLeft : 0)}. Pick how you’d like to fix it, then tick anything that helps.`;
+      ? `${short} is doable — comfortably by ${comfyStart}. Want it sooner? ${asked ? `${fullDate(asked)} is ${baht(v0.need - R0.most)} a month away.` : 'Let’s look.'} Let’s find the way that suits you 👇`
+      : `${short}${asked ? ` by ${fullDate(asked)}` : ''} works — it’s just tight (fun money drops to ${baht(v0.kind === 'tight' ? v0.funLeft : 0)}). ${comfyStart} is comfortable. Let’s find the way that suits you 👇`;
 
   function tick(k: AddOn) {
     Haptics.selectionAsync().catch(() => {});
@@ -169,7 +171,7 @@ export function FindWhatWorks() {
 
   return (
     <SetupScreen step={3} footer={<Button label={button} disabled={mode !== 'nodate' && zone === 'too'} onPress={go} />}>
-      <KipSays mood="careful">{say}</KipSays>
+      <KipSays mood="happy">{say}</KipSays>
       <Text style={styles.h1} accessibilityRole="header">
         Find what works
       </Text>

@@ -114,7 +114,7 @@ export default function SetupEverything() {
   const edit = (href: string) => router.push(`${href}?edit=1` as Href);
 
   return (
-    <SetupScreen step={undefined} footer={<Button label="See my plans" disabled={updating} onPress={() => router.push('/setup/plan')} />}>
+    <SetupScreen step={undefined} footer={<Button label="Done" disabled={updating} onPress={() => router.back()} />}>
       <BackButton />
       <View style={{ gap: 6 }}>
         <Text style={styles.h1} accessibilityRole="header">

@@ -19,7 +19,16 @@ const PRICE: Record<Tier, { amount: number; per: 'yr' | 'mo'; perDay: string }> 
   student: { amount: 590, per: 'yr', perDay: '฿1.6' },
 };
 
-const PERKS = ['Log by voice, typing or slips', '“Can I buy this?” plans that protect your goals', 'Week, month and year views', 'Up to 3 pinned goals + saving with friends'];
+// What's free forever vs what Kip Plus adds. The plan itself is never behind the paywall.
+const TABLE: [string, string, string][] = [
+  ['Your plan, goal & promise', '✓', '✓'],
+  ['Log spending yourself', '✓', '✓'],
+  ['Payday: Kip moves your saving', '—', '✓'],
+  ['Delivery & shopping nudges', '—', '✓'],
+  ['Kip rebalances when life happens', '—', '✓'],
+  ['3 goals · “Can I buy this?”', '1', '✓'],
+  ['Log by voice or slip photo', '—', '✓'],
+];
 
 // The last Setup step. Payments come with the store build; for now "Start 7 days free" starts the trial.
 export default function SetupPaywall() {
@@ -53,10 +62,12 @@ export default function SetupPaywall() {
       footer={
         <>
           {error && <Text style={styles.error}>{error}</Text>}
-          <Button label="Start 7 days free" loading={busy === 'trial'} disabled={busy !== null} onPress={() => finish('trial')} />
-          <Text style={styles.fine}>Kip reminds you 2 days before you’re charged · cancel in 2 taps · then {baht(price.amount)} a {price.per === 'yr' ? 'year' : 'month'}</Text>
+          <Button label="Try Plus free for 7 days" loading={busy === 'trial'} disabled={busy !== null} onPress={() => finish('trial')} />
+          <Text style={styles.fine}>
+            Kip reminds you 2 days before you’re charged · cancel in 2 taps · then {baht(price.amount)} a {price.per === 'yr' ? 'year' : 'month'}
+          </Text>
           <Pressable hitSlop={8} disabled={busy !== null} onPress={() => finish('free')} accessibilityRole="button">
-            <Text style={styles.free}>{busy === 'free' ? 'Saving…' : 'Use the free version (log it yourself)'}</Text>
+            <Text style={styles.free}>{busy === 'free' ? 'Saving…' : 'Keep my free plan'}</Text>
           </Pressable>
         </>
       }>
@@ -64,32 +75,49 @@ export default function SetupPaywall() {
         <BackButton size={46} />
         <View style={styles.chip}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }} numberOfLines={1}>
-            {plan.mode === 'noRoom' ? `${plan.short} · pinned` : draft.goalKind === 'monthly' ? `${plan.short} · ${baht(plan.monthlySave)}/mo` : `${plan.short} in ${plan.daysToGo} days · ${baht(plan.monthlySave)}/mo`}
+            {plan.mode === 'noRoom'
+              ? `${plan.short} · pinned`
+              : draft.goalKind === 'monthly'
+                ? `${plan.short} · ${baht(plan.monthlySave)}/mo`
+                : `${plan.short} in ${plan.daysToGo} days · ${baht(plan.monthlySave)}/mo`}
           </Text>
         </View>
       </View>
 
+      <View style={styles.saved}>
+        <View style={styles.savedTick}>
+          <Check size={13} color="#FFFFFF" weight="bold" />
+        </View>
+        <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink }}>
+          <Text style={styles.strong}>Your plan is saved — free, forever.</Text> {plan.short}, your promise and your month stay yours.
+        </Text>
+      </View>
+
       <View style={{ gap: 6 }}>
-        <Title>Keep Kip on your side</Title>
+        <Title>Want Kip to run it for you?</Title>
         <Text style={styles.sub}>
-          HeyKip costs <Text style={styles.strong}>{price.perDay} a day</Text>.{' '}
+          Kip Plus costs <Text style={styles.strong}>{price.perDay} a day</Text> — less than one delivery fee.{' '}
           {plan.mode === 'noRoom' ? (
             <>Kip finds the small wins that get {plan.short} moving.</>
           ) : (
             <>
-              Your plan saves <Text style={styles.strong}>{baht(plan.dailySaving)} a day</Text>.
+              Your plan already saves <Text style={styles.strong}>{baht(plan.monthlySave + plan.safetyMonthly)} a month</Text>.
             </>
           )}
         </Text>
       </View>
 
-      <View style={{ gap: 9, paddingHorizontal: 4, paddingVertical: 2 }}>
-        {PERKS.map((p) => (
-          <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={styles.tick}>
-              <Check size={12} color={colors.ink} weight="bold" />
-            </View>
-            <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.ink, flex: 1 }}>{p}</Text>
+      <View style={styles.table}>
+        <View style={styles.tRow}>
+          <Text style={[styles.tCell, { flex: 1 }]} />
+          <Text style={[styles.tHead, { color: colors.muted }]}>FREE</Text>
+          <Text style={styles.tHead}>PLUS</Text>
+        </View>
+        {TABLE.map(([what, free, plus], k) => (
+          <View key={what} style={[styles.tRow, k < TABLE.length - 1 && styles.tLine]}>
+            <Text style={[styles.tCell, { flex: 1 }]}>{what}</Text>
+            <Text style={[styles.tMark, { color: free === '—' ? colors.faint : colors.ink }]}>{free}</Text>
+            <Text style={[styles.tMark, { fontFamily: fonts.bold }]}>{plus}</Text>
           </View>
         ))}
       </View>
@@ -111,7 +139,27 @@ export default function SetupPaywall() {
   );
 }
 
-function Option({ on, onPress, title, sub, price, per, was, badge, color = colors.lime }: { on: boolean; onPress: () => void; title: string; sub: string; price: number; per: 'yr' | 'mo'; was?: number; badge?: string; color?: string }) {
+function Option({
+  on,
+  onPress,
+  title,
+  sub,
+  price,
+  per,
+  was,
+  badge,
+  color = colors.lime,
+}: {
+  on: boolean;
+  onPress: () => void;
+  title: string;
+  sub: string;
+  price: number;
+  per: 'yr' | 'mo';
+  was?: number;
+  badge?: string;
+  color?: string;
+}) {
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.option, on ? [styles.optionOn, { backgroundColor: color }] : styles.optionOff]}>
       {badge && (
@@ -136,6 +184,14 @@ function Option({ on, onPress, title, sub, price, per, was, badge, color = color
 }
 
 const styles = StyleSheet.create({
+  saved: { borderRadius: 16, backgroundColor: colors.lime, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  savedTick: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  table: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingHorizontal: 14, paddingVertical: 4 },
+  tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
+  tLine: { borderBottomWidth: 1, borderBottomColor: 'rgba(17,17,17,0.06)' },
+  tCell: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
+  tHead: { width: 56, textAlign: 'center', fontFamily: fonts.bold, fontSize: 11, color: colors.ink },
+  tMark: { width: 56, textAlign: 'center', fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
   chip: { height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.lavender, justifyContent: 'center', flexShrink: 1, marginLeft: 12 },
   sub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
   strong: { fontFamily: fonts.semibold, color: colors.ink },
@@ -143,10 +199,21 @@ const styles = StyleSheet.create({
   option: { borderRadius: 20, borderWidth: 2, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   optionOn: { borderColor: colors.ink },
   optionOff: { backgroundColor: colors.grey, borderColor: 'transparent' },
-  badge: { position: 'absolute', top: -11, left: 16, height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.ink, justifyContent: 'center' },
+  badge: {
+    position: 'absolute',
+    top: -11,
+    left: 16,
+    height: 22,
+    paddingHorizontal: 9,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.ink,
+    justifyContent: 'center',
+  },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   was: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textDecorationLine: 'line-through' },
   fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-  free: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
+  free: { textAlign: 'center', fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
   error: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, color: colors.orange },
 });

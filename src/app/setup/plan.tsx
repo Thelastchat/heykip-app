@@ -136,7 +136,7 @@ export default function SetupPlan() {
   }
 
   return (
-    <SetupScreen step={4} footer={<Button label={`Choose ${s.name}`} onPress={() => router.push('/setup/yours')} />}>
+    <SetupScreen step={4} footer={<Button label={`Choose ${s.name}`} onPress={() => router.push('/setup/sign')} />}>
       <Title>Pick your plan</Title>
       <Text style={styles.sub}>Same pay, four ways to run it. Tap a tab — the page under it is that plan.</Text>
 
@@ -332,6 +332,16 @@ export default function SetupPlan() {
           </View>
         </View>
       </View>
+      <Pressable onPress={() => router.push('/setup/yours')} style={styles.customize} accessibilityRole="button" accessibilityLabel="Customize your plan">
+        <CatBadge name="cash" color={colors.peach} size={34} />
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>Customize</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>Change food, fun or the goal amount · lock what matters</Text>
+        </View>
+        <Text style={{ fontFamily: fonts.semibold, fontSize: 20, color: colors.ink }}>›</Text>
+      </Pressable>
+      <Text style={[styles.foot, { marginTop: -6 }]}>Optional — most people go straight on.</Text>
+
       <Text style={styles.foot}>This is a starting plan. After a few weeks of real spending — subscriptions especially — I’ll update it with your real numbers.</Text>
     </SetupScreen>
   );
@@ -352,6 +362,18 @@ function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
 }
 
 const styles = StyleSheet.create({
+  customize: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(17,17,17,0.25)',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   sub: {
     fontFamily: fonts.regular,
     fontSize: 14,

@@ -184,8 +184,8 @@ export default function SetupYours() {
 
   return (
     <SetupScreen
-      step={5}
-      footer={<Button label={editing ? 'Update my plan' : 'Looks good — write my promise'} disabled={r.goal <= 0} onPress={() => (editing ? router.back() : router.push('/setup/sign'))} />}>
+      step={4}
+      footer={<Button label={editing ? 'Update my plan' : 'Done — back to my plan'} disabled={r.goal <= 0} onPress={() => router.back()} />}>
       <Title>Make it yours</Title>
       <Text style={styles.sub}>Change any number — Kip re-balances the rest and tells you what moved.</Text>
 
