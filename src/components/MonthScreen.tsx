@@ -333,6 +333,7 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
           </Pressable>
         ))}
       </View>
+      {cat === 'food' && v < 4500 && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s {baht(Math.round(v / 30))} a day — below ฿150 a day is very hard to keep.</Text>}
       {(value ?? 0) > max && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s all your spending money — {baht(max)} at most.</Text>}
       <Button label={v === cur ? 'Done' : `Set to ${baht(v)}`} onPress={() => onDone(Math.round(v / 10) * 10)} />
     </>

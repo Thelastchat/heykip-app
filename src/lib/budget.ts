@@ -1,7 +1,7 @@
 // "Your month": how this month's money is split, and how it re-balances when a budget changes.
-// Goal-first, always: 1 saving (goal + safety net), 2 bills, 3 everyday spending split into categories.
+// The numbers come from Kip's brain (brain.ts): 1 saving first (goal + safety net), 2 bills, 3 living + fun by category.
+import { livingFor, plan as splitMonth, type Inputs, type Result } from '@/lib/brain';
 import type { BudgetStyle } from '@/lib/setup/draft';
-import type { Plan } from '@/lib/setup/plan';
 import { colors } from '@/theme';
 
 export type CatKey = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
@@ -15,90 +15,74 @@ export const CATEGORY: Record<CatKey, { name: string; color: string; icon: IconK
   health_beauty: { name: 'Health & beauty', color: colors.lilac, icon: 'health' },
   learning: { name: 'Learning', color: colors.roseBeige, icon: 'book' },
   giving: { name: 'Giving', color: colors.pink, icon: 'gift' },
-  other: { name: 'Other', color: colors.grey, icon: 'more' },
+  other: { name: 'Household & other', color: colors.grey, icon: 'more' },
   spend_freely: { name: 'Spend freely', color: colors.lime, icon: 'cash' },
 };
 
-/** Each style's starting split of everyday spending (shares of 100). */
-const SPLIT: Record<BudgetStyle, Partial<Record<CatKey, number>>> = {
-  // How Thai households really spend, adjusted for one person (Ministry of Commerce household survey).
-  kip: { food: 45, transport: 15, shopping: 10, fun: 10, health_beauty: 8, learning: 4, giving: 3, other: 5 },
-  // Needs vs wants: everyday needs first, then a bigger share for fun.
-  '503020': { food: 38, transport: 14, health_beauty: 8, other: 5, shopping: 15, fun: 15, learning: 2, giving: 3 },
-  // 6 Jars: living, then fun, learning and giving each get a real share.
-  jars: { food: 36, transport: 13, shopping: 8, health_beauty: 6, other: 5, fun: 13, learning: 13, giving: 6 },
-  // Save first: no tracking — one pot.
-  savefirst: { spend_freely: 100 },
-};
-
-export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: string; desc: string; source: string }[] = [
-  {
-    key: 'kip',
-    name: 'Kip’s plan',
-    tag: 'RECOMMENDED',
-    tagColor: colors.lime,
-    desc: 'Made from your own numbers. Bills first, then a daily budget for food, travel and fun — based on how people in Thailand really spend. I fine-tune it as I learn you.',
-    source: 'your answers + Thai household spending (Ministry of Commerce, 2025)',
-  },
-  {
-    key: '503020',
-    name: '50 / 30 / 20',
-    tag: 'THE CLASSIC',
-    tagColor: colors.roseBeige,
-    desc: 'Half on needs, a bit less than a third on fun, the rest saved. Easy to remember — works for most people.',
-    source: 'Senator Elizabeth Warren & Amelia Warren Tyagi, All Your Worth (2005)',
-  },
-  {
-    key: 'jars',
-    name: '6 Jars',
-    tag: 'GROW YOURSELF',
-    tagColor: colors.lilac,
-    desc: 'Six jars: living, fun, learning, giving, saving and investing. For when you want your money to build a better you.',
-    source: 'T. Harv Eker, Secrets of the Millionaire Mind',
-  },
-  {
-    key: 'savefirst',
-    name: 'Save first',
-    tag: 'NO TRACKING',
-    tagColor: colors.sage,
-    desc: 'Your saving leaves on payday. Whatever’s left is yours — spend it without guilt or spreadsheets.',
-    source: '“pay yourself first” — a saying often credited to Warren Buffett',
-  },
+export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: string; desc: string }[] = [
+  { key: 'kip', name: 'Kip’s plan', tag: 'RECOMMENDED', tagColor: colors.lime, desc: 'Living costs first, a little safety net, then as much for your goal as you can comfortably save.' },
+  { key: 'savefirst', name: 'Save first', tag: 'FASTEST', tagColor: colors.sage, desc: 'The most Kip will plan goes out on payday. The rest is one pot — no categories to track.' },
+  { key: '503020', name: '50 / 30 / 20', tag: 'THE CLASSIC', tagColor: colors.roseBeige, desc: '20% saved, the rest on needs and wants.' },
+  { key: 'jars', name: '6 Jars', tag: 'GROW YOURSELF', tagColor: colors.lilac, desc: 'Jars for learning and giving too, plus a bigger safety net.' },
 ];
-
-/** The coloured bar on each style card: [share, colour, label]. */
-export function styleBar(style: BudgetStyle, plan: Pick<Plan, 'rent' | 'billsGuess' | 'spending' | 'dailySpend'>): [number, string, string][] {
-  switch (style) {
-    case 'kip': {
-      const bills = plan.rent + plan.billsGuess;
-      return [
-        [bills, colors.clay, `Bills ฿${bills.toLocaleString('en-US')}`],
-        [plan.spending, colors.orange, `Spending ฿${plan.spending.toLocaleString('en-US')} · ฿${plan.dailySpend}/day`],
-      ];
-    }
-    case '503020':
-      return [[50, colors.clay, 'Needs 50%'], [30, colors.orange, 'Fun 30%'], [20, colors.lime, 'Save 20%']];
-    case 'jars':
-      return [[55, colors.clay, 'Living 55%'], [10, colors.orange, 'Fun'], [10, colors.lavender, 'Learn'], [5, colors.peach, ''], [10, colors.lime, 'Save'], [10, colors.sky, 'Invest']];
-    case 'savefirst':
-      return [[20, colors.lime, 'Save'], [80, colors.orange, 'Spend freely']];
-  }
-}
 
 // ---------- the month ----------
 
 export type MonthBudget = {
-  v: 1;
+  v: 2;
   style: BudgetStyle;
+  inputs: Inputs; // what Kip planned from — kept so a style switch can re-plan
+  goalPerMonth: number | null;
   income: number;
   payday: number | null; // the month runs payday → payday; null = calendar month
   alwaysFreedTo: FreedTo | null; // "Do this every time I lower a budget"
   goal: { title: string; amount: number; isSafetyNet: boolean };
-  safety: { amount: number; target: number }; // amount includes the money style's extra saving
+  safety: { amount: number; target: number };
   goalExtra: number; // money moved to the goal from a lowered budget
   bills: { rent: number; guess: number };
   spend: { key: CatKey; amount: number }[];
 };
+
+/** Living costs + fun (+ learning and giving) as categories. */
+function categories(i: Inputs, r: Result, style: BudgetStyle): { key: CatKey; amount: number }[] {
+  const L = livingFor(i);
+  if (style === 'savefirst') return [{ key: 'spend_freely', amount: r.living + r.fun + r.learn + r.give }];
+  const shopping = Math.floor(r.fun / 2 / 10) * 10;
+  return [
+    { key: 'food', amount: L.food },
+    { key: 'transport', amount: L.transport },
+    { key: 'health_beauty', amount: L.health },
+    { key: 'other', amount: L.household },
+    { key: 'shopping', amount: shopping },
+    { key: 'fun', amount: r.fun - shopping },
+    ...(r.learn ? [{ key: 'learning' as const, amount: r.learn }] : []),
+    ...(r.give ? [{ key: 'giving' as const, amount: r.give }] : []),
+  ];
+}
+
+export function monthFrom(inputs: Inputs, style: BudgetStyle, goalPerMonth: number | null, payday: number | null, safetyTarget: number): MonthBudget {
+  const r = splitMonth(inputs, style, goalPerMonth);
+  return {
+    v: 2,
+    style,
+    inputs,
+    goalPerMonth,
+    income: Math.round(inputs.income),
+    payday,
+    alwaysFreedTo: null,
+    goal: { title: inputs.goal.title || 'Savings', amount: r.goal, isSafetyNet: inputs.goal.type === 'emergency' },
+    safety: { amount: r.net + r.invest, target: safetyTarget },
+    goalExtra: 0,
+    bills: { rent: inputs.rent, guess: inputs.bills },
+    spend: categories(inputs, r, style),
+  };
+}
+
+/** Switch money style: re-plan from the same numbers. */
+export const withStyle = (m: MonthBudget, style: BudgetStyle): MonthBudget => ({
+  ...monthFrom(m.inputs, style, m.goalPerMonth, m.payday, m.safety.target),
+  alwaysFreedTo: m.alwaysFreedTo,
+});
 
 const round10 = (n: number) => Math.round(n / 10) * 10;
 
@@ -107,29 +91,8 @@ function splitBy(total: number, shares: [CatKey, number][]): { key: CatKey; amou
   const sum = shares.reduce((a, [, s]) => a + s, 0) || 1;
   const parts = shares.map(([key, s]) => ({ key, amount: Math.floor((total * s) / sum / 10) * 10 }));
   const rest = total - parts.reduce((a, p) => a + p.amount, 0);
-  if (parts.length) parts[0].amount += rest; // the biggest share (listed first) takes the rounding
+  if (parts.length) parts[0].amount += rest;
   return parts;
-}
-
-export function startingMonth(style: BudgetStyle, plan: Plan, goalTitle: string, isSafetyNet: boolean, payday: number | null): MonthBudget {
-  const shares = Object.entries(SPLIT[style]) as [CatKey, number][];
-  return {
-    v: 1,
-    style,
-    income: Math.round(plan.income),
-    payday,
-    alwaysFreedTo: null,
-    goal: { title: plan.short || goalTitle, amount: plan.mode === 'noRoom' ? 0 : plan.monthlySave, isSafetyNet },
-    safety: { amount: plan.safetyMonthly + plan.extraSave, target: plan.safetyTarget },
-    goalExtra: 0,
-    bills: { rent: plan.rent, guess: plan.billsGuess },
-    spend: splitBy(plan.spending, shares),
-  };
-}
-
-/** Switch money style: keep the goal, safety net and bills; re-split everyday spending. */
-export function withStyle(m: MonthBudget, style: BudgetStyle): MonthBudget {
-  return { ...m, style, spend: splitBy(spendingTotal(m), Object.entries(SPLIT[style]) as [CatKey, number][]) };
 }
 
 export const savingTotal = (m: MonthBudget) => m.goal.amount + m.goalExtra + m.safety.amount;
@@ -152,18 +115,32 @@ export function lowerBudget(m: MonthBudget, key: CatKey, to: number, dest: Freed
 }
 
 /** A budget went up: take a little from each other category, in proportion. Never from bills, the goal or the safety net. */
+/** Living-cost categories Kip won't push below a realistic floor when taking money for another category. */
+const FLOOR: Partial<Record<CatKey, number>> = { food: 4500, transport: 1000, health_beauty: 500, other: 500 };
+
+/** A budget went up: take from fun money first (shopping, fun, learning, giving), in proportion.
+ *  Only if that isn't enough, take from living costs — never below their realistic floor.
+ *  Never from bills, the goal or the safety net. */
 export function takePlan(m: MonthBudget, key: CatKey, to: number): { from: CatKey; was: number; now: number }[] {
   const cur = m.spend.find((s) => s.key === key)?.amount ?? 0;
-  const others = m.spend.filter((s) => s.key !== key && s.amount > 0);
-  const pool = others.reduce((a, s) => a + s.amount, 0);
-  const need = Math.min(Math.max(0, to - cur), pool);
-  let left = need;
-  const cuts = others.map((s, i) => {
-    const cut = i === others.length - 1 ? left : Math.min(left, round10((need * s.amount) / pool));
-    left -= cut;
-    return { from: s.key, was: s.amount, now: s.amount - cut };
-  });
-  return cuts;
+  let left = Math.max(0, to - cur);
+  const cuts = new Map<CatKey, number>();
+  const takeFrom = (keys: { key: CatKey; spare: number }[]) => {
+    const pool = keys.reduce((a, k) => a + k.spare, 0);
+    if (pool <= 0 || left <= 0) return;
+    const want = Math.min(left, pool);
+    let got = 0;
+    keys.forEach((k, i) => {
+      const cut = i === keys.length - 1 ? Math.min(k.spare, want - got) : Math.min(k.spare, round10((want * k.spare) / pool));
+      cuts.set(k.key, (cuts.get(k.key) ?? 0) + cut);
+      got += cut;
+    });
+    left -= got;
+  };
+  const others = m.spend.filter((s) => s.key !== key);
+  takeFrom(others.filter((s) => !(s.key in FLOOR)).map((s) => ({ key: s.key, spare: s.amount })));
+  takeFrom(others.filter((s) => s.key in FLOOR).map((s) => ({ key: s.key, spare: Math.max(0, s.amount - (FLOOR[s.key] ?? 0)) })));
+  return others.filter((s) => cuts.get(s.key)).map((s) => ({ from: s.key, was: s.amount, now: s.amount - (cuts.get(s.key) ?? 0) }));
 }
 
 export function raiseBudget(m: MonthBudget, key: CatKey, to: number): MonthBudget {

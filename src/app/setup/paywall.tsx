@@ -64,7 +64,7 @@ export default function SetupPaywall() {
         <BackButton size={46} />
         <View style={styles.chip}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }} numberOfLines={1}>
-            {plan.mode === 'noRoom' ? `${plan.short} · pinned` : `${plan.short} in ${plan.daysToGo} days · ${baht(plan.monthlySave)}/mo`}
+            {plan.mode === 'noRoom' ? `${plan.short} · pinned` : draft.goalKind === 'monthly' ? `${plan.short} · ${baht(plan.monthlySave)}/mo` : `${plan.short} in ${plan.daysToGo} days · ${baht(plan.monthlySave)}/mo`}
           </Text>
         </View>
       </View>

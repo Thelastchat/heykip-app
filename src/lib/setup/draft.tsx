@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Living } from '@/lib/brain';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 // Everything the person tells Kip during Setup. It lives on the phone until they
@@ -7,7 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 export type IncomeType = 'regular' | 'changes';
 export type MoneyStyle = 'treat' | 'bills' | 'save' | 'disappears';
 export type Leak = 'delivery' | 'grab' | 'shopping' | 'coffee' | 'goingOut' | 'beauty';
-export type GoalKind = 'trip' | 'gadget' | 'car' | 'home' | 'safety_net';
+/** safety_net is shown as "Emergency fund"; monthly = "Save every month" (no target or date). */
+export type GoalKind = 'trip' | 'gadget' | 'car' | 'home' | 'safety_net' | 'monthly';
 /** How Kip splits what's left after the goal, the safety net and bills. */
 export type BudgetStyle = 'kip' | '503020' | 'jars' | 'savefirst';
 
@@ -20,6 +22,7 @@ export type SetupDraft = {
   monthStartsOnPayday: boolean;
   splitWhenPaid: boolean;
   rent: number | null;
+  bills: number | null; // other fixed bills; null = Kip's guess
 
   moneyStyle: MoneyStyle | null;
   leaks: Leak[];
@@ -30,8 +33,10 @@ export type SetupDraft = {
   goalSaved: number | null;
   goalDue: string | null; // yyyy-mm-dd
   goalPhoto: string | null; // local file uri until saved
-  noGoal: boolean; // "No goal yet" → the safety net is the first goal, no due date
+  goalMonthly: number | null; // "Save every month": how much
   budgetStyle: BudgetStyle;
+  goalPerMonth: number | null; // set on "Make it yours"; null = Kip's pick
+  living: Partial<Living>; // the person's own living costs, when they change Kip's
 
   promiseMain: string | null; // null = Kip's wording
   promiseBackup: string | null;
@@ -48,6 +53,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   monthStartsOnPayday: true,
   splitWhenPaid: true,
   rent: null,
+  bills: null,
   moneyStyle: null,
   leaks: [],
   goalTitle: '',
@@ -56,15 +62,17 @@ export const EMPTY_DRAFT: SetupDraft = {
   goalSaved: null,
   goalDue: null,
   goalPhoto: null,
-  noGoal: false,
+  goalMonthly: null,
   budgetStyle: 'kip',
+  goalPerMonth: null,
+  living: {},
   promiseMain: null,
   promiseBackup: null,
   signature: null,
   signedAt: null,
 };
 
-const KEY = 'heykip.setup.v1';
+const KEY = 'heykip.setup.v2';
 
 type SetupState = {
   draft: SetupDraft;
@@ -123,4 +131,6 @@ export const basicsDone = (d: SetupDraft) =>
   d.incomeType === 'regular' ? Boolean(d.monthlyIncome && d.payday) : Boolean(d.slowMonth);
 
 export const goalDone = (d: SetupDraft) =>
-  Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.noGoal) && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));
+  d.goalKind === 'monthly'
+    ? Boolean(d.goalTitle.trim() && d.goalMonthly)
+    : Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.goalKind === 'safety_net') && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));

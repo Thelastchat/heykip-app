@@ -4,7 +4,9 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { KipSays, MoneyTile, PrivacyNote, Segmented, SetupScreen, Title, ToggleRow } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
-import { basicsDone, useSetup, type IncomeType, type SetupDraft } from '@/lib/setup/draft';
+import { billsGuess, living, livingTotal } from '@/lib/brain';
+import { baht } from '@/lib/money';
+import { basicsDone, plannedIncome, useSetup, type IncomeType, type SetupDraft } from '@/lib/setup/draft';
 import { ordinal } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
 
@@ -13,6 +15,9 @@ export default function SetupBasics() {
   const { draft, update } = useSetup();
   const regular = draft.incomeType === 'regular';
   const payday = draft.payday;
+  const income = plannedIncome(draft);
+  const L = living(income);
+  const guess = billsGuess(income);
   const cycle = payday ? `${ordinal(payday)} to ${ordinal(payday === 1 ? 31 : payday - 1)}` : 'Payday to the day before';
 
   return (
@@ -67,19 +72,31 @@ export default function SetupBasics() {
         />
       )}
 
-      <MoneyTile
-        label={
-          <>
-            Rent or home payment <Text style={{ color: '#A9A9A1' }}>· optional</Text>
-          </>
-        }
-        value={draft.rent}
-        onChange={(rent) => update({ rent })}
-        placeholder="6,500"
-        right={<Text style={styles.aside}>Your biggest bill, so your daily budget is right from day one</Text>}
-      />
+      <View style={styles.row}>
+        <MoneyTile label="Rent or home loan" value={draft.rent} onChange={(rent) => update({ rent })} placeholder="8,500" size={22} style={{ flex: 1 }} />
+        <MoneyTile
+          label="Other bills"
+          value={draft.bills}
+          onChange={(bills) => update({ bills })}
+          placeholder={income ? guess.toLocaleString('en-US') : '1,500'}
+          size={22}
+          style={{ flex: 1 }}
+        />
+      </View>
       {rentWarning(draft) && <Text style={[styles.hint, { color: colors.orange }]}>{rentWarning(draft)}</Text>}
-      <Text style={styles.hint}>Other bills? I’ll spot them as you go and ask once.</Text>
+      <Text style={styles.hint}>
+        Other bills = phone, internet, electricity, water, instalments.{draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
+      </Text>
+
+      {income > 0 && (
+        <View style={styles.living}>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Kip adds real living costs too</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: '#2E2E2A' }}>
+            Food {baht(L.food)} ({baht(Math.round(L.food / 30))}/day) · transport {baht(L.transport)} · health {baht(L.health)} · household {baht(L.household)} ={' '}
+            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. You can change these later.
+          </Text>
+        </View>
+      )}
       <PrivacyNote />
     </SetupScreen>
   );
@@ -123,6 +140,6 @@ const styles = StyleSheet.create({
   payday: { flex: 1, borderRadius: 18, backgroundColor: colors.roseBeige, paddingVertical: 12, paddingHorizontal: 16 },
   label: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
   big: { fontFamily: fonts.regular, fontSize: 26, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
-  aside: { maxWidth: 130, textAlign: 'right', fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
-  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, paddingHorizontal: 4 },
+  hint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
+  living: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingVertical: 12, paddingHorizontal: 16, gap: 6 },
 });

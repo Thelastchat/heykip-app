@@ -4,10 +4,11 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { pinColors } from '@/theme';
 
-import { startingMonth } from '@/lib/budget';
+import { safetyNet } from '@/lib/brain';
+import { monthFrom } from '@/lib/budget';
 
 import type { SetupDraft } from './draft';
-import { makePlan } from './plan';
+import { isoDay, makePlan } from './plan';
 
 export type PlanChoice = 'trial' | 'free';
 
@@ -48,13 +49,15 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   }
 
   // 3. The first goal, pinned in spot 1 (always orange).
+  const monthly = draft.goalKind === 'monthly';
   const goal = {
     user_id: userId,
     title: draft.goalTitle.trim(),
     kind: draft.goalKind,
-    target_amount: draft.goalTarget,
-    saved_amount: draft.goalSaved ?? 0,
-    due_date: draft.goalDue,
+    target_amount: monthly ? (draft.goalMonthly ?? 0) * 12 : draft.goalTarget,
+    monthly_amount: monthly ? draft.goalMonthly : null,
+    saved_amount: monthly ? 0 : (draft.goalSaved ?? 0),
+    due_date: monthly ? null : isoDay(plan.due),
     pin_color: pinColors[0],
     position: 1,
     status: 'active',
@@ -87,12 +90,12 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
       payday: draft.incomeType === 'regular' ? draft.payday : null,
       month_starts_on_payday: draft.monthStartsOnPayday,
       split_when_paid: draft.splitWhenPaid,
-      rent: draft.rent,
+      rent: draft.rent ?? 0,
       daily_budget: plan.dailySpend,
       money_style: draft.moneyStyle,
       money_leaks: draft.leaks,
       budget_style: draft.budgetStyle,
-      budget: startingMonth(draft.budgetStyle, plan, draft.goalTitle.trim(), draft.goalKind === 'safety_net', draft.incomeType === 'regular' ? draft.payday : null),
+      budget: monthFrom(plan.inputs, draft.budgetStyle, draft.goalPerMonth, draft.incomeType === 'regular' ? draft.payday : null, safetyNet(plan.inputs).target),
       plan: choice,
       trial_ends_at: choice === 'trial' ? new Date(stamp + 7 * 86_400_000).toISOString() : null,
       onboarded: true,

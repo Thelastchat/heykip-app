@@ -1,11 +1,12 @@
 // Loads and saves "Your month" for the signed-in person.
-// Setup saves a starting month; people who finished Setup before that get one built from their profile and first goal.
+// Setup saves a starting month; anyone without one gets it rebuilt from their profile and first goal.
 import { useCallback, useEffect, useState } from 'react';
 
-import { startingMonth, type MonthBudget } from '@/lib/budget';
+import { safetyNet } from '@/lib/brain';
+import { monthFrom, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
-import { EMPTY_DRAFT, type BudgetStyle, type GoalKind } from '@/lib/setup/draft';
-import { makePlan } from '@/lib/setup/plan';
+import { EMPTY_DRAFT, type BudgetStyle, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
+import { inputsFrom } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 
 async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
@@ -15,11 +16,17 @@ async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
       .select('income_type, monthly_income, slow_month_income, good_month_income, payday, rent, budget_style')
       .eq('id', userId)
       .single(),
-    supabase.from('goals').select('title, kind, target_amount, saved_amount, due_date').eq('user_id', userId).eq('position', 1).eq('status', 'active').maybeSingle(),
+    supabase
+      .from('goals')
+      .select('title, kind, target_amount, saved_amount, due_date, monthly_amount')
+      .eq('user_id', userId)
+      .eq('position', 1)
+      .eq('status', 'active')
+      .maybeSingle(),
   ]);
   if (!p) return null;
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-  const draft = {
+  const draft: SetupDraft = {
     ...EMPTY_DRAFT,
     incomeType: p.income_type,
     monthlyIncome: num(p.monthly_income),
@@ -28,15 +35,15 @@ async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
     payday: p.payday,
     rent: num(p.rent),
     budgetStyle: (p.budget_style ?? 'kip') as BudgetStyle,
-    goalTitle: g?.title ?? '',
-    goalKind: (g?.kind ?? 'trip') as GoalKind,
-    goalTarget: num(g?.target_amount) ?? 0,
-    goalSaved: num(g?.saved_amount) ?? 0,
+    goalTitle: g?.title ?? 'Savings',
+    goalKind: (g?.kind ?? 'safety_net') as GoalKind,
+    goalTarget: num(g?.target_amount),
+    goalSaved: num(g?.saved_amount),
     goalDue: g?.due_date ?? null,
-    noGoal: !g?.due_date,
+    goalMonthly: num(g?.monthly_amount),
   };
-  const plan = makePlan(draft);
-  return startingMonth(draft.budgetStyle, plan, draft.goalTitle, draft.goalKind === 'safety_net', draft.incomeType === 'regular' ? draft.payday : null);
+  const inputs = inputsFrom(draft);
+  return monthFrom(inputs, draft.budgetStyle, null, draft.incomeType === 'regular' ? draft.payday : null, safetyNet(inputs).target);
 }
 
 export function useMonth() {
@@ -51,7 +58,8 @@ export function useMonth() {
     (async () => {
       const { data, error: e } = await supabase.from('profiles').select('budget').eq('id', userId).single();
       if (e) setError(e.message);
-      setMonth((data?.budget as MonthBudget | null) ?? (await buildFromProfile(userId)));
+      const saved = data?.budget as MonthBudget | null;
+      setMonth(saved?.v === 2 ? saved : await buildFromProfile(userId));
       setLoading(false);
     })();
   }, [userId]);
