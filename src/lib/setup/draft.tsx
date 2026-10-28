@@ -8,6 +8,8 @@ export type IncomeType = 'regular' | 'changes';
 export type MoneyStyle = 'treat' | 'bills' | 'save' | 'disappears';
 export type Leak = 'delivery' | 'grab' | 'shopping' | 'coffee' | 'goingOut' | 'beauty';
 export type GoalKind = 'trip' | 'gadget' | 'car' | 'home' | 'safety_net';
+/** How Kip splits what's left after the goal, the safety net and bills. */
+export type BudgetStyle = 'kip' | '503020' | 'jars' | 'savefirst';
 
 export type SetupDraft = {
   incomeType: IncomeType;
@@ -28,6 +30,8 @@ export type SetupDraft = {
   goalSaved: number | null;
   goalDue: string | null; // yyyy-mm-dd
   goalPhoto: string | null; // local file uri until saved
+  noGoal: boolean; // "No goal yet" → the safety net is the first goal, no due date
+  budgetStyle: BudgetStyle;
 
   promiseMain: string | null; // null = Kip's wording
   promiseBackup: string | null;
@@ -52,6 +56,8 @@ export const EMPTY_DRAFT: SetupDraft = {
   goalSaved: null,
   goalDue: null,
   goalPhoto: null,
+  noGoal: false,
+  budgetStyle: 'kip',
   promiseMain: null,
   promiseBackup: null,
   signature: null,
@@ -117,4 +123,4 @@ export const basicsDone = (d: SetupDraft) =>
   d.incomeType === 'regular' ? Boolean(d.monthlyIncome && d.payday) : Boolean(d.slowMonth);
 
 export const goalDone = (d: SetupDraft) =>
-  Boolean(d.goalTitle.trim() && d.goalTarget && d.goalDue && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));
+  Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.noGoal) && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));

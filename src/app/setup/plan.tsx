@@ -19,7 +19,7 @@ const KIND_ICON: Record<GoalKind, typeof AirplaneTilt> = {
   safety_net: Umbrella,
 };
 
-// Setup 4/5 · Kip's plan, pinned to your board.
+// Setup 5/6 · Kip's plan, pinned to your board.
 export default function SetupPlan() {
   const { draft, update } = useSetup();
   const plan = makePlan(draft);
@@ -43,7 +43,7 @@ export default function SetupPlan() {
   }[plan.mode];
 
   return (
-    <SetupScreen step={4} footer={<Button label="Looks good — write my promise" onPress={() => router.push('/setup/sign')} />}>
+    <SetupScreen step={5} footer={<Button label="Looks good — write my promise" onPress={() => router.push('/setup/sign')} />}>
       <KipSays mood={plan.mode === 'ok' ? 'happy' : 'careful'}>{kipLine}</KipSays>
       {plan.mode === 'stretch' && plan.suggestDue && (
         <View style={{ flexDirection: 'row', gap: 8, paddingLeft: 54 }}>

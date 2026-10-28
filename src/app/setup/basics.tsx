@@ -8,7 +8,7 @@ import { basicsDone, useSetup, type IncomeType, type SetupDraft } from '@/lib/se
 import { ordinal } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
 
-// Setup 1/5 · How does money come in?
+// Setup 1/6 · How does money come in?
 export default function SetupBasics() {
   const { draft, update } = useSetup();
   const regular = draft.incomeType === 'regular';

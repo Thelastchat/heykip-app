@@ -14,7 +14,7 @@ const STYLES: { key: MoneyStyle; label: string; sub: string }[] = [
   { key: 'disappears', label: 'Honestly? It just… disappears', sub: 'Same here sometimes' },
 ];
 
-// Setup 2/5 · Payday hits. What happens first?
+// Setup 2/6 · Payday hits. What happens first?
 export default function SetupStyle() {
   const { draft, update } = useSetup();
 

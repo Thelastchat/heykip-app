@@ -43,6 +43,7 @@ export function Polaroid({
   bottom = 10,
   children,
   style,
+  empty,
 }: {
   photo: string | null;
   width: number;
@@ -53,6 +54,8 @@ export function Polaroid({
   bottom?: number;
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** What fills the frame before a photo is added (default: a photo icon on cork beige). */
+  empty?: { color: string; icon: ReactNode };
 }) {
   return (
     <View style={[{ width, transform: [{ rotate: `${rotate}deg` }] }, style]}>
@@ -60,8 +63,8 @@ export function Polaroid({
         {photo ? (
           <Image source={{ uri: photo }} style={{ height: photoHeight, borderRadius: 2 }} contentFit="cover" transition={150} />
         ) : (
-          <View style={[styles.noPhoto, { height: photoHeight }]}>
-            <ImageIcon size={28} color="rgba(122,84,48,0.45)" />
+          <View style={[styles.noPhoto, { height: photoHeight }, empty && { backgroundColor: empty.color }]}>
+            {empty ? empty.icon : <ImageIcon size={28} color="rgba(122,84,48,0.45)" />}
           </View>
         )}
         {children}

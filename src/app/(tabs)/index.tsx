@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Plus, UserCircle } from 'phosphor-react-native';
+import { CaretRight, Plus, UserCircle } from 'phosphor-react-native';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CatBadge } from '@/components/CatIcon';
 import { Card, Muted, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { colors } from '@/theme';
@@ -38,6 +39,17 @@ export default function Home() {
         <View style={{ alignItems: 'center', paddingVertical: 10 }}>
           <T variant="greeting">{greeting()}</T>
         </View>
+
+        <Pressable accessibilityRole="button" onPress={() => router.push('/month')}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <CatBadge name="cash" color={colors.lime} size={44} />
+            <View style={{ flex: 1 }}>
+              <T variant="bodyStrong">Your month</T>
+              <Muted>Saving first, bills, then your daily budget</Muted>
+            </View>
+            <CaretRight size={18} color={colors.muted} weight="bold" />
+          </Card>
+        </Pressable>
 
         <Card>
           <T variant="bodyStrong">Home is on its way</T>

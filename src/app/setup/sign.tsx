@@ -12,7 +12,7 @@ import { useSetup } from '@/lib/setup/draft';
 import { fullDate, makePlan } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
 
-// Setup 5/5 · Your promise to yourself, signed with your finger.
+// Setup 6/6 · Your promise to yourself, signed with your finger.
 export default function SetupSign() {
   const { session } = useAuth();
   const { draft, update } = useSetup();
@@ -31,7 +31,7 @@ export default function SetupSign() {
 
   return (
     <SetupScreen
-      step={5}
+      step={6}
       footer={
         <>
           <Button label="Sign and commit" disabled={!draft.signature || !main.trim()} onPress={commit} />

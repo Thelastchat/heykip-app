@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { pinColors } from '@/theme';
 
+import { startingMonth } from '@/lib/budget';
+
 import type { SetupDraft } from './draft';
 import { makePlan } from './plan';
 
@@ -89,6 +91,8 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
       daily_budget: plan.dailySpend,
       money_style: draft.moneyStyle,
       money_leaks: draft.leaks,
+      budget_style: draft.budgetStyle,
+      budget: startingMonth(draft.budgetStyle, plan, draft.goalTitle.trim(), draft.goalKind === 'safety_net', draft.incomeType === 'regular' ? draft.payday : null),
       plan: choice,
       trial_ends_at: choice === 'trial' ? new Date(stamp + 7 * 86_400_000).toISOString() : null,
       onboarded: true,

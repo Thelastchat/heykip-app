@@ -16,11 +16,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CatIcon } from '@/components/CatIcon';
 import { Kip, type KipMood } from '@/components/Kip';
+import type { IconKey } from '@/lib/budget';
 import { T } from '@/components/ui';
 import { colors, fonts, radius, shadow } from '@/theme';
 
-export const STEPS = 5;
+export const STEPS = 6;
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
 export function SetupScreen({ step, footer, children }: { step?: number; footer: ReactNode; children: ReactNode }) {
@@ -220,6 +222,20 @@ export function Chip({ label, on, onPress }: { label: string; on: boolean; onPre
   );
 }
 
+/** A goal-type pill: grey with a black icon; when picked, it fills with its own brand colour and gets a black outline. */
+export function GoalPill({ label, icon, color, on, onPress }: { label: string; icon: IconKey; color: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected: on }}
+      onPress={onPress}
+      style={[styles.goalPill, on && { backgroundColor: color, borderColor: colors.ink }]}>
+      <CatIcon name={icon} size={18} />
+      <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function PrivacyNote() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -261,4 +277,5 @@ const styles = StyleSheet.create({
 
   chip: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  goalPill: { height: 38, paddingLeft: 10, paddingRight: 14, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

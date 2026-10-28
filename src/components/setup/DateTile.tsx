@@ -10,7 +10,7 @@ import { colors, fonts, radius } from '@/theme';
 import { SmallTile, smallValue } from './kit';
 
 /** "By when?" — a tile that opens the system date picker. Only future dates. */
-export function DateTile({ label, value, onChange, style }: { label: string; value: string | null; onChange: (iso: string) => void; style?: StyleProp<ViewStyle> }) {
+export function DateTile({ label, value, onChange, style, emptyLabel }: { label: string; value: string | null; onChange: (iso: string) => void; style?: StyleProp<ViewStyle>; emptyLabel?: string }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const tomorrow = new Date();
@@ -38,8 +38,8 @@ export function DateTile({ label, value, onChange, style }: { label: string; val
   return (
     <>
       <SmallTile label={label} style={style} onPress={show}>
-        <Text style={[smallValue, !value && { color: colors.faint }]} numberOfLines={1}>
-          {value ? shortDate(parseDay(value)) : '19 Dec'}
+        <Text style={[smallValue, !value && !emptyLabel && { color: colors.faint }]} numberOfLines={1}>
+          {value ? shortDate(parseDay(value)) : (emptyLabel ?? '19 Dec')}
         </Text>
       </SmallTile>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
