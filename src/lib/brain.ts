@@ -20,11 +20,15 @@ export type Inputs = {
   income: number; // per month (salary, or a slow month for changing income)
   rent: number;
   bills: number; // other fixed bills
-  goal: { type: GoalType; title: string; target: number; saved: number; months: number | null; monthly: number | null };
+  /** extra = side money expected before the goal date (a bonus, or side work for a while) — counted toward the goal. */
+  goal: { type: GoalType; title: string; target: number; saved: number; months: number | null; monthly: number | null; extra?: number };
   living?: Partial<Living>; // the person's own numbers, when they change Kip's
 };
 
 export type Living = { food: number; transport: number; health: number; household: number };
+
+/** What's still to come from pay: the goal, minus what's saved and any side money expected before the date. */
+export const goalNeed = (i: Inputs) => Math.max(0, i.goal.target - i.goal.saved - (i.goal.extra ?? 0));
 
 const r10 = (n: number) => Math.round(n / 10) * 10;
 const r100 = (n: number) => Math.round(n / 100) * 100;
@@ -84,7 +88,7 @@ export function verdict(i: Inputs): Verdict {
     if (m <= R.most) return { kind: 'tight', perMonth: m, months: 12, funLeft: R.left - m };
     return { kind: 'notByThen', need: m, months: 12, laterComfy: 0, laterTight: 0, byThen: R.comfortable * 12, perMonth: R.comfortable };
   }
-  const need = Math.max(0, i.goal.target - i.goal.saved);
+  const need = goalNeed(i);
   const months = i.goal.months ?? Math.ceil(need / Math.max(R.comfortable, 100));
   const per = Math.ceil(need / months / 100) * 100;
   if (per <= R.comfortable) return { kind: 'doable', perMonth: per, months };
@@ -127,7 +131,7 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   const S = safetyNet(i);
   const R = room(i);
   const isEmergency = i.goal.type === 'emergency';
-  const need = i.goal.type === 'monthly' ? Infinity : Math.max(0, i.goal.target - i.goal.saved);
+  const need = i.goal.type === 'monthly' ? Infinity : goalNeed(i);
   const notes: string[] = [];
   let goal = 0, net = isEmergency ? 0 : S.monthly, invest = 0, learn = 0, give = 0;
 
@@ -206,7 +210,7 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
 
   const goalMonths = i.goal.type === 'monthly' ? null : goal > 0 ? Math.ceil(need / goal) : null;
   const netPace = isEmergency ? goal : net;
-  const netMonths = netPace > 0 ? Math.ceil((isEmergency ? Math.max(0, i.goal.target - i.goal.saved) : S.target) / netPace) : Infinity;
+  const netMonths = netPace > 0 ? Math.ceil((isEmergency ? goalNeed(i) : S.target) / netPace) : Infinity;
   const goalIn12 = Math.min(goal * 12, need);
   // Once the goal is reached, the same monthly amount keeps going — to the safety net (Kip moves it on payday).
   const netIn12 = net * 12 + invest * 12 + Math.max(0, goal * 12 - goalIn12);
@@ -255,7 +259,7 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit, loc
   const now = plan(i, style, goalNow);
   const funMin = funMinimum(i.income);
   const spareFun = Math.max(0, now.fun - funMin);
-  const need = i.goal.type === 'monthly' ? Infinity : Math.max(0, i.goal.target - i.goal.saved);
+  const need = i.goal.type === 'monthly' ? Infinity : goalNeed(i);
   const out: EditResult = { inputs: i, goal: goalNow, fromFun: 0, fromGoal: 0, toGoal: 0, toFun: 0, limit: null, short: 0, blocked: 0 };
 
   if (e.kind === 'goal') {

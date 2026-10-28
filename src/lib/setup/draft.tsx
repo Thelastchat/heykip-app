@@ -13,6 +13,7 @@ export type Leak = 'delivery' | 'grab' | 'shopping' | 'coffee' | 'goingOut' | 'b
 export type GoalKind = 'trip' | 'gadget' | 'car' | 'home' | 'safety_net' | 'monthly';
 /** How Kip splits what's left after the goal, the safety net and bills. */
 export type BudgetStyle = 'kip' | '503020' | 'jars' | 'savefirst';
+export type SideIncome = { kind: 'once' | 'monthly'; amount: number; months: number | null };
 
 export type SetupDraft = {
   incomeType: IncomeType;
@@ -39,6 +40,8 @@ export type SetupDraft = {
   budgetStyle: BudgetStyle;
   goalPerMonth: number | null; // set on "Make it yours"; null = Kip's pick
   locks: { goal: boolean; fun: boolean }; // "Make it yours": what Kip may not move on its own
+  /** Extra money for the goal: a one-off bonus, or side work every month — for some months, or until the goal (months null). */
+  sideIncome: SideIncome | null;
   living: Partial<Living>; // the person's own living costs, when they change Kip's
 
   promiseMain: string | null; // null = Kip's wording
@@ -70,6 +73,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   budgetStyle: 'kip',
   goalPerMonth: null,
   locks: { goal: false, fun: false },
+  sideIncome: null,
   living: {},
   promiseMain: null,
   promiseBackup: null,
@@ -88,7 +92,7 @@ type SetupState = {
 
 const SetupContext = createContext<SetupState | null>(null);
 
-const PLAN_INPUTS: (keyof SetupDraft)[] = ['incomeType', 'monthlyIncome', 'slowMonth', 'goodMonth', 'rent', 'bills', 'goalKind', 'goalTarget', 'goalSaved', 'goalDue', 'goalMonthly'];
+const PLAN_INPUTS: (keyof SetupDraft)[] = ['incomeType', 'monthlyIncome', 'slowMonth', 'goodMonth', 'rent', 'bills', 'goalKind', 'goalTarget', 'goalSaved', 'goalDue', 'goalMonthly', 'sideIncome'];
 
 export function SetupProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT);

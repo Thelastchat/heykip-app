@@ -9,7 +9,7 @@ import { Kip } from '@/components/Kip';
 import { SetupScreen, Title, picked } from '@/components/setup/kit';
 import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
-import { LIVING_FLOOR, applyEdit, funMinimum, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
+import { LIVING_FLOOR, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
 import { CATEGORY, type IconKey } from '@/lib/budget';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
@@ -39,7 +39,7 @@ export default function SetupYours() {
   const monthly = draft.goalKind === 'monthly';
   const emergency = draft.goalKind === 'safety_net';
   const funMin = funMinimum(inputs.income);
-  const need = monthly ? Infinity : Math.max(0, inputs.goal.target - inputs.goal.saved);
+  const need = monthly ? Infinity : goalNeed(inputs);
   const sliderMax = Math.max(0, Math.min(r.goal + Math.max(0, r.fun - funMin), need));
   const [note, setNote] = useState<NoteState | null>(null);
   const goalPatch = (g: number): Partial<SetupDraft> => (monthly ? { goalMonthly: g, goalPerMonth: null } : { goalPerMonth: g });

@@ -9,7 +9,7 @@ import { livingFor, plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, STYLES } from '@/lib/budget';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
-import { inputsFrom, monthYear, monthsFromNow, ordinal, shortName } from '@/lib/setup/plan';
+import { inputsFrom, monthYear, monthsFromNow, ordinal, shortName, sideTotal } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts, money, radius } from '@/theme';
 
@@ -83,7 +83,7 @@ export default function SetupPlan() {
     for (const m of [Math.round(n / 3), Math.round((2 * n) / 3)].filter((m, k, a) => m > 0 && m < n && a.indexOf(m) === k)) {
       road.push({
         when: monthYear(monthsFromNow(m, draft)),
-        amount: baht(Math.min(i.goal.target, i.goal.saved + r.goal * m)),
+        amount: baht(Math.min(i.goal.target, i.goal.saved + r.goal * m + sideTotal(draft.sideIncome, m))),
       });
     }
     road.push({ when: monthYear(due), amount: `${short}!` });
@@ -93,6 +93,13 @@ export default function SetupPlan() {
     r.goal + r.net > 0
       ? `${payday}, ${baht(r.goal + r.net + r.invest)} moves out${early}: ${baht(r.goal)} to ${short}${r.net ? `, ${baht(r.net)} to your safety net` : ''}${r.invest ? `, ${baht(r.invest)} to your freedom jar` : ''}.`
       : `${payday}, rent and bills go first.`,
+    ...(draft.sideIncome && !monthly
+      ? [
+          draft.sideIncome.kind === 'once'
+            ? `When your ${baht(draft.sideIncome.amount)} bonus arrives, log it — it goes straight to ${short}.`
+            : `Side work: log your ${baht(draft.sideIncome.amount)} on the 1st${draft.sideIncome.months ? ` for ${draft.sideIncome.months} months` : ''} — it goes straight to ${short}. Missed a month? I’ll show the new date, no guilt.`,
+        ]
+      : []),
     `You get ${baht(r.daily)} a day. Spend less → the rest goes to ${draft.goalKind === 'safety_net' ? short : 'your safety net'} on payday.`,
     ...leakRules(draft.leaks, i).map((x) => `${x.title}: ${x.rule}`),
     monthly ? `Bad month? I lower ${short} first — never food or rent — and tell you.` : `Bad month? I lower ${short} first — never food or rent — and tell you the new date.`,

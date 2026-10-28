@@ -1,4 +1,5 @@
 import { billsGuess, living, livingFor, livingTotal, plan as splitMonth, room, safetyNet, verdict, type GoalType, type Inputs, type Result, type Verdict } from '@/lib/brain';
+import type { SideIncome } from './draft';
 import { getCalendars } from 'expo-localization';
 
 import { baht } from '@/lib/money';
@@ -175,8 +176,29 @@ function incomeBasis(d: SetupDraft): { income: number; basis: Plan['incomeBasis'
 
 const GOAL_TYPE: Record<GoalKind, GoalType> = { trip: 'trip', gadget: 'gadget', car: 'car', home: 'home', safety_net: 'emergency', monthly: 'monthly' };
 
+/** Side money that lands before the goal is reached (months = months to the goal). */
+export function sideTotal(side: SideIncome | null | undefined, months: number): number {
+  if (!side || side.amount <= 0) return 0;
+  if (side.kind === 'once') return side.amount;
+  return side.amount * Math.min(side.months ?? months, months);
+}
+
+/** With side money "until the goal", the date depends on it: the first month where pay + side money covers the rest. */
+export function monthsWithSide(i: Inputs, side: SideIncome | null | undefined, perMonth: number): number | null {
+  const left = Math.max(0, i.goal.target - i.goal.saved);
+  for (let m = 1; m <= 600; m++) if (perMonth * m + sideTotal(side, m) >= left) return m;
+  return null;
+}
+
 export function inputsFrom(d: SetupDraft, now = new Date()): Inputs {
   const { income } = incomeBasis(d);
+  const base = inputsNoSide(d, income, now);
+  if (!d.sideIncome || d.goalKind === 'monthly') return base;
+  const months = base.goal.months ?? monthsWithSide(base, d.sideIncome, Math.max(room(base).comfortable, 100)) ?? 12;
+  return { ...base, goal: { ...base.goal, extra: sideTotal(d.sideIncome, months) } };
+}
+
+function inputsNoSide(d: SetupDraft, income: number, now: Date): Inputs {
   return {
     income,
     rent: d.rent ?? 0,

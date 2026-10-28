@@ -19,7 +19,24 @@ import { colors, fonts, money } from '@/theme';
 // Everything the person told Kip, what Kip found in it, and an Edit on each part.
 // Coming back from an edit, Kip redoes the plan (a short "updating" moment) and says so.
 const snapshot = (d: SetupDraft) =>
-  JSON.stringify([d.monthlyIncome, d.slowMonth, d.goodMonth, d.payday, d.rent, d.bills, d.living, d.moneyStyle, d.leaks, d.goalTitle, d.goalKind, d.goalTarget, d.goalSaved, d.goalDue, d.goalMonthly]);
+  JSON.stringify([
+    d.monthlyIncome,
+    d.slowMonth,
+    d.goodMonth,
+    d.payday,
+    d.rent,
+    d.bills,
+    d.living,
+    d.moneyStyle,
+    d.leaks,
+    d.goalTitle,
+    d.goalKind,
+    d.goalTarget,
+    d.goalSaved,
+    d.goalDue,
+    d.goalMonthly,
+    d.sideIncome,
+  ]);
 
 export default function SetupEverything() {
   const { draft } = useSetup();
@@ -76,7 +93,10 @@ export default function SetupEverything() {
           icon: t.icon,
           color: t.color,
           title: v.kind === 'doable' ? `${plan.short} fits comfortably` : `${plan.short} is a stretch`,
-          sub: v.kind === 'doable' ? `${baht(plan.monthlySave)} a month = ${baht(plan.monthlySave * 12)} in a year.` : `${baht(R.comfortable)} a month is comfortable — ${baht(plan.monthlySave)} is planned.`,
+          sub:
+            v.kind === 'doable'
+              ? `${baht(plan.monthlySave)} a month = ${baht(plan.monthlySave * 12)} in a year.`
+              : `${baht(R.comfortable)} a month is comfortable — ${baht(plan.monthlySave)} is planned.`,
         }
       : {
           icon: t.icon,
@@ -151,7 +171,19 @@ export default function SetupEverything() {
       <Section title="YOUR GOAL" onEdit={() => edit('/setup/goal')}>
         <Row k={plan.short} v={monthly ? `${baht(draft.goalMonthly ?? 0)} a month` : baht(i.goal.target)} />
         {!monthly && <Row k="Saved so far" v={baht(i.goal.saved)} />}
-        {!monthly && !emergency && draft.goalDue && <Row k="You asked for" v={`${fullDate(parseDay(draft.goalDue))}${monthYear(plan.due) !== monthYear(parseDay(draft.goalDue)) ? ` → planned ${monthYear(plan.due)}` : ''}`} />}
+        {!monthly && draft.sideIncome && (
+          <Row
+            k="Extra money"
+            v={
+              draft.sideIncome.kind === 'once'
+                ? `${baht(draft.sideIncome.amount)} bonus`
+                : `${baht(draft.sideIncome.amount)}/mo side work${draft.sideIncome.months ? ` × ${draft.sideIncome.months}` : ''}`
+            }
+          />
+        )}
+        {!monthly && !emergency && draft.goalDue && (
+          <Row k="You asked for" v={`${fullDate(parseDay(draft.goalDue))}${monthYear(plan.due) !== monthYear(parseDay(draft.goalDue)) ? ` → planned ${monthYear(plan.due)}` : ''}`} />
+        )}
       </Section>
     </SetupScreen>
   );

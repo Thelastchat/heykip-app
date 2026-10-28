@@ -15,22 +15,23 @@ import { Button } from '@/components/ui';
 import { livingFor, plan as splitMonth, room, verdict, type Inputs } from '@/lib/brain';
 import type { IconKey } from '@/lib/budget';
 import { baht } from '@/lib/money';
-import { useSetup } from '@/lib/setup/draft';
+import { useSetup, type SideIncome } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
-import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, monthsUntil, parseDay, shortName } from '@/lib/setup/plan';
+import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, monthsUntil, parseDay, shortName, sideTotal } from '@/lib/setup/plan';
 import { colors, fonts, radius } from '@/theme';
 
 const ZONE = { too: colors.orange, tight: colors.peach, comfy: colors.lime } as const;
 type Zone = keyof typeof ZONE;
-type AddOn = 'saved' | 'delivery' | 'bonus';
+type AddOn = 'saved' | 'delivery' | 'extra';
 type Mode = 'move' | 'keep' | 'nodate';
 
 const r100 = (n: number) => Math.round(n / 100) * 100;
-const comfyMonths = (i: Inputs) => Math.max(1, Math.ceil(Math.max(0, i.goal.target - i.goal.saved) / Math.max(room(i).comfortable, 100)));
+const QUICK_SIDE = [1000, 2000, 3000, 5000];
+const HOW_LONG: (number | null)[] = [3, 6, 12, null];
 
 export function FindWhatWorks() {
   const { draft, update } = useSetup();
-  const base = inputsFrom(draft);
+  const base = inputsFrom({ ...draft, sideIncome: null });
   const L = livingFor(base);
   const short = shortName(draft.goalTitle, draft.goalKind);
   const asked = draft.goalDue ? parseDay(draft.goalDue) : null;
@@ -40,44 +41,53 @@ export function FindWhatWorks() {
   const t = typeInfo(draft.goalType, draft.goalKind);
 
   const [mode, setMode] = useState<Mode>('move');
-  const [ticked, setTicked] = useState<Record<AddOn, boolean>>({ saved: false, delivery: false, bonus: false });
+  const [ticked, setTicked] = useState<Record<AddOn, boolean>>({ saved: false, delivery: false, extra: Boolean(draft.sideIncome) });
   const [savedExtra, setSavedExtra] = useState(10000);
-  const [bonus, setBonus] = useState(10000);
+  const [side, setSide] = useState<SideIncome>(draft.sideIncome ?? { kind: 'monthly', amount: 3000, months: 6 });
   // A third less delivery (delivery ≈ 60% of food), never below the ฿150-a-day food floor.
   const deliveryCut = draft.leaks.includes('delivery') ? Math.max(0, Math.min(r100(L.food * 0.6 * 0.33), L.food - 4500)) : 0;
-  const opts = { savedExtra, bonus, deliveryCut, L };
+  const opts = { savedExtra, deliveryCut, L };
 
   const inputs = withAddOns(base, ticked, opts);
   const R = room(inputs);
-  const need = Math.max(0, inputs.goal.target - inputs.goal.saved);
+  const left = Math.max(0, inputs.goal.target - inputs.goal.saved);
+  const extraAt = (mm: number, on = ticked.extra) => (on ? sideTotal(side, mm) : 0);
+  const perAt = (mm: number, target = left, on = ticked.extra) => Math.ceil(Math.max(0, target - extraAt(mm, on)) / mm / 100) * 100;
+  const firstMonth = (limit: number, target = left, on = ticked.extra) => {
+    for (let mm = 1; mm <= 240; mm++) if (perAt(mm, target, on) <= Math.max(limit, 0)) return mm;
+    return 240;
+  };
+  const sideKey = `${ticked.extra}${side.kind}${side.amount}${side.months}`;
   const months = useMemo(() => {
-    const fast = Math.max(1, Math.ceil(need / Math.max(R.most, 100)));
-    const comfy = Math.max(1, Math.ceil(need / Math.max(R.comfortable, 100)));
+    const fast = firstMonth(R.most);
+    const comfy = firstMonth(R.comfortable);
     const lo = Math.max(1, Math.floor(fast * 0.6));
     const hi = Math.min(240, Math.max(comfy + Math.ceil(comfy * 0.4), fast + 6, askedMonths ?? 0));
     return { fast, comfy, lo, hi };
-  }, [need, R.most, R.comfortable, askedMonths]);
+  }, [left, R.most, R.comfortable, askedMonths, sideKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Your own date if it now fits comfortably, otherwise Kip's pick. Re-snaps when add-ons change,
-  // so money an add-on frees moves the goal closer instead of quietly becoming fun money.
-  const snap = () => (askedMonths && askedMonths >= months.comfy ? askedMonths : months.comfy);
+  // Kip's pick: the soonest comfortable month. Re-snaps when add-ons change, so money an add-on frees
+  // moves the goal closer instead of quietly becoming spending money. People can still drag to any month.
+  const snap = () => months.comfy;
   const [pick, setPick] = useState<number>(snap);
-  const tickKey = `${ticked.saved}${ticked.delivery}${ticked.bonus}${savedExtra}${bonus}`;
+  const tickKey = `${ticked.saved}${ticked.delivery}${savedExtra}${sideKey}`;
   useEffect(() => setPick(snap()), [tickKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep my date: the budget becomes what you'll really have by then (never more than the goal).
   const keepMonths = askedMonths ?? months.comfy;
-  const keepBudget = Math.min(base.goal.target, inputs.goal.saved + R.comfortable * keepMonths);
+  const keepBudget = Math.min(base.goal.target, inputs.goal.saved + R.comfortable * keepMonths + extraAt(keepMonths));
   const keep = mode === 'keep' && askedMonths !== null;
   const m = keep ? keepMonths : Math.min(months.hi, Math.max(months.lo, pick));
-  const effective: Inputs = keep ? { ...inputs, goal: { ...inputs.goal, target: keepBudget } } : inputs;
-  const effNeed = Math.max(0, effective.goal.target - effective.goal.saved);
-  const per = Math.ceil(effNeed / m / 100) * 100;
+  const target = keep ? keepBudget : inputs.goal.target;
+  const per = perAt(m, Math.max(0, target - inputs.goal.saved));
   const zone: Zone = per <= R.comfortable ? 'comfy' : per <= R.most ? 'tight' : 'too';
-  const result = splitMonth({ ...effective, goal: { ...effective.goal, months: m } }, 'kip');
+  const effective: Inputs = { ...inputs, goal: { ...inputs.goal, target, months: m, extra: extraAt(m) } };
+  const result = splitMonth(effective, 'kip');
   const date = monthsFromNow(m, draft);
   const fullFits = keepBudget >= base.goal.target;
   const nTicked = (Object.keys(ticked) as AddOn[]).filter((k) => ticked[k]).length;
+  // Side work a month that would keep the person's own date, comfortably.
+  const neededForDate = askedMonths ? Math.max(0, Math.ceil((left - R.comfortable * askedMonths) / askedMonths / 100) * 100) : 0;
 
   const say =
     v0.kind === 'notByThen'
@@ -92,16 +102,21 @@ export function FindWhatWorks() {
     Haptics.selectionAsync().catch(() => {});
     setMode(next);
   }
+  function changeSide(patch: Partial<SideIncome>) {
+    Haptics.selectionAsync().catch(() => {});
+    setSide((x) => ({ ...x, ...patch }));
+  }
 
   function go() {
     if (mode === 'nodate') {
-      update({ goalType: draft.goalType ?? t.key, goalKind: 'monthly', goalMonthly: Math.max(500, R0.comfortable), goalTarget: null, goalDue: null, goalPerMonth: null });
+      update({ goalType: draft.goalType ?? t.key, goalKind: 'monthly', goalMonthly: Math.max(500, R0.comfortable), goalTarget: null, goalDue: null, goalPerMonth: null, sideIncome: null });
     } else {
       update({
         goalDue: keep && draft.goalDue ? draft.goalDue : isoDay(date),
-        goalSaved: effective.goal.saved,
-        goalTarget: effective.goal.target,
+        goalSaved: inputs.goal.saved,
+        goalTarget: target,
         living: inputs.living ?? {},
+        sideIncome: ticked.extra && side.amount > 0 ? side : null,
         goalPerMonth: null,
       });
     }
@@ -110,18 +125,37 @@ export function FindWhatWorks() {
 
   // What an add-on does, measured against everything else you've ticked.
   const effect = (k: AddOn): string => {
-    const without = withAddOns(base, { ...ticked, [k]: false }, opts);
-    const withIt = withAddOns(base, { ...ticked, [k]: true }, opts);
+    const w = (on: boolean) => withAddOns(base, { ...ticked, [k]: on }, opts);
+    const without = w(false);
+    const withIt = w(true);
+    const sideOn = (on: boolean) => (k === 'extra' ? on : ticked.extra);
+    const leftOf = (i: Inputs) => Math.max(0, i.goal.target - i.goal.saved);
     if (keep) {
-      const gain = Math.min(base.goal.target, withIt.goal.saved + room(withIt).comfortable * keepMonths) - Math.min(base.goal.target, without.goal.saved + room(without).comfortable * keepMonths);
+      const budget = (i: Inputs, on: boolean) => Math.min(base.goal.target, i.goal.saved + room(i).comfortable * keepMonths + extraAt(keepMonths, on));
+      const gain = budget(withIt, sideOn(true)) - budget(without, sideOn(false));
       return gain > 0 ? `+${baht(gain)} to your budget by ${asked ? fullDate(asked) : 'your date'}` : 'Your full budget already fits';
     }
-    const sooner = comfyMonths(without) - comfyMonths(withIt);
-    const lead = k === 'saved' ? 'Counts toward ' + short + ' from day one' : k === 'bonus' ? `A ${baht(bonus)} bonus` : `${baht(deliveryCut)} a month less delivery`;
+    const comfyOf = (i: Inputs, on: boolean) => {
+      for (let mm = 1; mm <= 240; mm++) if (Math.ceil(Math.max(0, leftOf(i) - extraAt(mm, on)) / mm / 100) * 100 <= room(i).comfortable) return mm;
+      return 240;
+    };
+    const sooner = comfyOf(without, sideOn(false)) - comfyOf(withIt, sideOn(true));
+    const lead =
+      k === 'saved'
+        ? 'Counts toward ' + short + ' from day one'
+        : k === 'extra'
+          ? side.kind === 'once'
+            ? `A ${baht(side.amount)} bonus`
+            : `${baht(side.amount)} a month ${side.months ? `for ${side.months} months` : `until ${short}`}`
+          : `${baht(deliveryCut)} a month less delivery`;
     return sooner > 0 ? `${lead} · ${sooner} month${sooner > 1 ? 's' : ''} sooner` : lead;
   };
 
-  const includes = [ticked.saved && `✓ ${baht(savedExtra)} saved`, ticked.delivery && `✓ Delivery −${baht(deliveryCut)}/mo`, ticked.bonus && `✓ ${baht(bonus)} bonus`].filter(Boolean) as string[];
+  const includes = [
+    ticked.saved && `✓ ${baht(savedExtra)} saved`,
+    ticked.delivery && `✓ Delivery −${baht(deliveryCut)}/mo`,
+    ticked.extra && (side.kind === 'once' ? `✓ ${baht(side.amount)} bonus` : `✓ ${baht(side.amount)}/mo side work${side.months ? ` × ${side.months}` : ''}`),
+  ].filter(Boolean) as string[];
 
   const button =
     mode === 'nodate'
@@ -129,8 +163,9 @@ export function FindWhatWorks() {
       : zone === 'too'
         ? 'Pick a later month'
         : keep && asked
-          ? `Go with ${baht(effective.goal.target)} by ${monthYear(asked)}`
+          ? `Go with ${baht(target)} by ${monthYear(asked)}`
           : `Go with ${monthYear(date)}`;
+  const sideMonthsNow = side.months ? Math.min(side.months, m) : m;
 
   return (
     <SetupScreen step={3} footer={<Button label={button} disabled={mode !== 'nodate' && zone === 'too'} onPress={go} />}>
@@ -177,6 +212,9 @@ export function FindWhatWorks() {
               <View style={styles.sum}>
                 <SumRow k="Already saved" v={baht(inputs.goal.saved)} />
                 <SumRow k={`${baht(R.comfortable)} a month × ${keepMonths} month${keepMonths > 1 ? 's' : ''}`} v={baht(R.comfortable * keepMonths)} />
+                {ticked.extra && extraAt(keepMonths) > 0 && (
+                  <SumRow k={side.kind === 'once' ? 'Bonus' : `Side work ${baht(side.amount)} × ${side.months ? Math.min(side.months, keepMonths) : keepMonths}`} v={baht(extraAt(keepMonths))} />
+                )}
                 <View style={{ height: 1, backgroundColor: 'rgba(17,17,17,0.08)' }} />
                 <SumRow k={draft.goalKind === 'trip' ? 'Trip budget' : 'Your goal'} v={baht(keepBudget)} bold />
               </View>
@@ -202,7 +240,7 @@ export function FindWhatWorks() {
               </Text>
               <MonthDial lo={months.lo} hi={months.hi} value={m} fast={months.fast} comfy={months.comfy} locked={false} onChange={setPick} />
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <Stat k="Save a month" v={baht(per)} />
+                <Stat k="Save a month" v={baht(per)} sub={ticked.extra && side.kind === 'monthly' ? `+ ${baht(side.amount)} side work` : undefined} />
                 <Stat k="Spend a day" v={zone === 'too' ? '—' : baht(result.daily)} />
                 <Stat k="Fun a month" v={zone === 'too' ? '—' : baht(result.fun)} sub={zone === 'tight' ? 'near the minimum' : undefined} />
               </View>
@@ -228,8 +266,85 @@ export function FindWhatWorks() {
               <AmountInput value={savedExtra} onChange={setSavedExtra} label="Already saved" />
             </AddOnRow>
             {deliveryCut > 0 && <AddOnRow icon="food" color={colors.sky} title="Cut food delivery" effect={effect('delivery')} on={ticked.delivery} onPress={() => tick('delivery')} />}
-            <AddOnRow icon="gift" color={colors.lavender} title="A bonus or side money" effect={effect('bonus')} on={ticked.bonus} onPress={() => tick('bonus')}>
-              <AmountInput value={bonus} onChange={setBonus} label="Bonus" />
+            <AddOnRow
+              icon="gift"
+              color={colors.lavender}
+              title="Extra money — a bonus or side work"
+              effect={ticked.extra ? 'Once, or every month for a while' : effect('extra')}
+              on={ticked.extra}
+              onPress={() => tick('extra')}>
+              <View style={{ gap: 10 }}>
+                <View style={styles.miniSeg}>
+                  {(
+                    [
+                      ['once', 'Once (a bonus)'],
+                      ['monthly', 'Every month'],
+                    ] as const
+                  ).map(([k, label]) => (
+                    <Pressable
+                      key={k}
+                      onPress={() => changeSide({ kind: k })}
+                      style={[styles.miniItem, side.kind === k && styles.miniOn]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: side.kind === k }}>
+                      <Text style={[styles.miniText, side.kind === k && { fontFamily: fonts.bold, color: colors.ink }]}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.subLabel}>{side.kind === 'once' ? 'HOW MUCH?' : 'HOW MUCH A MONTH?'}</Text>
+                <View style={{ gap: 4 }}>
+                  <AmountInput value={side.amount} onChange={(amount) => setSide((x) => ({ ...x, amount }))} label={side.kind === 'once' ? 'Bonus amount' : 'Side work a month'} />
+                  <Text style={[styles.addonSub, { color: 'rgba(17,17,17,0.7)' }]}>
+                    {side.kind === 'once' ? 'a bonus, a gift, money you’ll sell something for' : 'e.g. weekend shifts, freelance, selling online'}
+                  </Text>
+                </View>
+                {side.kind === 'monthly' && (
+                  <>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {QUICK_SIDE.map((q) => (
+                        <Pressable key={q} onPress={() => changeSide({ amount: q })} style={[styles.chipBtn, side.amount === q && styles.chipOn]} accessibilityRole="button">
+                          <Text style={[styles.miniText, { color: colors.ink }, side.amount === q && { fontFamily: fonts.bold }]}>{baht(q)}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Text style={styles.subLabel}>FOR HOW LONG?</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
+                      {HOW_LONG.map((h) => {
+                        const sel = side.months === h;
+                        return (
+                          <Pressable
+                            key={String(h)}
+                            onPress={() => changeSide({ months: h })}
+                            style={[styles.chipBtn, sel && styles.chipOn]}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: sel }}>
+                            <Text style={[styles.miniText, { color: colors.ink }, sel && { fontFamily: fonts.bold }]}>{h ? `${h} months` : `Until ${short}`}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+                <View style={styles.sum}>
+                  <SumRow
+                    k={side.kind === 'once' ? 'Bonus' : `${baht(side.amount)} × ${sideMonthsNow} month${sideMonthsNow > 1 ? 's' : ''}`}
+                    v={baht(side.kind === 'once' ? side.amount : side.amount * sideMonthsNow)}
+                  />
+                  {!keep && <SumRow k={short} v={zone === 'too' ? 'still too soon' : `${monthYear(date)}${effect('extra').includes('sooner') ? ` · ${effect('extra').split('· ').pop()}` : ''}`} />}
+                </View>
+                {neededForDate > 0 && asked && (
+                  <View style={styles.kipTip}>
+                    <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink }}>
+                      <Text style={{ fontFamily: fonts.semibold }}>To keep {fullDate(asked)}</Text>, you’d need about <Text style={{ fontFamily: fonts.semibold }}>{baht(neededForDate)} a month</Text>{' '}
+                      extra until then.
+                    </Text>
+                    <Pressable onPress={() => changeSide({ kind: 'monthly', amount: neededForDate, months: null })} style={styles.useBtn} accessibilityRole="button">
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' }}>Use {baht(neededForDate)}</Text>
+                    </Pressable>
+                  </View>
+                )}
+                <Text style={[styles.addonSub, { fontSize: 11, color: 'rgba(17,17,17,0.65)' }]}>Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.</Text>
+              </View>
             </AddOnRow>
           </View>
         </>
@@ -263,10 +378,9 @@ export function FindWhatWorks() {
   );
 }
 
-function withAddOns(i: Inputs, on: Record<AddOn, boolean>, o: { savedExtra: number; bonus: number; deliveryCut: number; L: ReturnType<typeof livingFor> }): Inputs {
+function withAddOns(i: Inputs, on: Record<AddOn, boolean>, o: { savedExtra: number; deliveryCut: number; L: ReturnType<typeof livingFor> }): Inputs {
   let out: Inputs = { ...i, goal: { ...i.goal, months: null } };
   if (on.saved) out = { ...out, goal: { ...out.goal, saved: out.goal.saved + o.savedExtra } };
-  if (on.bonus) out = { ...out, goal: { ...out.goal, saved: out.goal.saved + o.bonus } };
   if (on.delivery && o.deliveryCut > 0) out = { ...out, living: { ...out.living, food: Math.max(4500, o.L.food - o.deliveryCut) } };
   return out;
 }
@@ -402,6 +516,15 @@ function AmountInput({ value, onChange, label }: { value: number; onChange: (n: 
 }
 
 const styles = StyleSheet.create({
+  miniSeg: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)' },
+  miniItem: { flex: 1, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  miniOn: { backgroundColor: '#FFFFFF', borderColor: colors.ink },
+  miniText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+  subLabel: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: 'rgba(17,17,17,0.6)' },
+  chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
+  chipOn: { borderColor: colors.ink },
+  kipTip: { borderRadius: 14, backgroundColor: colors.lime, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  useBtn: { height: 30, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
   seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: colors.grey },
   segItem: { flex: 1, borderRadius: radius.pill, paddingVertical: 8, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
   segOn: { backgroundColor: '#FFFFFF', borderColor: colors.ink },
