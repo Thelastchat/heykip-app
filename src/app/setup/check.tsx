@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   bar: { flexDirection: 'row', height: 14, borderRadius: radius.pill, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(17,17,17,0.08)' },
   option: { borderRadius: 18, borderWidth: 2, borderColor: 'transparent', backgroundColor: '#F8F6F4', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  optionOn: { borderColor: 'transparent' },
+  optionOn: { borderColor: colors.ink },
   radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
 });

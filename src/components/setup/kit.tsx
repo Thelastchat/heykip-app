@@ -165,9 +165,9 @@ export function SmallTile({ label, children, style, onPress }: { label: string; 
 
 export const smallValue = { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, padding: 0 } as const;
 
-// Picked = filled with its own brand colour, no outline — everywhere in the app. Lists pass a colour per option,
-// so when several are picked at once they're still easy to tell apart.
-export const picked = (color: string) => ({ backgroundColor: color, borderColor: 'transparent', boxShadow: 'none' });
+// Picked = its own brand colour + a black outline, everywhere in the app (ก้อย: easier to see than colour alone).
+// Lists pass a colour per option, so when several are picked at once they're still easy to tell apart.
+export const picked = (color: string) => ({ backgroundColor: color, borderColor: colors.ink, boxShadow: 'none' });
 
 export function Segmented<K extends string>({ options, value, onChange }: { options: { key: K; label: string; color?: string }[]; value: K; onChange: (k: K) => void }) {
   return (
@@ -237,7 +237,7 @@ export function Chip({ label, on, onPress, color = colors.lime }: { label: strin
   );
 }
 
-/** A goal-type pill: grey with a black icon; when picked, it fills with its own brand colour. */
+/** A goal-type pill: grey with a black icon; when picked, it fills with its own brand colour and gets a black outline. */
 export function GoalPill({ label, icon, color, on, onPress }: { label: string; icon: IconKey; color: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable

@@ -86,6 +86,8 @@ type SetupState = {
 
 const SetupContext = createContext<SetupState | null>(null);
 
+const PLAN_INPUTS: (keyof SetupDraft)[] = ['incomeType', 'monthlyIncome', 'slowMonth', 'goodMonth', 'rent', 'bills', 'goalKind', 'goalTarget', 'goalSaved', 'goalDue', 'goalMonthly'];
+
 export function SetupProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT);
   const [ready, setReady] = useState(false);
@@ -121,7 +123,18 @@ export function SetupProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(KEY, JSON.stringify(draft)).catch(() => {});
   }, [draft]);
 
-  const update = useCallback((patch: Partial<SetupDraft>) => setDraft((d) => ({ ...d, ...patch })), []);
+  // A custom monthly amount from "Make it yours" only makes sense for the numbers it was made with:
+  // change pay, rent, bills or the goal itself and Kip works the plan out fresh.
+  const update = useCallback(
+    (patch: Partial<SetupDraft>) =>
+      setDraft((d) => {
+        const next = { ...d, ...patch };
+        const changed = PLAN_INPUTS.some((k) => k in patch && patch[k] !== d[k]);
+        if (changed && !('goalPerMonth' in patch)) next.goalPerMonth = null;
+        return next;
+      }),
+    [],
+  );
   const reset = useCallback(() => {
     setDraft(EMPTY_DRAFT);
     AsyncStorage.removeItem(KEY).catch(() => {});

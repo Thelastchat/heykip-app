@@ -52,7 +52,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "web:skia": "setup-skia-web public"
+    "web:skia": "setup-skia-web public",
+    "check:plans": "npx tsx scripts/check-plans.ts"
   },
   "private": true
 }

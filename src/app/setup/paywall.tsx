@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   strong: { fontFamily: fonts.semibold, color: colors.ink },
   tick: { width: 20, height: 20, borderRadius: radius.pill, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   option: { borderRadius: 20, borderWidth: 2, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionOn: { borderColor: 'transparent' },
+  optionOn: { borderColor: colors.ink },
   optionOff: { backgroundColor: colors.grey, borderColor: 'transparent' },
   badge: { position: 'absolute', top: -11, left: 16, height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.ink, justifyContent: 'center' },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },

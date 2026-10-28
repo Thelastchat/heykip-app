@@ -1,3 +1,4 @@
+import { baht } from '@/lib/money';
 // Kip's money brain — v2. Realistic first, goal-first second.
 //
 // The order money is planned in, every month:
@@ -137,14 +138,29 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
     case 'kip':
       goal = Math.min(kipGoal, Math.max(0, R.most));
       break;
-    case 'savefirst':
+    case 'savefirst': {
       // Pay yourself first: the most Kip will plan leaves on payday; everything else is one pot.
-      goal = i.goal.type === 'monthly' ? Math.min(kipGoal, Math.max(0, R.most)) : Math.min(Math.max(0, R.most), need);
+      // A monthly goal keeps its amount — the extra goes to the safety net, so this style always saves the most.
+      const most = Math.max(0, R.most);
+      if (i.goal.type === 'monthly') {
+        goal = Math.min(kipGoal, most);
+        net += most - goal;
+      } else {
+        goal = Math.min(most, need);
+        net += Math.max(0, most - goal); // anything the goal doesn't need still gets saved
+      }
       notes.push('No categories — one pot for everything else.');
       break;
+    }
     case '503020': {
       const save = r100(i.income * 0.2);
       goal = Math.max(0, Math.min(save - net, Math.max(0, R.most)));
+      // A monthly goal is a promise of a set amount (e.g. ฿1,000 to Mom): keep it, the rest of the 20% goes to the safety net.
+      if (i.goal.type === 'monthly' && goal > kipGoal) {
+        net += goal - kipGoal;
+        goal = kipGoal;
+      }
+      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(`20% for saving leaves ${baht(goal)} a month for your goal, not ${baht(kipGoal)}.`);
       if (fixed + L > i.income * 0.5) notes.push(`Your needs are ${Math.round(((fixed + L) / i.income) * 100)}% of income, not 50% — so the fun part is smaller than “30”.`);
       break;
     }
@@ -154,6 +170,11 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
       give = r100(i.income * 0.05);
       goal = Math.min(r100(i.income * 0.1), Math.max(0, R.most));
       net = isEmergency ? 0 : Math.max(net, r100(i.income * 0.1));
+      if (i.goal.type === 'monthly' && goal > kipGoal) {
+        net += goal - kipGoal; // keep the promised monthly amount; the rest of the jar is extra safety
+        goal = kipGoal;
+      }
+      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(`The saving jar holds ${baht(goal)} a month for your goal, not ${baht(kipGoal)}.`);
       if (isEmergency) goal = Math.min(r100(i.income * 0.2), Math.max(0, R.most));
       const necessities = i.income * 0.55;
       if (fixed + L > necessities) notes.push(`Rent, bills and living need ${Math.round(((fixed + L) / i.income) * 100)}%, not 55% — taken from play first.`);
@@ -162,15 +183,22 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   }
   if (goalPerMonth !== undefined && goalPerMonth !== null) goal = Math.min(goalPerMonth, Math.max(0, i.income - fixed - L - net), need);
   let fun = i.income - fixed - L - goal - net - invest - learn - give;
-  // Never below zero: trim learning/giving first, then the extra saving, so life is covered.
+  // Fun never drops below its minimum (plans with no fun get abandoned): trim learning/giving first,
+  // then the extra saving. Only if that's not enough does the goal slow down.
+  const funFloor = Math.min(funMinimum(i.income), Math.max(0, R.left + net - (isEmergency ? 0 : S.monthly)));
   for (const cut of ['learn', 'give', 'net'] as const) {
-    if (fun >= 0) break;
+    if (fun >= funFloor) break;
     const floor = cut === 'net' && !isEmergency ? S.monthly : 0;
     const have = cut === 'learn' ? learn : cut === 'give' ? give : net;
-    const take = Math.min(-fun, have - floor);
+    const take = Math.max(0, Math.min(funFloor - fun, have - floor));
     if (cut === 'learn') learn -= take;
     if (cut === 'give') give -= take;
     if (cut === 'net') net -= take;
+    fun += take;
+  }
+  if (fun < funFloor && goalPerMonth == null) {
+    const take = Math.min(goal, funFloor - fun);
+    goal -= take;
     fun += take;
   }
   if (fun < 0) { goal = Math.max(0, goal + fun); fun = 0; }
@@ -180,7 +208,8 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   const netPace = isEmergency ? goal : net;
   const netMonths = netPace > 0 ? Math.ceil((isEmergency ? Math.max(0, i.goal.target - i.goal.saved) : S.target) / netPace) : Infinity;
   const goalIn12 = Math.min(goal * 12, need);
-  const netIn12 = net * 12 + invest * 12;
+  // Once the goal is reached, the same monthly amount keeps going — to the safety net (Kip moves it on payday).
+  const netIn12 = net * 12 + invest * 12 + Math.max(0, goal * 12 - goalIn12);
   const savedIn12 = goalIn12 + netIn12;
   return {
     style, goal, net, invest, fixed, living: L, fun, learn, give,

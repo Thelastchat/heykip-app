@@ -416,7 +416,7 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
       <SheetTitle mood="think" title="Add a bill" sub="Anything that comes every month: subscriptions, a gym, a phone instalment." />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', 'Gym', 'Phone instalment'].map((n) => (
-          <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky }]} accessibilityRole="button">
+          <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky, borderColor: colors.ink }]} accessibilityRole="button">
             <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: colors.ink }}>{n}</Text>
           </Pressable>
         ))}
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.15)' },
   option: { borderRadius: 18, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionOn: { borderColor: 'transparent' },
+  optionOn: { borderColor: colors.ink },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },
   check: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: '#C9C9C2', alignItems: 'center', justifyContent: 'center' },

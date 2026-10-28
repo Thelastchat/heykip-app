@@ -34,7 +34,7 @@ export default function SetupPlan() {
   const short = monthly ? draft.goalTitle.trim() || 'Savings' : shortName(draft.goalTitle, draft.goalKind);
   const style = draft.budgetStyle;
   const s = STYLES.find((x) => x.key === style) ?? STYLES[0];
-  const r = splitMonth(i, style);
+  const r = splitMonth(i, style, draft.goalPerMonth);
   const L = livingFor(i);
   const due = r.goalMonths ? monthsFromNow(r.goalMonths, draft) : null;
   const funAll = r.fun + r.learn + r.give;
@@ -201,7 +201,7 @@ function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
 
 const styles = StyleSheet.create({
   sub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: -6 },
-  tab: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.grey, justifyContent: 'center' },
+  tab: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
   tabText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   hero: { borderRadius: 22, paddingVertical: 16, paddingHorizontal: 16, gap: 8 },
   heroName: { fontFamily: fonts.semibold, fontSize: 20, color: colors.ink },

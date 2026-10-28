@@ -64,5 +64,5 @@ const styles = StyleSheet.create({
   stage: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, borderRadius: radius.cardLg, backgroundColor: colors.grey },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   chip: { paddingHorizontal: 16, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent', ...shadow.card },
-  chipOn: { backgroundColor: colors.lime },
+  chipOn: { backgroundColor: colors.lime, borderColor: colors.ink },
 });
