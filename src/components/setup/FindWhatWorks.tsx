@@ -19,7 +19,7 @@ import { typeInfo } from '@/lib/setup/goalTypes';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, monthsUntil, parseDay, shortName } from '@/lib/setup/plan';
 import { colors, fonts, radius } from '@/theme';
 
-const ZONE = { too: '#F3C9BC', tight: colors.peach, comfy: colors.lime } as const;
+const ZONE = { too: colors.orange, tight: colors.peach, comfy: colors.lime } as const;
 type Zone = keyof typeof ZONE;
 type LeverKey = 'smaller' | 'saved' | 'delivery' | 'bonus' | 'nodate';
 
