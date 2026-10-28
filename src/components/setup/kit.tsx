@@ -1,7 +1,7 @@
 // Building blocks for the Setup flow, matched to the canvas (v3).
 import { router } from 'expo-router';
 import { CaretLeft, Lock } from 'phosphor-react-native';
-import { useRef, type ComponentRef, type ReactNode } from 'react';
+import { useRef, type ComponentRef, type ReactNode, type RefObject } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,11 +25,22 @@ import { colors, fonts, radius, shadow } from '@/theme';
 export const STEPS = 6;
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
-export function SetupScreen({ step, footer, children }: { step?: number; footer: ReactNode; children: ReactNode }) {
+export function SetupScreen({
+  step,
+  footer,
+  children,
+  scrollRef,
+}: {
+  step?: number;
+  footer: ReactNode;
+  children: ReactNode;
+  scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null>;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
+        ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 16, gap: 14 }}>
         {step !== undefined && <StepHeader step={step} />}
@@ -152,11 +163,11 @@ export function SmallTile({ label, children, style, onPress }: { label: string; 
   );
 }
 
-export const smallValue = { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, padding: 0 } as const;
+export const smallValue = { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, padding: 0 } as const;
 
-// Picked = its own brand colour + a black outline, everywhere in the app. Lists pass a colour per option,
+// Picked = filled with its own brand colour, no outline — everywhere in the app. Lists pass a colour per option,
 // so when several are picked at once they're still easy to tell apart.
-export const picked = (color: string) => ({ backgroundColor: color, borderColor: colors.ink });
+export const picked = (color: string) => ({ backgroundColor: color, borderColor: 'transparent', boxShadow: 'none' });
 
 export function Segmented<K extends string>({ options, value, onChange }: { options: { key: K; label: string; color?: string }[]; value: K; onChange: (k: K) => void }) {
   return (
@@ -226,7 +237,7 @@ export function Chip({ label, on, onPress, color = colors.lime }: { label: strin
   );
 }
 
-/** A goal-type pill: grey with a black icon; when picked, it fills with its own brand colour and gets a black outline. */
+/** A goal-type pill: grey with a black icon; when picked, it fills with its own brand colour. */
 export function GoalPill({ label, icon, color, on, onPress }: { label: string; icon: IconKey; color: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -262,7 +273,7 @@ const styles = StyleSheet.create({
 
   tile: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
   tileLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  tileValue: { fontFamily: fonts.regular, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
+  tileValue: { fontFamily: fonts.bold, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
   tileInput: { flex: 1, padding: 0, margin: 0 },
 
   small: { borderRadius: 16, backgroundColor: colors.grey, paddingVertical: 10, paddingHorizontal: 14 },

@@ -5,7 +5,7 @@ import type { BudgetStyle } from '@/lib/setup/draft';
 import { colors, money } from '@/theme';
 
 export type CatKey = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
-export type IconKey = 'food' | 'travel' | 'shop' | 'fun' | 'health' | 'book' | 'gift' | 'more' | 'rent' | 'bill' | 'shield' | 'cash' | 'plane' | 'phone';
+export type IconKey = 'food' | 'travel' | 'shop' | 'fun' | 'health' | 'book' | 'gift' | 'more' | 'rent' | 'bill' | 'shield' | 'cash' | 'plane' | 'phone' | 'family' | 'lipstick' | 'shirt' | 'note' | 'ring' | 'sparkle' | 'shuffle' | 'camera' | 'plus';
 
 export const CATEGORY: Record<CatKey, { name: string; color: string; icon: IconKey }> = {
   food: { name: 'Food & drinks', color: colors.lime, icon: 'food' },

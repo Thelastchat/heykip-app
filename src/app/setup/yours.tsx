@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -20,6 +20,7 @@ const NAMES: Record<string, string> = { rent: 'Rent', bills: 'Other bills', food
 // (see applyEdit in brain.ts). Kip says what moved where, and stops anything that wouldn't work in real life.
 export default function SetupYours() {
   const { draft, update } = useSetup();
+  const editing = Boolean(useLocalSearchParams<{ edit?: string }>().edit);
   const plan = makePlan(draft);
   const { inputs, result: r, short } = plan;
   const L = livingFor(inputs);
@@ -102,7 +103,9 @@ export default function SetupYours() {
   );
 
   return (
-    <SetupScreen step={5} footer={<Button label="Looks good — write my promise" disabled={r.goal <= 0} onPress={() => router.push('/setup/sign')} />}>
+    <SetupScreen
+      step={5}
+      footer={<Button label={editing ? 'Update my plan' : 'Looks good — write my promise'} disabled={r.goal <= 0} onPress={() => (editing ? router.back() : router.push('/setup/sign'))} />}>
       <Title>Make it yours</Title>
       <Text style={styles.sub}>Change any number — Kip re-balances the rest and tells you what moved.</Text>
 
@@ -266,7 +269,7 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 9, gap: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(17,17,17,0.06)' },
   amount: { height: 36, width: 104, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   amountInput: { flex: 1, minWidth: 0, width: '100%', textAlign: 'right', padding: 0 },
-  amountText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+  amountText: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
   note: { gap: 8, borderRadius: 14, backgroundColor: '#F8F6F4', padding: 10 },
   dest: { height: 30, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'rgba(17,17,17,0.12)', justifyContent: 'center' },
   result: { borderRadius: 18, backgroundColor: colors.lime, borderWidth: 1, borderColor: colors.ink, paddingVertical: 14, paddingHorizontal: 16, gap: 6 },

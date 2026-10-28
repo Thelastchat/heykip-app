@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, type ComponentRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -13,6 +13,7 @@ import { colors, fonts } from '@/theme';
 // Setup 1/6 · How does money come in?
 export default function SetupBasics() {
   const { draft, update } = useSetup();
+  const editing = Boolean(useLocalSearchParams<{ edit?: string }>().edit);
   const regular = draft.incomeType === 'regular';
   const payday = draft.payday;
   const income = plannedIncome(draft);
@@ -21,7 +22,9 @@ export default function SetupBasics() {
   const cycle = payday ? `${ordinal(payday)} to ${ordinal(payday === 1 ? 31 : payday - 1)}` : 'Payday to the day before';
 
   return (
-    <SetupScreen step={1} footer={<Button label="Next" disabled={!basicsDone(draft)} onPress={() => router.push('/setup/style')} />}>
+    <SetupScreen
+      step={1}
+      footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
       <KipSays>
         {regular
           ? 'A few rough numbers so I can plan your days. Guesses are fine!'
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   payday: { flex: 1, borderRadius: 18, backgroundColor: colors.roseBeige, paddingVertical: 12, paddingHorizontal: 16 },
   label: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  big: { fontFamily: fonts.regular, fontSize: 26, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
+  big: { fontFamily: fonts.bold, fontSize: 26, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
   hint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
   living: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingVertical: 12, paddingHorizontal: 16, gap: 6 },
 });

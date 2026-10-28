@@ -65,6 +65,42 @@ const ICONS: Record<IconKey, { solid: (ink: string) => ReactNode; cut: ReactNode
     solid: (ink) => <><Rect x="5.6" y="1.8" width="12.8" height="20.4" rx="3.2" /></>,
     cut: <><Rect x="7.8" y="4.4" width="8.4" height="13" rx="1.2" /><Rect x="10.3" y="19.1" width="3.4" height="1.3" rx=".65" /></>,
   },
+  family: {
+    solid: (ink) => <><Circle cx="8" cy="6.4" r="3.2" /><Circle cx="16.6" cy="8.2" r="2.6" /><Path d="M1.8 20.6c0-4 2.8-6.8 6.2-6.8s6.2 2.8 6.2 6.8z" /><Path d="M14.6 20.6c.1-2.8-.6-4.6-1.8-6 1-.8 2.2-1.2 3.8-1.2 3 0 5.6 2.4 5.6 7.2z" /></>,
+    cut: null,
+  },
+  lipstick: {
+    solid: (ink) => <><Path d="M9.2 2.6 14.6 1v6.4H9.2z" /><Rect x="8" y="8.6" width="8" height="3" rx=".8" /><Rect x="7.2" y="12.8" width="9.6" height="9" rx="1.4" /></>,
+    cut: null,
+  },
+  shirt: {
+    solid: (ink) => <><Path d="M8.6 3.2 3 5.8 1.6 10.6l3.6 1.4 1-2.2V21h11.6V9.8l1 2.2 3.6-1.4L21 5.8l-5.6-2.6c-.6 1.6-1.9 2.6-3.4 2.6s-2.8-1-3.4-2.6z" /></>,
+    cut: null,
+  },
+  note: {
+    solid: (ink) => <><Path d="M9 3.4 20.4 1.4v14.2a3.4 3.4 0 1 1-2.2-3.2V6.4L11.2 7.7v10.1A3.4 3.4 0 1 1 9 14.6z" /></>,
+    cut: null,
+  },
+  ring: {
+    solid: (ink) => <><Path d="M9.4 1.8h5.2l1.8 3-4.4 3.2-4.4-3.2z" /><Circle cx="12" cy="14.4" r="6.8" /></>,
+    cut: <><Circle cx="12" cy="14.4" r="4.2" /></>,
+  },
+  sparkle: {
+    solid: (ink) => <><Path d="M12 1.5c.5 4.9 2.6 7.6 8.5 8.6-5.9 1-8 3.7-8.5 8.6-.5-4.9-2.6-7.6-8.5-8.6 5.9-1 8-3.7 8.5-8.6z" /><Path d="M19.5 15.5c.2 2 1 3 3 3.4-2 .4-2.8 1.4-3 3.4-.2-2-1-3-3-3.4 2-.4 2.8-1.4 3-3.4z" /></>,
+    cut: null,
+  },
+  shuffle: {
+    solid: (ink) => <><Path d="M2 6.2h3.6c2.2 0 3.6 1 4.9 3l4.4 6.6c.9 1.3 1.7 1.8 3.1 1.8h.8v-2.4l4.4 3.5-4.4 3.5v-2.2H18c-2.2 0-3.6-1-4.9-3L8.7 10.4C7.8 9 7 8.6 5.6 8.6H2z" /><Path d="M2 15.4h3.6c1.4 0 2.2-.4 3-1.6l.6-.9 1.5 2.2-.2.3c-1.3 2-2.7 2.4-4.9 2.4H2z" /><Path d="m13.3 8.8.2-.3c1.3-2 2.7-3 4.5-3h.8V3.3l4.4 3.5-4.4 3.5V8.1h-.8c-1.4 0-2.2.5-3.1 1.8l-.1.1z" /></>,
+    cut: null,
+  },
+  camera: {
+    solid: (ink) => <><Path d="M8.4 3.4h7.2l1.6 2.6h3.2A1.8 1.8 0 0 1 22.2 7.8v11a1.8 1.8 0 0 1-1.8 1.8H3.6a1.8 1.8 0 0 1-1.8-1.8v-11A1.8 1.8 0 0 1 3.6 6h3.2z" /></>,
+    cut: <><Circle cx="12" cy="13.2" r="4.6" /></>,
+  },
+  plus: {
+    solid: (ink) => <><Rect x="10.6" y="3" width="2.8" height="18" rx="1.4" /><Rect x="3" y="10.6" width="18" height="2.8" rx="1.4" /></>,
+    cut: null,
+  },
 };
 
 export function CatIcon({ name, size = 24, ink = colors.ink }: { name: IconKey; size?: number; ink?: string }) {

@@ -54,6 +54,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
     user_id: userId,
     title: draft.goalTitle.trim(),
     kind: draft.goalKind,
+    goal_type: draft.goalType,
     target_amount: monthly ? (draft.goalMonthly ?? 0) * 12 : draft.goalTarget,
     monthly_amount: monthly ? draft.goalMonthly : null,
     saved_amount: monthly ? 0 : (draft.goalSaved ?? 0),

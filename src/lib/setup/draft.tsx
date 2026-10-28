@@ -33,6 +33,7 @@ export type SetupDraft = {
   goalTarget: number | null;
   goalSaved: number | null;
   goalDue: string | null; // yyyy-mm-dd
+  goalType: string | null; // what kind of goal it is (Trip, Family, Beauty…) — picks its icon and colour
   goalPhoto: string | null; // local file uri until saved
   goalMonthly: number | null; // "Save every month": how much
   budgetStyle: BudgetStyle;
@@ -62,6 +63,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   goalTarget: null,
   goalSaved: null,
   goalDue: null,
+  goalType: null,
   goalPhoto: null,
   goalMonthly: null,
   budgetStyle: 'kip',
