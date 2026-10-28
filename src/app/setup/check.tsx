@@ -11,6 +11,7 @@ import { inputsFrom, isoDay, longDate, monthYear, monthsFromNow, parseDay, short
 import { colors, fonts, radius, shadow } from '@/theme';
 
 type Choice = { key: string; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
+const PICK: Record<string, string> = { comfy: colors.lime, anyway: colors.lime, tight: colors.peach, keep: colors.peach, most: colors.peach, smaller: colors.sky, numbers: colors.sky };
 
 // Setup 3/6 · Is it realistic? Shown when the goal doesn't fit as asked. Kip never shows an impossible plan:
 // it says so, shows where the money goes, and offers what does work.
@@ -91,10 +92,10 @@ export default function SetupCheck() {
 
   const comfyPlan = splitMonth(inputs, 'kip');
   const parts: [number, string, string][] = [
-    [fixed, colors.clay, `Rent & bills ${baht(fixed)}`],
+    [fixed, colors.orange, `Rent & bills ${baht(fixed)}`],
     [livingSum, colors.sky, `Living ${baht(livingSum)}`],
     [comfyPlan.net, colors.sage, `Safety net ${baht(comfyPlan.net)}`],
-    [comfyPlan.goal, colors.orange, `${short} ${baht(comfyPlan.goal)}`],
+    [comfyPlan.goal, colors.lime, `${short} ${baht(comfyPlan.goal)}`],
     [comfyPlan.fun + comfyPlan.learn + comfyPlan.give, colors.lavender, `Fun ${baht(comfyPlan.fun + comfyPlan.learn + comfyPlan.give)}`],
   ].filter(([n]) => (n as number) > 0) as [number, string, string][];
 
@@ -136,13 +137,13 @@ export default function SetupCheck() {
         {choices.map((c) => {
           const on = c.key === choice?.key;
           return (
-            <Pressable key={c.key} onPress={() => setPicked(c.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.option, on && styles.optionOn]}>
+            <Pressable key={c.key} onPress={() => setPicked(c.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.option, on && [styles.optionOn, { backgroundColor: PICK[c.key] ?? colors.lime }]]}>
               <View style={[styles.radio, on && { borderWidth: 7, borderColor: colors.ink }]} />
               <View style={{ flex: 1, gap: 3 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={{ fontFamily: fonts.semibold, fontSize: 16, color: colors.ink }}>{c.title}</Text>
                   {c.tag ? (
-                    <View style={[styles.tag, { backgroundColor: c.tagColor ?? colors.lime }]}>
+                    <View style={[styles.tag, { backgroundColor: on ? '#FFFFFF' : (c.tagColor ?? colors.lime) }]}>
                       <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{c.tag}</Text>
                     </View>
                   ) : null}
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
   small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   bar: { flexDirection: 'row', height: 14, borderRadius: radius.pill, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(17,17,17,0.08)' },
   option: { borderRadius: 18, borderWidth: 2, borderColor: 'transparent', backgroundColor: '#F8F6F4', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  optionOn: { borderColor: colors.ink, backgroundColor: '#FFFFFF', ...shadow.card },
+  optionOn: { borderColor: colors.ink, ...shadow.card },
   radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
 });

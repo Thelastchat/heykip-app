@@ -7,12 +7,13 @@ import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { LEAKS } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
 
-const STYLES: { key: MoneyStyle; label: string; sub: string }[] = [
-  { key: 'treat', label: 'Treat myself — I earned it', sub: 'Fair. We’ll make room for that' },
-  { key: 'bills', label: 'Pay the bills, then see', sub: 'Solid start' },
-  { key: 'save', label: 'Save some straight away', sub: 'Love that' },
-  { key: 'disappears', label: 'Honestly? It just… disappears', sub: 'Same here sometimes' },
+const STYLES: { key: MoneyStyle; label: string; sub: string; color: string }[] = [
+  { key: 'treat', label: 'Treat myself — I earned it', sub: 'Fair. We’ll make room for that', color: colors.lavender },
+  { key: 'bills', label: 'Pay the bills, then see', sub: 'Solid start', color: colors.sky },
+  { key: 'save', label: 'Save some straight away', sub: 'Love that', color: colors.lime },
+  { key: 'disappears', label: 'Honestly? It just… disappears', sub: 'Same here sometimes', color: colors.peach },
 ];
+const LEAK_COLOR = [colors.orange, colors.sky, colors.lavender, colors.peach, colors.lime, colors.sage];
 
 // Setup 2/6 · Payday hits. What happens first?
 export default function SetupStyle() {
@@ -25,7 +26,7 @@ export default function SetupStyle() {
 
       <View style={{ gap: 8 }} accessibilityRole="radiogroup">
         {STYLES.map((s) => (
-          <RadioCard key={s.key} label={s.label} sub={s.sub} on={draft.moneyStyle === s.key} onPress={() => update({ moneyStyle: s.key })} />
+          <RadioCard key={s.key} label={s.label} sub={s.sub} color={s.color} on={draft.moneyStyle === s.key} onPress={() => update({ moneyStyle: s.key })} />
         ))}
       </View>
 
@@ -34,12 +35,13 @@ export default function SetupStyle() {
           Where does money sneak away? <Text style={{ fontFamily: fonts.regular, color: colors.muted }}>Pick any</Text>
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {LEAKS.map((l) => {
+          {LEAKS.map((l, i) => {
             const on = draft.leaks.includes(l.key);
             return (
               <Chip
                 key={l.key}
                 label={l.label}
+                color={LEAK_COLOR[i % LEAK_COLOR.length]}
                 on={on}
                 onPress={() => update({ leaks: on ? draft.leaks.filter((k) => k !== l.key) : [...draft.leaks, l.key] })}
               />

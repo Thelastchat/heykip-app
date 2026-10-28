@@ -96,8 +96,8 @@ export default function SetupPaywall() {
 
       <View style={{ gap: 12, marginTop: 8 }}>
         <Option on={tier === 'yearly'} onPress={() => setTier('yearly')} title="Yearly" sub="First-member price, locked in" price={690} per="yr" was={990} badge="BEST VALUE" />
-        <Option on={tier === 'monthly'} onPress={() => setTier('monthly')} title="Monthly" sub="Cancel any time" price={129} per="mo" />
-        {tier === 'student' && <Option on onPress={() => {}} title="Student" sub="With a student email or ID" price={590} per="yr" />}
+        <Option on={tier === 'monthly'} onPress={() => setTier('monthly')} title="Monthly" sub="Cancel any time" price={129} per="mo" color={colors.sky} />
+        {tier === 'student' && <Option on onPress={() => {}} title="Student" sub="With a student email or ID" price={590} per="yr" color={colors.lavender} />}
       </View>
 
       {tier !== 'student' && (
@@ -111,9 +111,9 @@ export default function SetupPaywall() {
   );
 }
 
-function Option({ on, onPress, title, sub, price, per, was, badge }: { on: boolean; onPress: () => void; title: string; sub: string; price: number; per: 'yr' | 'mo'; was?: number; badge?: string }) {
+function Option({ on, onPress, title, sub, price, per, was, badge, color = colors.lime }: { on: boolean; onPress: () => void; title: string; sub: string; price: number; per: 'yr' | 'mo'; was?: number; badge?: string; color?: string }) {
   return (
-    <Pressable accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.option, on ? styles.optionOn : styles.optionOff]}>
+    <Pressable accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.option, on ? [styles.optionOn, { backgroundColor: color }] : styles.optionOff]}>
       {badge && (
         <View style={styles.badge}>
           <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.ink }}>{badge}</Text>
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
   strong: { fontFamily: fonts.semibold, color: colors.ink },
   tick: { width: 20, height: 20, borderRadius: radius.pill, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
   option: { borderRadius: 20, borderWidth: 2, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionOn: { backgroundColor: '#FFFFFF', borderColor: colors.ink, ...shadow.card },
+  optionOn: { borderColor: colors.ink, ...shadow.card },
   optionOff: { backgroundColor: colors.grey, borderColor: 'transparent' },
-  badge: { position: 'absolute', top: -11, left: 16, height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },
+  badge: { position: 'absolute', top: -11, left: 16, height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.ink, justifyContent: 'center' },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   was: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textDecorationLine: 'line-through' },
   fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },

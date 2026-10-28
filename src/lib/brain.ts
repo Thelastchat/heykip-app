@@ -115,6 +115,8 @@ export type Result = {
   goalMonths: number | null; // months to reach the goal at this pace
   netMonths: number; // months until the safety net is full
   savedIn12: number; // goal + safety net (+ invest) after 12 months
+  goalIn12: number; // of which: for the goal
+  netIn12: number; // of which: safety net (+ invest)
   notes: string[];
 };
 
@@ -177,10 +179,115 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   const goalMonths = i.goal.type === 'monthly' ? null : goal > 0 ? Math.ceil(need / goal) : null;
   const netPace = isEmergency ? goal : net;
   const netMonths = netPace > 0 ? Math.ceil((isEmergency ? Math.max(0, i.goal.target - i.goal.saved) : S.target) / netPace) : Infinity;
-  const savedIn12 = Math.min(goal * 12, need) + net * 12 + invest * 12;
+  const goalIn12 = Math.min(goal * 12, need);
+  const netIn12 = net * 12 + invest * 12;
+  const savedIn12 = goalIn12 + netIn12;
   return {
     style, goal, net, invest, fixed, living: L, fun, learn, give,
     daily: Math.floor((L + fun + learn + give) / 30 / 10) * 10,
-    goalMonths, netMonths, savedIn12, notes,
+    goalMonths, netMonths, savedIn12, goalIn12, netIn12, notes,
   };
+}
+
+// ---------- "Make it yours": change one number, Kip re-balances the rest ----------
+//
+// Income is fixed, so every change has to come from somewhere. The rules, like a careful friend would:
+//  • More for the goal → it comes out of fun money, but fun never drops below its minimum
+//    (5% of income, at least ฿1,000). Plans with no fun at all get abandoned.
+//  • A cost goes up (rent, bills, food…) → fun money pays first; if that's at its minimum, the goal slows down.
+//    Living costs can't go up past what's possible; rent and bills are facts, so Kip accepts them and says so.
+//  • A cost goes down → if fun money was squeezed below comfortable, it gets refilled first;
+//    the rest goes to the goal, so the date gets closer. A cut should have a purpose.
+//  • Living costs never go below a realistic floor (food ฿150 a day). Kip sets the floor and explains.
+//  • The safety net and money for the goal you already planned are never raided silently.
+
+export const funMinimum = (income: number) => Math.max(1000, r100(income * 0.05));
+
+export type CostKey = 'rent' | 'bills' | keyof Living;
+export type Edit = { kind: 'goal'; to: number } | { kind: 'cost'; key: CostKey; to: number } | { kind: 'fun'; to: number };
+
+export type EditResult = {
+  inputs: Inputs; // with the new cost
+  goal: number; // new money for the goal each month
+  fromFun: number;
+  fromGoal: number;
+  toGoal: number;
+  toFun: number;
+  limit: null | { why: 'floor' | 'goalMax' | 'funMin' | 'nothingLeft'; value: number };
+  short: number; // > 0 when costs are now more than income can carry
+};
+
+export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit): EditResult {
+  const now = plan(i, style, goalNow);
+  const funMin = funMinimum(i.income);
+  const spareFun = Math.max(0, now.fun - funMin);
+  const need = i.goal.type === 'monthly' ? Infinity : Math.max(0, i.goal.target - i.goal.saved);
+  const out: EditResult = { inputs: i, goal: goalNow, fromFun: 0, fromGoal: 0, toGoal: 0, toFun: 0, limit: null, short: 0 };
+
+  if (e.kind === 'goal') {
+    const max = Math.min(goalNow + spareFun, need);
+    let to = Math.max(0, r100(e.to));
+    if (to > max) {
+      to = max;
+      out.limit = { why: 'goalMax', value: max };
+    }
+    if (to >= goalNow) out.fromFun = to - goalNow;
+    else out.toFun = goalNow - to;
+    out.goal = to;
+    return out;
+  }
+
+  if (e.kind === 'fun') {
+    let to = Math.max(0, r10(e.to));
+    if (to < funMin) {
+      to = funMin;
+      out.limit = { why: 'funMin', value: funMin };
+    }
+    const d = to - now.fun;
+    if (d > 0) {
+      out.fromGoal = Math.min(d, goalNow);
+      if (d > goalNow) out.limit = { why: 'nothingLeft', value: now.fun + goalNow };
+      out.goal = goalNow - out.fromGoal;
+    } else {
+      out.toGoal = Math.min(-d, need - goalNow);
+      out.goal = goalNow + out.toGoal;
+    }
+    return out;
+  }
+
+  // A cost changed.
+  const L = livingFor(i);
+  const isLiving = e.key !== 'rent' && e.key !== 'bills';
+  const old = e.key === 'rent' ? i.rent : e.key === 'bills' ? i.bills : L[e.key as keyof Living];
+  let to = Math.max(0, r10(e.to));
+  if (isLiving && to < LIVING_FLOOR[e.key as keyof Living]) {
+    to = LIVING_FLOOR[e.key as keyof Living];
+    out.limit = { why: 'floor', value: to };
+  }
+  let d = to - old;
+  if (d > 0) {
+    out.fromFun = Math.min(d, spareFun);
+    out.fromGoal = Math.min(d - out.fromFun, goalNow);
+    const rest = d - out.fromFun - out.fromGoal;
+    if (rest > 0) {
+      if (isLiving) {
+        to -= rest; // can't spend money that isn't there
+        d -= rest;
+        out.limit = { why: 'nothingLeft', value: to };
+      } else {
+        out.short = rest; // rent and bills are facts — accept, and say so
+      }
+    }
+    out.goal = goalNow - out.fromGoal;
+  } else if (d < 0) {
+    // Fun money first gets back to a comfortable level (if earlier changes squeezed it), then the goal.
+    const funComfy = Math.max(1500, i.income * 0.1);
+    const refill = Math.min(-d, Math.max(0, r10(funComfy - now.fun)));
+    out.toGoal = Math.min(-d - refill, Math.max(0, need - goalNow));
+    out.toFun = -d - out.toGoal;
+    out.goal = goalNow + out.toGoal;
+  }
+  out.inputs =
+    e.key === 'rent' ? { ...i, rent: to } : e.key === 'bills' ? { ...i, bills: to } : { ...i, living: { ...i.living, [e.key]: to } };
+  return out;
 }

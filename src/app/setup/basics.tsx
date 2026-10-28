@@ -31,8 +31,8 @@ export default function SetupBasics() {
 
       <Segmented<IncomeType>
         options={[
-          { key: 'regular', label: 'Same every month' },
-          { key: 'changes', label: 'It changes' },
+          { key: 'regular', label: 'Same every month', color: colors.lime },
+          { key: 'changes', label: 'It changes', color: colors.sky },
         ]}
         value={draft.incomeType}
         onChange={(incomeType) => update({ incomeType })}

@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Polaroid } from '@/components/board';
 import { CatIcon } from '@/components/CatIcon';
 import { DateTile } from '@/components/setup/DateTile';
-import { GoalPill, KipSays, SetupScreen, SmallTile, Title, smallValue } from '@/components/setup/kit';
+import { GoalPill, KipSays, picked, SetupScreen, SmallTile, Title, smallValue } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { verdict } from '@/lib/brain';
 import type { IconKey } from '@/lib/budget';
@@ -120,8 +120,8 @@ export default function SetupGoal() {
             {QUICK.map((a) => {
               const on = draft.goalMonthly === a;
               return (
-                <Pressable key={a} onPress={() => update({ goalMonthly: a })} style={[styles.quick, on && { backgroundColor: colors.ink }]} accessibilityRole="button">
-                  <Text style={[styles.quickText, on && { color: '#FFFFFF', fontFamily: fonts.semibold }]}>{baht(a)}</Text>
+                <Pressable key={a} onPress={() => update({ goalMonthly: a })} style={[styles.quick, on && picked(colors.peach)]} accessibilityRole="button">
+                  <Text style={[styles.quickText, on && { fontFamily: fonts.semibold }]}>{baht(a)}</Text>
                 </Pressable>
               );
             })}
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   photoButton: { alignSelf: 'flex-start', height: 34, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.border, justifyContent: 'center' },
   warn: { fontFamily: fonts.regular, fontSize: 12, color: colors.orange, paddingHorizontal: 4 },
   note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
-  quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
+  quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   quickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
   fit: { borderRadius: 16, backgroundColor: colors.lime, borderWidth: 1, borderColor: colors.ink, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

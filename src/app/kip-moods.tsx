@@ -49,7 +49,7 @@ export default function KipMoods() {
               accessibilityState={{ selected: on }}
               onPress={() => setMood(m)}
               style={[styles.chip, on && styles.chipOn]}>
-              <T variant="label" style={{ color: on ? '#FFFFFF' : colors.ink }}>{MOODS[m].name}</T>
+              <T variant="label" style={{ color: colors.ink, fontFamily: on ? 'Geist_600SemiBold' : undefined }}>{MOODS[m].name}</T>
             </Pressable>
           );
         })}
@@ -63,6 +63,6 @@ export default function KipMoods() {
 const styles = StyleSheet.create({
   stage: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, borderRadius: radius.cardLg, backgroundColor: colors.grey },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  chip: { paddingHorizontal: 16, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', ...shadow.card },
-  chipOn: { backgroundColor: colors.ink },
+  chip: { paddingHorizontal: 16, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent', ...shadow.card },
+  chipOn: { backgroundColor: colors.lime, borderColor: colors.ink },
 });

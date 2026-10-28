@@ -29,9 +29,10 @@ export default function SetupMoney() {
           const r = splitMonth(inputs, s.key);
           const on = draft.budgetStyle === s.key;
           const when = monthly ? `${baht(r.goal)}/mo` : r.goalMonths ? monthYear(monthsFromNow(r.goalMonths, draft)) : 'Not yet';
-          const stats: [string, string][] = [
-            [monthly ? short : short, when],
-            ['Saved in 1 year', baht(r.savedIn12)],
+          const split = r.netIn12 > 0 ? `${short} ${baht(r.goalIn12)} + safety net ${baht(r.netIn12)}` : `all for ${short}`;
+          const stats: [string, string, string?][] = [
+            [short, when],
+            ['Saved in 1 year', baht(r.savedIn12), split],
             ['Spend a day', baht(r.daily)],
             [s.key === 'savefirst' ? 'After saving' : 'Fun a month', s.key === 'savefirst' ? 'One pot' : baht(r.fun)],
           ];
@@ -46,24 +47,25 @@ export default function SetupMoney() {
               accessibilityState={{ selected: on }}
               accessibilityLabel={`${s.name}. ${stats.map(([k, v]) => `${k} ${v}`).join(', ')}`}
               onPress={() => update({ budgetStyle: s.key, goalPerMonth: null })}
-              style={[styles.card, on && styles.cardOn]}>
+              style={[styles.card, on && [styles.cardOn, { backgroundColor: s.tagColor }]]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={[styles.radio, on && { borderWidth: 7, borderColor: colors.ink }]} />
                 <Text style={styles.name}>{s.name}</Text>
-                <View style={[styles.tag, { backgroundColor: s.tagColor }]}>
+                <View style={[styles.tag, { backgroundColor: on ? '#FFFFFF' : s.tagColor }]}>
                   <Text style={styles.tagText}>{s.tag}</Text>
                 </View>
               </View>
               <Text style={styles.desc}>{s.desc}</Text>
-              <View style={[styles.grid, { backgroundColor: on ? '#F6F3F0' : '#FFFFFF' }]}>
-                {stats.map(([k, v]) => (
-                  <View key={k} style={{ width: '50%', paddingVertical: 4 }}>
+              <View style={[styles.grid, { backgroundColor: '#FFFFFF' }]}>
+                {stats.map(([k, v, sub]) => (
+                  <View key={k} style={{ width: '50%', paddingVertical: 4, paddingRight: 6 }}>
                     <Text style={styles.statLabel} numberOfLines={1}>
                       {k}
                     </Text>
                     <Text style={styles.statValue} numberOfLines={1}>
                       {v}
                     </Text>
+                    {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
                   </View>
                 ))}
               </View>
@@ -74,7 +76,7 @@ export default function SetupMoney() {
       </View>
 
       <Text style={styles.foot}>
-        “Saved in 1 year” = {short} + safety net. Every style keeps rent, bills and your living costs the same — only saving and fun change.
+        “Saved in 1 year” is everything you put away: money for {short} plus your safety net. Every style keeps rent, bills and your living costs the same — only saving and fun change.
       </Text>
     </SetupScreen>
   );
@@ -82,7 +84,7 @@ export default function SetupMoney() {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 20, borderWidth: 2, borderColor: 'transparent', backgroundColor: '#F8F6F4', paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
-  cardOn: { borderColor: colors.ink, backgroundColor: '#FFFFFF', ...shadow.card },
+  cardOn: { borderColor: colors.ink, ...shadow.card },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   name: { flex: 1, fontFamily: fonts.semibold, fontSize: 17, color: colors.ink },
   tag: { height: 22, paddingHorizontal: 9, borderRadius: radius.pill, justifyContent: 'center' },
@@ -90,6 +92,7 @@ const styles = StyleSheet.create({
   desc: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: '#2E2E2A' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 12 },
   statLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+  statSub: { fontFamily: fonts.regular, fontSize: 10, lineHeight: 13, color: colors.muted },
   statValue: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
   note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: '#9A4A2E' },
   foot: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },

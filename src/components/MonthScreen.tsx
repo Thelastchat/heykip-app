@@ -130,7 +130,7 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
         <Section title="2 · Bills" right={baht(billsTotal(month))} />
         <View style={styles.card}>
           <View style={[styles.row, styles.divider]}>
-            <CatBadge name="rent" color={colors.clay} />
+            <CatBadge name="rent" color={colors.orange} />
             <Text style={styles.rowName}>Rent</Text>
             <Text style={styles.amount}>{baht(month.bills.rent)}</Text>
           </View>
@@ -287,7 +287,7 @@ function StylePicker({ current, onPick }: { current: MonthBudget['style']; onPic
       <SheetTitle mood="idle" title="Money style" sub="Your goal, safety net and bills stay the same. This only changes how spending is split." />
       <View style={{ gap: 8 }}>
         {STYLES.map((s) => (
-          <Option key={s.key} title={s.name} sub={s.desc} on={s.key === current} tag={s.key === 'kip' ? 'RECOMMENDED' : undefined} onPress={() => onPick(s.key)} />
+          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? 'RECOMMENDED' : undefined} onPress={() => onPick(s.key)} />
         ))}
       </View>
     </>
@@ -357,11 +357,11 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
       <SheetTitle mood="happy" title={`Nice — ${baht(freed)} freed up`} sub={`${CATEGORY[cat].name} ${baht(cur)} → ${baht(to)}. Where should it go?`} />
       <View style={{ gap: 8 }}>
         {options.map((o) => (
-          <Option key={o.key} title={o.title} sub={o.sub} tag={o.tag} on={dest === o.key} onPress={() => setDest(o.key)} />
+          <Option key={o.key} title={o.title} sub={o.sub} tag={o.tag} color={{ goal: colors.lime, safety: colors.sage, spread: colors.lavender }[o.key]} on={dest === o.key} onPress={() => setDest(o.key)} />
         ))}
       </View>
       <Pressable onPress={() => setAlways(!always)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} accessibilityRole="checkbox" accessibilityState={{ checked: always }}>
-        <View style={[styles.check, always && { backgroundColor: colors.ink, borderColor: colors.ink }]}>{always && <Check size={12} color="#FFFFFF" weight="bold" />}</View>
+        <View style={[styles.check, always && { backgroundColor: colors.lime, borderColor: colors.ink }]}>{always && <Check size={12} color={colors.ink} weight="bold" />}</View>
         <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>Do this every time I lower a budget</Text>
       </Pressable>
       <Button label={dest === 'spread' ? `Spread ${baht(freed)}` : `Move ${baht(freed)} to ${dest === 'goal' ? goalName : 'Safety net'}`} onPress={() => onDone(dest, always)} />
@@ -401,19 +401,19 @@ function Take({ month, cat, to, onYes, onChoose }: { month: MonthBudget; cat: Ca
   );
 }
 
-function Option({ title, sub, on, tag, onPress }: { title: string; sub: string; on: boolean; tag?: string; onPress: () => void }) {
+function Option({ title, sub, on, tag, onPress, color = colors.lime }: { title: string; sub: string; on: boolean; tag?: string; onPress: () => void; color?: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.option, on && styles.optionOn]}>
+    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.option, on && [styles.optionOn, { backgroundColor: color }]]}>
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>{title}</Text>
           {tag ? (
-            <View style={styles.tag}>
+            <View style={[styles.tag, on && { backgroundColor: '#FFFFFF' }]}>
               <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{tag}</Text>
             </View>
           ) : null}
         </View>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }} numberOfLines={3}>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: on ? 'rgba(17,17,17,0.7)' : colors.muted }} numberOfLines={3}>
           {sub}
         </Text>
       </View>
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.15)' },
   option: { borderRadius: 18, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionOn: { borderColor: colors.ink, backgroundColor: '#FFFFFF', ...shadow.card },
+  optionOn: { borderColor: colors.ink, ...shadow.card },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },
   check: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: '#C9C9C2', alignItems: 'center', justifyContent: 'center' },

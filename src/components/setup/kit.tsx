@@ -154,7 +154,11 @@ export function SmallTile({ label, children, style, onPress }: { label: string; 
 
 export const smallValue = { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, padding: 0 } as const;
 
-export function Segmented<K extends string>({ options, value, onChange }: { options: { key: K; label: string }[]; value: K; onChange: (k: K) => void }) {
+// Picked = its own brand colour + a black outline, everywhere in the app. Lists pass a colour per option,
+// so when several are picked at once they're still easy to tell apart.
+export const picked = (color: string) => ({ backgroundColor: color, borderColor: colors.ink });
+
+export function Segmented<K extends string>({ options, value, onChange }: { options: { key: K; label: string; color?: string }[]; value: K; onChange: (k: K) => void }) {
   return (
     <View style={styles.segment} accessibilityRole="radiogroup">
       {options.map((o) => {
@@ -165,8 +169,8 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}
             onPress={() => onChange(o.key)}
-            style={[styles.segmentItem, on && { backgroundColor: colors.ink }]}>
-            <Text style={[styles.segmentText, on && { color: '#FFFFFF', fontFamily: fonts.semibold }]}>{o.label}</Text>
+            style={[styles.segmentItem, on && picked(o.color ?? colors.lime)]}>
+            <Text style={[styles.segmentText, on && { color: colors.ink, fontFamily: fonts.semibold }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -194,30 +198,30 @@ export function ToggleRow({ title, sub, on, onToggle }: { title: string; sub: st
   );
 }
 
-export function RadioCard({ label, sub, on, onPress }: { label: string; sub?: string; on: boolean; onPress: () => void }) {
+export function RadioCard({ label, sub, on, onPress, color = colors.lime }: { label: string; sub?: string; on: boolean; onPress: () => void; color?: string }) {
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={[styles.radioCard, on && { borderColor: colors.ink, backgroundColor: colors.roseBeige }]}>
+      style={[styles.radioCard, on && picked(color)]}>
       <View style={[styles.radio, on && { borderWidth: 7, borderColor: colors.ink }]} />
       <View style={{ flex: 1 }}>
         <Text style={{ fontFamily: on ? fonts.semibold : fonts.medium, fontSize: 15, color: colors.ink }}>{label}</Text>
-        {on && sub ? <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>{sub}</Text> : null}
+        {on && sub ? <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: 'rgba(17,17,17,0.65)' }}>{sub}</Text> : null}
       </View>
     </Pressable>
   );
 }
 
-export function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+export function Chip({ label, on, onPress, color = colors.lime }: { label: string; on: boolean; onPress: () => void; color?: string }) {
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: on }}
       onPress={onPress}
-      style={[styles.chip, on && { backgroundColor: colors.ink }]}>
-      <Text style={[styles.chipText, on && { color: '#FFFFFF', fontFamily: fonts.semibold }]}>{label}</Text>
+      style={[styles.chip, on && picked(color)]}>
+      <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -229,7 +233,7 @@ export function GoalPill({ label, icon, color, on, onPress }: { label: string; i
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={[styles.goalPill, on && { backgroundColor: color, borderColor: colors.ink }]}>
+      style={[styles.goalPill, on && picked(color)]}>
       <CatIcon name={icon} size={18} />
       <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }]}>{label}</Text>
     </Pressable>
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
   smallLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
 
   segment: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: colors.grey },
-  segmentItem: { flex: 1, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { flex: 1, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
   segmentText: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
 
   switch: { width: 44, height: 26, borderRadius: radius.pill, backgroundColor: colors.ink },
@@ -275,7 +279,7 @@ const styles = StyleSheet.create({
   radioCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: 'transparent', paddingVertical: 13, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, ...shadow.card },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
 
-  chip: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
+  chip: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   goalPill: { height: 38, paddingLeft: 10, paddingRight: 14, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', flexDirection: 'row', alignItems: 'center', gap: 6 },
 });
