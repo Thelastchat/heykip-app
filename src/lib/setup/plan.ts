@@ -1,4 +1,6 @@
 import { billsGuess, living, livingFor, livingTotal, plan as splitMonth, room, safetyNet, verdict, type GoalType, type Inputs, type Result, type Verdict } from '@/lib/brain';
+import { getCalendars } from 'expo-localization';
+
 import { baht } from '@/lib/money';
 
 import { plannedIncome, type GoalKind, type Leak, type SetupDraft } from './draft';
@@ -52,7 +54,18 @@ const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 
 export const shortDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 export const longDate = (d: Date) => `${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
-export const fullDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+// Years follow the phone: if it's set to the Thai Buddhist calendar (2569), every year Kip shows is too,
+// so the dates match the date picker. Dates are still stored the normal way (2026).
+const BUDDHIST = (() => {
+  try {
+    return getCalendars()[0]?.calendar === 'buddhist';
+  } catch {
+    return false;
+  }
+})();
+export const shownYear = (d: Date) => d.getFullYear() + (BUDDHIST ? 543 : 0);
+
+export const fullDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${shownYear(d)}`;
 
 export function ordinal(n: number) {
   const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
@@ -144,7 +157,7 @@ export function monthsFromNow(months: number, d: SetupDraft, now = new Date()): 
   const day = d.incomeType === 'regular' && d.payday ? d.payday : now.getDate();
   return dayInMonth(now.getFullYear(), now.getMonth() + months, day);
 }
-export const monthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+export const monthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${shownYear(d)}`;
 /** Paydays until the date: whole calendar months, so a date picked as "N months from now" always counts as N. */
 export const monthsUntil = (iso: string, now = new Date()) => {
   const d = parseDay(iso);
