@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Living } from '@/lib/brain';
+import { supabase } from '@/lib/supabase';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 // Everything the person tells Kip during Setup. It lives on the phone until they
@@ -87,12 +88,24 @@ export function SetupProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<SetupDraft>(EMPTY_DRAFT);
   const [ready, setReady] = useState(false);
   const loaded = useRef(false);
+  const cleared = useRef(false);
+
+  // Signing out (or an account that no longer exists) starts Setup from zero, so the next person is a new user.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+      cleared.current = true;
+      setDraft(EMPTY_DRAFT);
+      AsyncStorage.removeItem(KEY).catch(() => {});
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   // Restore an unfinished Setup (for example after checking email for the sign-in code).
   useEffect(() => {
     AsyncStorage.getItem(KEY)
       .then((raw) => {
-        if (raw) setDraft({ ...EMPTY_DRAFT, ...(JSON.parse(raw) as Partial<SetupDraft>) });
+        if (raw && !cleared.current) setDraft({ ...EMPTY_DRAFT, ...(JSON.parse(raw) as Partial<SetupDraft>) });
       })
       .catch(() => {})
       .finally(() => {

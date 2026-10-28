@@ -42,8 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      await loadProfile(data.session);
+      let s = data.session;
+      // A session saved on the phone can belong to an account that was deleted: check it with the server.
+      if (s) {
+        const { error } = await supabase.auth.getUser();
+        if (error && error.status && error.status >= 400 && error.status < 500) {
+          await supabase.auth.signOut({ scope: 'local' });
+          s = null;
+        }
+      }
+      setSession(s);
+      await loadProfile(s);
       setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
