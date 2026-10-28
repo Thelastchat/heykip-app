@@ -83,13 +83,13 @@ export default function SetupCheck() {
       choices.push({
         key: 'smaller',
         per: R.comfortable,
-        title: `Keep ${fullDate(asked)}, go smaller`,
+        title: `Keep ${fullDate(asked)}, ${draft.goalKind === 'trip' ? 'spend less on the trip' : 'aim for less'}`,
         lines: [
-          `Your goal becomes ${baht(inputs.goal.saved + v.byThen)} instead of ${baht(inputs.goal.target)}${draft.goalKind === 'trip' ? ' — a shorter trip, or somewhere closer' : ''}`,
-          `Save ${baht(R.comfortable)} a month · ${baht(comfy.daily)} a day · fun money stays ${baht(comfy.fun)}`,
+          `Save ${baht(R.comfortable)} a month instead of ${baht(v.need)} — fits comfortably`,
+          `${draft.goalKind === 'trip' ? 'Trip budget' : 'Total'} ${baht(inputs.goal.saved + v.byThen)} instead of ${baht(inputs.goal.target)}${draft.goalKind === 'trip' ? ' — a shorter trip, or somewhere closer' : ''}`,
         ],
         apply: { goalTarget: inputs.goal.saved + v.byThen, goalPerMonth: null },
-        button: `Make it ${baht(inputs.goal.saved + v.byThen)}`,
+        button: `Make it ${baht(inputs.goal.saved + v.byThen)} in total`,
       });
     }
   }
