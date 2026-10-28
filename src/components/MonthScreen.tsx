@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { CaretDown, Check, PencilSimple } from 'phosphor-react-native';
+import { CaretDown, Check, PencilSimple, Plus, X } from 'phosphor-react-native';
 import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,9 @@ import {
   STYLES,
   billsTotal,
   dailyOf,
+  addBill,
   lowerBudget,
+  removeBill,
   raiseBudget,
   savingTotal,
   spendingTotal,
@@ -39,11 +41,12 @@ function period(payday: number | null, now = new Date()) {
   return [start, new Date(next.getFullYear(), next.getMonth(), next.getDate() - 1)] as const;
 }
 
-type Sheet = null | { stage: 'style' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
+type Sheet = null | { stage: 'addBill' } | { stage: 'style' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
 
 export function MonthScreen({ month, loading, error, save }: { month: MonthBudget | null; loading: boolean; error: string | null; save: (m: MonthBudget) => void }) {
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   if (loading || !month) {
     return (
@@ -134,17 +137,32 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
             <Text style={styles.rowName}>Rent</Text>
             <Text style={styles.amount}>{baht(month.bills.rent)}</Text>
           </View>
-          <View style={styles.row}>
+          {(month.bills.items ?? []).map((b, i) => (
+            <View key={`${b.name}-${i}`} style={[styles.row, styles.divider]}>
+              <CatBadge name="bill" color={colors.sky} />
+              <Text style={styles.rowName}>{b.name}</Text>
+              <Text style={styles.amount}>{baht(b.amount)}</Text>
+              <Pressable onPress={() => save(removeBill(month, i))} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${b.name}`}>
+                <X size={14} color={colors.muted} weight="bold" />
+              </Pressable>
+            </View>
+          ))}
+          <View style={[styles.row, styles.divider]}>
             <CatBadge name="bill" color={colors.sand} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowName}>
                 Other bills <Text style={{ color: colors.muted }}>· Kip’s guess</Text>
               </Text>
-              <Text style={styles.sub}>Shrinks as I learn your real bills</Text>
+              <Text style={styles.sub}>For bills I haven’t seen yet — shrinks as I learn the real ones</Text>
             </View>
             <Text style={styles.amount}>{baht(month.bills.guess)}</Text>
           </View>
+          <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={[styles.row, { justifyContent: 'center' }]} accessibilityRole="button">
+            <Plus size={14} color={colors.ink} weight="bold" />
+            <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Add a bill · Netflix, YouTube, gym…</Text>
+          </Pressable>
         </View>
+        {notice ? <Text style={[styles.foot, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
         <Section title="3 · Spending" right={`${baht(spending)} · ${baht(dailyOf(month))} a day`} />
@@ -206,6 +224,22 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
             current={month.style}
             onPick={(k) => {
               save(withStyle(month, k));
+              setSheet(null);
+            }}
+          />
+        )}
+        {sheet?.stage === 'addBill' && (
+          <AddBill
+            month={month}
+            onAdd={(name, amount) => {
+              const r = addBill(month, name, amount);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              save(r.month);
+              setNotice(
+                r.fromFun === 0 && r.fromGoal === 0
+                  ? `${name} added — it fits inside my bill guess, so nothing else changed.`
+                  : `${name} added: ${[r.fromGuess ? `${baht(r.fromGuess)} from my bill guess` : '', r.fromFun ? `${baht(r.fromFun)} from fun money` : '', r.fromGoal ? `${baht(r.fromGoal)} from ${month.goal.title}` : ''].filter(Boolean).join(', ')}.`,
+              );
               setSheet(null);
             }}
           />
@@ -345,26 +379,80 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
   const freed = cur - to;
   const [dest, setDest] = useState<FreedTo>('goal');
   const [always, setAlways] = useState(false);
-  const spreadDaily = Math.floor((spendingTotal(month) / 30) / 10) * 10; // spreading keeps spending the same total
   const goalName = month.goal.isSafetyNet ? 'Safety net' : month.goal.title;
-  const options: { key: FreedTo; title: string; sub: string; tag?: string }[] = [
-    { key: 'goal', title: goalName, sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`, tag: 'KIP’S PICK' },
-    ...(month.goal.isSafetyNet ? [] : [{ key: 'safety' as const, title: 'Safety net', sub: `${baht(month.safety.amount)} → ${baht(month.safety.amount + freed)} a month · full sooner` }]),
-    { key: 'spread', title: 'Spread across my spending', sub: `Daily budget stays ${baht(spreadDaily)} — the other categories get a little more` },
+  const amt = (k: CatKey) => month.spend.find((s) => s.key === k)?.amount ?? 0;
+  const funKey: CatKey = month.spend.some((s) => s.key === 'fun') ? 'fun' : 'spend_freely';
+  const options: { key: FreedTo; title: string; sub: string; tag?: string; color: string }[] = [
+    { key: 'goal', title: goalName, sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`, tag: 'KIP’S PICK', color: colors.lime },
+    ...(cat !== 'food' && month.spend.some((s) => s.key === 'food') ? [{ key: 'food' as const, title: 'Food & drinks', sub: `${baht(amt('food'))} → ${baht(amt('food') + freed)} a month`, color: colors.lime }] : []),
+    ...(cat !== 'transport' && month.spend.some((s) => s.key === 'transport') ? [{ key: 'transport' as const, title: 'Transport', sub: `${baht(amt('transport'))} → ${baht(amt('transport') + freed)} a month`, color: colors.sky }] : []),
+    ...(cat !== funKey ? [{ key: 'fun' as const, title: 'Fun money', sub: `${baht(amt(funKey))} → ${baht(amt(funKey) + freed)} a month`, color: colors.lavender }] : []),
   ];
+  const label = options.find((o) => o.key === dest)?.title ?? goalName;
   return (
     <>
-      <SheetTitle mood="happy" title={`Nice — ${baht(freed)} freed up`} sub={`${CATEGORY[cat].name} ${baht(cur)} → ${baht(to)}. Where should it go?`} />
+      <SheetTitle mood="happy" title={`Nice — ${baht(freed)} freed up`} sub={`${CATEGORY[cat].name} ${baht(cur)} → ${baht(to)}. Where should it go? (Bills stay as they are.)`} />
       <View style={{ gap: 8 }}>
         {options.map((o) => (
-          <Option key={o.key} title={o.title} sub={o.sub} tag={o.tag} color={{ goal: colors.lime, safety: colors.sage, spread: colors.lavender }[o.key]} on={dest === o.key} onPress={() => setDest(o.key)} />
+          <Option key={o.key} title={o.title} sub={o.sub} tag={o.tag} color={o.color} on={dest === o.key} onPress={() => setDest(o.key)} />
         ))}
       </View>
       <Pressable onPress={() => setAlways(!always)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} accessibilityRole="checkbox" accessibilityState={{ checked: always }}>
         <View style={[styles.check, always && { backgroundColor: colors.lime, borderColor: colors.ink }]}>{always && <Check size={12} color={colors.ink} weight="bold" />}</View>
         <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>Do this every time I lower a budget</Text>
       </Pressable>
-      <Button label={dest === 'spread' ? `Spread ${baht(freed)}` : `Move ${baht(freed)} to ${dest === 'goal' ? goalName : 'Safety net'}`} onPress={() => onDone(dest, always)} />
+      <Button label={`Move ${baht(freed)} to ${label}`} onPress={() => onDone(dest, always)} />
+    </>
+  );
+}
+
+function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, amount: number) => void }) {
+  const [name, setName] = useState('');
+  const [amount, setAmount] = useState<number | null>(null);
+  const preview = amount ? addBill(month, name || 'New bill', amount) : null;
+  const goalName = month.goal.isSafetyNet ? 'your safety net' : month.goal.title;
+  return (
+    <>
+      <SheetTitle mood="think" title="Add a bill" sub="Anything that comes every month: subscriptions, a gym, a phone instalment." />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', 'Gym', 'Phone instalment'].map((n) => (
+          <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky, borderColor: colors.ink }]} accessibilityRole="button">
+            <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: colors.ink }}>{n}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={colors.faint} style={[styles.field, { flex: 1.4 }]} accessibilityLabel="Bill name" />
+        <View style={[styles.field, { flex: 1, flexDirection: 'row', alignItems: 'center' }]}>
+          <Text style={styles.fieldText}>฿</Text>
+          <TextInput
+            value={amount === null ? '' : amount.toLocaleString('en-US')}
+            onChangeText={(t) => {
+              const d = t.replace(/[^\d]/g, '');
+              setAmount(d ? Math.min(Number(d), 999_999) : null);
+            }}
+            placeholder="179"
+            placeholderTextColor={colors.faint}
+            keyboardType="number-pad"
+            style={[styles.fieldText, { flex: 1, padding: 0 }]}
+            accessibilityLabel="Amount a month"
+          />
+        </View>
+      </View>
+      {preview && (
+        <View style={styles.takeBox}>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, paddingVertical: 6 }}>What it does to your month</Text>
+          {preview.fromGuess > 0 && <Text style={styles.impact}>✓ {baht(preview.fromGuess)} fits inside my bill guess — that’s what the guess is for.</Text>}
+          {preview.fromFun > 0 && <Text style={styles.impact}>• {baht(preview.fromFun)} less fun money a month.</Text>}
+          {preview.fromGoal > 0 && <Text style={styles.impact}>• {baht(preview.fromGoal)} less for {goalName} a month — it’ll take a little longer.</Text>}
+          {preview.short > 0 && <Text style={[styles.impact, { color: colors.orange }]}>• {baht(preview.short)} more than your month can carry. Something else has to go.</Text>}
+          {preview.fromFun === 0 && preview.fromGoal === 0 && preview.short === 0 && <Text style={styles.impact}>Nothing else changes.</Text>}
+          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>
+            {baht((amount ?? 0) * 12)} a year. Worth it? Only you can say — I just make sure you see it.
+          </Text>
+        </View>
+      )}
+      <Button label={amount ? `Add ${name || 'bill'} · ${baht(amount)} a month` : 'Add bill'} disabled={!amount || !name.trim()} onPress={() => amount && onAdd(name.trim(), amount)} />
     </>
   );
 }
@@ -461,5 +549,9 @@ const styles = StyleSheet.create({
   moneyText: { fontFamily: fonts.regular, fontSize: 34, letterSpacing: -1, color: colors.ink, fontVariant: ['tabular-nums'] },
   step: { flex: 1, height: 40, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
   takeBox: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 6, paddingHorizontal: 14 },
+  quickChip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
+  field: { height: 50, borderRadius: 14, backgroundColor: colors.grey, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+  fieldText: { fontFamily: fonts.semibold, fontSize: 18, color: colors.ink, fontVariant: ['tabular-nums'] },
+  impact: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.ink, paddingVertical: 2 },
   was: { fontFamily: fonts.regular, fontSize: 13, color: '#A9A9A1', textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
 });

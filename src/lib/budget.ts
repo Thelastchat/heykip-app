@@ -39,7 +39,7 @@ export type MonthBudget = {
   goal: { title: string; amount: number; isSafetyNet: boolean };
   safety: { amount: number; target: number };
   goalExtra: number; // money moved to the goal from a lowered budget
-  bills: { rent: number; guess: number };
+  bills: { rent: number; guess: number; items?: { name: string; amount: number }[] }; // guess = bills Kip hasn't seen yet
   spend: { key: CatKey; amount: number }[];
 };
 
@@ -96,22 +96,74 @@ function splitBy(total: number, shares: [CatKey, number][]): { key: CatKey; amou
 }
 
 export const savingTotal = (m: MonthBudget) => m.goal.amount + m.goalExtra + m.safety.amount;
-export const billsTotal = (m: MonthBudget) => m.bills.rent + m.bills.guess;
+export const billsTotal = (m: MonthBudget) => m.bills.rent + m.bills.guess + (m.bills.items ?? []).reduce((a, b) => a + b.amount, 0);
 export const spendingTotal = (m: MonthBudget) => m.spend.reduce((a, s) => a + s.amount, 0);
 export const dailyOf = (m: MonthBudget) => Math.floor(spendingTotal(m) / 30 / 10) * 10;
 
-export type FreedTo = 'goal' | 'safety' | 'spread';
+export type FreedTo = 'goal' | 'food' | 'transport' | 'fun';
 
-/** A budget went down: the freed money goes to the goal, the safety net, or the other categories. */
+/** A budget went down: the freed money goes to the goal, food, transport or fun money — never to bills. */
 export function lowerBudget(m: MonthBudget, key: CatKey, to: number, dest: FreedTo): MonthBudget {
   const cur = m.spend.find((s) => s.key === key)?.amount ?? 0;
   const freed = Math.max(0, cur - to);
   const spend = m.spend.map((s) => (s.key === key ? { ...s, amount: to } : s));
   if (dest === 'goal') return { ...m, spend, goalExtra: m.goalExtra + freed };
-  if (dest === 'safety') return { ...m, spend, safety: { ...m.safety, amount: m.safety.amount + freed } };
-  const others = spend.filter((s) => s.key !== key);
-  const add = splitBy(freed, others.map((s) => [s.key, s.amount || 1] as [CatKey, number]));
-  return { ...m, spend: spend.map((s) => ({ ...s, amount: s.amount + (add.find((a) => a.key === s.key)?.amount ?? 0) })) };
+  const target: CatKey = dest === 'fun' ? (spend.some((s) => s.key === 'fun') ? 'fun' : 'spend_freely') : dest;
+  if (!spend.some((s) => s.key === target)) return { ...m, spend, goalExtra: m.goalExtra + freed };
+  return { ...m, spend: spend.map((s) => (s.key === target ? { ...s, amount: s.amount + freed } : s)) };
+}
+
+// ---------- a new bill (YouTube Premium, a gym, a phone instalment…) ----------
+//
+// Kip's bill guess exists for exactly this: bills it hasn't seen yet. So a new bill comes out of the guess first —
+// often nothing else changes. Beyond the guess: fun money pays (shopping, fun), then the goal slows down.
+// Living costs and the safety net are left alone.
+
+export type BillImpact = { month: MonthBudget; fromGuess: number; fromFun: number; fromGoal: number; short: number };
+
+const FUN_KEYS: CatKey[] = ['shopping', 'fun', 'spend_freely', 'learning', 'giving'];
+
+export function addBill(m: MonthBudget, name: string, amount: number): BillImpact {
+  let left = Math.max(0, Math.round(amount));
+  const fromGuess = Math.min(left, m.bills.guess);
+  left -= fromGuess;
+  // Fun money, in proportion, down to zero (a bill is a must; fun bends).
+  const fun = m.spend.filter((s) => FUN_KEYS.includes(s.key) && s.amount > 0);
+  const pool = fun.reduce((a, s) => a + s.amount, 0);
+  const fromFun = Math.min(left, pool);
+  let got = 0;
+  const cut = new Map<CatKey, number>();
+  fun.forEach((s, i) => {
+    const c = i === fun.length - 1 ? fromFun - got : Math.min(s.amount, round10((fromFun * s.amount) / pool));
+    cut.set(s.key, c);
+    got += c;
+  });
+  left -= fromFun;
+  const goalHave = m.goal.amount + m.goalExtra;
+  const fromGoal = Math.min(left, goalHave);
+  left -= fromGoal;
+  const extraCut = Math.min(fromGoal, m.goalExtra);
+  return {
+    month: {
+      ...m,
+      bills: { ...m.bills, guess: m.bills.guess - fromGuess, items: [...(m.bills.items ?? []), { name, amount }] },
+      spend: m.spend.map((s) => ({ ...s, amount: s.amount - (cut.get(s.key) ?? 0) })),
+      goalExtra: m.goalExtra - extraCut,
+      goal: { ...m.goal, amount: m.goal.amount - (fromGoal - extraCut) },
+    },
+    fromGuess,
+    fromFun,
+    fromGoal,
+    short: left,
+  };
+}
+
+/** Remove a bill: the money goes back the way it came — goal first, then fun, then the guess. */
+export function removeBill(m: MonthBudget, index: number): MonthBudget {
+  const items = [...(m.bills.items ?? [])];
+  const [bill] = items.splice(index, 1);
+  if (!bill) return m;
+  return { ...m, bills: { ...m.bills, items }, goalExtra: m.goalExtra + bill.amount };
 }
 
 /** A budget went up: take a little from each other category, in proportion. Never from bills, the goal or the safety net. */

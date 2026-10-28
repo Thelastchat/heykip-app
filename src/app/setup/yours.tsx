@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
-import { SetupScreen, Title } from '@/components/setup/kit';
+import { SetupScreen, Title, picked } from '@/components/setup/kit';
 import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
 import { LIVING_FLOOR, applyEdit, funMinimum, livingFor, safetyNet, type Edit, type EditResult } from '@/lib/brain';
@@ -29,20 +29,47 @@ export default function SetupYours() {
   const funMin = funMinimum(inputs.income);
   const need = monthly ? Infinity : Math.max(0, inputs.goal.target - inputs.goal.saved);
   const sliderMax = Math.max(0, Math.min(r.goal + Math.max(0, r.fun - funMin), need));
-  const [note, setNote] = useState<{ at: string; text: string; warn: boolean } | null>(null);
+  const [note, setNote] = useState<NoteState | null>(null);
+  const goalPatch = (g: number): Partial<SetupDraft> => (monthly ? { goalMonthly: g, goalPerMonth: null } : { goalPerMonth: g });
 
   function edit(e: Edit, at: string) {
     const res = applyEdit(inputs, draft.budgetStyle, r.goal, e);
-    const patch: Partial<SetupDraft> = {
-      rent: res.inputs.rent,
-      bills: res.inputs.bills,
-      living: res.inputs.living ?? {},
-      ...(monthly ? { goalMonthly: res.goal, goalPerMonth: null } : { goalPerMonth: res.goal }),
-    };
+    const patch: Partial<SetupDraft> = { rent: res.inputs.rent, bills: res.inputs.bills, living: res.inputs.living ?? {}, ...goalPatch(res.goal) };
     const after = makePlan({ ...draft, ...patch });
     update(patch);
     const text = explain(res, plan, after, at);
-    setNote(text ? { at, text, warn: Boolean(res.limit || res.short) } : null);
+    // Money freed by lowering a cost (or fun): Kip puts it somewhere sensible, and the person can choose where instead.
+    const freed = res.toGoal + res.toFun;
+    const route =
+      e.kind !== 'goal' && freed > 0
+        ? { amount: freed, base: { ...patch, ...goalPatch(r.goal) }, goalBefore: r.goal, from: at, picked: (res.toGoal >= res.toFun ? 'goal' : 'fun') as Dest }
+        : undefined;
+    setNote(text ? { at, text, warn: Boolean(res.limit || res.short), route } : null);
+  }
+
+  /** Send the freed money somewhere else: the goal, food, transport or fun money. Never bills. */
+  function reroute(dest: Dest) {
+    const rt = note?.route;
+    if (!rt || !note) return;
+    const base = rt.base;
+    let patch: Partial<SetupDraft> = base;
+    let text: string;
+    if (dest === 'goal') {
+      const add = Math.min(rt.amount, Math.max(0, need - rt.goalBefore));
+      patch = { ...base, ...goalPatch(rt.goalBefore + add) };
+      const after = makePlan({ ...draft, ...patch });
+      text = `${baht(rt.amount)} goes to ${short} — now ${baht(after.result.goal)} a month${monthly ? '' : `, arriving ${after.result.goalMonths ? monthYear(after.due) : 'later'}`}.`;
+    } else if (dest === 'fun') {
+      const after = makePlan({ ...draft, ...patch });
+      text = `${baht(rt.amount)} goes to fun money — now ${baht(after.result.fun)} a month.`;
+    } else {
+      const liv = { ...(base.living ?? {}) };
+      liv[dest] = (liv[dest] ?? L[dest]) + rt.amount;
+      patch = { ...base, living: liv };
+      text = `${baht(rt.amount)} goes to ${NAMES[dest].toLowerCase()} — now ${baht(liv[dest] ?? 0)} a month.`;
+    }
+    update(patch);
+    setNote({ ...note, text, warn: false, route: { ...rt, picked: dest } });
   }
 
   function explain(res: EditResult, before: Plan, after: Plan, at: string): string {
@@ -71,7 +98,7 @@ export default function SetupYours() {
       : `→ Nothing goes to ${short} yet · ${baht(r.daily)} a day to spend`;
   const kipFood = livingFor({ ...inputs, living: {} }).food;
   const row = (at: string, icon: IconKey, color: string, hint: string, value: number, e: (to: number) => Edit, warn = false) => (
-    <Row icon={icon} color={color} name={NAMES[at]} hint={hint} value={value} warn={warn} onChange={(to) => edit(e(to), at)} note={note?.at === at ? note : null} />
+    <Row icon={icon} color={color} name={NAMES[at]} hint={hint} value={value} warn={warn} onChange={(to) => edit(e(to), at)} note={note?.at === at ? <Note note={note} short={short} onRoute={reroute} /> : null} />
   );
 
   return (
@@ -90,7 +117,7 @@ export default function SetupYours() {
           <Text style={styles.tiny}>most {baht(sliderMax)} · keeps {baht(funMin)} for fun</Text>
         </View>
         <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.ink }}>{headline}</Text>
-        {note?.at === 'goal' && <Note text={note.text} warn={note.warn} />}
+        {note?.at === 'goal' && <Note note={note} short={short} onRoute={reroute} />}
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4 }}>
@@ -99,7 +126,7 @@ export default function SetupYours() {
       </View>
       <View style={styles.card}>
         {row('rent', 'rent', colors.orange, 'You told me', inputs.rent, (to) => ({ kind: 'cost', key: 'rent', to }))}
-        {row('bills', 'bill', colors.sand, 'Phone, internet, electricity, water', inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
+        {row('bills', 'bill', colors.sand, 'Phone, internet, electricity, Netflix, YouTube…', inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
         {row('food', 'food', colors.lime, `${baht(Math.round(L.food / 30))} a day · lowest ฿150`, L.food, (to) => ({ kind: 'cost', key: 'food', to }), L.food <= LIVING_FLOOR.food)}
         {row('transport', 'travel', colors.sky, 'BTS/MRT, bus or bike fuel', L.transport, (to) => ({ kind: 'cost', key: 'transport', to }))}
         {row('health', 'health', colors.lilac, 'Pharmacy, haircut, toiletries', L.health, (to) => ({ kind: 'cost', key: 'health', to }))}
@@ -128,15 +155,49 @@ export default function SetupYours() {
         </Text>
       </View>
       {L.food !== kipFood && <Text style={styles.foot}>Kip’s number for food is {baht(kipFood)}.</Text>}
+      <View style={styles.heads}>
+        <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>This is your starting plan — it will change</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink }}>
+          Once you log for a few weeks, I’ll swap my guesses for your real numbers. Subscriptions (Netflix, YouTube, Spotify, apps) are the ones almost everyone underestimates — when a new one shows up, I’ll show you exactly what it does to {short}.
+        </Text>
+      </View>
     </SetupScreen>
   );
 }
 
-function Note({ text, warn }: { text: string; warn: boolean }) {
+type Dest = 'goal' | 'food' | 'transport' | 'fun';
+type NoteState = {
+  at: string;
+  text: string;
+  warn: boolean;
+  route?: { amount: number; base: Partial<SetupDraft>; goalBefore: number; from: string; picked: Dest };
+};
+const DEST_COLOR: Record<Dest, string> = { goal: colors.peach, food: colors.lime, transport: colors.sky, fun: colors.lavender };
+
+function Note({ note, short, onRoute }: { note: NoteState; short: string; onRoute: (d: Dest) => void }) {
+  const rt = note.route;
+  const dests = (['goal', 'food', 'transport', 'fun'] as Dest[]).filter((d) => d !== rt?.from);
   return (
-    <View style={[styles.note, warn && { backgroundColor: '#FBE3DA' }]}>
-      <Kip mood={warn ? 'careful' : 'happy'} size={26} />
-      <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink }}>{text}</Text>
+    <View style={[styles.note, note.warn && !rt && { backgroundColor: '#FBE3DA' }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        <Kip mood={note.warn && !rt ? 'careful' : 'happy'} size={26} />
+        <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink }}>{note.text}</Text>
+      </View>
+      {rt && (
+        <View style={{ gap: 6, paddingLeft: 34 }}>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>Where should the {baht(rt.amount)} go?</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
+            {dests.map((d) => {
+              const on = rt.picked === d;
+              return (
+                <Pressable key={d} onPress={() => onRoute(d)} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.dest, on && picked(DEST_COLOR[d])]}>
+                  <Text style={{ fontFamily: on ? fonts.semibold : fonts.medium, fontSize: 12, color: colors.ink }}>{d === 'goal' ? short : NAMES[d]}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -158,7 +219,7 @@ function Row({
   value: number;
   onChange?: (v: number) => void;
   warn?: boolean;
-  note: { text: string; warn: boolean } | null;
+  note: React.ReactNode;
 }) {
   const [text, setText] = useState<string | null>(null);
   return (
@@ -191,7 +252,7 @@ function Row({
           <Text style={[styles.amountText, { paddingHorizontal: 12 }]}>{baht(value)}</Text>
         )}
       </View>
-      {note && <Note text={note.text} warn={note.warn} />}
+      {note}
     </View>
   );
 }
@@ -206,8 +267,10 @@ const styles = StyleSheet.create({
   amount: { height: 36, width: 104, paddingHorizontal: 12, borderRadius: 12, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   amountInput: { flex: 1, minWidth: 0, width: '100%', textAlign: 'right', padding: 0 },
   amountText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  note: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 14, backgroundColor: '#FFFFFF', padding: 10 },
+  note: { gap: 8, borderRadius: 14, backgroundColor: '#F8F6F4', padding: 10 },
+  dest: { height: 30, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'rgba(17,17,17,0.12)', justifyContent: 'center' },
   result: { borderRadius: 18, backgroundColor: colors.lime, borderWidth: 1, borderColor: colors.ink, paddingVertical: 14, paddingHorizontal: 16, gap: 6 },
   resultLine: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+  heads: { borderRadius: 16, backgroundColor: colors.sky, paddingVertical: 12, paddingHorizontal: 14, gap: 4 },
   foot: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
 });

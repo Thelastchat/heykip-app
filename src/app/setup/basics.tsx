@@ -85,7 +85,7 @@ export default function SetupBasics() {
       </View>
       {rentWarning(draft) && <Text style={[styles.hint, { color: colors.orange }]}>{rentWarning(draft)}</Text>}
       <Text style={styles.hint}>
-        Other bills = phone, internet, electricity, water, instalments.{draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
+        Other bills = phone, internet, electricity, water, subscriptions (Netflix, YouTube, Spotify…) and instalments.{draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
       </Text>
 
       {income > 0 && (
@@ -93,7 +93,7 @@ export default function SetupBasics() {
           <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Kip adds real living costs too</Text>
           <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: '#2E2E2A' }}>
             Food {baht(L.food)} ({baht(Math.round(L.food / 30))}/day) · transport {baht(L.transport)} · health {baht(L.health)} · household {baht(L.household)} ={' '}
-            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. You can change these later.
+            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll swap them for your real ones.
           </Text>
         </View>
       )}
