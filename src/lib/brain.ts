@@ -244,14 +244,19 @@ export type EditResult = {
   toFun: number;
   limit: null | { why: 'floor' | 'goalMax' | 'funMin' | 'nothingLeft'; value: number };
   short: number; // > 0 when costs are now more than income can carry
+  /** > 0 when locks stop Kip from finding the money: nothing was changed, the person decides. */
+  blocked: number;
 };
 
-export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit): EditResult {
+/** What the person locked on "Make it yours": Kip never moves these on its own. */
+export type Locks = { goal: boolean; fun: boolean };
+
+export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit, locks: Locks = { goal: false, fun: false }): EditResult {
   const now = plan(i, style, goalNow);
   const funMin = funMinimum(i.income);
   const spareFun = Math.max(0, now.fun - funMin);
   const need = i.goal.type === 'monthly' ? Infinity : Math.max(0, i.goal.target - i.goal.saved);
-  const out: EditResult = { inputs: i, goal: goalNow, fromFun: 0, fromGoal: 0, toGoal: 0, toFun: 0, limit: null, short: 0 };
+  const out: EditResult = { inputs: i, goal: goalNow, fromFun: 0, fromGoal: 0, toGoal: 0, toFun: 0, limit: null, short: 0, blocked: 0 };
 
   if (e.kind === 'goal') {
     const max = Math.min(goalNow + spareFun, need);
@@ -295,9 +300,13 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit): Ed
   }
   let d = to - old;
   if (d > 0) {
-    out.fromFun = Math.min(d, spareFun);
-    out.fromGoal = Math.min(d - out.fromFun, goalNow);
+    out.fromFun = locks.fun ? 0 : Math.min(d, spareFun);
+    out.fromGoal = locks.goal ? 0 : Math.min(d - out.fromFun, goalNow);
     const rest = d - out.fromFun - out.fromGoal;
+    if (rest > 0 && (locks.goal || locks.fun)) {
+      // A lock is in the way: change nothing and let the person choose.
+      return { ...out, fromFun: 0, fromGoal: 0, blocked: rest };
+    }
     if (rest > 0) {
       if (isLiving) {
         to -= rest; // can't spend money that isn't there
@@ -311,8 +320,8 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit): Ed
   } else if (d < 0) {
     // Fun money first gets back to a comfortable level (if earlier changes squeezed it), then the goal.
     const funComfy = Math.max(1500, i.income * 0.1);
-    const refill = Math.min(-d, Math.max(0, r10(funComfy - now.fun)));
-    out.toGoal = Math.min(-d - refill, Math.max(0, need - goalNow));
+    const refill = locks.goal ? -d : locks.fun ? 0 : Math.min(-d, Math.max(0, r10(funComfy - now.fun)));
+    out.toGoal = locks.goal ? 0 : Math.min(-d - refill, Math.max(0, need - goalNow));
     out.toFun = -d - out.toGoal;
     out.goal = goalNow + out.toGoal;
   }

@@ -38,6 +38,7 @@ export type SetupDraft = {
   goalMonthly: number | null; // "Save every month": how much
   budgetStyle: BudgetStyle;
   goalPerMonth: number | null; // set on "Make it yours"; null = Kip's pick
+  locks: { goal: boolean; fun: boolean }; // "Make it yours": what Kip may not move on its own
   living: Partial<Living>; // the person's own living costs, when they change Kip's
 
   promiseMain: string | null; // null = Kip's wording
@@ -68,6 +69,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   goalMonthly: null,
   budgetStyle: 'kip',
   goalPerMonth: null,
+  locks: { goal: false, fun: false },
   living: {},
   promiseMain: null,
   promiseBackup: null,

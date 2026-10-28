@@ -1,6 +1,6 @@
 // Sanity checks for Kip's money engine: run `npx tsx scripts/check-plans.ts`.
 // Thousands of random people × every goal kind × every money style; any broken rule is printed.
-import { funMinimum, livingFor, livingTotal, plan, room, verdict, type Inputs, type Style } from '../src/lib/brain';
+import { applyEdit, funMinimum, livingFor, livingTotal, plan, room, verdict, type Inputs, type Style } from '../src/lib/brain';
 
 const STYLES: Style[] = ['kip', 'savefirst', '503020', 'jars'];
 const rnd = (a: number, b: number) => Math.round((a + Math.random() * (b - a)) / 100) * 100;
@@ -46,5 +46,29 @@ for (let n = 0; n < 4000; n++) {
     if (c.goal !== Math.min(custom, Math.max(0, goal.target - goal.saved))) fail('custom amount not used', i, c);
   }
 }
+// Locks on "Make it yours": a locked goal or fun amount never moves; if Kip can't find the money, nothing changes.
+for (let n = 0; n < 3000; n++) {
+  const income = rnd(12000, 80000);
+  const i: Inputs = { income, rent: rnd(0, income * 0.35), bills: rnd(500, income * 0.08), goal: { type: 'trip', title: 'g', target: rnd(5000, income * 4), saved: 0, months: null, monthly: null } };
+  if (verdict(i).kind === 'noRoom') continue;
+  const now = plan(i, 'kip');
+  if (now.goal <= 0) continue;
+  const key = (['food', 'transport', 'rent', 'bills'] as const)[n % 4];
+  const L = livingFor(i);
+  const cur = key === 'rent' ? i.rent : key === 'bills' ? i.bills : L[key];
+  const to = cur + rnd(-cur * 0.5, income * 0.15);
+  for (const locks of [{ goal: true, fun: false }, { goal: false, fun: true }, { goal: true, fun: true }]) {
+    const res = applyEdit(i, 'kip', now.goal, { kind: 'cost', key, to }, locks);
+    cases++;
+    if (res.blocked > 0) {
+      if (res.inputs !== i || res.goal !== now.goal) fail('blocked edit still changed something', i, { locks, res });
+      continue;
+    }
+    const after = plan(res.inputs, 'kip', res.goal);
+    if (locks.goal && res.goal !== now.goal) fail('locked goal moved', i, { locks, to, key, res });
+    if (locks.fun && Math.abs(after.fun - now.fun) > 10 && !(to < cur)) fail('locked fun moved', i, { locks, to, key, before: now.fun, after: after.fun });
+  }
+}
+
 console.log(fails ? `${fails} problems in ${cases} cases` : `All good — ${cases} cases × ${STYLES.length} styles`);
 process.exit(fails ? 1 : 0);
