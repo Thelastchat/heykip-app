@@ -84,7 +84,10 @@ export default function SetupCheck() {
         key: 'smaller',
         per: R.comfortable,
         title: `Keep ${fullDate(asked)}, go smaller`,
-        lines: [`You’d have ${baht(v.byThen)} by then${draft.goalKind === 'trip' ? ' — enough for a shorter trip, or somewhere closer' : ''}`],
+        lines: [
+          `Your goal becomes ${baht(inputs.goal.saved + v.byThen)} instead of ${baht(inputs.goal.target)}${draft.goalKind === 'trip' ? ' — a shorter trip, or somewhere closer' : ''}`,
+          `Save ${baht(R.comfortable)} a month · ${baht(comfy.daily)} a day · fun money stays ${baht(comfy.fun)}`,
+        ],
         apply: { goalTarget: inputs.goal.saved + v.byThen, goalPerMonth: null },
         button: `Make it ${baht(inputs.goal.saved + v.byThen)}`,
       });
