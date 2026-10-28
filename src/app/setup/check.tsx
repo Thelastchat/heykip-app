@@ -7,10 +7,11 @@ import { Button } from '@/components/ui';
 import { livingFor, plan as splitMonth, room, verdict } from '@/lib/brain';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
-import { inputsFrom, isoDay, longDate, monthYear, monthsFromNow, parseDay, shortName } from '@/lib/setup/plan';
+import { funMinimum } from '@/lib/brain';
+import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, parseDay, shortName } from '@/lib/setup/plan';
 import { colors, fonts, radius, shadow } from '@/theme';
 
-type Choice = { key: string; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
+type Choice = { key: string; per?: number; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
 const PICK: Record<string, string> = { comfy: colors.lime, anyway: colors.lime, tight: colors.peach, keep: colors.peach, most: colors.peach, smaller: colors.sky, numbers: colors.sky };
 
 // Setup 3/6 · Is it realistic? Shown when the goal doesn't fit as asked. Kip never shows an impossible plan:
@@ -36,10 +37,10 @@ export default function SetupCheck() {
     );
   } else if (draft.goalKind === 'monthly') {
     const comfy = at(R.comfortable), most = at(R.most);
-    say = `${baht(draft.goalMonthly ?? 0)} a month doesn’t fit. After rent, living and a small safety net you have ${baht(R.left)}. Here’s what does work:`;
+    say = `${baht(draft.goalMonthly ?? 0)} a month doesn’t fit. After rent, bills, living, a small safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most you can save is ${baht(R.most)}. Here’s what does work:`;
     choices.push(
-      { key: 'comfy', title: `Save ${baht(R.comfortable)} a month`, tag: 'KIP’S PICK', lines: [`${baht(R.comfortable * 12)} in a year · ${baht(comfy.daily)} a day to spend`, `Comfortable — fun money stays ${baht(comfy.fun)}`], apply: { goalMonthly: R.comfortable, goalPerMonth: null }, button: `Go with ${baht(R.comfortable)}` },
-      { key: 'most', title: `Save ${baht(R.most)} a month`, tag: 'TIGHT', tagColor: colors.roseBeige, lines: [`${baht(R.most * 12)} in a year · ${baht(most.daily)} a day`, `Fun money drops to ${baht(most.fun)}`], apply: { goalMonthly: R.most, goalPerMonth: null }, button: `Go with ${baht(R.most)}` },
+      { key: 'comfy', per: R.comfortable, title: `Save ${baht(R.comfortable)} a month`, tag: 'KIP’S PICK', lines: [`${baht(R.comfortable * 12)} in a year · ${baht(comfy.daily)} a day to spend`, `Comfortable — fun money stays ${baht(comfy.fun)}`], apply: { goalMonthly: R.comfortable, goalPerMonth: null }, button: `Go with ${baht(R.comfortable)}` },
+      { key: 'most', per: R.most, title: `Save ${baht(R.most)} a month`, tag: 'TIGHT', tagColor: colors.roseBeige, lines: [`${baht(R.most * 12)} in a year · ${baht(most.daily)} a day`, `Fun money drops to ${baht(most.fun)}`], apply: { goalMonthly: R.most, goalPerMonth: null }, button: `Go with ${baht(R.most)}` },
     );
   } else if (v.kind === 'notByThen' || v.kind === 'tight') {
     const asked = draft.goalDue ? parseDay(draft.goalDue) : null;
@@ -50,12 +51,13 @@ export default function SetupCheck() {
     const tightDate = monthsFromNow(tightMonths, draft);
     const comfy = at(R.comfortable), most = at(R.most);
     if (v.kind === 'notByThen') {
-      say = `Honest answer: ${short}${asked ? ` by ${longDate(asked)}` : ''} doesn’t fit. It needs ${baht(v.need)} a month — after rent, living and a small safety net you have ${baht(R.left)}. Here’s what does work:`;
+      say = `Honest answer: ${short}${asked ? ` by ${fullDate(asked)}` : ''} doesn’t fit. It needs ${baht(v.need)} a month. After rent, bills, living, a small safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most you can save is ${baht(R.most)}. Here’s what does work:`;
     } else {
-      say = `${short}${asked ? ` by ${longDate(asked)}` : ''} is possible — but tight. Fun money would drop to ${baht(v.funLeft)} a month. A little later is a lot easier:`;
+      say = `${short}${asked ? ` by ${fullDate(asked)}` : ''} is possible — but tight. Fun money would drop to ${baht(v.funLeft)} a month. A little later is a lot easier:`;
     }
     choices.push({
       key: 'comfy',
+      per: R.comfortable,
       title: `${short} in ${monthYear(comfyDate)}`,
       tag: 'KIP’S PICK',
       lines: [`Save ${baht(R.comfortable)} a month · ${baht(comfy.daily)} a day to spend`, `Comfortable — fun money stays ${baht(comfy.fun)}`],
@@ -65,21 +67,23 @@ export default function SetupCheck() {
     if (v.kind === 'notByThen' && tightMonths < comfyMonths) {
       choices.push({
         key: 'tight',
-        title: `Faster: ${monthYear(tightDate)}`,
+        per: R.most,
+        title: asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000 ? `Just after your date: ${fullDate(tightDate)}` : `Faster: ${monthYear(tightDate)}`,
         tag: 'TIGHT',
         tagColor: colors.roseBeige,
         lines: [`Save ${baht(R.most)} a month · ${baht(most.daily)} a day`, `Fun money drops to ${baht(most.fun)}`],
         apply: { goalDue: isoDay(tightDate), goalPerMonth: null },
-        button: `Go with ${monthYear(tightDate)}`,
+        button: `Go with ${asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000 ? fullDate(tightDate) : monthYear(tightDate)}`,
       });
     }
     if (v.kind === 'tight' && asked) {
-      choices.push({ key: 'keep', title: `Keep ${longDate(asked)}`, tag: 'TIGHT', tagColor: colors.roseBeige, lines: [`Save ${baht(v.perMonth)} a month`, `Fun money drops to ${baht(v.funLeft)}`], apply: { goalPerMonth: null }, button: `Keep ${longDate(asked)}` });
+      choices.push({ key: 'keep', per: v.perMonth, title: `Keep ${fullDate(asked)}`, tag: 'TIGHT', tagColor: colors.roseBeige, lines: [`Save ${baht(v.perMonth)} a month`, `Fun money drops to ${baht(v.funLeft)}`], apply: { goalPerMonth: null }, button: `Keep ${fullDate(asked)}` });
     }
     if (v.kind === 'notByThen' && asked && v.byThen > 0) {
       choices.push({
         key: 'smaller',
-        title: `Keep ${longDate(asked)}, go smaller`,
+        per: R.comfortable,
+        title: `Keep ${fullDate(asked)}, go smaller`,
         lines: [`You’d have ${baht(v.byThen)} by then${draft.goalKind === 'trip' ? ' — enough for a shorter trip, or somewhere closer' : ''}`],
         apply: { goalTarget: inputs.goal.saved + v.byThen, goalPerMonth: null },
         button: `Make it ${baht(inputs.goal.saved + v.byThen)}`,
@@ -90,7 +94,7 @@ export default function SetupCheck() {
   const [picked, setPicked] = useState(choices[0]?.key);
   const choice = choices.find((c) => c.key === picked) ?? choices[0];
 
-  const comfyPlan = splitMonth(inputs, 'kip');
+  const comfyPlan = splitMonth(inputs, 'kip', choice?.per ?? R.comfortable); // the bar shows the option you picked
   const parts: [number, string, string][] = [
     [fixed, colors.orange, `Rent & bills ${baht(fixed)}`],
     [livingSum, colors.sky, `Living ${baht(livingSum)}`],
