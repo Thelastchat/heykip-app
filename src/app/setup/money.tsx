@@ -7,7 +7,7 @@ import { plan as splitMonth } from '@/lib/brain';
 import { STYLES } from '@/lib/budget';
 import { baht } from '@/lib/money';
 import { useSetup } from '@/lib/setup/draft';
-import { inputsFrom, monthYear, monthsFromNow, shortName } from '@/lib/setup/plan';
+import { inputsFrom, monthYear, monthsFromNow, monthsUntil, parseDay, shortName } from '@/lib/setup/plan';
 import { colors, fonts, radius, shadow } from '@/theme';
 
 // Setup 4/6 · Pick your money style — with the real result of each one, for this person's numbers.
@@ -16,11 +16,26 @@ export default function SetupMoney() {
   const inputs = inputsFrom(draft);
   const monthly = draft.goalKind === 'monthly';
   const short = monthly ? draft.goalTitle.trim() || 'Savings' : shortName(draft.goalTitle, draft.goalKind);
+  // What the person chose on the step before (a date for a goal, an amount for monthly saving) — every card is compared to it.
+  const chosen = monthly ? null : draft.goalDue ? parseDay(draft.goalDue) : null;
+  const chosenMonths = chosen ? monthsUntil(draft.goalDue as string) : null;
 
   return (
     <SetupScreen step={4} footer={<Button label="Next" onPress={() => router.push('/setup/yours')} />}>
       <KipSays>
-        Same {baht(inputs.income)}, four ways to split it. Here’s what each one means for <Text style={{ fontFamily: fonts.semibold }}>you</Text> — if you stick to it.
+        {chosen ? (
+          <>
+            You picked <Text style={{ fontFamily: fonts.semibold }}>{short} in {monthYear(chosen)}</Text>. Kip’s plan gets you there — here’s how the other styles compare, if you stick to them.
+          </>
+        ) : monthly ? (
+          <>
+            You want to save <Text style={{ fontFamily: fonts.semibold }}>{baht(draft.goalMonthly ?? 0)} a month</Text>. Here’s what each style does with your {baht(inputs.income)}, if you stick to it.
+          </>
+        ) : (
+          <>
+            Same {baht(inputs.income)}, four ways to split it. Here’s what each one means for <Text style={{ fontFamily: fonts.semibold }}>you</Text> — if you stick to it.
+          </>
+        )}
       </KipSays>
       <Title>Pick your money style</Title>
 
@@ -36,10 +51,19 @@ export default function SetupMoney() {
             ['Spend a day', baht(r.daily)],
             [s.key === 'savefirst' ? 'After saving' : 'Fun a month', s.key === 'savefirst' ? 'One pot' : baht(r.fun)],
           ];
-          const note =
-            s.key === 'savefirst' && r.fun < inputs.income * 0.08
-              ? 'Tight: little room for surprises or nights out.'
-              : r.notes.find((n) => !n.startsWith('No categories')) ?? (s.key === 'jars' && !monthly ? `${short} gets only 10% — slowest to your goal.` : '');
+          const vsPick =
+            chosenMonths && r.goalMonths
+              ? r.goalMonths > chosenMonths
+                ? `${r.goalMonths - chosenMonths} month${r.goalMonths - chosenMonths > 1 ? 's' : ''} later than your pick (${monthYear(chosen as Date)}).`
+                : r.goalMonths < chosenMonths
+                  ? `${chosenMonths - r.goalMonths} month${chosenMonths - r.goalMonths > 1 ? 's' : ''} sooner than your pick — fun money is tighter.`
+                  : `Matches your pick: ${monthYear(chosen as Date)}.`
+              : monthly && r.goal < (draft.goalMonthly ?? 0)
+                ? `Only ${baht(r.goal)} a month for ${short} — less than the ${baht(draft.goalMonthly ?? 0)} you wanted.`
+                : '';
+          const tight = r.fun <= inputs.income * 0.06 ? ' Fun money is tight — little room for surprises.' : '';
+          const styleNote = r.notes.find((n) => !n.startsWith('No categories')) ?? '';
+          const note = [vsPick + (vsPick ? tight : ''), styleNote].filter(Boolean).join(' ') || tight.trim();
           return (
             <Pressable
               key={s.key}

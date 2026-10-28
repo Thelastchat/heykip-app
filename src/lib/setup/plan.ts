@@ -145,7 +145,11 @@ export function monthsFromNow(months: number, d: SetupDraft, now = new Date()): 
   return dayInMonth(now.getFullYear(), now.getMonth() + months, day);
 }
 export const monthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-export const monthsUntil = (iso: string, now = new Date()) => Math.max(1, Math.round(daysBetween(now, parseDay(iso)) / 30.44));
+/** Paydays until the date: whole calendar months, so a date picked as "N months from now" always counts as N. */
+export const monthsUntil = (iso: string, now = new Date()) => {
+  const d = parseDay(iso);
+  return Math.max(1, (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth()));
+};
 
 /** Which income Kip plans on: salary, a slow month — or the average, if a slow month can't cover the basics. */
 function incomeBasis(d: SetupDraft): { income: number; basis: Plan['incomeBasis'] } {
