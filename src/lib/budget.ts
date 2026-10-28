@@ -2,7 +2,7 @@
 // The numbers come from Kip's brain (brain.ts): 1 saving first (goal + safety net), 2 bills, 3 living + fun by category.
 import { livingFor, plan as splitMonth, type Inputs, type Result } from '@/lib/brain';
 import type { BudgetStyle } from '@/lib/setup/draft';
-import { colors } from '@/theme';
+import { colors, money } from '@/theme';
 
 export type CatKey = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
 export type IconKey = 'food' | 'travel' | 'shop' | 'fun' | 'health' | 'book' | 'gift' | 'more' | 'rent' | 'bill' | 'shield' | 'cash' | 'plane' | 'phone';
@@ -10,11 +10,11 @@ export type IconKey = 'food' | 'travel' | 'shop' | 'fun' | 'health' | 'book' | '
 export const CATEGORY: Record<CatKey, { name: string; color: string; icon: IconKey }> = {
   food: { name: 'Food & drinks', color: colors.lime, icon: 'food' },
   transport: { name: 'Transport', color: colors.sky, icon: 'travel' },
-  shopping: { name: 'Shopping', color: colors.orange, icon: 'shop' },
-  fun: { name: 'Fun', color: colors.lavender, icon: 'fun' },
-  health_beauty: { name: 'Health & beauty', color: colors.lilac, icon: 'health' },
-  learning: { name: 'Learning', color: colors.roseBeige, icon: 'book' },
-  giving: { name: 'Giving', color: colors.pink, icon: 'gift' },
+  shopping: { name: 'Shopping', color: colors.pink, icon: 'shop' },
+  fun: { name: 'Fun', color: money.fun, icon: 'fun' },
+  health_beauty: { name: 'Health & beauty', color: colors.lavender, icon: 'health' },
+  learning: { name: 'Learning', color: colors.clay, icon: 'book' },
+  giving: { name: 'Giving', color: colors.peach, icon: 'gift' },
   other: { name: 'Household & other', color: colors.grey, icon: 'more' },
   spend_freely: { name: 'Spend freely', color: colors.lime, icon: 'cash' },
 };

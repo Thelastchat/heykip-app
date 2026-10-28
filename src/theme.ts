@@ -23,6 +23,17 @@ export const colors = {
   lilac: '#E7E1F0',
 } as const;
 
+// What each kind of money looks like, everywhere. The rule: two different things never get colours that
+// look alike (same tone) — only things that belong together share one. Rent & bills are one group: black.
+export const money = {
+  fixed: colors.ink, // rent & bills — the money that goes first
+  living: colors.sky,
+  safetyNet: colors.sage,
+  goal: colors.lime,
+  fun: colors.orange,
+  goalChoice: colors.pink, // the goal, when it sits in a list next to food (lime)
+} as const;
+
 // Pin colours by goal position on the board: goal 1 is always orange.
 export const pinColors = [colors.orange, colors.lavender, colors.sky] as const;
 

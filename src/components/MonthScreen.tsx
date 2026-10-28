@@ -28,7 +28,7 @@ import {
 } from '@/lib/budget';
 import { baht } from '@/lib/money';
 import { shortDate } from '@/lib/setup/plan';
-import { colors, fonts, radius, shadow } from '@/theme';
+import { colors, fonts, money, radius, shadow } from '@/theme';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -133,13 +133,13 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
         <Section title="2 · Bills" right={baht(billsTotal(month))} />
         <View style={styles.card}>
           <View style={[styles.row, styles.divider]}>
-            <CatBadge name="rent" color={colors.orange} />
+            <CatBadge name="rent" color={money.fixed} />
             <Text style={styles.rowName}>Rent</Text>
             <Text style={styles.amount}>{baht(month.bills.rent)}</Text>
           </View>
           {(month.bills.items ?? []).map((b, i) => (
             <View key={`${b.name}-${i}`} style={[styles.row, styles.divider]}>
-              <CatBadge name="bill" color={colors.sky} />
+              <CatBadge name="bill" color={money.fixed} />
               <Text style={styles.rowName}>{b.name}</Text>
               <Text style={styles.amount}>{baht(b.amount)}</Text>
               <Pressable onPress={() => save(removeBill(month, i))} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${b.name}`}>
@@ -148,7 +148,7 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
             </View>
           ))}
           <View style={[styles.row, styles.divider]}>
-            <CatBadge name="bill" color={colors.sand} />
+            <CatBadge name="bill" color={money.fixed} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowName}>
                 Other bills <Text style={{ color: colors.muted }}>· Kip’s guess</Text>
@@ -383,10 +383,10 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
   const amt = (k: CatKey) => month.spend.find((s) => s.key === k)?.amount ?? 0;
   const funKey: CatKey = month.spend.some((s) => s.key === 'fun') ? 'fun' : 'spend_freely';
   const options: { key: FreedTo; title: string; sub: string; tag?: string; color: string }[] = [
-    { key: 'goal', title: goalName, sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`, tag: 'KIP’S PICK', color: colors.lime },
+    { key: 'goal', title: goalName, sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`, tag: 'KIP’S PICK', color: money.goalChoice },
     ...(cat !== 'food' && month.spend.some((s) => s.key === 'food') ? [{ key: 'food' as const, title: 'Food & drinks', sub: `${baht(amt('food'))} → ${baht(amt('food') + freed)} a month`, color: colors.lime }] : []),
     ...(cat !== 'transport' && month.spend.some((s) => s.key === 'transport') ? [{ key: 'transport' as const, title: 'Transport', sub: `${baht(amt('transport'))} → ${baht(amt('transport') + freed)} a month`, color: colors.sky }] : []),
-    ...(cat !== funKey ? [{ key: 'fun' as const, title: 'Fun money', sub: `${baht(amt(funKey))} → ${baht(amt(funKey) + freed)} a month`, color: colors.lavender }] : []),
+    ...(cat !== funKey ? [{ key: 'fun' as const, title: 'Fun money', sub: `${baht(amt(funKey))} → ${baht(amt(funKey) + freed)} a month`, color: money.fun }] : []),
   ];
   const label = options.find((o) => o.key === dest)?.title ?? goalName;
   return (

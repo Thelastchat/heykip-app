@@ -95,7 +95,7 @@ export function CatIcon({ name, size = 24, ink = colors.ink }: { name: IconKey; 
 export function CatBadge({ name, color, size = 38 }: { name: IconKey; color: string; size?: number }) {
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-      <CatIcon name={name} size={Math.round(size * 0.52)} />
+      <CatIcon name={name} size={Math.round(size * 0.52)} ink={color === colors.ink ? '#FFFFFF' : colors.ink} />
     </View>
   );
 }

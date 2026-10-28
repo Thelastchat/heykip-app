@@ -9,7 +9,7 @@ import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { funMinimum } from '@/lib/brain';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, parseDay, shortName } from '@/lib/setup/plan';
-import { colors, fonts, radius, shadow } from '@/theme';
+import { colors, fonts, money, radius, shadow } from '@/theme';
 
 type Choice = { key: string; per?: number; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
 const PICK: Record<string, string> = { comfy: colors.lime, anyway: colors.lime, tight: colors.peach, keep: colors.peach, most: colors.peach, smaller: colors.sky, numbers: colors.sky };
@@ -99,11 +99,11 @@ export default function SetupCheck() {
 
   const comfyPlan = splitMonth(inputs, 'kip', choice?.per ?? R.comfortable); // the bar shows the option you picked
   const parts: [number, string, string][] = [
-    [fixed, colors.orange, `Rent & bills ${baht(fixed)}`],
-    [livingSum, colors.sky, `Living ${baht(livingSum)}`],
-    [comfyPlan.net, colors.sage, `Safety net ${baht(comfyPlan.net)}`],
-    [comfyPlan.goal, colors.lime, `${short} ${baht(comfyPlan.goal)}`],
-    [comfyPlan.fun + comfyPlan.learn + comfyPlan.give, colors.lavender, `Fun ${baht(comfyPlan.fun + comfyPlan.learn + comfyPlan.give)}`],
+    [fixed, money.fixed, `Rent & bills ${baht(fixed)}`],
+    [livingSum, money.living, `Living ${baht(livingSum)}`],
+    [comfyPlan.net, money.safetyNet, `Safety net ${baht(comfyPlan.net)}`],
+    [comfyPlan.goal, money.goal, `${short} ${baht(comfyPlan.goal)}`],
+    [comfyPlan.fun + comfyPlan.learn + comfyPlan.give, money.fun, `Fun ${baht(comfyPlan.fun + comfyPlan.learn + comfyPlan.give)}`],
   ].filter(([n]) => (n as number) > 0) as [number, string, string][];
 
   function go() {

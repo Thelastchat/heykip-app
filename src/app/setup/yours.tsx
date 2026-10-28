@@ -8,11 +8,11 @@ import { SetupScreen, Title, picked } from '@/components/setup/kit';
 import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
 import { LIVING_FLOOR, applyEdit, funMinimum, livingFor, safetyNet, type Edit, type EditResult } from '@/lib/brain';
-import type { IconKey } from '@/lib/budget';
+import { CATEGORY, type IconKey } from '@/lib/budget';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { makePlan, monthYear, type Plan } from '@/lib/setup/plan';
-import { colors, fonts, shadow } from '@/theme';
+import { colors, fonts, money, shadow } from '@/theme';
 
 const NAMES: Record<string, string> = { rent: 'Rent', bills: 'Other bills', food: 'Food', transport: 'Transport', health: 'Health & personal', household: 'Household', fun: 'Fun money', goal: '' };
 
@@ -125,16 +125,16 @@ export default function SetupYours() {
         <Text style={styles.tiny}>{baht(inputs.income)} in · every baht has a job</Text>
       </View>
       <View style={styles.card}>
-        {row('rent', 'rent', colors.orange, 'You told me', inputs.rent, (to) => ({ kind: 'cost', key: 'rent', to }))}
-        {row('bills', 'bill', colors.sand, 'Phone, internet, electricity, Netflix, YouTube…', inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
+        {row('rent', 'rent', money.fixed, 'You told me', inputs.rent, (to) => ({ kind: 'cost', key: 'rent', to }))}
+        {row('bills', 'bill', money.fixed, 'Phone, internet, electricity, Netflix, YouTube…', inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
         {row('food', 'food', colors.lime, `${baht(Math.round(L.food / 30))} a day · lowest ฿150`, L.food, (to) => ({ kind: 'cost', key: 'food', to }), L.food <= LIVING_FLOOR.food)}
         {row('transport', 'travel', colors.sky, 'BTS/MRT, bus or bike fuel', L.transport, (to) => ({ kind: 'cost', key: 'transport', to }))}
-        {row('health', 'health', colors.lilac, 'Pharmacy, haircut, toiletries', L.health, (to) => ({ kind: 'cost', key: 'health', to }))}
+        {row('health', 'health', CATEGORY.health_beauty.color, 'Pharmacy, haircut, toiletries', L.health, (to) => ({ kind: 'cost', key: 'health', to }))}
         {row('household', 'more', colors.grey, 'Laundry, small things', L.household, (to) => ({ kind: 'cost', key: 'household', to }))}
         {!emergency && <Row icon="shield" color={colors.sage} name="Safety net" hint={`Always first · full at ${baht(S.target)}`} value={r.net} note={null} />}
-        {r.learn > 0 && <Row icon="book" color={colors.roseBeige} name="Learning" hint="6 Jars: courses, books" value={r.learn} note={null} />}
-        {r.give > 0 && <Row icon="gift" color={colors.pink} name="Giving" hint="6 Jars: family, merit, gifts" value={r.give} note={null} />}
-        {row('fun', 'fun', colors.lavender, `Nights out, treats, shopping · at least ${baht(funMin)}`, r.fun, (to) => ({ kind: 'fun', to }))}
+        {r.learn > 0 && <Row icon="book" color={CATEGORY.learning.color} name="Learning" hint="6 Jars: courses, books" value={r.learn} note={null} />}
+        {r.give > 0 && <Row icon="gift" color={CATEGORY.giving.color} name="Giving" hint="6 Jars: family, merit, gifts" value={r.give} note={null} />}
+        {row('fun', 'fun', money.fun, `Nights out, treats, shopping · at least ${baht(funMin)}`, r.fun, (to) => ({ kind: 'fun', to }))}
       </View>
 
       <View style={styles.result}>
@@ -172,7 +172,7 @@ type NoteState = {
   warn: boolean;
   route?: { amount: number; base: Partial<SetupDraft>; goalBefore: number; from: string; picked: Dest };
 };
-const DEST_COLOR: Record<Dest, string> = { goal: colors.peach, food: colors.lime, transport: colors.sky, fun: colors.lavender };
+const DEST_COLOR: Record<Dest, string> = { goal: money.goalChoice, food: colors.lime, transport: colors.sky, fun: money.fun };
 
 function Note({ note, short, onRoute }: { note: NoteState; short: string; onRoute: (d: Dest) => void }) {
   const rt = note.route;
