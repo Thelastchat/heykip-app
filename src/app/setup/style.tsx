@@ -6,7 +6,7 @@ import { Chip, KipSays, RadioCard, SetupScreen, Title } from '@/components/setup
 import { Button } from '@/components/ui';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { inputsFrom, LEAKS } from '@/lib/setup/plan';
-import { leakRules, PAYDAY } from '@/lib/setup/rules';
+import { LEAK_COLOR, leakRules, PAYDAY } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
 
 const ANSWERS: { key: MoneyStyle; color: string }[] = [
@@ -15,8 +15,6 @@ const ANSWERS: { key: MoneyStyle; color: string }[] = [
   { key: 'save', color: colors.lime },
   { key: 'disappears', color: colors.peach },
 ];
-// One colour per leak chip, none alike (picked chips sit side by side).
-const LEAK_COLOR = [colors.lime, colors.sky, colors.pink, colors.sage, colors.orange, colors.lavender];
 
 // Setup 2/6 · Payday hits. What happens first? Each answer shows what Kip will actually do with it.
 export default function SetupStyle() {
@@ -25,9 +23,7 @@ export default function SetupStyle() {
   const rules = leakRules(draft.leaks, inputsFrom(draft));
 
   return (
-    <SetupScreen
-      step={2}
-      footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!draft.moneyStyle} onPress={() => (editing ? router.back() : router.push('/setup/goal'))} />}>
+    <SetupScreen step={2} footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!draft.moneyStyle} onPress={() => (editing ? router.back() : router.push('/setup/goal'))} />}>
       <KipSays>
         No judging — this decides <Text style={{ fontFamily: fonts.semibold }}>when</Text> I move your saving and <Text style={{ fontFamily: fonts.semibold }}>where</Text> I nudge you.
       </KipSays>
@@ -46,15 +42,7 @@ export default function SetupStyle() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {LEAKS.map((l, i) => {
             const on = draft.leaks.includes(l.key);
-            return (
-              <Chip
-                key={l.key}
-                label={l.label}
-                color={LEAK_COLOR[i % LEAK_COLOR.length]}
-                on={on}
-                onPress={() => update({ leaks: on ? draft.leaks.filter((k) => k !== l.key) : [...draft.leaks, l.key] })}
-              />
-            );
+            return <Chip key={l.key} label={l.label} color={LEAK_COLOR[l.key]} on={on} onPress={() => update({ leaks: on ? draft.leaks.filter((k) => k !== l.key) : [...draft.leaks, l.key] })} />;
           })}
         </View>
       </View>
@@ -62,6 +50,7 @@ export default function SetupStyle() {
       {rules.length > 0 && (
         <View style={styles.rules}>
           <Text style={styles.rulesHead}>WHAT I’LL DO ABOUT IT</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted, marginTop: -2 }}>Colour = the budget it comes from</Text>
           {rules.map((r) => (
             <View key={r.key} style={styles.rule}>
               <CatBadge name={r.icon} color={r.color} size={30} />

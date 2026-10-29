@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 export type IncomeType = 'regular' | 'changes';
 export type MoneyStyle = 'treat' | 'bills' | 'save' | 'disappears';
-export type Leak = 'delivery' | 'grab' | 'shopping' | 'coffee' | 'goingOut' | 'beauty';
+export type Leak = 'delivery' | 'grab' | 'shopping' | 'coffee' | 'goingOut' | 'beauty' | 'snacks' | 'bubbleTea' | 'subscriptions' | 'games' | 'treating' | 'sales';
 /** safety_net is shown as "Emergency fund"; monthly = "Save every month" (no target or date). */
 export type GoalKind = 'trip' | 'gadget' | 'car' | 'home' | 'safety_net' | 'monthly';
 /** How Kip splits what's left after the goal, the safety net and bills. */

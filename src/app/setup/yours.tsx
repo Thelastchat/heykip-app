@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
-import { SetupScreen, Title, picked } from '@/components/setup/kit';
+import { BackButton, SetupScreen, Title, picked } from '@/components/setup/kit';
 import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
 import { LIVING_FLOOR, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
@@ -183,9 +183,8 @@ export default function SetupYours() {
   const sliderLocked = locks.goal || locks.fun;
 
   return (
-    <SetupScreen
-      step={4}
-      footer={<Button label={editing ? 'Update my plan' : 'Done — back to my plan'} disabled={r.goal <= 0} onPress={() => router.back()} />}>
+    <SetupScreen step={undefined} footer={<Button label={editing ? 'Update my plan' : 'Done'} disabled={r.goal <= 0} onPress={() => router.back()} />}>
+      <BackButton />
       <Title>Make it yours</Title>
       <Text style={styles.sub}>Change any number — Kip re-balances the rest and tells you what moved.</Text>
 

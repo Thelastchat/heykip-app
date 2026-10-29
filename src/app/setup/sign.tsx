@@ -31,7 +31,7 @@ export default function SetupSign() {
 
   return (
     <SetupScreen
-      step={5}
+      step={4}
       footer={
         <>
           <Button label="Sign and commit" disabled={!draft.signature || !main.trim()} onPress={commit} />

@@ -22,7 +22,7 @@ import type { IconKey } from '@/lib/budget';
 import { T } from '@/components/ui';
 import { colors, fonts, radius, shadow } from '@/theme';
 
-export const STEPS = 5;
+export const STEPS = 4;
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
 export function SetupScreen({
@@ -232,7 +232,7 @@ export function Chip({ label, on, onPress, color = colors.lime }: { label: strin
       accessibilityState={{ checked: on }}
       onPress={onPress}
       style={[styles.chip, on && picked(color)]}>
-      <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }]}>{label}</Text>
+      <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }, on && color === colors.ink && { color: '#FFFFFF' }]}>{label}</Text>
     </Pressable>
   );
 }

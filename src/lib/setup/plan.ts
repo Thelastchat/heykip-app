@@ -95,6 +95,12 @@ const CHANGE: Record<Leak, string> = {
   coffee: 'Café coffee 3 times a week',
   goingOut: 'One big night out a week',
   beauty: 'Beauty buys from fun money',
+  snacks: 'A weekly 7-Eleven budget',
+  bubbleTea: 'Bubble tea twice a week',
+  subscriptions: 'Only subscriptions I use',
+  games: 'A monthly top-up limit',
+  treating: 'A set budget for treating friends',
+  sales: 'A budget before each sale day',
 };
 
 const STAY: Record<Leak, string> = {
@@ -104,6 +110,12 @@ const STAY: Record<Leak, string> = {
   delivery: 'Your favourite takeaway',
   shopping: 'Treats you plan for',
   grab: 'Getting home safe',
+  snacks: 'Your favourite snacks',
+  bubbleTea: 'Your bubble tea',
+  subscriptions: 'The apps you love',
+  games: 'Your games',
+  treating: 'Treating the people you love',
+  sales: 'The deals you really want',
 };
 
 const CUT_FIRST: Record<Leak, string> = {
@@ -113,6 +125,12 @@ const CUT_FIRST: Record<Leak, string> = {
   coffee: 'café coffee',
   goingOut: 'nights out',
   beauty: 'beauty buys',
+  snacks: '7-Eleven runs',
+  bubbleTea: 'bubble tea',
+  subscriptions: 'subscriptions I don’t use',
+  games: 'game top-ups',
+  treating: 'treating friends',
+  sales: 'sale-day shopping',
 };
 
 export const LEAKS: { key: Leak; label: string }[] = [
@@ -122,6 +140,12 @@ export const LEAKS: { key: Leak; label: string }[] = [
   { key: 'coffee', label: 'Coffee' },
   { key: 'goingOut', label: 'Going out' },
   { key: 'beauty', label: 'Beauty' },
+  { key: 'snacks', label: '7-Eleven snacks' },
+  { key: 'bubbleTea', label: 'Bubble tea' },
+  { key: 'subscriptions', label: 'Subscriptions' },
+  { key: 'games', label: 'Games & top-ups' },
+  { key: 'treating', label: 'Treating friends' },
+  { key: 'sales', label: 'Sale days (11.11)' },
 ];
 
 function moment(kind: GoalKind, title: string, short: string) {
@@ -235,7 +259,7 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
   const mode: Plan['mode'] = v.kind === 'noRoom' ? 'noRoom' : v.kind === 'notByThen' && !d.goalPerMonth ? 'stretch' : 'ok';
 
   const picked = LEAKS.map((l) => l.key).filter((k) => d.leaks.includes(k));
-  const notPicked = (['coffee', 'goingOut', 'beauty', 'delivery', 'shopping', 'grab'] as Leak[]).filter((k) => !d.leaks.includes(k));
+  const notPicked = (['coffee', 'goingOut', 'beauty', 'bubbleTea', 'snacks', 'delivery', 'shopping', 'grab', 'games', 'treating', 'subscriptions', 'sales'] as Leak[]).filter((k) => !d.leaks.includes(k));
   const changes = picked.slice(0, 2).map((k) => CHANGE[k]);
   if (changes.length === 0) changes.push('Spending stays under your daily number');
   const stays = notPicked.slice(0, 2).map((k) => STAY[k]);

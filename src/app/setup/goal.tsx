@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   muted12: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   hand: { fontFamily: fonts.hand, fontSize: 20, color: '#4A4A44' },
 
-  suggested: { marginHorizontal: -6, borderRadius: 26, backgroundColor: '#F7F2EA', paddingTop: 16, paddingBottom: 16 },
+  suggested: { marginHorizontal: -6, paddingTop: 8, paddingBottom: 8 },
   suggestedHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 16 },
   kipTag: { alignSelf: 'flex-start', height: 26, paddingLeft: 9, paddingRight: 11, borderRadius: radius.pill, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', gap: 6 },
   kipTagText: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6, color: colors.ink },

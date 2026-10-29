@@ -8,7 +8,8 @@ import { Button } from '@/components/ui';
 import { baht } from '@/lib/money';
 import { useSetup } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
-import { makePlan, monthYear } from '@/lib/setup/plan';
+import { makePlan, monthYear, ordinal } from '@/lib/setup/plan';
+import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
 
 const CONFETTI = [colors.lime, colors.orange, colors.sky, colors.lavender, colors.pink, colors.sage];
@@ -20,12 +21,20 @@ export default function SetupCongrats() {
   const plan = makePlan(draft);
   const monthly = draft.goalKind === 'monthly';
   const icon = typeInfo(draft.goalType, draft.goalKind).key === 'trip' ? '✈︎ ' : '';
+  // What Kip will actually do with their answers: the payday habit, then their money leaks.
+  const day = draft.incomeType === 'regular' && draft.payday ? `on the ${ordinal(draft.payday)}` : 'on payday';
+  const how = [
+    `${baht(plan.monthlySave + plan.safetyMonthly)} moves to ${plan.short}${plan.safetyMonthly && draft.goalKind !== 'safety_net' ? ' and your safety net' : ''} ${day}${draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save' ? ', first thing in the morning' : ''}`,
+    ...leakRules(draft.leaks, plan.inputs)
+      .slice(0, 2)
+      .map((r) => r.rule.split('. ')[0].replace(/\.$/, '')),
+  ];
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 70, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + 40, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
       <Confetti />
       <View style={{ alignItems: 'center' }}>
-        <Kip mood="celebrate" size={170} />
+        <Kip mood="celebrate" size={140} />
       </View>
       <View style={{ alignItems: 'center', gap: 8 }}>
         <Text style={styles.h1}>Yay! Your plan is ready</Text>
@@ -40,13 +49,26 @@ export default function SetupCongrats() {
           {baht(plan.monthlySave)} a month · {baht(plan.dailySpend)} a day to spend
           {draft.goalKind === 'safety_net' ? '' : ' · a safety net growing from day one'}
         </Text>
+        <View style={styles.rule} />
+        <Text style={styles.howHead}>HOW I’LL RUN IT</Text>
+        {how.map((line) => (
+          <View key={line} style={{ flexDirection: 'row', gap: 8 }}>
+            <Text style={styles.cardText}>•</Text>
+            <Text style={[styles.cardText, { flex: 1 }]}>{line}</Text>
+          </View>
+        ))}
       </View>
-      <Pressable onPress={() => router.push('/setup/everything')} hitSlop={10} style={{ alignItems: 'center', gap: 2 }} accessibilityRole="link">
-        <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' }}>See what I used →</Text>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>optional · check or change any number</Text>
-      </Pressable>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
+        <Pressable onPress={() => router.push('/setup/everything')} hitSlop={10} accessibilityRole="link">
+          <Text style={styles.link}>See what I used</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/setup/yours')} hitSlop={10} accessibilityRole="link">
+          <Text style={styles.link}>Customize numbers</Text>
+        </Pressable>
+      </View>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -8 }}>optional · you can change your money style any time in the app</Text>
       <View style={{ marginTop: 'auto' }}>
-        <Button label="Pick my plan" onPress={() => router.push('/setup/plan')} />
+        <Button label="Make my promise" onPress={() => router.push('/setup/sign')} />
       </View>
     </View>
   );
@@ -99,6 +121,9 @@ function Confetti() {
 }
 
 const styles = StyleSheet.create({
+  rule: { height: 1, backgroundColor: 'rgba(17,17,17,0.1)', marginVertical: 4 },
+  howHead: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
+  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
   screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20, gap: 16 },
   h1: { fontFamily: fonts.semibold, fontSize: 32, letterSpacing: -0.6, color: colors.ink, textAlign: 'center' },
   sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center' },
