@@ -1,12 +1,18 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { CaretDown, Check, PencilSimple, Plus, X } from 'phosphor-react-native';
+import { Image } from 'expo-image';
+import { CaretDown, Check, Lock, Plus, X } from 'phosphor-react-native';
 import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
+import { Glass } from '@/components/glow/Glass';
+import { GlowBackground } from '@/components/glow/GlowBackground';
+import { RiseIn, Ring, Squish } from '@/components/glow/motion';
+import { BillGlyph, glyphFor } from '@/components/home/BillStack';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
 import {
@@ -26,9 +32,10 @@ import {
   type FreedTo,
   type MonthBudget,
 } from '@/lib/budget';
+import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { shortDate } from '@/lib/setup/plan';
-import { colors, fonts, money, radius, shadow } from '@/theme';
+import { colors, fonts, glow, money, radius } from '@/theme';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -43,7 +50,25 @@ function period(payday: number | null, now = new Date()) {
 
 type Sheet = null | { stage: 'addBill' } | { stage: 'style' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
 
-export function MonthScreen({ month, loading, error, save }: { month: MonthBudget | null; loading: boolean; error: string | null; save: (m: MonthBudget) => void }) {
+export function MonthScreen({
+  month,
+  loading,
+  error,
+  save,
+  spent,
+  isPlus = true,
+  onLocked,
+}: {
+  month: MonthBudget | null;
+  loading: boolean;
+  error: string | null;
+  save: (m: MonthBudget) => void;
+  /** Spent so far this month by category — shows what's left on each ring. */
+  spent?: Partial<Record<CatKey, number>>;
+  /** Free users: changing amounts and money styles are Plus. Bills are facts, so adding one stays free. */
+  isPlus?: boolean;
+  onLocked?: (f: 'styles' | 'customize') => void;
+}) {
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -51,6 +76,7 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
   if (loading || !month) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
+        <GlowBackground />
         {loading ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.muted}>{error ?? 'Finish Setup to see your month.'}</Text>}
       </View>
     );
@@ -60,6 +86,8 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
   const style = STYLES.find((s) => s.key === month.style)!;
   const spending = spendingTotal(month);
   const saving = savingTotal(month);
+  const bills = billsTotal(month);
+  const goalAmount = month.goal.amount + month.goalExtra;
 
   const change = (key: CatKey, amount: number) => {
     const cur = month.spend.find((s) => s.key === key)?.amount ?? 0;
@@ -73,151 +101,152 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
     }
     setSheet({ stage: 'take', key, to: amount });
   };
+  const edit = (key: CatKey) => (isPlus ? setSheet({ stage: 'edit', key }) : onLocked?.('customize'));
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) + 90, gap: 14 }}>
-        <ScreenHeader
-          title="Your month"
-          right={
-            <Pressable onPress={() => setSheet({ stage: 'style' })} style={styles.stylePill} accessibilityRole="button" accessibilityLabel={`Money style: ${style.name}. Change`}>
-              <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{style.name}</Text>
-              <CaretDown size={11} color={colors.ink} weight="bold" />
-            </Pressable>
-          }
-        />
+    <View style={{ flex: 1 }}>
+      <GlowBackground />
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 100 }} showsVerticalScrollIndicator={false}>
+        <View style={{ paddingHorizontal: 18 }}>
+          <ScreenHeader
+            title="Your month"
+            right={
+              <Squish onPress={() => (isPlus ? setSheet({ stage: 'style' }) : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={`Money style: ${style.name}. Change`}>
+                <Glass radius={999} innerStyle={styles.stylePill}>
+                  <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>{style.name}</Text>
+                  {isPlus ? <CaretDown size={11} color={colors.ink} weight="bold" /> : <MiniLock />}
+                </Glass>
+              </Squish>
+            }
+          />
+        </View>
 
-        <View style={{ alignItems: 'center', gap: 2, paddingTop: 4, paddingBottom: 2 }}>
-          <Text style={styles.muted}>
-            {shortDate(from)} – {shortDate(to)} · coming in
+        <RiseIn delay={40} style={{ paddingHorizontal: 22, paddingTop: 22 }}>
+          <Text style={styles.heroLabel}>
+            {shortDate(from)} – {shortDate(to)} · your pay
           </Text>
-          <Text style={styles.big}>{baht(month.income)}</Text>
-        </View>
+          <Text style={styles.big}>
+            <Text style={{ fontSize: 26, fontFamily: fonts.regular }}>฿</Text>
+            {month.income.toLocaleString('en-US')}
+          </Text>
+        </RiseIn>
 
-        <View style={styles.saysRow}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.bubble}>
-            <Text style={styles.bubbleText}>Here’s a starting point. Tap any amount to change it — I’ll balance the rest so it still adds up.</Text>
-          </View>
-        </View>
+        {/* where every baht goes */}
+        <RiseIn delay={90} style={styles.flowBar}>
+          <FlowPart flex={saving} color={colors.limeDeep} label="Saving" amount={saving} delay={0} />
+          <FlowPart flex={bills} color={colors.ink} label="Bills" amount={bills} delay={100} light />
+          <FlowPart flex={spending} color="rgba(255,255,255,0.78)" label="To spend" amount={spending} delay={200} />
+        </RiseIn>
+        <Text style={styles.note}>Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.</Text>
 
         {/* 1 · Saving first */}
-        <Section title="1 · Saving first" right={`${baht(saving)} · every payday`} />
-        <View style={styles.savingCard}>
-          <View style={styles.row}>
-            {month.goal.isSafetyNet ? <CatBadge name="shield" color="#FFFFFF" size={30} /> : <View style={styles.pinDot} />}
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowName, { fontFamily: fonts.semibold }]} numberOfLines={1}>
-                {month.goal.title}
-              </Text>
-              {month.goalExtra > 0 ? <Text style={styles.sub}>Includes {baht(month.goalExtra)} moved from your budgets</Text> : null}
-            </View>
-            <Text style={styles.amount}>{baht(month.goal.amount + month.goalExtra)}</Text>
-          </View>
-          {!month.goal.isSafetyNet && (
-            <View style={[styles.row, { alignItems: 'flex-start' }]}>
-              <CatBadge name="shield" color="#FFFFFF" size={30} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowName}>
-                  <Text style={{ fontFamily: fonts.semibold }}>Safety net</Text>
-                  {month.income ? ` · ${Math.round((month.safety.amount / month.income) * 100)}%` : ''}
-                </Text>
-                <Text style={styles.sub}>Until you have {baht(month.safety.target)} — 3 months of basics</Text>
-              </View>
-              <Text style={styles.amount}>{baht(month.safety.amount)}</Text>
-            </View>
-          )}
-        </View>
+        <Section n={1} title="Saving first" right={`${baht(saving)} · on payday`} />
+        <RiseIn delay={140} style={styles.cardWrap}>
+          <Glass radius={26} innerStyle={styles.card}>
+            <Row
+              icon={month.goal.isSafetyNet ? 'shield' : 'plane'}
+              title={month.goal.title}
+              sub={month.goalExtra > 0 ? `Includes ${baht(month.goalExtra)} moved from your budgets` : 'Goes out first, every payday'}
+              amount={baht(goalAmount)}
+              amountSub="a month"
+            />
+            {!month.goal.isSafetyNet && (
+              <Row icon="shield" title="Safety net" sub={`Until you have ${baht(month.safety.target)} — 3 months of basics`} amount={baht(month.safety.amount)} amountSub="a month" divider />
+            )}
+          </Glass>
+        </RiseIn>
 
         {/* 2 · Bills */}
-        <Section title="2 · Bills" right={baht(billsTotal(month))} />
-        <View style={styles.card}>
-          <View style={[styles.row, styles.divider]}>
-            <CatBadge name="rent" color={money.fixed} />
-            <Text style={styles.rowName}>Rent</Text>
-            <Text style={styles.amount}>{baht(month.bills.rent)}</Text>
-          </View>
-          {(month.bills.items ?? []).map((b, i) => (
-            <View key={`${b.name}-${i}`} style={[styles.row, styles.divider]}>
-              <CatBadge name="bill" color={money.fixed} />
-              <Text style={styles.rowName}>{b.name}</Text>
-              <Text style={styles.amount}>{baht(b.amount)}</Text>
-              <Pressable onPress={() => save(removeBill(month, i))} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${b.name}`}>
-                <X size={14} color={colors.muted} weight="bold" />
-              </Pressable>
-            </View>
-          ))}
-          <View style={[styles.row, styles.divider]}>
-            <CatBadge name="bill" color={money.fixed} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowName}>
-                Other bills <Text style={{ color: colors.muted }}>· Kip’s guess</Text>
-              </Text>
-              <Text style={styles.sub}>For bills I haven’t seen yet — shrinks as I learn the real ones</Text>
-            </View>
-            <Text style={styles.amount}>{baht(month.bills.guess)}</Text>
-          </View>
-          <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={[styles.row, { justifyContent: 'center' }]} accessibilityRole="button">
-            <Plus size={14} color={colors.ink} weight="bold" />
-            <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Add a bill · Netflix, YouTube, gym…</Text>
-          </Pressable>
-        </View>
-        {notice ? <Text style={[styles.foot, { color: colors.ink }]}>{notice}</Text> : null}
+        <Section n={2} title="Bills" right={baht(bills)} />
+        <RiseIn delay={180} style={styles.cardWrap}>
+          <Glass radius={26} innerStyle={styles.card}>
+            <Row glyph={{ name: 'Rent', tint: colors.lavender }} title="Rent" sub="You told me" amount={baht(month.bills.rent)} />
+            {(month.bills.items ?? []).map((b, i) => (
+              <Row
+                key={`${b.name}-${i}`}
+                glyph={{ name: b.name, tint: tintFor(b.name) }}
+                title={b.name}
+                sub="Monthly"
+                amount={baht(b.amount)}
+                divider
+                right={
+                  <Pressable onPress={() => save(removeBill(month, i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${b.name}`} style={styles.xBtn}>
+                    <X size={12} color={colors.muted} weight="bold" />
+                  </Pressable>
+                }
+              />
+            ))}
+            <Row glyph={{ name: 'Other bills', tint: colors.sand }} title="Other bills" sub="Kip’s guess — shrinks as you add real ones" amount={`~${baht(month.bills.guess)}`} divider />
+            <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={styles.addRow} accessibilityRole="button">
+              <View style={styles.addDot}>
+                <Plus size={13} color="#FFFFFF" weight="bold" />
+              </View>
+              <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>Add a bill · Netflix, phone, gym…</Text>
+            </Pressable>
+          </Glass>
+        </RiseIn>
+        {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
-        <Section title="3 · Spending" right={`${baht(spending)} · ${baht(dailyOf(month))} a day`} />
-        <View style={styles.card}>
-          {month.spend.map((s, i) => {
-            const c = CATEGORY[s.key];
-            const pct = spending ? Math.round((s.amount / spending) * 100) : 0;
-            return (
-              <Pressable
-                key={s.key}
-                onPress={() => setSheet({ stage: 'edit', key: s.key })}
-                accessibilityRole="button"
-                accessibilityLabel={`${c.name}, ${baht(s.amount)}. Change`}
-                style={[styles.row, i < month.spend.length - 1 && styles.divider]}>
-                <CatBadge name={c.icon} color={c.color} />
-                <View style={{ flex: 1, gap: 5 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <Section n={3} title="Spending" right={`${baht(spending)} · ${baht(dailyOf(month))} a day`} />
+        <RiseIn delay={220} style={styles.cardWrap}>
+          <Glass radius={26} innerStyle={styles.card}>
+            {month.spend.map((s, i) => {
+              const c = CATEGORY[s.key];
+              const used = spent?.[s.key] ?? 0;
+              const left = Math.max(0, s.amount - used);
+              return (
+                <Pressable
+                  key={s.key}
+                  onPress={() => edit(s.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.name}, ${baht(s.amount)}, ${baht(left)} left. Change`}
+                  style={[styles.row, i > 0 && styles.divider]}>
+                  <View style={{ width: 48, height: 48 }}>
+                    <Ring pct={s.amount ? left / s.amount : 0} size={48} stroke={4.5} color={colors.limeDeep} delay={300 + i * 60} />
+                    <Image source={ICON3D[CAT_ICON3D[s.key]]} style={{ position: 'absolute', left: 9, top: 9, width: 30, height: 30 }} contentFit="contain" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.rowName}>{c.name}</Text>
+                    <Text style={styles.sub} numberOfLines={1}>
+                      {HINT[s.key]}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.amount}>{baht(s.amount)}</Text>
+                    {spent ? <Text style={styles.sub}>{baht(left)} left</Text> : null}
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={styles.track}>
-                      <View style={[styles.fill, { width: `${Math.min(100, pct * 2)}%` }]} />
-                    </View>
-                    <Text style={styles.pct}>{pct}%</Text>
+                  <View style={styles.editPill}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>Edit</Text>
+                    {!isPlus && <MiniLock />}
                   </View>
-                </View>
-                <View style={styles.pencil}>
-                  <PencilSimple size={14} color={colors.muted} />
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+                </Pressable>
+              );
+            })}
+          </Glass>
+        </RiseIn>
 
-        <View style={styles.leftovers}>
-          <CatBadge name="shield" color="#FFFFFF" size={34} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Leftovers go to your safety net</Text>
-            <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(17,17,17,0.7)' }}>
-              Daily money you didn’t spend, and any of my bill guess you didn’t need — moved on payday, automatically.
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.foot}>
+        <Text style={styles.note}>Changing a number? Kip rebalances the rest so your month still adds up.{!isPlus ? ' Changing amounts and money styles is ✦ Plus.' : ''}</Text>
+        <RiseIn delay={260} style={styles.cardWrap}>
+          <Glass radius={22} innerStyle={styles.leftovers}>
+            <Image source={ICON3D.shield} style={{ width: 40, height: 40 }} contentFit="contain" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.ink }}>Leftovers go to your safety net</Text>
+              <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>
+                Daily money you didn’t spend, and any of my bill guess you didn’t need — moved on payday.
+              </Text>
+            </View>
+          </Glass>
+        </RiseIn>
+        <Text style={styles.note}>
           Starting split based on what Thai households spend (Ministry of Commerce, 2025), adjusted for one person. After your first month, I’ll match it to how you really spend.
         </Text>
-        {error ? <Text style={[styles.foot, { color: colors.orange }]}>{error}</Text> : null}
+        {error ? <Text style={[styles.note, { color: colors.orange }]}>{error}</Text> : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Button label="Looks good" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       </View>
-
       <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>
         {sheet?.stage === 'style' && (
           <StylePicker
@@ -275,11 +304,100 @@ export function MonthScreen({ month, loading, error, save }: { month: MonthBudge
   );
 }
 
-function Section({ title, right }: { title: string; right: string }) {
+const HINT: Record<CatKey, string> = {
+  food: '฿150 a day at least',
+  transport: 'BTS/MRT, bus or bike taxi',
+  shopping: 'Clothes, gadgets, online',
+  fun: 'Going out, treats, hobbies',
+  health_beauty: 'Pharmacy, haircut, toiletries',
+  learning: 'Courses, books',
+  giving: 'Family, merit, gifts',
+  other: 'Laundry, small things',
+  spend_freely: 'One pot for everything day to day',
+};
+
+function tintFor(name: string) {
+  const g = glyphFor(name);
+  return ({ house: colors.lavender, bolt: colors.lime, drop: colors.sky, phone: colors.peach, wifi: colors.sage, play: colors.pink, receipt: colors.sand } as const)[g];
+}
+
+function FlowPart({ flex, color, label, amount, delay, light }: { flex: number; color: string; label: string; amount: number; delay: number; light?: boolean }) {
+  if (flex <= 0) return null;
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4, marginTop: 4 }}>
-      <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>{right}</Text>
+    <Animated.View
+      entering={FadeInLeft.delay(300 + delay).duration(700)}
+      style={{ flex, backgroundColor: color, justifyContent: 'flex-end', paddingHorizontal: 8, paddingVertical: 7, overflow: 'hidden' }}>
+      <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: light ? '#FFFFFF' : colors.ink }} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 10, color: light ? 'rgba(255,255,255,0.7)' : 'rgba(17,17,17,0.6)' }} numberOfLines={1}>
+        {baht(amount)}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function Row({
+  icon,
+  glyph,
+  title,
+  sub,
+  amount,
+  amountSub,
+  divider,
+  right,
+}: {
+  icon?: Icon3D;
+  glyph?: { name: string; tint: string };
+  title: string;
+  sub: string;
+  amount: string;
+  amountSub?: string;
+  divider?: boolean;
+  right?: ReactNode;
+}) {
+  return (
+    <View style={[styles.row, divider && styles.divider]}>
+      {icon ? (
+        <Image source={ICON3D[icon]} style={{ width: 44, height: 44 }} contentFit="contain" />
+      ) : glyph ? (
+        <View style={[styles.gico, { backgroundColor: glyph.tint }]}>
+          <BillGlyph name={glyph.name} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.sub}>{sub}</Text>
+      </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={styles.amount}>{amount}</Text>
+        {amountSub ? <Text style={styles.sub}>{amountSub}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+function MiniLock() {
+  return (
+    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
+      <Lock size={9} color="#FFFFFF" weight="fill" />
+    </View>
+  );
+}
+
+function Section({ n, title, right }: { n: number; title: string; right: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 28, paddingBottom: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={styles.nDot}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' }}>{n}</Text>
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>
     </View>
   );
 }
@@ -367,7 +485,9 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
           </Pressable>
         ))}
       </View>
-      {cat === 'food' && v < 4500 && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s {baht(Math.round(v / 30))} a day — below ฿150 a day is very hard to keep.</Text>}
+      {cat === 'food' && v < 4500 && (
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s {baht(Math.round(v / 30))} a day — below ฿150 a day is very hard to keep.</Text>
+      )}
       {(value ?? 0) > max && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s all your spending money — {baht(max)} at most.</Text>}
       <Button label={v === cur ? 'Done' : `Set to ${baht(v)}`} onPress={() => onDone(Math.round(v / 10) * 10)} />
     </>
@@ -383,9 +503,19 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
   const amt = (k: CatKey) => month.spend.find((s) => s.key === k)?.amount ?? 0;
   const funKey: CatKey = month.spend.some((s) => s.key === 'fun') ? 'fun' : 'spend_freely';
   const options: { key: FreedTo; title: string; sub: string; tag?: string; color: string }[] = [
-    { key: 'goal', title: goalName, sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`, tag: 'KIP’S PICK', color: money.goalChoice },
-    ...(cat !== 'food' && month.spend.some((s) => s.key === 'food') ? [{ key: 'food' as const, title: 'Food & drinks', sub: `${baht(amt('food'))} → ${baht(amt('food') + freed)} a month`, color: colors.lime }] : []),
-    ...(cat !== 'transport' && month.spend.some((s) => s.key === 'transport') ? [{ key: 'transport' as const, title: 'Transport', sub: `${baht(amt('transport'))} → ${baht(amt('transport') + freed)} a month`, color: colors.sky }] : []),
+    {
+      key: 'goal',
+      title: goalName,
+      sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`,
+      tag: 'KIP’S PICK',
+      color: money.goalChoice,
+    },
+    ...(cat !== 'food' && month.spend.some((s) => s.key === 'food')
+      ? [{ key: 'food' as const, title: 'Food & drinks', sub: `${baht(amt('food'))} → ${baht(amt('food') + freed)} a month`, color: colors.lime }]
+      : []),
+    ...(cat !== 'transport' && month.spend.some((s) => s.key === 'transport')
+      ? [{ key: 'transport' as const, title: 'Transport', sub: `${baht(amt('transport'))} → ${baht(amt('transport') + freed)} a month`, color: colors.sky }]
+      : []),
     ...(cat !== funKey ? [{ key: 'fun' as const, title: 'Fun money', sub: `${baht(amt(funKey))} → ${baht(amt(funKey) + freed)} a month`, color: money.fun }] : []),
   ];
   const label = options.find((o) => o.key === dest)?.title ?? goalName;
@@ -444,12 +574,14 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
           <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, paddingVertical: 6 }}>What it does to your month</Text>
           {preview.fromGuess > 0 && <Text style={styles.impact}>✓ {baht(preview.fromGuess)} fits inside my bill guess — that’s what the guess is for.</Text>}
           {preview.fromFun > 0 && <Text style={styles.impact}>• {baht(preview.fromFun)} less fun money a month.</Text>}
-          {preview.fromGoal > 0 && <Text style={styles.impact}>• {baht(preview.fromGoal)} less for {goalName} a month — it’ll take a little longer.</Text>}
+          {preview.fromGoal > 0 && (
+            <Text style={styles.impact}>
+              • {baht(preview.fromGoal)} less for {goalName} a month — it’ll take a little longer.
+            </Text>
+          )}
           {preview.short > 0 && <Text style={[styles.impact, { color: colors.orange }]}>• {baht(preview.short)} more than your month can carry. Something else has to go.</Text>}
           {preview.fromFun === 0 && preview.fromGoal === 0 && preview.short === 0 && <Text style={styles.impact}>Nothing else changes.</Text>}
-          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>
-            {baht((amount ?? 0) * 12)} a year. Worth it? Only you can say — I just make sure you see it.
-          </Text>
+          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>{baht((amount ?? 0) * 12)} a year. Worth it? Only you can say — I just make sure you see it.</Text>
         </View>
       )}
       <Button label={amount ? `Add ${name || 'bill'} · ${baht(amount)} a month` : 'Add bill'} disabled={!amount || !name.trim()} onPress={() => amount && onAdd(name.trim(), amount)} />
@@ -511,36 +643,44 @@ function Option({ title, sub, on, tag, onPress, color = colors.lime }: { title: 
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 24 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   muted: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center' },
-  big: { fontFamily: fonts.medium, fontSize: 40, letterSpacing: -1.2, color: colors.ink, fontVariant: ['tabular-nums'] },
-  stylePill: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.grey, flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  saysRow: { flexDirection: 'row' },
-  bubble: { maxWidth: '86%', backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 14, borderTopLeftRadius: 20, borderTopRightRadius: 4, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  bubbleText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-
-  sectionTitle: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
-  savingCard: { borderRadius: 18, backgroundColor: colors.peach, paddingVertical: 4, paddingHorizontal: 14 },
-  card: { borderRadius: 18, backgroundColor: '#FFFFFF', paddingVertical: 4, paddingHorizontal: 14, ...shadow.card },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  divider: { borderBottomWidth: 1, borderBottomColor: 'rgba(17,17,17,0.06)' },
-  rowName: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(17,17,17,0.6)' },
-  amount: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  pinDot: { width: 14, height: 14, marginHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.orange, boxShadow: 'inset 0 -1.5px 2px rgba(0,0,0,0.18), 0 2px 3px rgba(0,0,0,0.2)' },
-  track: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.07)', overflow: 'hidden' },
-  fill: { height: 5, borderRadius: radius.pill, backgroundColor: colors.ink },
-  pct: { width: 30, textAlign: 'right', fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-  pencil: { width: 30, height: 30, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
-  leftovers: { borderRadius: 18, backgroundColor: colors.lime, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.ink },
-  foot: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 10, backgroundColor: 'rgba(255,255,255,0.94)' },
+  stylePill: { height: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+  big: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 52, color: colors.ink, fontVariant: ['tabular-nums'], marginTop: 4 },
+  flowBar: { flexDirection: 'row', gap: 3, height: 54, marginHorizontal: 18, marginTop: 18, borderRadius: 18, overflow: 'hidden' },
+  note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 22, marginTop: 10 },
+  sectionTitle: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  nDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  cardWrap: { paddingHorizontal: 18 },
+  card: { paddingVertical: 4, paddingHorizontal: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  divider: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
+  rowName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+  sub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
+  amount: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+  gico: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  xBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
+  addDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  editPill: { height: 30, paddingHorizontal: 10, borderRadius: 999, backgroundColor: glow.control, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  leftovers: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(247,244,247,0.88)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.9)' },
 
   scrim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.38)' },
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.15)' },
-  option: { borderRadius: 18, borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  option: {
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.grey,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   optionOn: { borderColor: colors.ink },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
   tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },

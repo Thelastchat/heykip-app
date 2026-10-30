@@ -10,7 +10,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { Kip, type KipMood } from '@/components/Kip';
-import { Compare, PlusSheet, type PlusFeature } from '@/components/PlusSheet';
+import { PlusSheet, type PlusFeature } from '@/components/PlusSheet';
+import { fasterStyle, plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
@@ -109,18 +110,9 @@ export default function Home() {
     setTimeout(() => setToast(null), 2600);
   }
 
-  const styleCompare = (() => {
-    if (!month) return null;
-    const cur = splitMonth(month.inputs, month.style as Style, month.goalPerMonth);
-    const all = STYLES.map((s) => ({ s, r: splitMonth(month.inputs, s.key as Style) })).filter((x) => x.s.key !== month.style);
-    const best = all.reduce((a, b) => ((b.r.goalMonths ?? 999) < (a.r.goalMonths ?? 999) ? b : a), all[0]);
-    const sooner = (cur.goalMonths ?? 0) - (best.r.goalMonths ?? 0);
-    const curName = STYLES.find((s) => s.key === month.style)?.name ?? 'Kip’s plan';
-    return { cur, best, sooner, curName };
-  })();
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
-  const whenFor = (months: number | null | undefined) =>
-    months && month ? monthYear(monthsFromNow(months, { incomeType: month.payday ? 'regular' : 'changes', payday: month.payday } as never)) : '—';
+  const pitch = plusPitch(month, short, funLeft);
+  const styleCompare = month ? fasterStyle(month) : null;
 
   const plusCards: { f: PlusFeature; icon: Icon3D; title: string; teaser: string; on?: boolean }[] = [
     {
@@ -142,41 +134,6 @@ export default function Home() {
     { f: 'customize', icon: 'shield', title: 'Customize & locks', teaser: `Lock ${short}, move food & fun your way` },
     { f: 'talk', icon: 'phone', title: 'Talk to Kip', teaser: '“Can I afford hotpot on Friday?”' },
   ];
-
-  const sheetContent: Record<PlusFeature, { title: string; sub: string; body?: React.ReactNode }> = {
-    styles: {
-      title: styleCompare && styleCompare.sooner > 0 ? `Try ${styleCompare.best.s.name}?` : 'Try another money style',
-      sub: styleCompare && styleCompare.sooner > 0 ? `Same pay — ${short} ${styleCompare.sooner} month${styleCompare.sooner > 1 ? 's' : ''} sooner.` : 'Same pay, four ways to run it.',
-      body: styleCompare ? (
-        <Compare
-          left={{ k: `Now · ${styleCompare.curName}`, v: whenFor(styleCompare.cur.goalMonths), sub: `saves ${baht(styleCompare.cur.goal)} a month` }}
-          right={{ k: styleCompare.best.s.name, v: whenFor(styleCompare.best.r.goalMonths), sub: `saves ${baht(styleCompare.best.r.goal)} a month`, color: styleCompare.best.s.tagColor }}
-        />
-      ) : undefined,
-    },
-    talk: {
-      title: 'Ask Kip anything',
-      sub: 'Like a friend who knows your numbers.',
-      body: (
-        <View style={{ gap: 6 }}>
-          <View style={[styles.bubble, styles.bubbleMe]}>
-            <Text style={styles.bubbleText}>Can I afford hotpot on Friday?</Text>
-          </View>
-          <View style={styles.bubble}>
-            <Text style={styles.bubbleText}>
-              Yes — ฿300 fits. You still have <Text style={{ fontFamily: fonts.semibold }}>{baht(funLeft)}</Text> fun money this month, and {short} stays on track.
-            </Text>
-          </View>
-        </View>
-      ),
-    },
-    customize: { title: 'Make the plan yours', sub: `Change food, fun or ${short} — lock what matters and I rebalance the rest.` },
-    automove: {
-      title: 'Let me move it for you',
-      sub: `${baht(saving)} goes to ${short} and your safety net ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'} — before you can spend it.`,
-    },
-    goals: { title: 'Pin 2 more goals', sub: 'Up to 3 goals on your board, each with its own date — I plan them together.' },
-  };
 
   // ---- bills (paid marks reset each pay period) ----
   const pk = periodKey(month?.payday ?? null, now);
@@ -387,8 +344,8 @@ export default function Home() {
       </Squish>
 
       {sheet && (
-        <PlusSheet open onClose={() => setSheet(null)} onUnlocked={() => unlocked(sheet)} title={sheetContent[sheet].title} sub={sheetContent[sheet].sub}>
-          {sheetContent[sheet].body}
+        <PlusSheet open onClose={() => setSheet(null)} onUnlocked={() => unlocked(sheet)} title={pitch[sheet].title} sub={pitch[sheet].sub}>
+          {pitch[sheet].body}
         </PlusSheet>
       )}
     </View>

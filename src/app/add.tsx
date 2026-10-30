@@ -2,48 +2,55 @@
 // Kip shows what this does to today's money before you save, using the same numbers as Home.
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Backspace, CalendarBlank, PencilSimple, Receipt } from 'phosphor-react-native';
+import { Image } from 'expo-image';
+import { Backspace, CalendarBlank, Lock, PencilSimple, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CatBadge } from '@/components/CatIcon';
-import { PlusSheet } from '@/components/PlusSheet';
+import { Kip } from '@/components/Kip';
+import { ChatPeek, PlusSheet } from '@/components/PlusSheet';
+import { Glass } from '@/components/glow/Glass';
+import { GlowBackground } from '@/components/glow/GlowBackground';
+import { Squish } from '@/components/glow/motion';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY, type IconKey } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
+import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts, money, radius } from '@/theme';
+import { colors, fonts, money } from '@/theme';
 
 type Kind = 'spend' | 'income';
-type Cat = { key: string; name: string; icon: IconKey; color: string };
+type Cat = { key: string; name: string; icon: IconKey; color: string; i3?: Icon3D };
 
 // Spending: the five you use most, then More. Colours follow the budget each one counts against.
 const SPEND_MAIN: Cat[] = [
-  { key: 'food', name: 'Food', icon: 'food', color: CATEGORY.food.color },
-  { key: 'transport', name: 'Transport', icon: 'travel', color: CATEGORY.transport.color },
-  { key: 'shopping', name: 'Shopping', icon: 'shop', color: CATEGORY.shopping.color },
-  { key: 'fun', name: 'Fun', icon: 'fun', color: CATEGORY.fun.color },
-  { key: 'home_bills', name: 'Home & bills', icon: 'rent', color: money.fixed },
+  { key: 'food', name: 'Food', icon: 'food', color: CATEGORY.food.color, i3: 'bowl' },
+  { key: 'transport', name: 'Transport', icon: 'travel', color: CATEGORY.transport.color, i3: 'car' },
+  { key: 'shopping', name: 'Shopping', icon: 'shop', color: CATEGORY.shopping.color, i3: 'shop' },
+  { key: 'fun', name: 'Fun', icon: 'fun', color: CATEGORY.fun.color, i3: 'fun' },
+  { key: 'home_bills', name: 'Home & bills', icon: 'rent', color: money.fixed, i3: 'house' },
 ];
 const SPEND_MORE: Cat[] = [
-  { key: 'health_beauty', name: 'Health & beauty', icon: 'health', color: CATEGORY.health_beauty.color },
-  { key: 'giving', name: 'Giving', icon: 'gift', color: CATEGORY.giving.color },
+  { key: 'health_beauty', name: 'Health & beauty', icon: 'health', color: CATEGORY.health_beauty.color, i3: 'heart' },
+  { key: 'giving', name: 'Giving', icon: 'gift', color: CATEGORY.giving.color, i3: 'piggy' },
   { key: 'learning', name: 'Learning', icon: 'book', color: CATEGORY.learning.color },
-  { key: 'travel', name: 'Travel', icon: 'plane', color: CATEGORY.other.color },
+  { key: 'travel', name: 'Travel', icon: 'plane', color: CATEGORY.other.color, i3: 'plane' },
   { key: 'family_pets', name: 'Family & pets', icon: 'family', color: CATEGORY.other.color },
-  { key: 'installments', name: 'Installments', icon: 'note', color: CATEGORY.other.color },
+  { key: 'installments', name: 'Installments', icon: 'note', color: CATEGORY.other.color, i3: 'bill' },
   { key: 'other', name: 'Other', icon: 'more', color: CATEGORY.other.color },
 ];
 // Money in is one kind of thing, so one colour (the Income colour on Home).
 const INCOME: Cat[] = [
-  { key: 'pay', name: 'Pay', icon: 'cash', color: colors.lavender },
-  { key: 'side_gigs', name: 'Side gigs', icon: 'phone', color: colors.lavender },
-  { key: 'gifts', name: 'Gifts', icon: 'gift', color: colors.lavender },
+  { key: 'pay', name: 'Pay', icon: 'cash', color: colors.lavender, i3: 'income' },
+  { key: 'side_gigs', name: 'Side gigs', icon: 'phone', color: colors.lavender, i3: 'phone' },
+  { key: 'gifts', name: 'Gifts', icon: 'gift', color: colors.lavender, i3: 'piggy' },
   { key: 'other', name: 'Other', icon: 'more', color: colors.lavender },
 ];
 
@@ -107,6 +114,7 @@ export default function Add() {
     }
     // Money in. Pay is what the plan already runs on; anything extra gets a job.
     const extra = cat.key === 'pay' ? Math.max(0, amount - month.income) : amount;
+    if (cat.key === 'pay' && amount > 0 && amount < month.income) return { text: 'Part of this month’s pay — ', bold: baht(month.income - amount), rest: ' still to come', warn: false };
     if (cat.key === 'pay' && extra === 0) return { text: `Your plan runs on ${baht(month.income)} a month — this is it`, bold: null, warn: false };
     if (extra === 0) return null;
     const building = month.safety.amount > 0;
@@ -159,75 +167,82 @@ export default function Add() {
   const shown = digits ? Number(digits.replace(/\.$/, '')).toLocaleString('en-US', { maximumFractionDigits: 2 }) + (digits.endsWith('.') ? '.' : '') : '0';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) }}>
-      <View style={{ paddingHorizontal: 20 }}>
+    <View style={{ flex: 1, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) }}>
+      <GlowBackground />
+      <View style={{ paddingHorizontal: 18 }}>
         <ScreenHeader
           title="Add it yourself"
           right={
-            <Pressable onPress={() => setSlip(true)} style={styles.slip} accessibilityRole="button" accessibilityLabel={isPlus ? 'Add from a slip' : 'Add from a slip — Plus'}>
-              <Receipt size={18} color={colors.ink} />
-              <Text style={styles.slipText}>Slip</Text>
-            </Pressable>
+            <Squish onPress={() => setSlip(true)} accessibilityRole="button" accessibilityLabel={isPlus ? 'Add from a slip' : 'Add from a slip — Plus'}>
+              <Glass radius={23} innerStyle={styles.slip}>
+                <Receipt size={17} color={colors.ink} weight="fill" />
+                <Text style={styles.slipText}>Slip</Text>
+                {!isPlus && (
+                  <View style={styles.lk}>
+                    <Lock size={9} color="#FFFFFF" weight="fill" />
+                  </View>
+                )}
+              </Glass>
+            </Squish>
           }
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, gap: 14 }} keyboardShouldPersistTaps="handled">
-        {slip && isPlus && (
-          <Text style={[styles.hint, { backgroundColor: colors.lime, borderRadius: 14, padding: 10, color: colors.ink }]}>Slip reading is almost here — for now, type it in. It takes 3 seconds.</Text>
-        )}
-        <View style={styles.seg}>
-          {(['spend', 'income'] as Kind[]).map((k) => (
-            <Pressable key={k} onPress={() => switchKind(k)} style={[styles.segBtn, kind === k && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: kind === k }}>
-              <Text style={[styles.segText, kind === k && { color: '#FFFFFF' }]}>{k === 'spend' ? 'Spent' : 'Got paid'}</Text>
-            </Pressable>
-          ))}
+      <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {slip && isPlus && <Text style={[styles.hint, styles.soon]}>Slip reading is almost here — for now, type it in. It takes 3 seconds.</Text>}
+        <View style={{ paddingHorizontal: 18 }}>
+          <Switch kind={kind} onChange={switchKind} />
         </View>
 
-        <View style={{ alignItems: 'center', gap: 4 }}>
+        <View style={{ alignItems: 'center', gap: 10, paddingTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={[styles.amount, !digits && { color: colors.faint }]} numberOfLines={1} adjustsFontSizeToFit>
-              ฿{shown}
+              <Text style={{ fontSize: 34 }}>฿</Text>
+              {shown}
             </Text>
-            <View style={styles.caret} />
+            <Caret />
           </View>
           {hint && (
-            <Text style={[styles.hint, hint.warn && { color: colors.orange }]}>
-              {hint.text}
-              {hint.bold && <Text style={{ fontFamily: fonts.semibold, color: hint.warn ? colors.orange : colors.ink }}>{hint.bold}</Text>}
-              {'rest' in hint ? hint.rest : ''}
-            </Text>
+            <View style={styles.kipLine}>
+              <Kip mood={hint.warn ? 'careful' : 'happy'} size={30} />
+              <Text style={[styles.hint, hint.warn && { color: colors.orangeText }]}>
+                {hint.text}
+                {hint.bold && <Text style={{ fontFamily: fonts.semibold, color: hint.warn ? colors.orangeText : colors.ink }}>{hint.bold}</Text>}
+                {'rest' in hint ? hint.rest : ''}
+              </Text>
+            </View>
           )}
         </View>
 
-        <View style={styles.chips}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ marginVertical: -14 }}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingVertical: 14, gap: 8 }}>
           {chips.map((c) => {
             const on = c.key === cat.key;
             return (
-              <Pressable
-                key={c.key}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setCat(c);
-                }}
-                style={[styles.chip, on && { backgroundColor: c.color === money.fixed ? colors.grey : c.color, borderColor: colors.ink }]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}>
-                <CatBadge name={c.icon} color={c.color} size={28} />
-                <Text style={[styles.chipText, on && { fontFamily: fonts.semibold }]}>{c.name}</Text>
-              </Pressable>
+              <Squish key={c.key} onPress={() => setCat(c)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={c.name}>
+                <Glass radius={23} tint={on ? colors.lime : undefined} innerStyle={[styles.chip, on && styles.chipOn]}>
+                  {c.i3 ? <Image source={ICON3D[c.i3]} style={{ width: 36, height: 36 }} contentFit="contain" /> : <CatBadge name={c.icon} color={c.color} size={30} />}
+                  <Text style={[styles.chipText, on && { fontFamily: fonts.medium }]}>{c.name}</Text>
+                </Glass>
+              </Squish>
             );
           })}
           {kind === 'spend' && !more && (
-            <Pressable onPress={() => setMore(true)} style={[styles.chip, { backgroundColor: '#FFFFFF', borderColor: colors.border }]} accessibilityRole="button">
-              <CatBadge name="more" color={colors.grey} size={28} />
-              <Text style={styles.chipText}>More</Text>
-            </Pressable>
+            <Squish onPress={() => setMore(true)} accessibilityRole="button" accessibilityLabel="More categories">
+              <Glass radius={23} innerStyle={styles.chip}>
+                <Text style={[styles.chipText, { width: 30, textAlign: 'center', letterSpacing: 1 }]}>•••</Text>
+                <Text style={styles.chipText}>More</Text>
+              </Glass>
+            </Squish>
           )}
-        </View>
+        </ScrollView>
 
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={styles.field}>
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18 }}>
+          <Glass radius={18} style={{ flex: 1 }} innerStyle={styles.field}>
             <PencilSimple size={16} color={colors.muted} />
             <View style={{ flex: 1 }}>
               <Text style={styles.fieldK}>Note</Text>
@@ -240,37 +255,36 @@ export default function Add() {
                 maxLength={60}
               />
             </View>
-          </View>
-          <Pressable style={styles.field} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={`When: ${whenLabel(when)}`}>
-            <CalendarBlank size={16} color={colors.muted} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldK}>When</Text>
-              <Text style={styles.fieldV} numberOfLines={1}>
-                {whenLabel(when)}
-              </Text>
-            </View>
+          </Glass>
+          <Pressable style={{ flex: 1 }} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={`When: ${whenLabel(when)}`}>
+            <Glass radius={18} innerStyle={styles.field}>
+              <CalendarBlank size={16} color={colors.muted} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldK}>When</Text>
+                <Text style={styles.fieldV} numberOfLines={1}>
+                  {whenLabel(when)}
+                </Text>
+              </View>
+            </Glass>
           </Pressable>
         </View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, gap: 12 }}>
-        <View style={{ gap: 8 }}>
+      <View style={{ paddingHorizontal: 18, gap: 10 }}>
+        <View style={{ gap: 7 }}>
           {[
             ['1', '2', '3'],
             ['4', '5', '6'],
             ['7', '8', '9'],
             ['.', '0', 'del'],
           ].map((row) => (
-            <View key={row.join('')} style={{ flexDirection: 'row', gap: 8 }}>
+            <View key={row.join('')} style={{ flexDirection: 'row', gap: 7 }}>
               {row.map((k) => (
-                <Pressable
-                  key={k}
-                  onPress={() => press(k)}
-                  style={({ pressed }) => [styles.key, pressed && { backgroundColor: colors.border }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={k === 'del' ? 'Delete' : k}>
-                  {k === 'del' ? <Backspace size={24} color={colors.ink} /> : <Text style={styles.keyText}>{k}</Text>}
-                </Pressable>
+                <Squish key={k} haptic={false} onPress={() => press(k)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={k === 'del' ? 'Delete' : k}>
+                  <Glass radius={18} innerStyle={styles.key}>
+                    {k === 'del' ? <Backspace size={24} color={colors.ink} /> : <Text style={styles.keyText}>{k}</Text>}
+                  </Glass>
+                </Squish>
               ))}
             </View>
           ))}
@@ -310,51 +324,66 @@ export default function Add() {
           onClose={() => setSlip(false)}
           onUnlocked={() => setSlip(false)}
           title="Snap a slip, I’ll log it"
-          sub="Take a photo of a bank slip and I fill in the amount, category and time for you."
-        />
+          sub="Take a photo of a bank slip and I fill in the amount, category and time for you.">
+          <ChatPeek ask="📷  KBank slip · 13:05" answer="Got it — ฿80, Transport, today 13:05. Saved ✓" />
+        </PlusSheet>
       )}
     </View>
   );
 }
 
+/** Spent / Got paid — a black knob slides between them. */
+function Switch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void }) {
+  const [w, setW] = useState(0);
+  const x = useSharedValue(0);
+  useEffect(() => {
+    x.value = withSpring(kind === 'spend' ? 0 : 1, { damping: 16, stiffness: 180 });
+  }, [kind, x]);
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * (w / 2 - 4) }] }));
+  return (
+    <Glass radius={24} innerStyle={styles.seg}>
+      <View style={StyleSheet.absoluteFill} onLayout={(e) => setW(e.nativeEvent.layout.width)} pointerEvents="none" />
+      <Animated.View style={[styles.segKnob, { width: w / 2 - 4 }, knob]} />
+      {(['spend', 'income'] as Kind[]).map((k) => (
+        <Pressable key={k} onPress={() => onChange(k)} style={styles.segBtn} accessibilityRole="tab" accessibilityState={{ selected: kind === k }}>
+          <Text style={[styles.segText, kind === k && { color: '#FFFFFF' }]}>{k === 'spend' ? 'Spent' : 'Got paid'}</Text>
+        </Pressable>
+      ))}
+    </Glass>
+  );
+}
+
+/** A blinking cursor after the amount. */
+function Caret() {
+  const o = useSharedValue(1);
+  useEffect(() => {
+    o.value = withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0, { duration: 0 }), withTiming(0, { duration: 500 }), withTiming(1, { duration: 0 })), -1);
+  }, [o]);
+  const a = useAnimatedStyle(() => ({ opacity: o.value }));
+  return <Animated.View style={[styles.caret, a]} />;
+}
+
 const styles = StyleSheet.create({
-  slip: {
-    height: 46,
-    paddingHorizontal: 16,
-    borderRadius: radius.pill,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
-  },
-  slipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
-  seg: { flexDirection: 'row', backgroundColor: colors.grey, borderRadius: radius.pill, padding: 4 },
-  segBtn: { flex: 1, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  segOn: { backgroundColor: colors.ink },
-  segText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.muted },
-  amount: { fontFamily: fonts.medium, fontSize: 60, letterSpacing: -2.4, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 320 },
-  caret: { width: 2.5, height: 52, backgroundColor: colors.orange, marginLeft: 3, borderRadius: 2 },
-  hint: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted, textAlign: 'center' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    height: 44,
-    paddingLeft: 6,
-    paddingRight: 14,
-    borderRadius: radius.pill,
-    backgroundColor: colors.grey,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  slip: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  slipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  lk: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  soon: { marginHorizontal: 18, backgroundColor: colors.lime, borderRadius: 14, padding: 10, color: colors.ink },
+  seg: { flexDirection: 'row', height: 48, padding: 4 },
+  segKnob: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 999, backgroundColor: colors.ink },
+  segBtn: { flex: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  segText: { fontFamily: fonts.medium, fontSize: 15, color: colors.muted },
+  amount: { fontFamily: fonts.regular, fontSize: 64, letterSpacing: -3, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 320 },
+  caret: { width: 3, height: 54, backgroundColor: colors.ink, marginLeft: 4, borderRadius: 2 },
+  kipLine: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24 },
+  hint: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted, textAlign: 'center', flexShrink: 1 },
+  chip: { height: 46, paddingLeft: 5, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chipOn: { borderWidth: 1.5, borderColor: colors.ink },
   chipText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
-  field: { flex: 1, minHeight: 56, borderRadius: radius.field, backgroundColor: colors.grey, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  field: { minHeight: 56, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
   fieldK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
   fieldV: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
-  key: { flex: 1, height: 52, borderRadius: 16, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
-  keyText: { fontFamily: fonts.medium, fontSize: 24, color: colors.ink },
+  key: { height: 50, alignItems: 'center', justifyContent: 'center' },
+  keyText: { fontFamily: fonts.regular, fontSize: 24, color: colors.ink },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,17,17,0.45)' },
   whenSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 8 },
   whenTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginBottom: 4 },

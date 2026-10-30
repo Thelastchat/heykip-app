@@ -40,6 +40,11 @@ const PATHS: Record<Glyph, string> = {
     'M5 2.5h14a1 1 0 0 1 1 1V21a.6.6 0 0 1-1 .4l-2-1.4-2 1.4a.6.6 0 0 1-.7 0L12 20l-2.3 1.4a.6.6 0 0 1-.7 0L7 20l-2 1.4a.6.6 0 0 1-1-.4V3.5a1 1 0 0 1 1-1zM8 7.2a.8.8 0 0 0 0 1.6h8a.8.8 0 0 0 0-1.6zm0 4a.8.8 0 0 0 0 1.6h8a.8.8 0 0 0 0-1.6z',
 };
 
+/** The bill's solid glyph, picked from its name. */
+export function BillGlyph({ name }: { name: string }) {
+  return <GlyphIcon g={glyphFor(name)} />;
+}
+
 function GlyphIcon({ g, color = '#2A2A2A', size = 20 }: { g: Glyph; color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">

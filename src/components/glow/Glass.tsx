@@ -21,6 +21,14 @@ export function Glass({
   tint?: string;
   shadow?: boolean;
 }) {
+  // On the web the card frosts itself (backdrop-filter), so no extra layers sit on top of icons.
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[{ borderRadius: radius }, shadow && styles.shadow, style]}>
+        <View style={[{ borderRadius: radius, overflow: 'hidden', borderWidth: 1, borderColor: glow.glassEdge, backgroundColor: tint, backdropFilter: 'blur(24px) saturate(1.5)' } as ViewStyle, innerStyle]}>{children}</View>
+      </View>
+    );
+  }
   return (
     <View style={[{ borderRadius: radius }, shadow && styles.shadow, style]}>
       <View style={[{ borderRadius: radius, overflow: 'hidden', borderWidth: 1, borderColor: glow.glassEdge }, innerStyle]}>
