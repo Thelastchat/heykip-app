@@ -6,7 +6,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
-import { colors, shadow } from '@/theme';
+import { Glass } from '@/components/glow/Glass';
+import { colors } from '@/theme';
 
 // Floating 3-item bar: Home · Kip (centre, opens Talk) · Goals.
 export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
@@ -22,6 +23,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={styles.bar}>
+        <Glass radius={999} style={StyleSheet.absoluteFill} innerStyle={{ flex: 1 }} />
         <TabIcon label="Home" active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? '#FFFFFF' : colors.ink} />
         </TabIcon>
@@ -64,13 +66,10 @@ const styles = StyleSheet.create({
   bar: {
     width: 256,
     height: 72,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    ...shadow.card,
   },
   icon: { width: 52, height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   kip: {

@@ -1,5 +1,6 @@
 // HeyKip design tokens — the single source for colours, type, radii and shadows.
-// Matches the approved canvas (v3). Lime #F6FF9A is the ONLY yellow.
+// Glow redesign (Oct 2026): lime and orange moved warmer — lime to 58° (#FFFC9A), orange to 20° (#E28151).
+// Lime is still the ONLY yellow; the 3D icon set is tinted to the same 58°.
 
 export const colors = {
   bg: '#FFFFFF',
@@ -10,9 +11,11 @@ export const colors = {
   line: 'rgba(17,17,17,0.08)',
   border: 'rgba(17,17,17,0.14)',
 
-  lime: '#F6FF9A',
+  lime: '#FFFC9A',
+  limeDeep: '#F0EA4A', // the stronger lime: rings, fills, progress
   lavender: '#CAC2DF',
-  orange: '#E27651',
+  orange: '#E28151',
+  orangeText: '#B45A2F', // orange that reads as text on light glass
   sky: '#AAC4E4',
   clay: '#B98070',
   peach: '#FCDCB3',
@@ -36,6 +39,19 @@ export const money = {
 
 // Pin colours by goal position on the board: goal 1 is always orange.
 export const pinColors = [colors.orange, colors.lavender, colors.sky] as const;
+
+// The glow look: one soft field behind every screen, frosted see-through cards on top.
+export const glow = {
+  field: ['#FDFBF6', '#FCF8EF', '#F8F5F7', '#F5F2F8'] as const, // top → bottom
+  peach: '#FFD2A6',
+  peachWarm: '#FFBF8E', // when spending runs a bit fast
+  yellow: '#FFF47A',
+  lavender: '#DCD2F7',
+  cream: '#FFE2C2',
+  glass: 'rgba(255,255,255,0.42)',
+  glassEdge: 'rgba(255,255,255,0.95)',
+  control: 'rgba(17,17,17,0.07)', // buttons that sit on glass need their own fill
+} as const;
 
 export const radius = { card: 24, cardLg: 28, field: 16, pill: 999 } as const;
 

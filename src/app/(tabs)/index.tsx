@@ -1,52 +1,59 @@
+// Home, the glow version: one soft field behind everything, frosted cards on top.
+// Today's money first, then the week, Kip, your goal, what's left per category, Plus, and the bills.
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { Eye, EyeSlash, Lock, Plus, UserCircle } from 'phosphor-react-native';
-import { useCallback, useState } from 'react';
+import { Plus, UserCircle } from 'phosphor-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
-import { CatBadge, CatIcon } from '@/components/CatIcon';
-import { Kip } from '@/components/Kip';
+import { Kip, type KipMood } from '@/components/Kip';
 import { Compare, PlusSheet, type PlusFeature } from '@/components/PlusSheet';
+import { Glass } from '@/components/glow/Glass';
+import { GlowBackground } from '@/components/glow/GlowBackground';
+import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
+import { BillStack, type Bill } from '@/components/home/BillStack';
+import { WeekStrip } from '@/components/home/WeekStrip';
 import { plan as splitMonth, type Style } from '@/lib/brain';
-import { billsTotal, CATEGORY, savingTotal, STYLES, type CatKey, type IconKey } from '@/lib/budget';
+import { CATEGORY, savingTotal, STYLES, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
-import { monthNumbers, useHome, type HomeGoal } from '@/lib/home';
+import { monthNumbers, periodKey, useHome, type HomeGoal } from '@/lib/home';
+import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { typeInfo } from '@/lib/setup/goalTypes';
-import { fullDate, monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
+import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts, money, radius } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function greeting(d = new Date()) {
-  const h = d.getHours();
-  if (h < 12) return 'Good morning!';
-  if (h < 17) return 'Good afternoon!';
-  if (h < 21) return 'Get home safe!';
-  return 'It’s late, get some rest';
-}
+/** ฿ drawn smaller next to a big number. */
+const Big = (n: number) => (
+  <>
+    <Text style={{ fontSize: 26 }}>฿</Text>
+    {n.toLocaleString('en-US')}
+  </>
+);
 
-// Home: your goal, what Kip thinks today, what's left to spend — and the Plus features, visible but locked.
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
-  const { month } = useMonth();
-  const { goals, spent, reload } = useHome(month);
-  const [hide, setHide] = useState(false);
+  const { month, save } = useMonth();
+  const { goals, spent, streak, reload } = useHome(month);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
+  const [kipMood, setKipMood] = useState<KipMood>('happy');
   const isPlus = profile ? profile.plan !== 'free' : false;
 
   useFocusEffect(
     useCallback(() => {
       reload();
+      setSelectedDay(new Date().toDateString());
     }, [reload]),
   );
 
@@ -54,24 +61,36 @@ export default function Home() {
   const goal = goals[0];
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
 
-  // ---- the month in numbers ----
-  const { P, leftMonth, dailyToday, leftToday, pace } = monthNumbers(month, spent, now);
+  // ---- the month in numbers (the same numbers as the + screen) ----
+  const { P, spendBudget, leftMonth, dailyToday, leftToday, pace } = monthNumbers(month, spent, now);
   const saving = month ? savingTotal(month) : 0;
-  const bills = month ? billsTotal(month) : 0;
   const goalDate = goal?.due ? parseDay(goal.due) : null;
-  const daysToGoal = goalDate ? Math.max(0, Math.round((goalDate.getTime() - now.getTime()) / 86_400_000)) : null;
-  const focus = focusCategory(month?.spend ?? [], spent.byCat);
+  const fast = spent.total > 0 && pace > 0;
+  const isTodaySelected = selectedDay === now.toDateString();
+  const dailyPlan = P.total ? spendBudget / P.total : 0;
 
-  const [say, sayGrey] =
+  // Kip celebrates when something new was logged today, then settles.
+  const lastToday = useRef(spent.today);
+  useEffect(() => {
+    if (spent.today > lastToday.current) {
+      setKipMood('celebrate');
+      const id = setTimeout(() => setKipMood(fast ? 'careful' : 'happy'), 2200);
+      lastToday.current = spent.today;
+      return () => clearTimeout(id);
+    }
+    lastToday.current = spent.today;
+    setKipMood(fast ? 'careful' : 'happy');
+  }, [spent.today, fast]);
+
+  const say =
     spent.total === 0
-      ? ['Your plan is running.', `Tell me what you spend — tap + — and I’ll keep ${short} on track. Today you can spend ${baht(leftToday)}.`]
+      ? `Your plan is running. Tell me what you spend and I’ll keep ${short} on track.`
       : pace <= 0
-        ? [`You’re doing great — ${baht(-pace)} under pace this month.`, goalDate ? `${short} is on track for ${monthYear(goalDate)}.` : `${short} is on track.`]
-        : [`A bit fast this month — ${baht(pace)} over pace.`, `Keep to ${baht(dailyToday)} a day and ${short} stays on ${goalDate ? monthYear(goalDate) : 'track'}.`];
+        ? `You’re doing great — ${baht(-pace)} under pace. ${short} is on track${goalDate ? ` for ${monthYear(goalDate)}` : ''}.`
+        : `A bit fast this month — ${baht(pace)} over pace. Keep to ${baht(dailyToday)} a day and ${short} stays on ${goalDate ? monthYear(goalDate) : 'track'}.`;
 
   // ---- Plus ----
   function openFeature(f: PlusFeature) {
-    Haptics.selectionAsync().catch(() => {});
     if (!isPlus) return setSheet(f);
     unlocked(f);
   }
@@ -82,9 +101,12 @@ export default function Home() {
     if (f === 'automove' && session) {
       await supabase.from('profiles').update({ split_when_paid: true }).eq('id', session.user.id);
       await refreshProfile();
-      setToast(`On ✓ — ${baht(saving)} moves to ${short} ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}.`);
-      setTimeout(() => setToast(null), 3500);
+      flash(`On ✓ — ${baht(saving)} moves to ${short} ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}`);
     }
+  }
+  function flash(t: string) {
+    setToast(t);
+    setTimeout(() => setToast(null), 2600);
   }
 
   const styleCompare = (() => {
@@ -97,49 +119,40 @@ export default function Home() {
     return { cur, best, sooner, curName };
   })();
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
+  const whenFor = (months: number | null | undefined) =>
+    months && month ? monthYear(monthsFromNow(months, { incomeType: month.payday ? 'regular' : 'changes', payday: month.payday } as never)) : '—';
 
-  const tiles: { f: PlusFeature; icon: IconKey; title: string; teaser: string }[] = [
+  const plusCards: { f: PlusFeature; icon: Icon3D; title: string; teaser: string; on?: boolean }[] = [
     {
       f: 'styles',
-      icon: 'cash',
-
+      icon: 'piggy',
       title: 'Money styles',
       teaser:
         styleCompare && styleCompare.sooner > 0
-          ? `${styleCompare.best.s.name} gets ${short} ${styleCompare.sooner} month${styleCompare.sooner > 1 ? 's' : ''} sooner`
+          ? `${short} ${styleCompare.sooner} month${styleCompare.sooner > 1 ? 's' : ''} sooner with ${styleCompare.best.s.name}`
           : 'Try Save first, 50/30/20 or 6 Jars',
     },
-    { f: 'talk', icon: 'fun', title: 'Talk to Kip', teaser: '“Can I afford hotpot on Friday?” — ask anything' },
-    { f: 'customize', icon: 'rent', title: 'Customize & locks', teaser: `Lock ${short}, move food & fun your way` },
     {
       f: 'automove',
-      icon: 'shield',
-
+      icon: 'income',
       title: 'Payday auto-move',
-      teaser: profile?.split_when_paid ? `On — ${baht(saving)} moves itself` : `${baht(saving)} moves itself ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}`,
+      teaser: `${baht(saving)} moves itself ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}`,
+      on: !!profile?.split_when_paid,
     },
+    { f: 'customize', icon: 'shield', title: 'Customize & locks', teaser: `Lock ${short}, move food & fun your way` },
+    { f: 'talk', icon: 'phone', title: 'Talk to Kip', teaser: '“Can I afford hotpot on Friday?”' },
   ];
 
   const sheetContent: Record<PlusFeature, { title: string; sub: string; body?: React.ReactNode }> = {
     styles: {
       title: styleCompare && styleCompare.sooner > 0 ? `Try ${styleCompare.best.s.name}?` : 'Try another money style',
       sub: styleCompare && styleCompare.sooner > 0 ? `Same pay — ${short} ${styleCompare.sooner} month${styleCompare.sooner > 1 ? 's' : ''} sooner.` : 'Same pay, four ways to run it.',
-      body:
-        styleCompare && month ? (
-          <Compare
-            left={{
-              k: `Now · ${styleCompare.curName}`,
-              v: styleCompare.cur.goalMonths ? monthYear(monthsFromNow(styleCompare.cur.goalMonths, { incomeType: month.payday ? 'regular' : 'changes', payday: month.payday } as never)) : '—',
-              sub: `saves ${baht(styleCompare.cur.goal)} a month`,
-            }}
-            right={{
-              k: styleCompare.best.s.name,
-              v: styleCompare.best.r.goalMonths ? monthYear(monthsFromNow(styleCompare.best.r.goalMonths, { incomeType: month.payday ? 'regular' : 'changes', payday: month.payday } as never)) : '—',
-              sub: `saves ${baht(styleCompare.best.r.goal)} a month`,
-              color: styleCompare.best.s.tagColor,
-            }}
-          />
-        ) : undefined,
+      body: styleCompare ? (
+        <Compare
+          left={{ k: `Now · ${styleCompare.curName}`, v: whenFor(styleCompare.cur.goalMonths), sub: `saves ${baht(styleCompare.cur.goal)} a month` }}
+          right={{ k: styleCompare.best.s.name, v: whenFor(styleCompare.best.r.goalMonths), sub: `saves ${baht(styleCompare.best.r.goal)} a month`, color: styleCompare.best.s.tagColor }}
+        />
+      ) : undefined,
     },
     talk: {
       title: 'Ask Kip anything',
@@ -165,225 +178,213 @@ export default function Home() {
     goals: { title: 'Pin 2 more goals', sub: 'Up to 3 goals on your board, each with its own date — I plan them together.' },
   };
 
-  const cardW = width - 36 - 28;
+  // ---- bills (paid marks reset each pay period) ----
+  const pk = periodKey(month?.payday ?? null, now);
+  const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
+  const bills: Bill[] = month
+    ? [
+        ...(month.bills.rent > 0 ? [{ key: 'rent', name: 'Rent', amount: month.bills.rent }] : []),
+        ...(month.bills.items ?? []).map((b) => ({ key: `item:${b.name}`, name: b.name, amount: b.amount })),
+        ...(month.bills.guess > 0 ? [{ key: 'guess', name: 'Other bills', amount: month.bills.guess, estimate: true }] : []),
+      ].map((b) => ({ ...b, paid: paidKeys.includes(b.key) }))
+    : [];
+  function setPaid(key: string, paid: boolean) {
+    if (!month) return;
+    const keys = new Set(paidKeys);
+    if (paid) keys.add(key);
+    else keys.delete(key);
+    save({ ...month, paid: { period: pk, keys: [...keys] } } as MonthBudget);
+    if (paid) flash(`${bills.find((b) => b.key === key)?.name ?? 'Bill'} paid ✓`);
+  }
+
+  // Left to spend: whatever is going faster than plan comes first, so it's never hidden off-screen.
+  const gone = P.total ? P.dayIndex / P.total : 0;
+  const spendTiles = (month?.spend ?? [])
+    .map((s) => {
+      const used = spent.byCat[s.key] ?? 0;
+      const share = s.amount ? used / s.amount : 0;
+      return { s, used, left: Math.max(0, s.amount - used), going: used > 0 && share > Math.max(gone + 0.15, gone * 1.5) };
+    })
+    .sort((a, b) => Number(b.going) - Number(a.going));
+
+  const shownSpent = spent.byDay[selectedDay] ?? 0;
+  const sel = new Date(selectedDay);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 18, paddingBottom: 200, gap: 14 }}>
-        <View style={styles.topRow}>
+    <View style={{ flex: 1 }}>
+      <GlowBackground mood={fast ? 'fast' : 'calm'} />
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 200 }} showsVerticalScrollIndicator={false}>
+        {/* top */}
+        <RiseIn style={styles.top}>
+          <Glass radius={999} shadow innerStyle={styles.pill}>
+            <Text style={styles.pillText}>
+              🔥 {streak > 0 ? <Text style={{ fontFamily: fonts.medium }}>{streak}</Text> : null}
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{streak > 0 ? ` day${streak > 1 ? 's' : ''} logged` : ' Log today to start a streak'}</Text>
+            </Text>
+          </Glass>
           <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={() => router.push('/profile')} style={styles.avatar}>
-            {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 46, height: 46 }} /> : <UserCircle size={46} color={colors.ink} weight="light" />}
+            {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 40, height: 40 }} /> : <UserCircle size={40} color={colors.ink} weight="light" />}
           </Pressable>
-          {isPlus && (
-            <View style={styles.plusBadge}>
-              <Text style={styles.plusBadgeText}>✦ {profile?.plan === 'trial' ? 'PLUS TRIAL' : 'PLUS'}</Text>
-            </View>
-          )}
-        </View>
+        </RiseIn>
 
-        <View style={{ alignItems: 'center', gap: 2 }}>
-          <Text style={styles.date}>
-            ☀ {DAYS[now.getDay()]}, {MONTHS[now.getMonth()]} {now.getDate()} · {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+        <RiseIn delay={60}>
+          <Text style={styles.hello}>
+            Hello, {profile?.display_name?.split(' ')[0] ?? 'there'}
+            {'\n'}
+            <Text style={{ color: '#B9B8B0' }}>Today’s money</Text>
           </Text>
-          <Text style={styles.greeting}>{greeting(now)}</Text>
-        </View>
+        </RiseIn>
 
-        {/* Goals */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={cardW + 10}
-          decelerationRate="fast"
-          style={{ marginHorizontal: -18 }}
-          contentContainerStyle={{ paddingHorizontal: 18, gap: 10, paddingTop: 10 }}>
-          {goals.map((g) => (
-            <GoalCard key={g.id} g={g} width={cardW} name={profile?.display_name ?? null} />
-          ))}
-          {!isPlus && goals.length < 3 && (
-            <Pressable onPress={() => openFeature('goals')} style={[styles.moreGoals, { width: cardW * 0.62 }]} accessibilityRole="button" accessibilityLabel="Pin more goals — Plus">
-              <CatIcon name="plus" size={26} />
-              <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: 'center' }}>Pin 2 more goals</Text>
-              <LockDot />
-            </Pressable>
-          )}
-        </ScrollView>
-        {goals.length > 0 && <Text style={styles.caption}>Swipe for your other goals →</Text>}
-
-        {/* Kip today */}
-        <View style={styles.kipCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Kip mood="happy" size={28} />
-            <Text style={styles.kipLabel}>Kip · Today</Text>
+        {/* the two numbers */}
+        <RiseIn delay={120} style={styles.nums}>
+          <View>
+            <CountUp value={isTodaySelected ? leftToday : shownSpent} format={Big} style={styles.n1} />
+            <Text style={styles.lbl}>{isTodaySelected ? 'Left today' : `Spent ${DAYS[sel.getDay()]} ${sel.getDate()}`}</Text>
           </View>
-          <Text style={styles.kipSay}>
-            {say} <Text style={{ color: colors.muted }}>{sayGrey}</Text>
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            <View style={[styles.chip, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.chipText, { color: '#FFFFFF' }]}>Focus: {focus}</Text>
-            </View>
-            {goal && (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{daysToGoal !== null ? `${short} in ${daysToGoal} days` : `${baht(goal.monthly ?? 0)} a month to ${short}`}</Text>
+          <View style={styles.vbar} />
+          <View style={{ flexShrink: 1 }}>
+            <CountUp value={leftMonth} format={(n) => <>{Big(n)}</>} style={styles.n2} />
+            <Text style={styles.lbl}>Left this month</Text>
+          </View>
+          <Glass radius={25} style={{ marginLeft: 'auto' }} innerStyle={styles.cal}>
+            <Text style={styles.calN}>{P.daysLeft}</Text>
+            <Text style={styles.calS}>days</Text>
+          </Glass>
+        </RiseIn>
+
+        <RiseIn delay={180} style={{ paddingHorizontal: 18, marginTop: 22 }}>
+          <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setSelectedDay(d.toDateString())} now={now} />
+        </RiseIn>
+
+        {/* Kip */}
+        <RiseIn delay={240} style={{ paddingHorizontal: 18, marginTop: 22 }}>
+          <Glass radius={30}>
+            <View style={{ padding: 20, paddingBottom: 18, minHeight: 190 }}>
+              <View style={styles.kip} pointerEvents="none">
+                <Kip mood={kipMood} size={104} />
               </View>
-            )}
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-            <Text style={styles.small}>Left this month</Text>
-            <Pressable onPress={() => setHide((h) => !h)} hitSlop={8} accessibilityRole="button" accessibilityLabel={hide ? 'Show amounts' : 'Hide amounts'}>
-              {hide ? <EyeSlash size={16} color={colors.muted} /> : <Eye size={16} color={colors.muted} />}
-            </Pressable>
-          </View>
-          <Text style={styles.bigMoney}>{hide ? '฿ ••••' : baht(leftMonth)}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={styles.pill}>
-              <Text style={styles.chipText}>
-                {P.daysLeft} day{P.daysLeft > 1 ? 's' : ''} left
-              </Text>
+              <Text style={styles.kipName}>Kip</Text>
+              <Text style={styles.kipRole}>Your money buddy</Text>
+              <Text style={styles.say}>{say}</Text>
+              <View style={styles.two}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.twoK}>Spent today</Text>
+                  <Text style={styles.twoV}>
+                    {baht(spent.today)} of {baht(dailyToday)}
+                  </Text>
+                </View>
+                <View style={[styles.twoR]}>
+                  <Text style={styles.twoK}>{short}</Text>
+                  <Text style={styles.twoV}>{goalDate ? monthYear(goalDate) : goal?.monthly ? `${baht(goal.monthly)}/mo` : '—'}</Text>
+                </View>
+              </View>
             </View>
-            <Pressable onPress={() => router.push('/month')} hitSlop={8}>
-              <Text style={styles.link}>Your month</Text>
-            </Pressable>
-          </View>
-          <View style={styles.today}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.small}>Left to spend today</Text>
-              <Text style={styles.todayMoney}>{hide ? '฿ ••••' : baht(leftToday)}</Text>
-              <Text style={styles.small}>
-                Spent {baht(spent.today)} of {baht(dailyToday)}
-              </Text>
-            </View>
-            <View style={{ alignItems: 'center', gap: 8 }}>
-              <Ring pct={dailyToday ? spent.today / dailyToday : 0} />
-              <Pressable onPress={() => openFeature('talk')} style={styles.askKip} accessibilityRole="button" accessibilityLabel={isPlus ? 'Ask Kip' : 'Ask Kip — Plus'}>
-                <Text style={styles.chipText}>Ask Kip</Text>
-                {!isPlus && <LockDot size={20} />}
-              </Pressable>
-            </View>
-          </View>
-        </View>
+            <Squish onPress={() => openFeature('talk')} style={styles.foot} accessibilityRole="button" accessibilityLabel={isPlus ? 'Ask Kip anything' : 'Ask Kip anything — Plus'}>
+              <Text style={styles.footText}>Ask Kip anything</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {!isPlus && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>Plus</Text>}
+                <View style={styles.lockDot}>{isPlus ? <Arrow /> : <LockIcon />}</View>
+              </View>
+            </Squish>
+          </Glass>
+        </RiseIn>
+
+        {/* goal */}
+        <RiseIn delay={300}>
+          <Section title="Your goal" right={`1 of ${isPlus ? 3 : 1}`} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
+            {goal && <GoalCard g={goal} perMonth={month?.goal.amount ?? 0} width={Math.min(312, width - 60)} />}
+            <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel="Pin 2 more goals">
+              <Image source={ICON3D.piggy} style={{ width: 66, height: 66 }} contentFit="contain" />
+              <Text style={styles.addGoalText}>{isPlus ? 'Add a goal' : 'Pin 2 more goals'}</Text>
+              {!isPlus && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>✦ PLUS</Text>
+                </View>
+              )}
+            </Squish>
+          </ScrollView>
+        </RiseIn>
+
+        {/* left to spend */}
+        <RiseIn delay={360}>
+          <Section title="Left to spend" right="Your month" onRight={() => router.push('/month')} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
+            {spendTiles.map(({ s, left, going }, i) => {
+              return (
+                <Squish key={s.key} onPress={() => router.push('/month')} accessibilityRole="button" accessibilityLabel={`${CATEGORY[s.key].name}: ${baht(left)} left of ${baht(s.amount)}`}>
+                  <Glass radius={24} innerStyle={styles.cat}>
+                    <View style={{ width: 64, height: 64, marginBottom: 10 }}>
+                      <Ring pct={s.amount ? left / s.amount : 0} color={going ? colors.orange : colors.limeDeep} delay={500 + i * 80} />
+                      <Float delay={i * 600} style={StyleSheet.absoluteFill}>
+                        <Image source={ICON3D[CAT_ICON3D[s.key]]} style={{ width: 40, height: 40, margin: 12 }} contentFit="contain" />
+                      </Float>
+                    </View>
+                    <Text style={styles.pct}>{s.amount ? Math.round((left / s.amount) * 100) : 0}% left</Text>
+                    <Text style={styles.catName} numberOfLines={1}>
+                      {CATEGORY[s.key].name.split(' &')[0]}
+                    </Text>
+                    <Text style={styles.catBig}>{baht(left)}</Text>
+                    {going ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.orange }} />
+                        <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.orangeText }}>Going fast</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.catOf}>of {baht(s.amount)}</Text>
+                    )}
+                  </Glass>
+                </Squish>
+              );
+            })}
+          </ScrollView>
+        </RiseIn>
 
         {/* Plus */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6 }}>
-          <Text style={styles.h2}>{isPlus ? 'Kip is working for you' : 'Do more with Kip'}</Text>
-          <View style={styles.plusBadge}>
-            <Text style={styles.plusBadgeText}>✦ PLUS</Text>
-          </View>
-        </View>
-        {!isPlus && <Text style={[styles.small, { marginTop: -8 }]}>Your plan works free. These make Kip do the work for you — tap any to try.</Text>}
-        <View style={styles.grid}>
-          {tiles.map((t) => (
-            <Pressable key={t.f} onPress={() => openFeature(t.f)} style={styles.tile} accessibilityRole="button" accessibilityLabel={`${t.title}${isPlus ? '' : ' — Plus'}`}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <View style={styles.tileIcon}>
-                  <CatIcon name={t.icon} size={18} ink="#FFFFFF" />
+        <RiseIn delay={420}>
+          <Section title="Do more with Kip" tag="✦ PLUS" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.rowOuter, { marginTop: -38 }]} contentContainerStyle={[styles.rowInner, { paddingTop: 40 }]}>
+            {plusCards.map((c, i) => (
+              <Squish key={c.f} onPress={() => openFeature(c.f)} style={styles.plus} accessibilityRole="button" accessibilityLabel={`${c.title}${isPlus ? '' : ' — Plus'}`}>
+                <Float delay={i * 700} style={styles.plusIcon}>
+                  <Image source={ICON3D[c.icon]} style={{ width: 96, height: 96 }} contentFit="contain" />
+                </Float>
+                <Text style={styles.plusTitle}>{c.title}</Text>
+                <Text style={styles.plusTeaser}>{c.teaser}</Text>
+                <View style={styles.tryc}>
+                  <Text style={styles.trycText}>{isPlus ? (c.on ? 'On ✓' : 'Open') : '✦ Try free'}</Text>
                 </View>
-                {!isPlus && <LockDot />}
-              </View>
-              <Text style={styles.tileTitle}>{t.title}</Text>
-              <Text style={styles.tileTeaser}>{t.teaser}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {toast && (
-          <View style={styles.toast}>
-            <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.ink }}>{toast}</Text>
-          </View>
+              </Squish>
+            ))}
+          </ScrollView>
+        </RiseIn>
+
+        {/* bills */}
+        {bills.length > 0 && (
+          <RiseIn delay={480} style={{ paddingHorizontal: 18 }}>
+            <Section title="Bills this month" right={`${baht(bills.reduce((a, b) => a + b.amount, 0))} · set aside`} inset={false} />
+            <BillStack bills={bills} onPaid={setPaid} />
+          </RiseIn>
         )}
-
-        {/* Income / spending */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={[styles.flow, { backgroundColor: colors.lavender }]}>
-            <Text style={styles.small2}>Income</Text>
-            <Text style={styles.flowMoney}>{hide ? '••••' : baht(month?.income ?? 0)}</Text>
-          </View>
-          <View style={[styles.flow, { backgroundColor: colors.orange }]}>
-            <Text style={styles.small2}>Spending</Text>
-            <Text style={styles.flowMoney}>{hide ? '••••' : baht(spent.total)}</Text>
-          </View>
-        </View>
-        <View style={styles.bar}>
-          <View style={[styles.barPart, { flex: Math.max(spent.total, 1), backgroundColor: colors.ink }]}>
-            <Text style={[styles.barK, { color: 'rgba(255,255,255,0.7)' }]}>Spent</Text>
-            <Text style={[styles.barV, { color: '#FFFFFF' }]}>{baht(spent.total)}</Text>
-          </View>
-          <View style={[styles.barPart, { flex: Math.max(saving, 1), backgroundColor: colors.sky }]}>
-            <Text style={styles.barK}>Savings</Text>
-            <Text style={styles.barV}>{baht(saving)}</Text>
-          </View>
-          <View style={[styles.barPart, { flex: Math.max(leftMonth, 1), backgroundColor: '#F2F2EF' }]}>
-            <Text style={styles.barK}>To spend</Text>
-            <Text style={styles.barV}>{baht(leftMonth)}</Text>
-          </View>
-        </View>
-        <Text style={styles.small}>Bills this month {baht(bills)}</Text>
-
-        {/* Where it went */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text style={styles.h2}>Where it went</Text>
-          <Pressable onPress={() => router.push('/month')} hitSlop={8}>
-            <Text style={styles.link}>Details</Text>
-          </Pressable>
-        </View>
-        {spent.total === 0 ? (
-          <View style={styles.empty}>
-            <Text style={{ fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center' }}>
-              Nothing logged yet. Tap + to add what you spend — I’ll show where it goes.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.whereCard}>
-            {(month?.spend ?? [])
-              .map((s) => ({ ...s, used: spent.byCat[s.key] ?? 0 }))
-              .filter((s) => s.used > 0)
-              .sort((a, b) => b.used - a.used)
-              .slice(0, 5)
-              .map((s) => (
-                <View key={s.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <CatBadge name={CATEGORY[s.key].icon} color={CATEGORY[s.key].color} size={30} />
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={styles.rowName}>{CATEGORY[s.key].name}</Text>
-                      <Text style={styles.rowName}>
-                        {baht(s.used)} <Text style={{ color: colors.muted }}>/ {baht(s.amount)}</Text>
-                      </Text>
-                    </View>
-                    <View style={styles.track}>
-                      <View
-                        style={{ width: `${Math.min(100, (s.used / Math.max(s.amount, 1)) * 100)}%`, height: 6, borderRadius: 3, backgroundColor: s.used > s.amount ? colors.orange : colors.ink }}
-                      />
-                    </View>
-                  </View>
-                </View>
-              ))}
-          </View>
-        )}
-
-        {/* Bills */}
-        <Text style={styles.h2}>Bills this month</Text>
-        <View style={styles.whereCard}>
-          {month && (
-            <>
-              <BillRow name="Rent" amount={month.bills.rent} />
-              {(month.bills.items ?? []).map((b, i) => (
-                <BillRow key={`${b.name}-${i}`} name={b.name} amount={b.amount} />
-              ))}
-              {month.bills.guess > 0 && <BillRow name="Other bills · Kip’s guess" amount={month.bills.guess} />}
-            </>
-          )}
-        </View>
       </ScrollView>
 
-      <Pressable
+      {toast && (
+        <View style={[styles.toast, { bottom: 176 + Math.max(insets.bottom, 12) }]} pointerEvents="none">
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
+
+      <Squish
+        haptic={false}
         accessibilityRole="button"
         accessibilityLabel="Add it yourself"
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           router.push('/add');
         }}
-        style={[styles.fab, { bottom: 116 + Math.max(insets.bottom, 12) - 12 }]}>
-        <Plus size={28} color="#FFFFFF" weight="bold" />
-      </Pressable>
+        style={[styles.fab, { bottom: 104 + Math.max(insets.bottom, 12) - 12 }]}>
+        <Plus size={26} color="#FFFFFF" weight="bold" />
+      </Squish>
 
       {sheet && (
         <PlusSheet open onClose={() => setSheet(null)} onUnlocked={() => unlocked(sheet)} title={sheetContent[sheet].title} sub={sheetContent[sheet].sub}>
@@ -394,164 +395,212 @@ export default function Home() {
   );
 }
 
-function focusCategory(spend: { key: CatKey; amount: number }[], byCat: Record<string, number | undefined>): string {
-  let best: { key: CatKey; r: number } | null = null;
-  for (const s of spend) {
-    const r = (byCat[s.key] ?? 0) / Math.max(s.amount, 1);
-    if (r > 0 && (!best || r > best.r)) best = { key: s.key, r };
-  }
-  return (best ? CATEGORY[best.key].name : 'Food & drinks').split(' &')[0];
-}
-
-function GoalCard({ g, width, name }: { g: HomeGoal; width: number; name: string | null }) {
-  const t = typeInfo(g.goalType, g.kind as never);
-  const short = g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never);
-  const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
-  const days = g.due ? Math.max(0, Math.round((parseDay(g.due).getTime() - Date.now()) / 86_400_000)) : null;
-  const line = (g.promise ?? '').split('\n')[0];
-  const signed = g.signedAt ? new Date(g.signedAt) : null;
+function Section({ title, right, onRight, tag, inset = true }: { title: string; right?: string; onRight?: () => void; tag?: string; inset?: boolean }) {
   return (
-    <View style={[styles.goalCard, { width, backgroundColor: t.color }]}>
-      {g.photo ? (
-        <Image source={{ uri: g.photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-          <CatIcon name={t.icon} size={64} />
+    <View style={[styles.sec, inset && { paddingHorizontal: 22 }]}>
+      <Text style={styles.secTitle}>{title}</Text>
+      {tag ? (
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tag}</Text>
         </View>
-      )}
-      <View style={styles.goalTop}>
-        <View style={styles.goalChip}>
-          <CatIcon name={t.icon} size={14} />
-          <Text style={styles.chipText} numberOfLines={1}>
-            {short}
-            {days !== null ? ` · ${days} days` : g.monthly ? ` · ${baht(g.monthly)}/mo` : ''}
-          </Text>
-        </View>
-        {g.target > 0 && (
-          <View style={[styles.goalChip, { backgroundColor: colors.ink }]}>
-            <Text style={[styles.chipText, { color: '#FFFFFF' }]}>{pct}%</Text>
-          </View>
-        )}
-      </View>
-      {line ? (
-        <View style={[styles.postIt, t.color === colors.lime && !g.photo && { backgroundColor: '#FFFFFF' }]}>
-          <View style={styles.tape} />
-          <Text style={styles.promiseHead}>MY PROMISE</Text>
-          <Text style={styles.promise} numberOfLines={3}>
-            {line}
-          </Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <Text style={styles.signedAt}>{signed ? `Signed ${MONTHS[signed.getMonth()]} ${signed.getDate()}` : ''}</Text>
-            {g.signature ? <Image source={{ uri: g.signature }} style={{ width: 70, height: 30 }} contentFit="contain" /> : name ? <Text style={styles.sig}>{name}</Text> : null}
-          </View>
-        </View>
+      ) : right ? (
+        <Pressable onPress={onRight} disabled={!onRight} hitSlop={8}>
+          <Text style={styles.secRight}>{right}</Text>
+        </Pressable>
       ) : null}
     </View>
   );
 }
 
-function BillRow({ name, amount }: { name: string; amount: number }) {
+function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width: number }) {
+  const t = typeInfo(g.goalType, g.kind as never);
+  const short = g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never);
+  const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
+  const days = g.due ? Math.max(0, Math.round((parseDay(g.due).getTime() - Date.now()) / 86_400_000)) : null;
+  const line = (g.promise ?? '').split('\n')[0];
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <CatBadge name="bill" color={money.fixed} size={30} />
-      <Text style={[styles.rowName, { flex: 1 }]}>{name}</Text>
-      <Text style={styles.rowName}>{baht(amount)}</Text>
-    </View>
+    <Squish onPress={() => router.push('/goals')} style={[styles.goal, { width, backgroundColor: t.color }]} accessibilityRole="button" accessibilityLabel={`${g.title}, ${pct}% saved`}>
+      {g.photo ? (
+        <Image source={{ uri: g.photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }]}>
+          <Float amount={6}>
+            <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 120, height: 120 }} contentFit="contain" />
+          </Float>
+        </View>
+      )}
+      <View style={styles.gchip}>
+        <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 26, height: 26 }} contentFit="contain" />
+        <Text style={styles.gchipText} numberOfLines={1}>
+          {short}
+          {days !== null ? ` · ${days} days` : ''}
+        </Text>
+      </View>
+      {line ? (
+        <View style={styles.note}>
+          <View style={styles.tape} />
+          <Text style={styles.noteHead}>MY PROMISE</Text>
+          <Text style={styles.noteText} numberOfLines={3}>
+            {line}
+          </Text>
+        </View>
+      ) : null}
+      <View style={styles.strip}>
+        <Glass radius={22} shadow={false} tint="rgba(255,255,255,0.72)">
+          <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text style={styles.stripBig}>{g.target > 0 ? `${baht(g.saved)} saved` : `${baht(perMonth)} a month`}</Text>
+              {g.target > 0 && <Text style={styles.stripSmall}>{pct}%</Text>}
+            </View>
+            {g.target > 0 && (
+              <>
+                <View style={styles.track}>
+                  <View style={[styles.trackFill, { width: `${Math.max(pct, 2)}%` }]} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={styles.stripSmall}>{baht(perMonth)} a month</Text>
+                  <Text style={styles.stripSmall}>of {baht(g.target)}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </Glass>
+      </View>
+    </Squish>
   );
 }
 
-function LockDot({ size = 24 }: { size?: number }) {
+function LockIcon() {
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
-      <Lock size={size * 0.5} color="#FFFFFF" weight="fill" />
-    </View>
+    <Svg width={11} height={11} viewBox="0 0 24 24">
+      <Path fill="#FFFFFF" d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
+    </Svg>
   );
 }
-
-function Ring({ pct }: { pct: number }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const p = Math.min(1, Math.max(0, pct));
+function Arrow() {
   return (
-    <Svg width={64} height={64} viewBox="0 0 64 64">
-      <Circle cx={32} cy={32} r={r} stroke="rgba(17,17,17,0.12)" strokeWidth={9} fill="none" />
-      <Circle cx={32} cy={32} r={r} stroke={colors.ink} strokeWidth={9} fill="none" strokeDasharray={`${c * p} ${c}`} strokeLinecap="round" rotation={-90} origin="32, 32" />
+    <Svg width={12} height={12} viewBox="0 0 24 24">
+      <Path d="M5 12h13M13 6l6 6-6 6" stroke="#FFFFFF" strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  avatar: { width: 46, height: 46, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  plusBadge: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
-  plusBadgeText: { fontFamily: fonts.bold, fontSize: 11, color: '#FFFFFF' },
-  date: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  greeting: { fontFamily: fonts.medium, fontSize: 32, letterSpacing: -0.6, color: colors.ink },
-  caption: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -6 },
-  goalCard: { height: 260, borderRadius: 28, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 24px rgba(0,0,0,0.10)' },
-  goalTop: { position: 'absolute', left: 12, right: 12, top: 14, flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  goalChip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  postIt: {
-    position: 'absolute',
-    left: 14,
-    bottom: 16,
-    width: 206,
-    paddingTop: 18,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-    backgroundColor: colors.lime,
-    transform: [{ rotate: '-2.5deg' }],
-    gap: 3,
-    boxShadow: '0 10px 20px rgba(0,0,0,0.20)',
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+  pill: { height: 40, paddingHorizontal: 14, justifyContent: 'center' },
+  pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+  avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF' },
+  hello: { paddingHorizontal: 22, paddingTop: 26, fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
+  nums: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 22 },
+  n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 50, color: colors.ink, fontVariant: ['tabular-nums'] },
+  n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 34, color: '#B9B8B0', fontVariant: ['tabular-nums'] },
+  lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
+  vbar: { width: 1, height: 54, backgroundColor: 'rgba(17,17,17,0.12)' },
+  cal: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
+  calN: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 16, color: colors.ink },
+  calS: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
+  kip: { position: 'absolute', right: 10, top: 6 },
+  kipName: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },
+  kipRole: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 1 },
+  say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: 14, maxWidth: 210, minHeight: 63 },
+  two: { flexDirection: 'row', marginTop: 14 },
+  twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(17,17,17,0.1)', paddingLeft: 16 },
+  twoK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+  twoV: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
+  foot: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(255,252,154,0.35)',
   },
-  tape: { position: 'absolute', top: -8, left: 79, width: 48, height: 16, backgroundColor: 'rgba(255,255,255,0.6)', transform: [{ rotate: '-5deg' }] },
-  promiseHead: { fontFamily: fonts.regular, fontSize: 9, letterSpacing: 1.1, color: 'rgba(17,17,17,0.55)' },
-  promise: { fontFamily: fonts.hand, fontSize: 21, lineHeight: 22, color: colors.ink },
-  signedAt: { fontFamily: fonts.regular, fontSize: 10, color: 'rgba(17,17,17,0.5)', paddingBottom: 4 },
-  sig: { fontFamily: fonts.signature, fontSize: 30, color: colors.ink },
-  moreGoals: { height: 260, borderRadius: 28, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(17,17,17,0.25)', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 14 },
-  kipCard: { borderRadius: 28, backgroundColor: colors.roseBeige, padding: 18, gap: 10 },
-  kipLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  kipSay: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 28, letterSpacing: -0.3, color: colors.ink },
-  chip: { height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', justifyContent: 'center' },
-  chipText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  small2: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(17,17,17,0.7)' },
-  bigMoney: { fontFamily: fonts.medium, fontSize: 44, letterSpacing: -1.4, color: colors.ink, fontVariant: ['tabular-nums'] },
-  pill: { height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', justifyContent: 'center' },
-  link: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink, textDecorationLine: 'underline' },
-  today: { borderRadius: 22, backgroundColor: colors.lime, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  todayMoney: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
-  askKip: { height: 30, paddingLeft: 12, paddingRight: 5, borderRadius: radius.pill, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  h2: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { width: '48.5%', minHeight: 128, borderRadius: 20, padding: 14, gap: 8, backgroundColor: '#F8F6F4' },
-  tileIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  tileTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
-  tileTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(17,17,17,0.72)' },
-  toast: { borderRadius: 16, backgroundColor: colors.lime, padding: 12 },
-  flow: { flex: 1, borderRadius: 22, padding: 16, gap: 18 },
-  flowMoney: { fontFamily: fonts.medium, fontSize: 24, color: colors.ink, fontVariant: ['tabular-nums'] },
-  bar: { flexDirection: 'row', height: 64, borderRadius: 16, overflow: 'hidden' },
-  barPart: { justifyContent: 'center', paddingHorizontal: 10, minWidth: 70 },
-  barK: { fontFamily: fonts.regular, fontSize: 11, color: 'rgba(17,17,17,0.7)' },
-  barV: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  empty: { borderRadius: 20, backgroundColor: '#F8F6F4', padding: 18 },
-  whereCard: { borderRadius: 20, backgroundColor: '#F8F6F4', padding: 14, gap: 12 },
-  rowName: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.08)' },
-  bubble: { alignSelf: 'flex-start', maxWidth: '88%', borderRadius: 16, borderTopLeftRadius: 4, backgroundColor: colors.grey, paddingVertical: 9, paddingHorizontal: 12 },
-  bubbleMe: { alignSelf: 'flex-end', borderTopLeftRadius: 16, borderTopRightRadius: 4, backgroundColor: colors.lime },
-  bubbleText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+  footText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+  lockDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 34, paddingBottom: 12 },
+  secTitle: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+  secRight: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+  tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
+  tagText: { fontFamily: fonts.semibold, fontSize: 11, color: '#FFFFFF' },
+  // swipe rows: room for shadows to fade out, then the space is pulled back — no clipped edges
+  rowOuter: { marginTop: -20, marginBottom: -30 },
+  rowInner: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 48, gap: 10 },
+  goal: { height: 270, borderRadius: 30, overflow: 'hidden', boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)' },
+  gchip: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    height: 34,
+    paddingLeft: 4,
+    paddingRight: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: '70%',
+  },
+  gchipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, flexShrink: 1 },
+  note: {
+    position: 'absolute',
+    right: 16,
+    top: 60,
+    width: 150,
+    backgroundColor: colors.lime,
+    paddingTop: 13,
+    paddingHorizontal: 11,
+    paddingBottom: 8,
+    transform: [{ rotate: '3deg' }],
+    boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
+  },
+  tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: 'rgba(255,255,255,0.65)', transform: [{ rotate: '-4deg' }] },
+  noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: 'rgba(17,17,17,0.55)' },
+  noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.ink, marginTop: 2 },
+  strip: { position: 'absolute', left: 10, right: 10, bottom: 10 },
+  stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  stripSmall: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+  track: { height: 8, borderRadius: 4, backgroundColor: 'rgba(17,17,17,0.08)', marginTop: 9, marginBottom: 6, overflow: 'hidden' },
+  trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
+  addGoal: {
+    width: 140,
+    height: 270,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(17,17,17,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 12,
+  },
+  addGoalText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
+  cat: { width: 136, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
+  pct: { position: 'absolute', right: 14, top: 14, fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+  catName: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+  catBig: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.8, color: colors.ink, marginTop: 1, fontVariant: ['tabular-nums'] },
+  catOf: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+  plus: { width: 236, height: 136, borderRadius: 26, padding: 16, backgroundColor: '#141414', boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 28px rgba(17,17,17,0.12)' },
+  plusIcon: { position: 'absolute', right: -4, top: -34 },
+  plusTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 20, color: '#FFFFFF', maxWidth: 130 },
+  plusTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(255,255,255,0.62)', marginTop: 4, maxWidth: 150 },
+  tryc: { position: 'absolute', left: 16, bottom: 14, height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.limeDeep, justifyContent: 'center' },
+  trycText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
   fab: {
     position: 'absolute',
     right: 20,
-    width: 64,
-    height: 64,
-    borderRadius: 999,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 10px 24px rgba(17,17,17,0.28)',
+    boxShadow: '0 14px 28px rgba(17,17,17,0.28)',
   },
+  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
+  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF' },
+  bubble: { alignSelf: 'flex-start', maxWidth: '88%', borderRadius: 16, borderTopLeftRadius: 4, backgroundColor: colors.grey, paddingVertical: 9, paddingHorizontal: 12 },
+  bubbleMe: { alignSelf: 'flex-end', borderTopLeftRadius: 16, borderTopRightRadius: 4, backgroundColor: colors.lime },
+  bubbleText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
 });

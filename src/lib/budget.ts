@@ -41,6 +41,8 @@ export type MonthBudget = {
   goalExtra: number; // money moved to the goal from a lowered budget
   bills: { rent: number; guess: number; items?: { name: string; amount: number }[] }; // guess = bills Kip hasn't seen yet
   spend: { key: CatKey; amount: number }[];
+  /** Bills marked paid this month (cleared when a new month starts). */
+  paid?: { period: string; keys: string[] };
 };
 
 /** Living costs + fun (+ learning and giving) as categories. */

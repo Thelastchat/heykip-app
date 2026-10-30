@@ -73,6 +73,7 @@ export function useHome(month: MonthBudget | null) {
   const [goals, setGoals] = useState<HomeGoal[]>([]);
   const [spent, setSpent] = useState<Spent>({ total: 0, today: 0, bills: 0, byCat: {}, byDay: {} });
   const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(0);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -87,6 +88,13 @@ export function useHome(month: MonthBudget | null) {
       supabase.from('promises').select('goal_id, text, signature_url, signed_at').eq('user_id', userId).order('signed_at', { ascending: false }),
       supabase.from('transactions').select('amount, kind, occurred_at, categories(key)').eq('user_id', userId).eq('kind', 'spend').gte('occurred_at', p.start.toISOString()),
     ]);
+    // Days logged in a row (today, or up to yesterday if nothing yet today) — from the last 60 days of logs.
+    const { data: recent } = await supabase
+      .from('transactions')
+      .select('occurred_at')
+      .eq('user_id', userId)
+      .gte('occurred_at', new Date(Date.now() - 60 * 86_400_000).toISOString());
+    setStreak(streakOf((recent ?? []).map((r) => r.occurred_at)));
     const list = await Promise.all(
       (g ?? []).map(async (x) => {
         const promise = (pr ?? []).find((y) => y.goal_id === x.id);
@@ -130,5 +138,21 @@ export function useHome(month: MonthBudget | null) {
     load();
   }, [load]);
 
-  return { goals, spent, loading, reload: load };
+  return { goals, spent, streak, loading, reload: load };
 }
+
+/** Consecutive days with at least one log, ending today (or yesterday, so the streak doesn't break before you log today). */
+export function streakOf(dates: string[], now = new Date()): number {
+  const days = new Set(dates.map((d) => new Date(d).toDateString()));
+  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!days.has(day.toDateString())) day.setDate(day.getDate() - 1);
+  let n = 0;
+  while (days.has(day.toDateString())) {
+    n++;
+    day.setDate(day.getDate() - 1);
+  }
+  return n;
+}
+
+/** A stable key for the current pay period, used to reset "paid" bills each month. */
+export const periodKey = (payday: number | null, now = new Date()) => period(payday, now).start.toDateString();
