@@ -2,7 +2,7 @@
 // and the numbers Kip talks about. Spending comes from logged transactions (none yet = a fresh month).
 import { useCallback, useEffect, useState } from 'react';
 
-import type { CatKey } from '@/lib/budget';
+import { spendingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -21,7 +21,28 @@ export type HomeGoal = {
   signedAt: string | null;
 };
 
-export type Spent = { total: number; today: number; byCat: Partial<Record<CatKey | 'home_bills' | 'travel' | 'family_pets' | 'installments', number>>; byDay: Record<string, number> };
+/** What was spent this month, counted against the plan. `bills` = logged under Home & bills — already planned, so not taken from spending again. */
+export type Spent = { total: number; today: number; bills: number; byCat: Partial<Record<CatKey, number>>; byDay: Record<string, number> };
+
+/** Which budget a logged category counts against. Categories without their own budget (travel, pets…) count as Household & other. */
+export function budgetKey(dbKey: string, month: MonthBudget | null): CatKey | 'bills' {
+  if (dbKey === 'home_bills') return 'bills';
+  if (month?.style === 'savefirst') return 'spend_freely';
+  if (month?.spend.some((s) => s.key === dbKey)) return dbKey as CatKey;
+  return 'other';
+}
+
+/** The month in numbers — the same on Home and in "Add it yourself". */
+export function monthNumbers(month: MonthBudget | null, spent: Spent, now = new Date()) {
+  const P = period(month?.payday ?? null, now);
+  const spendBudget = month ? spendingTotal(month) : 0;
+  const leftMonth = Math.max(0, spendBudget - spent.total);
+  // Today's share of what's left, counting what was already spent today back in.
+  const dailyToday = Math.max(0, Math.round((leftMonth + spent.today) / P.daysLeft / 10) * 10);
+  const leftToday = Math.max(0, dailyToday - spent.today);
+  const pace = Math.round(spent.total - spendBudget * (P.dayIndex / P.total));
+  return { P, spendBudget, leftMonth, dailyToday, leftToday, pace };
+}
 
 /** The month runs payday → payday (or 1st → 1st when pay changes). */
 export function period(payday: number | null, now = new Date()) {
@@ -45,11 +66,12 @@ async function signed(path: string | null | undefined): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-export function useHome(payday: number | null) {
+export function useHome(month: MonthBudget | null) {
+  const payday = month?.payday ?? null;
   const { session } = useAuth();
   const userId = session?.user.id;
   const [goals, setGoals] = useState<HomeGoal[]>([]);
-  const [spent, setSpent] = useState<Spent>({ total: 0, today: 0, byCat: {}, byDay: {} });
+  const [spent, setSpent] = useState<Spent>({ total: 0, today: 0, bills: 0, byCat: {}, byDay: {} });
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -86,10 +108,14 @@ export function useHome(payday: number | null) {
     );
     setGoals(list);
     const todayKey = new Date().toDateString();
-    const s: Spent = { total: 0, today: 0, byCat: {}, byDay: {} };
+    const s: Spent = { total: 0, today: 0, bills: 0, byCat: {}, byDay: {} };
     for (const t of tx ?? []) {
       const amt = Number(t.amount);
-      const key = ((t.categories as unknown as { key: string } | null)?.key ?? 'other') as keyof Spent['byCat'];
+      const key = budgetKey((t.categories as unknown as { key: string } | null)?.key ?? 'other', month);
+      if (key === 'bills') {
+        s.bills += amt;
+        continue;
+      }
       s.total += amt;
       s.byCat[key] = (s.byCat[key] ?? 0) + amt;
       const d = new Date(t.occurred_at).toDateString();
@@ -98,7 +124,7 @@ export function useHome(payday: number | null) {
     }
     setSpent(s);
     setLoading(false);
-  }, [userId, payday]);
+  }, [userId, payday, month]);
 
   useEffect(() => {
     load();

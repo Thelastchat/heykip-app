@@ -11,9 +11,9 @@ import { CatBadge, CatIcon } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
 import { Compare, PlusSheet, type PlusFeature } from '@/components/PlusSheet';
 import { plan as splitMonth, type Style } from '@/lib/brain';
-import { CATEGORY, STYLES, type CatKey, type IconKey } from '@/lib/budget';
+import { billsTotal, CATEGORY, savingTotal, STYLES, type CatKey, type IconKey } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
-import { period, useHome, type HomeGoal } from '@/lib/home';
+import { monthNumbers, useHome, type HomeGoal } from '@/lib/home';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { typeInfo } from '@/lib/setup/goalTypes';
@@ -38,7 +38,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month } = useMonth();
-  const { goals, spent, reload } = useHome(month?.payday ?? null);
+  const { goals, spent, reload } = useHome(month);
   const [hide, setHide] = useState(false);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -55,14 +55,9 @@ export default function Home() {
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
 
   // ---- the month in numbers ----
-  const P = period(month?.payday ?? null, now);
-  const spendBudget = month ? month.spend.reduce((a, s) => a + s.amount, 0) : 0;
-  const saving = month ? month.goal.amount + month.goalExtra + month.safety.amount : 0;
-  const bills = month ? month.bills.rent + month.bills.guess + (month.bills.items ?? []).reduce((a, b) => a + b.amount, 0) : 0;
-  const leftMonth = Math.max(0, spendBudget - spent.total);
-  const dailyToday = Math.max(0, Math.round((leftMonth + spent.today) / P.daysLeft / 10) * 10);
-  const leftToday = Math.max(0, dailyToday - spent.today);
-  const pace = Math.round(spent.total - spendBudget * (P.dayIndex / P.total));
+  const { P, leftMonth, dailyToday, leftToday, pace } = monthNumbers(month, spent, now);
+  const saving = month ? savingTotal(month) : 0;
+  const bills = month ? billsTotal(month) : 0;
   const goalDate = goal?.due ? parseDay(goal.due) : null;
   const daysToGoal = goalDate ? Math.max(0, Math.round((goalDate.getTime() - now.getTime()) / 86_400_000)) : null;
   const focus = focusCategory(month?.spend ?? [], spent.byCat);
