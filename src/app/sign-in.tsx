@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +15,9 @@ import { colors, fonts, radius } from '@/theme';
 export default function SignIn() {
   // Arriving from a signed promise: this is "save your plan", not a cold sign-in.
   const saving = Boolean(useSetup().draft.signature);
+  // Read once after mount — asking the navigator during render gives a stale answer.
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => setCanGoBack(router.canGoBack()), []);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -41,7 +44,7 @@ export default function SignIn() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
-        <View style={{ minHeight: 46 }}>{router.canGoBack() && <BackButton size={46} />}</View>
+        <View style={{ minHeight: 46 }}>{canGoBack && <BackButton size={46} />}</View>
         <View style={styles.top}>
           <Kip mood={saving ? 'happy' : 'idle'} size={150} />
           <T variant="hero" style={{ textAlign: 'center' }}>
