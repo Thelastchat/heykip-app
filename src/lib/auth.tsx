@@ -9,6 +9,7 @@ export type Profile = {
   avatar_url: string | null;
   onboarded: boolean;
   plan: 'free' | 'trial' | 'yearly' | 'monthly' | 'student';
+  split_when_paid: boolean; // Plus: Kip moves the saving on payday
 };
 
 type AuthState = {
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // The profiles row is created by a database trigger on sign-up (see the migration).
     const { data } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url, onboarded, plan')
+      .select('id, display_name, avatar_url, onboarded, plan, split_when_paid')
       .eq('id', s.user.id)
       .maybeSingle();
     setProfile((data as Profile | null) ?? null);

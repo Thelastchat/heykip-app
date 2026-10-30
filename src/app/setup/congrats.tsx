@@ -62,11 +62,8 @@ export default function SetupCongrats() {
         <Pressable onPress={() => router.push('/setup/everything')} hitSlop={10} accessibilityRole="link">
           <Text style={styles.link}>See what I used</Text>
         </Pressable>
-        <Pressable onPress={() => router.push('/setup/yours')} hitSlop={10} accessibilityRole="link">
-          <Text style={styles.link}>Customize numbers</Text>
-        </Pressable>
       </View>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -8 }}>optional · you can change your money style any time in the app</Text>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -8 }}>optional · you can change it any time in the app</Text>
       <View style={{ marginTop: 'auto' }}>
         <Button label="Make my promise" onPress={() => router.push('/setup/sign')} />
       </View>

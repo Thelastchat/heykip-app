@@ -16,7 +16,7 @@ export default function SetupIntro() {
   const { draft, ready } = useSetup();
 
   // Just created an account after signing the promise → straight to the last step.
-  if (ready && session && draft.signature) return <Redirect href="/setup/paywall" />;
+  if (ready && session && draft.signature) return <Redirect href="/setup/finish" />;
 
   return (
     <SetupScreen

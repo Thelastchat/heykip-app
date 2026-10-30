@@ -26,7 +26,7 @@ export default function SetupSign() {
   function commit() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     update({ signedAt: new Date().toISOString(), promiseMain: main.trim(), promiseBackup: backup.trim() });
-    router.push(session ? '/setup/paywall' : '/sign-in');
+    router.push(session ? '/setup/finish' : '/sign-in');
   }
 
   return (
