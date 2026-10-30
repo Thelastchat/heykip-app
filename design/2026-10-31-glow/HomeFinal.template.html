@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home · glow v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #111111; --muted: #8a8a84; --soft: #b9b8b0; --lime: #fffc9a; --limeDeep: #f0ea4a; --orange: #e28151;
+    --glass: rgba(255, 255, 255, 0.42); --edge: rgba(255, 255, 255, 0.95);
+    --shadow: 0 1px 2px rgba(17,17,17,.03), 0 16px 36px rgba(17,17,17,.06);
+    --spring: cubic-bezier(.34,1.56,.64,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: #e9e7e3; font-family: Geist, system-ui, sans-serif; color: var(--ink); }
+  .phone { width: 390px; max-width: 100%; margin: 0 auto; min-height: 100vh; background: linear-gradient(180deg, #fdfbf6 0%, #fcf8ef 40%, #f8f5f7 75%, #f5f2f8 100%); position: relative; overflow: hidden; padding-bottom: 150px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .b { font-size: .62em; vertical-align: .32em; margin-right: .04em; font-weight: 400; } /* small baht sign */
+  .in { opacity: 0; transform: translateY(16px); animation: rise .8s var(--spring) forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .press { transition: transform .25s var(--spring); cursor: pointer; }
+  .press:active { transform: scale(.97); }
+  .glass { background: var(--glass); backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5); border: 1px solid var(--edge); box-shadow: var(--shadow); }
+
+  /* the glow follows the month: lime when on pace, warm peach when a bit fast */
+  .glow { position: fixed; top: 0; bottom: 0; left: 50%; width: 390px; max-width: 100%; transform: translateX(-50%); pointer-events: none; filter: blur(64px); overflow: visible; z-index: 0; }
+  .glow i { position: absolute; border-radius: 50%; transition: background 1.2s ease; }
+  .glow .a { width: 300px; height: 300px; right: -90px; top: -60px; background: #ffd2a6; opacity: .55; animation: d1 12s ease-in-out infinite; }
+  .glow .b2 { width: 320px; height: 320px; left: -60px; top: 32%; background: #fff47a; opacity: .5; animation: d2 14s ease-in-out infinite; }
+  .glow .c { width: 300px; height: 300px; right: -80px; bottom: 6%; background: #dcd2f7; opacity: .62; animation: d3 10s ease-in-out infinite; }
+  .glow .d { width: 220px; height: 220px; left: 40px; top: 14%; background: #ffe2c2; opacity: .45; animation: d1 16s ease-in-out infinite reverse; }
+  .fast .glow .a { background: #ffbf8e; } .fast .glow .d { background: #ffd2a6; }
+  @keyframes d1 { 50% { transform: translate(-40px, 50px) scale(1.12); } }
+  @keyframes d2 { 50% { transform: translate(60px, -30px) scale(.9); } }
+  @keyframes d3 { 50% { transform: translate(-30px, -50px) scale(1.15); } }
+  .layer { position: relative; z-index: 1; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0; }
+  .rt { display: flex; gap: 8px; align-items: center; }
+  .pill { height: 40px; padding: 0 14px; border-radius: 99px; background: rgba(255,255,255,.7); backdrop-filter: blur(14px); border: 1px solid #fff; box-shadow: var(--shadow); display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
+  .round { width: 40px; padding: 0; justify-content: center; position: relative; }
+  .round .dot { position: absolute; top: 9px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); border: 1.5px solid #fff; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px #fff, var(--shadow); }
+
+  .hello { padding: 26px 22px 0; font-weight: 400; font-size: 34px; line-height: 40px; letter-spacing: -1.1px; }
+  .hello span { color: var(--soft); }
+
+  .nums { display: flex; align-items: flex-end; padding: 22px 22px 0; gap: 14px; }
+  .nums .n { font-weight: 500; font-size: 46px; letter-spacing: -2px; line-height: 1; }
+  .nums .n.dim { color: var(--soft); font-weight: 400; font-size: 30px; letter-spacing: -1px; }
+  .nums .bar { width: 1px; height: 54px; background: rgba(17,17,17,.12); }
+  .nums .lbl { font-size: 12px; color: var(--muted); margin-top: 7px; }
+  .nums .cal { margin-left: auto; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.7); border: 1px solid #fff; box-shadow: var(--shadow); display: grid; place-content: center; text-align: center; }
+  .cal b { font-weight: 600; font-size: 15px; line-height: 15px; } .cal small { font-size: 10px; color: var(--muted); }
+
+  /* the week: each day is a dot — on pace, a bit over, or still to come */
+  .week { display: flex; gap: 6px; padding: 22px 18px 0; }
+  .day { flex: 1; height: 64px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; color: var(--muted); }
+  .day b { font-size: 15px; font-weight: 500; color: var(--ink); }
+  .day i { width: 6px; height: 6px; border-radius: 50%; background: var(--limeDeep); }
+  .day i.over { background: var(--orange); } .day i.none { background: rgba(17,17,17,.12); }
+  .day.later { opacity: .45; }
+  .day.on { background: var(--ink); color: rgba(255,255,255,.6); box-shadow: 0 10px 20px rgba(17,17,17,.18); }
+  .day.on b { color: #fff; } .day.pay b::after { content: "฿"; font-size: 9px; vertical-align: 5px; margin-left: 1px; color: var(--muted); }
+
+  /* Kip */
+  .kipcard { margin: 22px 18px 0; border-radius: 30px; overflow: hidden; }
+  .kipcard .body { padding: 20px 20px 18px; position: relative; }
+  .kipcard h3 { font-weight: 500; font-size: 24px; letter-spacing: -.5px; }
+  .kipcard .role { color: var(--muted); font-size: 13px; margin-top: 1px; }
+  .kip { position: absolute; right: 12px; top: 8px; width: 114px; animation: bob 3.4s ease-in-out infinite; filter: drop-shadow(0 18px 16px rgba(0,0,0,.14)); transform-origin: 50% 100%; cursor: pointer; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(3deg) scale(.98, 1.02); } }
+  .kip.jump { animation: jump .9s var(--spring); }
+  @keyframes jump { 0% { transform: scale(1.08,.9); } 40% { transform: translateY(-30px) scale(.94,1.08) rotate(-8deg); } 75% { transform: scale(1.06,.94); } 100% { transform: none; } }
+  .say { font-size: 15px; line-height: 21px; margin-top: 14px; max-width: 200px; min-height: 63px; }
+  .say b { font-weight: 600; }
+  .typing span { display: inline-block; width: 6px; height: 6px; border-radius: 9px; background: var(--soft); margin-right: 3px; animation: tdot 1s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes tdot { 50% { transform: translateY(-4px); background: var(--muted); } }
+  .two { display: flex; margin-top: 14px; }
+  .two div { flex: 1; } .two div + div { border-left: 1px solid rgba(17,17,17,.1); padding-left: 16px; }
+  .two small { font-size: 12px; color: var(--muted); } .two b { display: block; font-weight: 500; font-size: 16px; margin-top: 2px; }
+  .foot { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid rgba(255,255,255,.95); background: linear-gradient(90deg, rgba(255,255,255,.5), rgba(255,252,154,.5)); font-weight: 500; font-size: 15px; }
+  .lock { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); display: inline-grid; place-items: center; }
+  .lock svg { width: 11px; }
+  .foot .r { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 400; }
+
+  .sec { display: flex; justify-content: space-between; align-items: baseline; padding: 34px 22px 12px; }
+  .sec h2 { font-size: 19px; font-weight: 500; letter-spacing: -.3px; }
+  .sec small { color: var(--muted); font-size: 13px; }
+  .tag { height: 24px; padding: 0 10px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; }
+  .row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 18px 18px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .row::-webkit-scrollbar { display: none; }
+
+  /* goal: the photo, with a frosted strip that carries the numbers */
+  .goal { flex: 0 0 312px; height: 270px; scroll-snap-align: start; border-radius: 30px; overflow: hidden; position: relative; box-shadow: var(--shadow); }
+  .goal img.photo { width: 100%; height: 100%; object-fit: cover; animation: kenburns 18s ease-in-out infinite alternate; }
+  @keyframes kenburns { to { transform: scale(1.08) translate(-8px, -4px); } }
+  .goal .chip { position: absolute; left: 12px; top: 12px; height: 34px; padding: 0 12px 0 4px; border-radius: 99px; background: rgba(255,255,255,.9); display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; }
+  .goal .chip img { width: 28px; height: 28px; }
+  .note { position: absolute; right: 16px; top: 60px; width: 150px; background: var(--lime); padding: 13px 11px 7px; transform: rotate(3deg); box-shadow: 0 12px 20px rgba(0,0,0,.22); }
+  .note::before { content: ""; position: absolute; top: -8px; left: 52px; width: 44px; height: 15px; background: rgba(255,255,255,.65); transform: rotate(-4deg); }
+  .note small { font-size: 8px; letter-spacing: 1px; color: rgba(17,17,17,.55); }
+  .note p { font-family: Caveat; font-size: 18px; line-height: 18px; margin-top: 2px; }
+  .strip { position: absolute; left: 10px; right: 10px; bottom: 10px; border-radius: 22px; padding: 12px 14px; background: rgba(255,255,255,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.9); }
+  .strip .l1 { display: flex; justify-content: space-between; align-items: baseline; }
+  .strip .l1 b { font-weight: 500; font-size: 17px; } .strip .l1 span { font-size: 13px; color: var(--muted); }
+  .strip .track { height: 8px; border-radius: 9px; background: rgba(17,17,17,.08); margin: 9px 0 6px; overflow: hidden; }
+  .strip .fill { height: 100%; width: 0; background: var(--limeDeep); border-radius: 9px; transition: width 1.6s cubic-bezier(.2,.8,.2,1) .7s; }
+  .strip .l2 { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .addgoal { flex: 0 0 140px; height: 270px; scroll-snap-align: start; border-radius: 30px; border: 1.5px dashed rgba(17,17,17,.16); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 14px; text-align: center; padding: 12px; }
+  .addgoal img { width: 66px; opacity: .9; }
+
+  /* categories */
+  /* Left to spend: compact number tiles — the ring around the icon is what's left */
+  .cat { flex: 0 0 136px; scroll-snap-align: start; border-radius: 24px; padding: 12px 14px 14px; }
+  .ring2 { position: relative; width: 64px; height: 64px; margin-bottom: 10px; }
+  .ring2 svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring2 circle.arc { transition: stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1) .5s; }
+  .ring2 img { position: absolute; left: 12px; top: 12px; width: 40px; height: 40px; animation: float 4.5s ease-in-out infinite; }
+  .cat:nth-child(2) img { animation-delay: -1.2s; } .cat:nth-child(3) img { animation-delay: -2.4s; } .cat:nth-child(4) img { animation-delay: -3.3s; }
+  @keyframes float { 50% { transform: translateY(-3px) rotate(-5deg); } }
+  .cat .pct { position: absolute; right: 14px; top: 14px; font-size: 12px; color: var(--muted); }
+  .cat { position: relative; }
+  .cat b { display: block; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .cat .big { font-size: 24px; font-weight: 500; letter-spacing: -.8px; margin-top: 1px; }
+  .cat small { font-size: 12px; color: var(--muted); }
+  .cat .flag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #b45a2f; margin-top: 4px; }
+  .cat .flag i { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+
+  /* Do more with Kip: wider premium cards — shimmering gradient, the 3D icon pops out of the card */
+  .prow { padding-top: 30px !important; }
+  .plus { flex: 0 0 236px; scroll-snap-align: start; border-radius: 26px; padding: 16px; height: 136px; position: relative; overflow: visible;
+    background: linear-gradient(135deg, rgba(255,250,140,.85) 0%, rgba(255,255,255,.7) 48%, rgba(214,204,246,.85) 100%);
+    border: 1px solid rgba(255,255,255,.95); box-shadow: 0 1px 2px rgba(17,17,17,.03), 0 16px 30px rgba(160,140,220,.18); }
+  .plus .clip { position: absolute; inset: 0; border-radius: 26px; overflow: hidden; pointer-events: none; }
+  .plus .clip::after { content: ""; position: absolute; top: -20%; bottom: -20%; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent); transform: skewX(-18deg); animation: sheen 5s ease-in-out infinite; }
+  .plus:nth-child(2) .clip::after { animation-delay: 1.2s; } .plus:nth-child(3) .clip::after { animation-delay: 2.4s; } .plus:nth-child(4) .clip::after { animation-delay: 3.6s; }
+  @keyframes sheen { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+  .plus img { position: absolute; right: -4px; top: -34px; width: 96px; height: 96px; filter: drop-shadow(0 14px 14px rgba(0,0,0,.16)); animation: float2 5s ease-in-out infinite; }
+  .plus:nth-child(2) img { animation-delay: -1.5s; } .plus:nth-child(3) img { animation-delay: -3s; }
+  @keyframes float2 { 50% { transform: translateY(-5px) rotate(4deg); } }
+  .plus b { display: block; font-size: 16px; font-weight: 500; max-width: 130px; line-height: 20px; }
+  .plus small { display: block; color: rgba(17,17,17,.62); font-size: 12px; line-height: 16px; margin-top: 4px; max-width: 150px; }
+  .plus .tryc { position: absolute; left: 16px; bottom: 14px; height: 28px; padding: 0 12px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+
+  .bills { margin: 0 18px; border-radius: 26px; padding: 4px 16px; }
+  .billrow { display: flex; align-items: center; padding: 12px 0; gap: 12px; }
+  .billrow + .billrow { border-top: 1px solid rgba(17,17,17,.07); }
+  .billrow img { width: 40px; height: 40px; }
+  .billrow div { flex: 1; } .billrow b { font-weight: 500; font-size: 15px; display: block; } .billrow small { font-size: 12px; color: var(--muted); }
+  .billrow .amt { font-weight: 500; font-size: 16px; }
+
+  .fab { position: fixed; right: max(20px, calc(50% - 175px)); bottom: 100px; width: 62px; height: 62px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; box-shadow: 0 14px 28px rgba(17,17,17,.28); z-index: 10; }
+  .fab::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--ink); opacity: 0; animation: ping 2.4s ease-out 2.6s 3; }
+  @keyframes ping { 0% { transform: scale(.9); opacity: .45; } 100% { transform: scale(1.35); opacity: 0; } }
+  .tabs { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); width: 290px; max-width: calc(100% - 36px); height: 62px; border-radius: 99px; display: flex; align-items: center; justify-content: space-around; z-index: 9; }
+  .tabs .t { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; }
+  .tabs .t.on { background: var(--ink); }
+  .tabs .t img { width: 40px; }
+  .toast { position: fixed; left: 50%; bottom: 178px; transform: translate(-50%, 20px); background: var(--ink); color: #fff; font-size: 13px; padding: 10px 14px; border-radius: 99px; opacity: 0; transition: all .5s var(--spring); white-space: nowrap; z-index: 11; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  /* ---- Bills: a soft wallet stack. Paid bills sink to the bottom; slide to pay. ---- */
+  .bsum { margin: 0 18px 14px; }
+  .bsum .l { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .bsum .l b { color: var(--ink); font-weight: 500; }
+  .segs { display: flex; gap: 3px; height: 8px; }
+  .segs i { border-radius: 9px; background: rgba(17,17,17,.08); position: relative; overflow: hidden; }
+  .segs i::after { content: ""; position: absolute; inset: 0; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform .7s var(--spring); }
+  .segs i.done::after { transform: none; }
+  .stack { margin: 0 18px; position: relative; }
+  .bcard { position: relative; border-radius: 26px; padding: 14px 16px; height: 132px; cursor: pointer; overflow: hidden;
+    background-image: linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,0) 55%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 -4px 14px rgba(17,17,17,.05);
+    transition: height .55s var(--spring), margin-top .55s var(--spring), transform .5s var(--spring), opacity .4s, filter .4s; }
+  .bcard + .bcard { margin-top: -62px; }
+  .bcard.last { height: 70px; }
+  .bcard.open { height: 152px; }
+  .bcard.open + .bcard { margin-top: -14px; }
+  .bcard + .bcard.addc { margin-top: 10px; }
+  .bcard.dark { background-color: #121212; background-image: linear-gradient(160deg, #2a2a2a, #111 60%); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 24px rgba(17,17,17,.18); }
+  .strip3 { display: flex; align-items: center; gap: 12px; height: 42px; }
+  .strip3 .ic { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.85); display: grid; place-items: center; flex: none; }
+  .bcard.dark .ic { background: rgba(255,255,255,.12); } .bcard.dark .ic svg * { stroke: #fff; } .bcard.dark .ic svg circle { fill: #fff; }
+  .strip3 .ic svg { width: 19px; height: 19px; }
+  .strip3 .nm { flex: 1; min-width: 0; } .strip3 .nm b { display: block; font-size: 17px; font-weight: 500; letter-spacing: -.2px; }
+  .strip3 .nm small { font-size: 12px; opacity: .62; }
+  .strip3 .am { text-align: right; } .strip3 .am b { display: block; font-size: 17px; font-weight: 500; }
+  .strip3 .am small { font-size: 12px; opacity: .62; }
+  .est { display: inline-flex; height: 18px; padding: 0 7px; border-radius: 9px; border: 1px dashed currentColor; font-size: 10px; align-items: center; margin-left: 6px; opacity: .7; vertical-align: 2px; }
+  .soonDot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--limeDeep); margin-right: 5px; animation: blink 1.6s ease-in-out infinite; vertical-align: 1px; }
+  @keyframes blink { 50% { opacity: .3; } }
+  /* open card: slide to pay + remind */
+  .act { display: flex; gap: 8px; margin-top: 16px; opacity: 0; transform: translateY(8px); transition: all .4s ease .12s; pointer-events: none; }
+  .bcard.open .act { opacity: 1; transform: none; pointer-events: auto; }
+  .bell { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.55); flex: none; transition: background .3s; }
+  .bcard.dark .bell { background: rgba(255,255,255,.12); }
+  .bell svg { width: 20px; } .bell.on { background: var(--limeDeep) !important; } .bell.on svg path { stroke: #111 !important; }
+  .slide { flex: 1; height: 50px; border-radius: 99px; background: rgba(255,255,255,.55); position: relative; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; overflow: hidden; touch-action: none; user-select: none; }
+  .bcard.dark .slide { background: rgba(255,255,255,.12); }
+  .slide .fillx { position: absolute; left: 0; top: 0; bottom: 0; width: 50px; border-radius: 99px; background: var(--limeDeep); }
+  .slide .knob2 { position: absolute; left: 3px; top: 3px; width: 44px; height: 44px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; box-shadow: 0 4px 10px rgba(0,0,0,.2); z-index: 2; }
+  .bcard.dark .slide .knob2 { background: var(--limeDeep); } .bcard.dark .slide .knob2 svg path { stroke: #111; }
+  .slide .txt { position: relative; z-index: 1; padding-left: 30px; opacity: .8; }
+  .slide .txt::after { content: " →"; animation: hint 1.6s ease-in-out infinite; display: inline-block; }
+  @keyframes hint { 50% { transform: translateX(4px); } }
+  /* paid: sinks to the bottom, quiet grey glass */
+  .bcard.paid { background-color: rgba(255,255,255,.55) !important; background-image: none; color: var(--ink); filter: saturate(.2); }
+  .bcard.paid .nm b, .bcard.paid .am b { text-decoration: line-through; opacity: .45; }
+  .bcard.paid .ic { background: var(--ink); } .bcard.paid .ic svg * { stroke: #fff !important; }
+  .bcard.addc { background: transparent; background-image: none; border: 1.5px dashed rgba(17,17,17,.18); box-shadow: none; height: 64px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--muted); backdrop-filter: blur(10px); }
+  .bcard.addc span { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 18px; line-height: 0; }
+  .bcard.pop { animation: pop2 .6s var(--spring); }
+  @keyframes pop2 { 0% { transform: scale(1); } 30% { transform: scale(.94); } 100% { transform: scale(1); } }
+
+  /* bills, colourless: frosted white like the rest of Home — depth from light and shadow only */
+  .bcard { background-color: rgba(255,255,255,.34) !important; background-image: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.12) 70%) !important; color: var(--ink) !important;
+    border: 1px solid rgba(255,255,255,.95); backdrop-filter: blur(18px) saturate(1.6); -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    box-shadow: 0 -6px 16px rgba(17,17,17,.045), inset 0 1px 0 rgba(255,255,255,.9) !important; filter: none !important; }
+  .bcard.open { background-color: rgba(255,255,255,.5) !important; box-shadow: 0 -6px 18px rgba(17,17,17,.06), 0 14px 30px rgba(17,17,17,.08), inset 0 1px 0 #fff !important; }
+  .strip3 .ic { background: rgba(255,255,255,.6) !important; }
+  .bcard .ic svg * { stroke: #111 !important; } .bcard .ic svg circle { fill: #111 !important; }
+  .bcard.paid { background-color: rgba(255,255,255,.2) !important; background-image: none !important; }
+  .bcard.paid .ic { background: var(--ink) !important; } .bcard.paid .ic svg * { stroke: #fff !important; }
+  .bcard .bell, .bcard.dark .bell { background: rgba(255,255,255,.6) !important; } .bcard .bell svg path { stroke: #111; }
+  .bcard .slide, .bcard.dark .slide { background: rgba(255,255,255,.6) !important; }
+  .bcard .slide .knob2, .bcard.dark .slide .knob2 { background: var(--ink) !important; } .bcard .slide .knob2 svg path { stroke: #fff !important; }
+  .bcard.addc { background: transparent !important; background-image: none !important; box-shadow: none !important; border: 1.5px dashed rgba(17,17,17,.16); }
+  .strip3 .am small, .strip3 .nm small { opacity: 1; color: var(--muted); }
+
+  /* swipe rows: leave room for the soft shadows to fade out, then pull the space back — no clipped edges */
+  .row { padding-top: 22px !important; padding-bottom: 48px !important; margin-top: -20px; margin-bottom: -30px; }
+  .row.prow { padding-top: 40px !important; }
+
+  /* bill icons: soft brand-colour circles, solid ink glyphs. One colour per bill, no two close tones */
+  .strip3 .ic { width: 44px !important; height: 44px !important; background: var(--tint, #f2f2ef) !important; }
+  .strip3 .ic svg { width: 20px !important; height: 20px !important; }
+  .bcard .ic svg * { stroke: none !important; fill: #2a2a2a !important; }
+  .bcard .bell, .bcard.dark .bell { background: rgba(255,255,255,.7) !important; } .bcard .bell svg path { stroke: none !important; fill: #2a2a2a !important; }
+  .bcard .bell.on { background: var(--limeDeep) !important; }
+  .bcard.paid .ic { background: var(--ink) !important; } .bcard.paid .ic svg * { fill: none !important; stroke: #fff !important; }
+
+  .plus .clip { display: none; }
+  .plus { background: var(--pbg) !important; border: 1px solid var(--pedge) !important; box-shadow: 0 1px 2px rgba(17,17,17,.04), 0 14px 28px rgba(17,17,17,.10) !important; color: var(--pfg); }
+  .plus small { color: var(--pmuted) !important; }
+  .plus .tryc { background: var(--pbtn) !important; color: var(--pbtnfg) !important; }
+  :root { --pbg: #141414; --pedge: #141414; --pfg: #fff; --pmuted: rgba(255,255,255,.62); --pbtn: #f0ea4a; --pbtnfg: #111; }
+
+  /* controls on see-through cards need their own edge: light grey fill + fine outline */
+  .bcard .bell, .bcard.dark .bell { background: rgba(17,17,17,.07) !important; box-shadow: inset 0 0 0 1px rgba(17,17,17,.06); }
+  .bcard .bell.on { background: var(--limeDeep) !important; box-shadow: none; }
+  .bcard .slide, .bcard.dark .slide { background: rgba(17,17,17,.07) !important; box-shadow: inset 0 0 0 1px rgba(17,17,17,.06); }
+  .bcard .slide .txt { opacity: .75; }
+
+  /* slider at rest: just the knob — the lime fill only appears as you drag */
+  .bcard .slide .fillx { width: 0; }
+  .bcard .slide .txt::after { content: none; }
+  .bcard .slide .txt { padding-left: 34px; }
+  /* due soon: the dot needs to read on a light card */
+  .soonDot { background: var(--orange) !important; }
+</style>
+</head>
+<body>
+<div class="phone fast" id="phone">
+  <div class="glow"><i class="a"></i><i class="d"></i><i class="b2"></i><i class="c"></i></div>
+  <div class="layer">
+    <div class="top in" style="animation-delay:.02s">
+      <div class="pill press">🔥 <span class="num">7</span> <span style="color:var(--muted);font-size:12px;font-weight:400">days logged</span></div>
+      <div class="rt">
+        <div class="pill round press"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><i class="dot"></i></div>
+        <img class="avatar press" src="{{avatar}}" alt="" />
+      </div>
+    </div>
+
+    <h1 class="hello in" style="animation-delay:.08s">Hello, Koy<br /><span>Today’s money</span></h1>
+
+    <div class="nums in" style="animation-delay:.14s">
+      <div><div class="n num" id="today"><span class="b">฿</span>0</div><div class="lbl" id="todaylbl">Left today</div></div>
+      <div class="bar"></div>
+      <div><div class="n dim num" id="month"><span class="b">฿</span>0</div><div class="lbl">Left this month</div></div>
+      <div class="cal press"><b class="num">26</b><small>days</small></div>
+    </div>
+
+    <div class="week in" style="animation-delay:.2s" id="week"></div>
+
+    <div class="kipcard glass in" style="animation-delay:.26s">
+      <div class="body">
+        <img class="kip" id="kip" src="{{kip}}" alt="Kip" />
+        <h3>Kip</h3>
+        <div class="role">Your money buddy</div>
+        <div class="say" id="say"><span class="typing"><span></span><span></span><span></span></span></div>
+        <div class="two">
+          <div><small>Spent today</small><b class="num" id="spent">฿0 of ฿340</b></div>
+          <div><small>Japan</small><b>Dec 2027</b></div>
+        </div>
+      </div>
+      <div class="foot press">Ask Kip anything <span class="r">Plus <span class="lock"><svg viewBox="0 0 24 24" fill="#fff"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z"/></svg></span></span></div>
+    </div>
+
+    <div class="sec in" style="animation-delay:.32s"><h2>Your goal</h2><small>1 of 3</small></div>
+    <div class="row in" style="animation-delay:.36s">
+      <div class="goal press">
+        <img class="photo" src="{{photo}}" alt="" />
+        <div class="chip"><img src="{{plane}}" alt="" />Japan · 420 days</div>
+        <div class="note"><small>MY PROMISE</small><p>By 25 December, I’ll be in Japan — all paid for.</p></div>
+        <div class="strip">
+          <div class="l1"><b class="num">฿5,000 saved</b><span class="num">8%</span></div>
+          <div class="track"><div class="fill" id="gfill"></div></div>
+          <div class="l2"><span class="num">฿4,000 a month</span><span class="num">of ฿60,000</span></div>
+        </div>
+      </div>
+      <div class="addgoal press"><img src="{{piggy}}" alt="" />Pin 2 more goals<span class="tag">✦ PLUS</span></div>
+    </div>
+
+    <div class="sec in" style="animation-delay:.4s"><h2>Left to spend</h2><small>Your month</small></div>
+    <div class="row in" style="animation-delay:.44s">
+      <div class="cat glass press"><div class="ring2"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(17,17,17,.07)" stroke-width="6"/><circle class="arc" id="foodring" cx="32" cy="32" r="26" fill="none" stroke="var(--limeDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4" data-off="37.2"/></svg><img src="{{bowl}}" alt="" /></div><span class="pct num">77% left</span><b>Food</b><div class="big num" id="foodbig">฿5,020</div><small class="num">of ฿6,500</small></div>
+      <div class="cat glass press"><div class="ring2"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(17,17,17,.07)" stroke-width="6"/><circle class="arc" cx="32" cy="32" r="26" fill="none" stroke="var(--limeDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4" data-off="38.1"/></svg><img src="{{car}}" alt="" /></div><span class="pct num">77% left</span><b>Transport</b><div class="big num">฿1,380</div><small class="num">of ฿1,800</small></div>
+      <div class="cat glass press"><div class="ring2"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(17,17,17,.07)" stroke-width="6"/><circle class="arc" cx="32" cy="32" r="26" fill="none" stroke="var(--orange)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4" data-off="66.8"/></svg><img src="{{shop}}" alt="" /></div><span class="pct num">59% left</span><b>Shopping</b><div class="big num">฿650</div><div class="flag"><i></i>Going fast</div></div>
+      <div class="cat glass press"><div class="ring2"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(17,17,17,.07)" stroke-width="6"/><circle class="arc" cx="32" cy="32" r="26" fill="none" stroke="var(--limeDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4" data-off="0.0"/></svg><img src="{{fun}}" alt="" /></div><span class="pct num">100% left</span><b>Fun</b><div class="big num">฿1,100</div><small class="num">of ฿1,100</small></div>
+      <div class="cat glass press"><div class="ring2"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(17,17,17,.07)" stroke-width="6"/><circle class="arc" cx="32" cy="32" r="26" fill="none" stroke="var(--limeDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4" data-off="0.0"/></svg><img src="{{heart}}" alt="" /></div><span class="pct num">100% left</span><b>Health & beauty</b><div class="big num">฿700</div><small class="num">of ฿700</small></div>
+    </div>
+
+    <div class="sec in" style="animation-delay:.48s"><h2>Do more with Kip</h2><span class="tag">✦ PLUS</span></div>
+    <div class="row prow in" style="animation-delay:.52s;margin-top:-38px">
+      <div class="plus press"><span class="clip"></span><img src="{{piggy}}" alt="" /><b>Money styles</b><small>Japan 5 months sooner with Save first</small><span class="tryc">✦ Try free</span></div>
+      <div class="plus press"><span class="clip"></span><img src="{{income}}" alt="" /><b>Payday auto-move</b><small>฿5,300 moves itself on the 25th</small><span class="tryc">✦ Try free</span></div>
+      <div class="plus press"><span class="clip"></span><img src="{{shield}}" alt="" /><b>Customize & locks</b><small>Lock Japan, move food & fun your way</small><span class="tryc">✦ Try free</span></div>
+      <div class="plus press"><span class="clip"></span><img src="{{phone}}" alt="" /><b>Snap a slip</b><small>Photo of a bank slip — Kip logs it</small><span class="tryc">✦ Try free</span></div>
+    </div>
+
+    <div class="sec in" style="animation-delay:.56s"><h2>Bills this month</h2><small class="num">฿8,500 · set aside</small></div>
+    <div class="bsum in" style="animation-delay:.58s"><div class="l"><span><b id="paidN">0 of 5</b> paid</span><span class="num" id="togo">฿8,500 to go</span></div><div class="segs" id="segs"></div></div>
+    <div class="stack in" id="stack" style="animation-delay:.6s"></div>
+  </div>
+
+  <div class="toast" id="toast">Logged ฿80 · Food</div>
+  <div class="fab press" id="fab" title="Try it: log ฿80 for food"><svg width="26" height="26" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+  <div class="tabs glass">
+    <div class="t on"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg></div>
+    <div class="t"><img src="{{kip}}" alt="" /></div>
+    <div class="t"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="#111"/></svg></div>
+  </div>
+</div>
+<script>
+  // One person, one month that adds up: ฿11,200 to spend from payday (25th); ฿2,350 spent over 6 days; 26 days left → ฿340 a day.
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => '<span class="b">฿</span>' + Math.round(n).toLocaleString('en-US');
+  const plain = (n) => '฿' + Math.round(n).toLocaleString('en-US');
+  function count(el, from, to, ms = 1100) {
+    const t0 = performance.now();
+    const step = (t) => { const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3); el.innerHTML = fmt(from + (to - from) * e); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  function say(html, delay = 0) {
+    setTimeout(() => { $('say').innerHTML = '<span class="typing"><span></span><span></span><span></span></span>'; }, delay);
+    setTimeout(() => { $('say').innerHTML = html; }, delay + 900);
+  }
+  const days = [['Sun', 25, 300, 'pay'], ['Mon', 26, 520], ['Tue', 27, 610], ['Wed', 28, 290], ['Thu', 29, 630], ['Fri', 30, 0, 'today'], ['Sat', 31, 0, 'later']];
+  const daily = 373; // ฿11,200 ÷ 30 days, before anything was spent
+  $('week').innerHTML = days.map(([d, n, s, k]) => `<div class="day press ${k === 'today' ? 'on istoday' : ''} ${k === 'pay' ? 'pay' : ''} ${k === 'later' ? 'later' : ''}" ${k === 'later' ? 'data-later=1' : ''} data-s="${s}" data-d="${d}"><span>${d}</span><b>${n}</b><i class="${k === 'today' || k === 'later' ? 'none' : s > daily ? 'over' : ''}"></i></div>`).join('');
+  let left = 340, spent = 0, month = 8850, food = 5020;
+  setTimeout(() => { count($('today'), 0, left); count($('month'), 0, month, 1300); $('gfill').style.width = '8%'; document.querySelectorAll('.ring2 .arc').forEach((c) => (c.style.strokeDashoffset = c.dataset.off)); }, 400);
+  say('A bit fast this week — <b>฿540</b> over pace. Keep to <b>฿340</b> a day and Japan stays on Dec 2027.', 900);
+  document.querySelectorAll('.day').forEach((d) =>
+    d.addEventListener('click', () => {
+      if (d.dataset.later) return;
+      document.querySelectorAll('.day').forEach((x) => x.classList.remove('on')); d.classList.add('on');
+      const today = d.classList.contains('istoday');
+      if (today) { count($('today'), 0, left, 500); $('todaylbl').textContent = 'Left today'; }
+      else { count($('today'), 0, +d.dataset.s, 500); $('todaylbl').textContent = `Spent ${d.dataset.d}`; }
+    }),
+  );
+  // ---- Bills: soonest first, paid ones sink to the bottom; open one to slide-to-pay ----
+  const ICON = {
+    house: '<path d="M11.3 2.6a1 1 0 0 1 1.4 0l8.6 7.8c.4.4.7.9.7 1.5V20a2 2 0 0 1-2 2h-4.5v-6.5h-5V22H5.5a2 2 0 0 1-2-2v-8.1c0-.6.3-1.1.7-1.5z"/>',
+    bolt: '<path d="M13.6 1.8a.6.6 0 0 1 1 .5L13.5 10h6a.6.6 0 0 1 .5 1l-9.6 11.2a.6.6 0 0 1-1-.5L10.5 14h-6a.6.6 0 0 1-.5-1z"/>',
+    drop: '<path d="M12 2.2c.3 0 .6.1.8.4C14.6 4.8 20 11 20 15a8 8 0 0 1-16 0c0-4 5.4-10.2 7.2-12.4.2-.3.5-.4.8-.4z"/>',
+    phone: '<path fill-rule="evenodd" d="M8.5 1.5h7a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3h-7a3 3 0 0 1-3-3v-15a3 3 0 0 1 3-3zm2 17.2a.8.8 0 0 0 0 1.6h3a.8.8 0 0 0 0-1.6z"/>',
+    wifi: '<path d="M12 4.5c3.9 0 7.4 1.5 10 4a1.2 1.2 0 0 1-1.7 1.7A12 12 0 0 0 12 7c-3.2 0-6.2 1.2-8.3 3.3A1.2 1.2 0 0 1 2 8.6c2.6-2.6 6.1-4.1 10-4.1zm0 4.7c2.6 0 5 1 6.7 2.7a1.2 1.2 0 1 1-1.7 1.7 7.1 7.1 0 0 0-10 0 1.2 1.2 0 0 1-1.7-1.7A9.5 9.5 0 0 1 12 9.2zm0 4.7c1.3 0 2.6.5 3.5 1.4a1.2 1.2 0 0 1-1.7 1.7 2.5 2.5 0 0 0-3.6 0 1.2 1.2 0 0 1-1.7-1.7c.9-.9 2.2-1.4 3.5-1.4zM12 18a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4z"/>',
+    check: '<path d="M5 12.5 10 17l9-10" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  };
+  // each bill is its own kind of thing → its own clearly different colour (soft tints of the brand set)
+  const bills = [
+    { id: 'rent', ic: 'house', name: 'Rent', amt: 7000, day: 1, tint: '#cac2df' },
+    { id: 'elec', ic: 'bolt', name: 'Electricity', amt: 650, day: 5, est: true, tint: '#fffc9a' },
+    { id: 'water', ic: 'drop', name: 'Water', amt: 150, day: 8, est: true, tint: '#aac4e4' },
+    { id: 'phone', ic: 'phone', name: 'Phone plan', amt: 399, day: 10, tint: '#fcdcb3' },
+    { id: 'net', ic: 'wifi', name: 'Home internet', amt: 301, day: 15, tint: '#d9e6cf' },
+  ];
+  const TODAY = 30; // Oct 30 → Nov n is (n + 1) days away
+  const away = (d) => d + 1;
+  let openId = 'rent';
+  const bell = '<svg viewBox="0 0 24 24"><path d="M12 2a6.5 6.5 0 0 1 6.5 6.5c0 5.3 1.6 7.3 2.4 8a.8.8 0 0 1-.5 1.5H3.6a.8.8 0 0 1-.5-1.5c.8-.7 2.4-2.7 2.4-8A6.5 6.5 0 0 1 12 2zm-2.6 17.8h5.2a2.6 2.6 0 0 1-5.2 0z"/></svg>';
+  const arrow = '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function drawBills() {
+    const order = [...bills.filter((b) => !b.paid), ...bills.filter((b) => b.paid)];
+    const lastId = order[order.length - 1].id;
+    $('stack').innerHTML = order.map((b) => {
+      const soon = !b.paid && away(b.day) <= 3;
+      const sub = b.paid ? `Paid · ${plain(b.amt)}` : b.est ? `Usually${'<span class="est">estimate</span>'}` : 'Monthly';
+      const when = b.paid ? `Nov ${b.day}` : `${soon ? '<span class="soonDot"></span>' : ''}${soon ? 'in ' + away(b.day) + ' days' : 'Nov ' + b.day}`;
+      return `<div class="bcard ${b.dark && !b.paid ? 'dark' : ''} ${b.paid ? 'paid' : ''} ${openId === b.id && !b.paid ? 'open' : ''} ${b.id === lastId && !(openId === b.id && !b.paid) ? 'last' : ''}" data-id="${b.id}" style="${b.bg && !b.paid ? 'background-color:' + b.bg : ''}">
+        <div class="strip3"><span class="ic" style="--tint:${b.tint}"><svg viewBox="0 0 24 24">${ICON[b.paid ? 'check' : b.ic]}</svg></span><div class="nm"><b>${b.name}</b><small>${b.paid ? 'Paid ✓' : sub}</small></div><div class="am"><b class="num">${b.est && !b.paid ? '~' : ''}${plain(b.amt)}</b><small>${when}</small></div></div>
+        <div class="act"><div class="bell ${b.remind ? 'on' : ''}" title="Remind me the day before">${bell}</div><div class="slide"><i class="fillx"></i><span class="knob2">${arrow}</span><span class="txt">Slide to mark paid</span></div></div>
+      </div>`;
+    }).join('') + '<div class="bcard addc press"><span>+</span>Add a bill</div>';
+    const paid = bills.filter((b) => b.paid), total = bills.reduce((a, b) => a + b.amt, 0);
+    $('paidN').textContent = `${paid.length} of ${bills.length}`;
+    $('togo').textContent = paid.length === bills.length ? 'All paid 🎉' : `${plain(total - paid.reduce((a, b) => a + b.amt, 0))} to go`;
+    if (!$('segs').children.length) $('segs').innerHTML = bills.map((b) => `<i style="flex:${Math.max(b.amt, 450)}" data-id="${b.id}"></i>`).join('');
+    bills.forEach((b) => $('segs').querySelector(`[data-id="${b.id}"]`).classList.toggle('done', !!b.paid));
+    wireBills();
+  }
+  function wireBills() {
+    document.querySelectorAll('.bcard[data-id]').forEach((c) => {
+      const b = bills.find((x) => x.id === c.dataset.id);
+      c.addEventListener('click', (e) => {
+        if (e.target.closest('.act')) return;
+        if (b.paid) { b.paid = false; openId = b.id; drawBills(); return; } // undo
+        openId = openId === b.id ? null : b.id; drawBills();
+      });
+      const bl = c.querySelector('.bell'); bl && bl.addEventListener('click', (e) => { e.stopPropagation(); b.remind = !b.remind; bl.classList.toggle('on', b.remind); toast(b.remind ? `I’ll remind you Nov ${b.day - 1 || 'Oct 31'}` : 'Reminder off'); });
+      const sl = c.querySelector('.slide'); if (!sl) return;
+      const knob = sl.querySelector('.knob2'), fill = sl.querySelector('.fillx');
+      let x0 = null, max = 0;
+      const move = (x) => { const d = Math.max(0, Math.min(max, x - x0)); knob.style.transform = `translateX(${d}px)`; fill.style.width = d > 2 ? d + 50 + 'px' : '0'; return d; };
+      sl.addEventListener('pointerdown', (e) => { e.stopPropagation(); x0 = e.clientX; max = sl.clientWidth - 50; knob.style.transition = fill.style.transition = 'none'; sl.setPointerCapture(e.pointerId); });
+      sl.addEventListener('pointermove', (e) => { if (x0 !== null) move(e.clientX); });
+      sl.addEventListener('pointerup', (e) => {
+        if (x0 === null) return; const d = move(e.clientX); x0 = null;
+        knob.style.transition = fill.style.transition = 'all .35s cubic-bezier(.34,1.56,.64,1)';
+        if (d > max * 0.82) { knob.style.transform = `translateX(${max}px)`; fill.style.width = '100%'; c.classList.add('pop'); setTimeout(() => { b.paid = true; openId = (bills.find((x) => !x.paid) || {}).id; drawBills(); toast(`${b.name} paid ✓`); }, 380); }
+        else { knob.style.transform = ''; fill.style.width = '0'; }
+      });
+    });
+  }
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1800); }
+  drawBills();
+  $('kip').addEventListener('click', () => { const k = $('kip'); k.classList.remove('jump'); void k.offsetWidth; k.classList.add('jump'); });
+  $('fab').addEventListener('click', () => {
+    const k = $('kip'); k.classList.remove('jump'); void k.offsetWidth; k.classList.add('jump');
+    count($('today'), left, left - 80, 900); count($('month'), month, month - 80, 900);
+    const fb = $('foodbig'); const t0 = food; food -= 80; (function anim(s) { const p = Math.min(1, (performance.now() - s) / 900); fb.textContent = plain(t0 - 80 * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(() => anim(s)); })(performance.now());
+    left -= 80; spent += 80; month -= 80;
+    $('spent').textContent = `${plain(spent)} of ฿340`;
+    $('foodring').style.strokeDashoffset = (163.4 * (1 - food / 6500)).toFixed(1); document.querySelector('#foodring').closest('.cat').querySelector('.pct').textContent = Math.round((food / 6500) * 100) + '% left';
+    toast('Logged ฿80 · Food');
+    say(left > 0 ? `Nice — <b>${plain(left)}</b> left today. Food is still on track 👌` : 'That’s over today — fine, I’ll spread it over the next 25 days.', 300);
+  });
+</script>
+</body>
+</html>
