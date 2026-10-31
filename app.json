@@ -42,7 +42,14 @@
         {
           "photosPermission": "HeyKip uses your photos so you can pin a picture of your goal.",
           "cameraPermission": false,
-          "microphonePermission": false
+          "microphonePermission": "HeyKip listens when you tap the mic, so you can tell Kip what you spent."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "HeyKip listens when you tap the mic, so you can tell Kip what you spent.",
+          "speechRecognitionPermission": "HeyKip turns what you say into words so Kip can log your spending."
         }
       ]
     ],

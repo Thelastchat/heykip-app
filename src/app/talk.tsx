@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
 import { PlusSheet } from '@/components/PlusSheet';
+import { Listening } from '@/components/talk/Listening';
 import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -41,6 +42,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
 import { colors, fonts, glow } from '@/theme';
 
 type Turn = {
@@ -106,6 +108,47 @@ export default function Talk() {
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = useMemo(() => plusPitch(month, short, funLeft), [month, short, funLeft]);
   const first = profile?.display_name?.split(' ')[0];
+
+  // ---- talking out loud ----
+  const [listening, setListening] = useState(false);
+  const [lang, setLang] = useState<VoiceLang>(defaultVoiceLang);
+  useEffect(() => {
+    savedVoiceLang().then((l) => l && setLang(l));
+  }, []);
+  const voice = useVoice((heard) => {
+    // The phone stopped by itself (long silence, or a hiccup): use what it heard.
+    setListening(false);
+    if (heard) send(heard);
+    else flash('I didn’t catch that — try again?');
+  });
+
+  async function listen(l = lang) {
+    if (!isPlus) return setLocked(true);
+    if (!voiceModule()) return flash('Talking out loud works in the HeyKip app build. For now, tap 🎤 on your keyboard.');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setListening(true);
+    const problem = await voice.start(l);
+    if (problem) {
+      setListening(false);
+      flash(problem === 'denied' ? 'I need the microphone — turn it on for HeyKip in Settings.' : 'Listening isn’t working right now — type it instead?');
+    }
+  }
+  async function doneTalking() {
+    const heard = await voice.finish();
+    setListening(false);
+    if (heard) send(heard);
+    else flash('I didn’t catch that — try again?');
+  }
+  function stopTalking() {
+    voice.cancel();
+    setListening(false);
+  }
+  function switchLang(l: VoiceLang) {
+    setLang(l);
+    saveVoiceLang(l);
+    voice.cancel();
+    listen(l);
+  }
 
   function flash(t: string) {
     setToast(t);
@@ -258,9 +301,9 @@ export default function Talk() {
       )}
 
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        <Pressable onPress={() => flash('Talking out loud comes with the next app build — type for now')} accessibilityRole="button" accessibilityLabel="Voice — coming soon">
+        <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel="Talk to Kip out loud">
           <Glass radius={25} innerStyle={styles.mic}>
-            <Microphone size={20} color={colors.muted} />
+            <Microphone size={20} color={colors.ink} weight="bold" />
           </Glass>
         </Pressable>
         <Glass radius={25} style={{ flex: 1 }} innerStyle={styles.inputWrap}>
@@ -287,6 +330,8 @@ export default function Talk() {
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
+
+      {listening && <Listening name={first} state={voice.state} text={voice.text} level={voice.level} lang={lang} onLang={switchLang} onDone={doneTalking} onCancel={stopTalking} />}
 
       {locked && !isPlus && (
         <PlusSheet open onClose={() => setLocked(false)} onUnlocked={() => setLocked(false)} title={pitch.talk.title} sub={pitch.talk.sub}>
