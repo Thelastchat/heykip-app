@@ -190,7 +190,7 @@ export const monthsUntil = (iso: string, now = new Date()) => {
 };
 
 /** Which income Kip plans on: salary, a slow month — or the average, if a slow month can't cover the basics. */
-function incomeBasis(d: SetupDraft): { income: number; basis: Plan['incomeBasis'] } {
+export function incomeBasis(d: SetupDraft): { income: number; basis: Plan['incomeBasis'] } {
   if (d.incomeType === 'regular') return { income: d.monthlyIncome ?? 0, basis: 'salary' };
   const slow = plannedIncome(d);
   const basics = (d.rent ?? 0) + (d.bills ?? billsGuess(slow)) + livingTotal(living(slow));

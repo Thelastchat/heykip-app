@@ -1,6 +1,7 @@
 // Loads and saves "Your month" for the signed-in person.
 // Setup saves a starting month; anyone without one gets it rebuilt from their profile and first goal.
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 
 import { safetyNet } from '@/lib/brain';
 import { monthFrom, type MonthBudget } from '@/lib/budget';
@@ -11,18 +12,8 @@ import { supabase } from '@/lib/supabase';
 
 async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
   const [{ data: p }, { data: g }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('income_type, monthly_income, slow_month_income, good_month_income, payday, rent, budget_style')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('goals')
-      .select('title, kind, target_amount, saved_amount, due_date, monthly_amount')
-      .eq('user_id', userId)
-      .eq('position', 1)
-      .eq('status', 'active')
-      .maybeSingle(),
+    supabase.from('profiles').select('income_type, monthly_income, slow_month_income, good_month_income, payday, rent, budget_style').eq('id', userId).single(),
+    supabase.from('goals').select('title, kind, target_amount, saved_amount, due_date, monthly_amount').eq('user_id', userId).eq('position', 1).eq('status', 'active').maybeSingle(),
   ]);
   if (!p) return null;
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -53,20 +44,28 @@ export function useMonth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      const { data, error: e } = await supabase.from('profiles').select('budget').eq('id', userId).single();
-      if (e) setError(e.message);
-      const saved = data?.budget as MonthBudget | null;
-      setMonth(saved?.v === 2 ? saved : await buildFromProfile(userId));
-      setLoading(false);
-    })();
-  }, [userId]);
+  // Load whenever the screen comes into view, so a change made on another screen (Profile, Your month)
+  // shows up everywhere. A save made here is never overwritten by a slower load.
+  const saving = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      const at = saving.current;
+      (async () => {
+        const { data, error: e } = await supabase.from('profiles').select('budget').eq('id', userId).single();
+        if (e) setError(e.message);
+        const saved = data?.budget as MonthBudget | null;
+        const next = saved?.v === 2 ? saved : await buildFromProfile(userId);
+        if (saving.current === at) setMonth(next);
+        setLoading(false);
+      })();
+    }, [userId]),
+  );
 
   /** Update on screen straight away, then save in the background. */
   const save = useCallback(
     async (next: MonthBudget) => {
+      saving.current++;
       setMonth(next);
       if (!userId) return;
       const { error: e } = await supabase.from('profiles').update({ budget: next, budget_style: next.style }).eq('id', userId);
