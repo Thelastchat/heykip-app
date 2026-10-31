@@ -16,17 +16,63 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY } from '@/lib/budget';
-import { monthNumbers, useHome } from '@/lib/home';
+import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
-import { applyBuy, askKip, buyPlan, DB_CAT_NAME, dbCatIcon, kipContext, type BuyPlan, type KipReply, type LogItem } from '@/lib/kip';
+import { soonerText } from '@/components/goals/PutMoneySheet';
+import {
+  applyBuy,
+  askKip,
+  buyPlan,
+  DB_CAT_NAME,
+  dbCatIcon,
+  IN_CAT_NAME,
+  inCatIcon,
+  incomeNotes,
+  isIn,
+  kipContext,
+  type BuyPlan,
+  type DbCat,
+  type InCat,
+  type InItem,
+  type KipReply,
+  type LogItem,
+} from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, glow } from '@/theme';
 
-type Turn = { id: number; me: string; state: 'thinking' | 'done' | 'error'; reply?: KipReply; plan?: BuyPlan | null; error?: string; saved?: boolean; bought?: boolean; dismissed?: boolean };
-const SUGGEST = ['Chicken rice 60, Thai tea 45 and Grab 80', 'Can I buy a shirt for 890?', 'How am I doing this month?', 'ข้าวกะเพรา 70 กาแฟ 55'];
+type Turn = {
+  id: number;
+  me: string;
+  state: 'thinking' | 'done' | 'error';
+  reply?: KipReply;
+  plan?: BuyPlan | null;
+  error?: string;
+  saved?: boolean;
+  bought?: boolean;
+  dismissed?: boolean;
+  extra?: { amount: number; from: 'bonus' | 'side' | 'gift' | 'other'; note: string } | null; // extra money in, once saved
+  extraDone?: { put: true; total: number } | { put: false };
+};
+type Item = LogItem | InItem;
+type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
+const SUGGEST = ['Chicken rice 60, Thai tea 45 and Grab 80', 'Got paid 18,000 today', 'Can I buy a shirt for 890?', 'How am I doing this month?', 'ข้าวกะเพรา 70 กาแฟ 55'];
+const SPEND_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
+const IN_CATS: InCat[] = ['pay', 'side_gigs', 'gifts', 'other'];
+
+/** Whatever the server says, every row ends up with a real category of the right kind and a positive amount. */
+function clean(items: KipReply['items']): Item[] {
+  return (items ?? [])
+    .map((it) => ({ ...it, amount: Math.abs(Number(it.amount) || 0) }))
+    .filter((it) => it.amount > 0)
+    .map((it) =>
+      it.money === 'in'
+        ? ({ name: it.name, amount: it.amount, money: 'in', category: IN_CATS.includes(it.category as InCat) ? (it.category as InCat) : 'other' } as InItem)
+        : ({ name: it.name, amount: it.amount, money: 'out', category: SPEND_CATS.includes(it.category as DbCat) ? (it.category as DbCat) : 'other' } as LogItem),
+    );
+}
 
 export default function Talk() {
   const insets = useSafeAreaInsets();
@@ -45,16 +91,17 @@ export default function Talk() {
   useEffect(() => {
     supabase
       .from('categories')
-      .select('id, key')
-      .eq('kind', 'spend')
+      .select('id, key, kind')
       .is('user_id', null)
-      .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [c.key, c.id]))));
+      .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 
   const goal = goals[0];
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
   const arrives = goal?.due ? monthYear(parseDay(goal.due)) : null;
   const goalIcon = goal ? (goal.goalType ? goalTypeIcon3D(goal.goalType) : goalIcon3D(goal.kind)) : 'piggy';
+  const perMonth = month ? month.goal.amount + month.goalExtra : 0;
+  const goalInfo: GoalInfo = goal ? { id: goal.id, name: short, arrives, icon: goalIcon, saved: goal.saved, target: goal.target, perMonth } : null;
   const n = month ? monthNumbers(month, spent) : null;
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = useMemo(() => plusPitch(month, short, funLeft), [month, short, funLeft]);
@@ -77,7 +124,8 @@ export default function Talk() {
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 60);
     const res = await askKip(msg, kipContext(month, spent, goal ? { name: short, arrives } : null, first));
     // The buy answer is worked out once, from the month as it was when Kip answered.
-    if (res.ok) update(id, { state: 'done', reply: res.reply, plan: res.reply.kind === 'buy' && res.reply.buy && month ? buyPlan(month, spent, res.reply.buy) : null });
+    if (res.ok)
+      update(id, { state: 'done', reply: { ...res.reply, items: clean(res.reply.items) }, plan: res.reply.kind === 'buy' && res.reply.buy && month ? buyPlan(month, spent, res.reply.buy) : null });
     else
       update(id, {
         state: 'error',
@@ -94,13 +142,28 @@ export default function Talk() {
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
   }
 
-  async function saveItems(t: Turn, items: LogItem[]) {
+  async function saveItems(t: Turn, items: Item[]) {
     if (!session || items.length === 0) return;
-    const rows = items.map((it) => ({ user_id: session.user.id, kind: 'spend', amount: it.amount, category_id: ids[it.category] ?? ids.other ?? null, note: it.name, source: 'typed' }));
+    const rows = items.map((it) => {
+      const kind = isIn(it) ? 'income' : 'spend';
+      return { user_id: session.user.id, kind, amount: it.amount, category_id: ids[`${kind}:${it.category}`] ?? ids[`${kind}:other`] ?? null, note: it.name, source: 'typed' };
+    });
     const { error } = await supabase.from('transactions').insert(rows);
     if (error) return flash(`Couldn’t save: ${error.message}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(t.id, { saved: true });
+    const ins = items.filter(isIn);
+    const { extra, from } = incomeNotes(ins, month);
+    update(t.id, { saved: true, extra: extra > 0 ? { amount: extra, from, note: ins.map((i) => i.name).join(', ') } : null });
+    reload();
+    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
+  }
+
+  async function putExtra(t: Turn) {
+    if (!goalInfo || !t.extra) return;
+    const { data, error } = await supabase.rpc('put_in_goal', { p_goal: goalInfo.id, p_amount: t.extra.amount, p_source: 'extra', p_from: t.extra.from, p_note: t.extra.note.slice(0, 120) });
+    if (error) return flash(`Couldn’t save: ${error.message}`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    update(t.id, { extraDone: { put: true, total: Number(data ?? goalInfo.saved + t.extra.amount) } });
     reload();
   }
 
@@ -108,7 +171,7 @@ export default function Talk() {
     if (!session || !month) return;
     const { error } = await supabase
       .from('transactions')
-      .insert({ user_id: session.user.id, kind: 'spend', amount: item.amount, category_id: ids[item.category] ?? null, note: item.name, source: 'typed' });
+      .insert({ user_id: session.user.id, kind: 'spend', amount: item.amount, category_id: ids[`spend:${item.category}`] ?? null, note: item.name, source: 'typed' });
     if (error) return flash(`Couldn’t save: ${error.message}`);
     save(applyBuy(month, plan));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -145,7 +208,7 @@ export default function Talk() {
               <Kip mood="listen" size={170} />
             </View>
             <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>
-              Just type it like you’d text a friend — or ask me “Can I buy…?”. {n ? `You have ${baht(n.leftToday)} left today.` : ''}
+              Just type it like you’d text a friend — what you spent, money that came in, or “Can I buy…?”. {n ? `You have ${baht(n.leftToday)} left today.` : ''}
             </Text>
           </RiseIn>
         )}
@@ -164,7 +227,11 @@ export default function Talk() {
                 month={month}
                 plan={t.plan ?? null}
                 goal={{ name: short, arrives, icon: goalIcon }}
+                goalInfo={goalInfo}
+                spent={spent}
                 onSave={(items) => saveItems(t, items)}
+                onPutExtra={() => putExtra(t)}
+                onKeepExtra={() => update(t.id, { extraDone: { put: false } })}
                 onBuy={(item, plan) => buyIt(t, item, plan)}
                 onNotNow={() => update(t.id, { dismissed: true })}
               />
@@ -201,7 +268,7 @@ export default function Talk() {
             value={text}
             onChangeText={setText}
             onFocus={() => !isPlus && setLocked(true)}
-            placeholder={isPlus ? 'Grab 80, lunch 60… or “Can I buy…?”' : 'Talk to Kip is a Plus feature'}
+            placeholder={isPlus ? 'Lunch 60, got paid 18,000… or “Can I buy…?”' : 'Talk to Kip is a Plus feature'}
             placeholderTextColor={colors.faint}
             style={styles.input}
             onSubmitEditing={() => send()}
@@ -247,7 +314,11 @@ function Answer({
   month,
   plan,
   goal,
+  goalInfo,
+  spent,
   onSave,
+  onPutExtra,
+  onKeepExtra,
   onBuy,
   onNotNow,
 }: {
@@ -256,45 +327,85 @@ function Answer({
   month: ReturnType<typeof useMonth>['month'];
   plan: BuyPlan | null;
   goal: { name: string; arrives: string | null; icon: keyof typeof ICON3D };
-  onSave: (items: LogItem[]) => void;
+  goalInfo: GoalInfo;
+  spent: ReturnType<typeof useHome>['spent'];
+  onSave: (items: Item[]) => void;
+  onPutExtra: () => void;
+  onKeepExtra: () => void;
   onBuy: (item: LogItem, plan: BuyPlan) => void;
   onNotNow: () => void;
 }) {
-  const [items, setItems] = useState<LogItem[]>(reply.items ?? []);
+  const [items, setItems] = useState<Item[]>((reply.items as Item[]) ?? []);
 
   if (reply.kind === 'log' && items.length) {
-    const total = items.reduce((a, i) => a + i.amount, 0);
+    const ins = items.filter(isIn);
+    const outs = items.filter((i): i is LogItem => !isIn(i));
+    const inTotal = ins.reduce((a, i) => a + i.amount, 0);
+    const outTotal = outs.reduce((a, i) => a + i.amount, 0);
+    const { notes } = incomeNotes(ins, month);
+    // Left for today once these are saved (bills don't touch today's money).
+    const todayOut = month ? outs.filter((o) => budgetKey(o.category, month) !== 'bills').reduce((a, o) => a + o.amount, 0) : 0;
+    const leftAfter = month && !t.saved ? monthNumbers(month, { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }).leftToday : null;
+    const remove = (it: Item) => setItems((xs) => xs.filter((x) => x !== it));
+    const row = (it: Item, i: number, note: { text: string; extra: boolean } | null) => (
+      <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Image source={ICON3D[isIn(it) ? inCatIcon(it.category) : dbCatIcon(it.category)]} style={{ width: 34, height: 34 }} contentFit="contain" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.itemName}>{it.name}</Text>
+          <Text style={[styles.sub, note?.extra && { color: colors.lavenderText }]}>{isIn(it) ? `${IN_CAT_NAME[it.category]}${note ? ` · ${note.text}` : ''}` : DB_CAT_NAME[it.category]}</Text>
+        </View>
+        <Text style={[styles.itemAmt, isIn(it) && { color: colors.lavenderText }]}>
+          {isIn(it) ? '+' : ''}
+          {baht(it.amount)}
+        </Text>
+        {!t.saved && (
+          <Pressable onPress={() => remove(it)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.name}`} style={styles.x}>
+            <X size={11} color={colors.muted} weight="bold" />
+          </Pressable>
+        )}
+      </View>
+    );
+    const extra = t.extra;
     return (
       <>
         <KipLine text={reply.reply} />
         <Glass radius={24} innerStyle={{ padding: 14, gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={styles.cap}>{t.saved ? 'SAVED ✓' : 'KIP HEARD · TAP × TO REMOVE'}</Text>
-            <Text style={styles.cap}>{baht(total)}</Text>
-          </View>
-          {items.map((it, i) => (
-            <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Image source={ICON3D[dbCatIcon(it.category)]} style={{ width: 34, height: 34 }} contentFit="contain" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{it.name}</Text>
-                <Text style={styles.sub}>{DB_CAT_NAME[it.category]}</Text>
+          {t.saved && <Text style={styles.cap}>SAVED ✓</Text>}
+          {ins.length > 0 && (
+            <>
+              <View style={styles.secRow}>
+                <Text style={styles.cap}>MONEY IN</Text>
+                <View style={styles.inPill}>
+                  <Text style={styles.inPillText}>+{baht(inTotal)}</Text>
+                </View>
               </View>
-              <Text style={styles.itemAmt}>{baht(it.amount)}</Text>
-              {!t.saved && (
-                <Pressable onPress={() => setItems((xs) => xs.filter((_, j) => j !== i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.name}`} style={styles.x}>
-                  <X size={11} color={colors.muted} weight="bold" />
-                </Pressable>
-              )}
-            </View>
-          ))}
+              {ins.map((it, i) => row(it, i, notes[i]))}
+            </>
+          )}
+          {ins.length > 0 && outs.length > 0 && <View style={styles.hr} />}
+          {outs.length > 0 && (
+            <>
+              <View style={styles.secRow}>
+                <Text style={styles.cap}>{ins.length ? 'SPENT' : t.saved ? 'SPENT' : 'KIP HEARD · TAP × TO REMOVE'}</Text>
+                <Text style={[styles.cap, { color: colors.ink }]}>
+                  {baht(outTotal)}
+                  {leftAfter !== null ? ` · ${baht(leftAfter)} left today` : ''}
+                </Text>
+              </View>
+              {outs.map((it, i) => row(it, i, null))}
+            </>
+          )}
           {!t.saved && (
             <Squish onPress={() => onSave(items)} style={styles.dark} accessibilityRole="button">
               <Text style={styles.darkText}>
-                Save {items.length > 1 ? `all ${items.length}` : 'it'} · {baht(total)}
+                {items.length > 1 ? `Save all ${items.length}` : 'Save it'}
+                {ins.length ? '' : ` · ${baht(outTotal)}`}
               </Text>
             </Squish>
           )}
         </Glass>
+
+        {t.saved && extra && goalInfo && <ExtraOffer extra={extra.amount} goal={goalInfo} done={t.extraDone} hasPay={ins.some((i) => i.category === 'pay')} onPut={onPutExtra} onKeep={onKeepExtra} />}
       </>
     );
   }
@@ -376,7 +487,66 @@ function Answer({
   return <KipLine text={reply.reply} />;
 }
 
+/** After saving: extra money (not the usual pay) can go to the goal. Today's money is the same either way. */
+function ExtraOffer({ extra, goal, done, hasPay, onPut, onKeep }: { extra: number; goal: NonNullable<GoalInfo>; done: Turn['extraDone']; hasPay: boolean; onPut: () => void; onKeep: () => void }) {
+  const sooner = soonerText(extra, goal.perMonth);
+  const target = goal.target > 0 ? goal.target : 0;
+  const was = target ? Math.min(1, goal.saved / target) : 0;
+  const after = target ? Math.min(1, (goal.saved + extra) / target) : 0;
+  return (
+    <>
+      <KipLine text={`${hasPay ? 'Your pay is what your plan already runs on. ' : ''}The ${baht(extra)} is extra — want it to get you to ${goal.name} sooner?`} />
+      <Glass radius={26} innerStyle={{ padding: 16, gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Image source={ICON3D[goal.icon]} style={{ width: 48, height: 48 }} contentFit="contain" />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.itemName, { fontSize: 17 }]}>{goal.name}</Text>
+            <Text style={styles.sub}>{target ? `${baht(goal.saved)} of ${baht(target)}` : `${baht(goal.saved)} saved`}</Text>
+          </View>
+          <Text style={styles.price}>+{baht(extra)}</Text>
+        </View>
+        {target > 0 && (
+          <View style={styles.goalBar}>
+            <View style={[styles.goalBarFill, { width: `${after * 100}%`, backgroundColor: colors.lavender }]} />
+            <View style={[styles.goalBarFill, { width: `${was * 100}%`, backgroundColor: colors.limeDeep }]} />
+          </View>
+        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={styles.sub}>
+            {goal.arrives ? `${goal.arrives} → ` : ''}
+            <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{sooner ?? 'sooner'}</Text>
+          </Text>
+          <Text style={styles.sub}>{baht(goal.saved + extra)}</Text>
+        </View>
+      </Glass>
+      {done ? (
+        <Text style={[styles.sub, { textAlign: 'center' }]}>{done.put ? `Put in ✓ — ${goal.name} is at ${baht(done.total)} now.` : 'Okay — it’s yours to spend. Today’s money stays the same.'}</Text>
+      ) : (
+        <View style={{ gap: 8 }}>
+          <Squish onPress={onPut} style={styles.dark} accessibilityRole="button">
+            <Text style={styles.darkText}>
+              Put {baht(extra)} in {goal.name}
+            </Text>
+          </Squish>
+          <Squish onPress={onKeep} accessibilityRole="button">
+            <Glass radius={999} innerStyle={styles.light}>
+              <Text style={styles.lightText}>Keep it to spend</Text>
+            </Glass>
+          </Squish>
+          <Text style={[styles.sub, { textAlign: 'center' }]}>Today’s money stays the same either way</Text>
+        </View>
+      )}
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  secRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  inPill: { backgroundColor: 'rgba(220,210,247,0.75)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+  inPillText: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText, fontVariant: ['tabular-nums'] },
+  hr: { height: 1, backgroundColor: 'rgba(17,17,17,0.07)', marginVertical: 2 },
+  goalBar: { height: 10, borderRadius: 5, backgroundColor: 'rgba(17,17,17,0.07)', overflow: 'hidden' },
+  goalBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 5 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 },
   round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },

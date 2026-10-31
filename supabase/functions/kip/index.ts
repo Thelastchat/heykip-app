@@ -3,6 +3,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
+const IN_CATS = ['pay', 'side_gigs', 'gifts', 'other'];
 const MODEL = 'claude-haiku-5-5';
 
 const cors = {
@@ -17,18 +18,27 @@ const tool = {
   input_schema: {
     type: 'object',
     properties: {
-      kind: { type: 'string', enum: ['log', 'buy', 'answer'], description: 'log = they are telling you what they spent; buy = they ask if they can afford something; answer = any other question' },
+      kind: {
+        type: 'string',
+        enum: ['log', 'buy', 'answer'],
+        description: 'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; answer = any other question',
+      },
       items: {
         type: 'array',
-        description: 'kind=log: each thing they spent money on',
+        description: 'kind=log: each amount of money that went out or came in',
         items: {
           type: 'object',
           properties: {
-            name: { type: 'string', description: 'short name in the language they used, e.g. "Chicken rice" or "ข้าวมันไก่"' },
-            amount: { type: 'number' },
-            category: { type: 'string', enum: CATS },
+            name: { type: 'string', description: 'short name in the language they used, e.g. "Chicken rice", "ข้าวมันไก่", "เงินเดือน"' },
+            amount: { type: 'number', description: 'always positive' },
+            money: { type: 'string', enum: ['out', 'in'], description: 'out = they spent it; in = they received it (salary, freelance, gift, refund, sold something)' },
+            category: {
+              type: 'string',
+              enum: [...new Set([...CATS, ...IN_CATS])],
+              description: `money=out: one of ${CATS.join(', ')}. money=in: pay (salary, wages, เงินเดือน), side_gigs (freelance, jobs, งานเสริม, ขายของ), gifts (gift, อั่งเปา, money from family), other (refund, anything else).`,
+            },
           },
-          required: ['name', 'amount', 'category'],
+          required: ['name', 'amount', 'money', 'category'],
         },
       },
       buy: {
@@ -69,7 +79,7 @@ Deno.serve(async (req) => {
       'You are Kip, a friendly money buddy in HeyKip, a saving app for young Thais. Short, warm, honest. Never preachy.',
       'Reply in the language the person used (Thai or English). Amounts are Thai baht.',
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
-      'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun.',
+      'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',
       `The person's month right now (JSON): ${JSON.stringify(context ?? {}).slice(0, 3000)}`,
     ].join('\n');
 

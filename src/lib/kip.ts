@@ -4,12 +4,17 @@ import { CATEGORY, spendingTotal, type CatKey, type MonthBudget } from '@/lib/bu
 import { budgetKey, monthNumbers, type Spent } from '@/lib/home';
 import type { Icon3D } from '@/lib/icons3d';
 import { CAT_ICON3D } from '@/lib/icons3d';
+import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 
 /** Every category key the server can return (the database's categories). */
 export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other';
-export type LogItem = { name: string; amount: number; category: DbCat };
-export type KipReply = { kind: 'log' | 'buy' | 'answer'; reply: string; items?: LogItem[]; buy?: LogItem };
+/** Money in: the database's income categories ('other' is shared with spending). */
+export type InCat = 'pay' | 'side_gigs' | 'gifts' | 'other';
+export type LogItem = { name: string; amount: number; category: DbCat; money?: 'in' | 'out' };
+export type InItem = { name: string; amount: number; category: InCat; money: 'in' };
+export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
+export type KipReply = { kind: 'log' | 'buy' | 'answer'; reply: string; items?: (LogItem | InItem)[]; buy?: LogItem };
 
 export const DB_CAT_NAME: Record<DbCat, string> = {
   food: 'Food',
@@ -30,12 +35,45 @@ export function dbCatIcon(c: DbCat): Icon3D {
   return extra[c] ?? (c in CAT_ICON3D ? CAT_ICON3D[c as CatKey] : 'bill');
 }
 
+export const IN_CAT_NAME: Record<InCat, string> = { pay: 'Pay', side_gigs: 'Side gig', gifts: 'Gift', other: 'Other money in' };
+const IN_ICON: Record<InCat, Icon3D> = { pay: 'income', side_gigs: 'phone', gifts: 'piggy', other: 'income' };
+export const inCatIcon = (c: InCat): Icon3D => IN_ICON[c] ?? 'income';
+
+/**
+ * What money coming in means for the plan. The plan already runs on the usual pay, so pay is "in", not extra;
+ * only pay above the usual amount, and anything that isn't pay, is extra. Today's money never changes either way.
+ */
+export function incomeNotes(items: InItem[], month: MonthBudget | null) {
+  const usual = month?.income ?? 0;
+  const pay = items.filter((i) => i.category === 'pay').reduce((a, i) => a + i.amount, 0);
+  const payExtra = usual > 0 ? Math.max(0, pay - usual) : 0;
+  const notes = items.map((i) => {
+    if (i.category !== 'pay') return { text: 'extra, not in your plan', extra: true };
+    if (usual <= 0) return { text: 'pay', extra: false };
+    if (pay < usual) return { text: `part of this month’s pay — ${baht(usual - pay)} still to come`, extra: false };
+    if (payExtra > 0) return { text: `${baht(payExtra)} more than usual — that part is extra`, extra: true };
+    return { text: 'this month’s pay is in', extra: false };
+  });
+  const others = items.filter((i) => i.category !== 'pay');
+  const extra = payExtra + others.reduce((a, i) => a + i.amount, 0);
+  // Where the extra mostly came from, for the goal's history.
+  const parts: [string, number][] = [
+    ['bonus', payExtra],
+    ['side', others.filter((i) => i.category === 'side_gigs').reduce((a, i) => a + i.amount, 0)],
+    ['gift', others.filter((i) => i.category === 'gifts').reduce((a, i) => a + i.amount, 0)],
+    ['other', others.filter((i) => i.category === 'other').reduce((a, i) => a + i.amount, 0)],
+  ];
+  const from = parts.sort((a, b) => b[1] - a[1])[0][0] as 'bonus' | 'side' | 'gift' | 'other';
+  return { notes, extra, from };
+}
+
 /** The month as numbers Kip may quote. */
 export function kipContext(month: MonthBudget | null, spent: Spent, goal: { name: string; arrives: string | null } | null, name?: string | null) {
   if (!month) return {};
   const n = monthNumbers(month, spent);
   return {
     name: name ?? undefined,
+    usualPayPerMonth: month.income,
     leftToday: n.leftToday,
     leftThisMonth: n.leftMonth,
     daysLeft: n.P.daysLeft,

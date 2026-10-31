@@ -13,7 +13,8 @@ export const colors = {
 
   lime: '#FFFC9A',
   limeDeep: '#F0EA4A', // the stronger lime: rings, fills, progress
-  lavender: '#CAC2DF',
+  lavender: '#CAC2DF', // money in
+  lavenderText: '#5B4A96', // money in, as text on light glass
   orange: '#E28151',
   orangeText: '#B45A2F', // orange that reads as text on light glass
   sky: '#AAC4E4',
