@@ -19,6 +19,7 @@ export type HomeGoal = {
   promise: string | null;
   signature: string | null; // signed link
   signedAt: string | null;
+  createdAt: string;
 };
 
 /** What was spent this month, counted against the plan. `bills` = logged under Home & bills — already planned, so not taken from spending again. */
@@ -81,7 +82,7 @@ export function useHome(month: MonthBudget | null) {
     const [{ data: g }, { data: pr }, { data: tx }] = await Promise.all([
       supabase
         .from('goals')
-        .select('id, title, kind, goal_type, target_amount, saved_amount, monthly_amount, due_date, photo_url, position')
+        .select('id, title, kind, goal_type, target_amount, saved_amount, monthly_amount, due_date, photo_url, position, created_at')
         .eq('user_id', userId)
         .eq('status', 'active')
         .order('position'),
@@ -111,6 +112,7 @@ export function useHome(month: MonthBudget | null) {
           promise: promise?.text ?? null,
           signature: await signed(promise?.signature_url),
           signedAt: promise?.signed_at ?? null,
+          createdAt: x.created_at,
         } satisfies HomeGoal;
       }),
     );
