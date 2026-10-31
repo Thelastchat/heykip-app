@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -7,10 +8,11 @@ import { Kip } from '@/components/Kip';
 import { Button } from '@/components/ui';
 import { baht } from '@/lib/money';
 import { useSetup } from '@/lib/setup/draft';
-import { typeInfo } from '@/lib/setup/goalTypes';
 import { makePlan, monthYear, ordinal } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
+import { GlowBackground } from '@/components/glow/GlowBackground';
+import { ICON3D, goalTypeIcon3D, type Icon3D } from '@/lib/icons3d';
 
 const CONFETTI = [colors.lime, colors.orange, colors.sky, colors.lavender, colors.pink, colors.sage];
 
@@ -20,18 +22,33 @@ export default function SetupCongrats() {
   const insets = useSafeAreaInsets();
   const plan = makePlan(draft);
   const monthly = draft.goalKind === 'monthly';
-  const icon = typeInfo(draft.goalType, draft.goalKind).key === 'trip' ? '✈︎ ' : '';
   // What Kip will actually do with their answers: the payday habit, then their money leaks.
   const day = draft.incomeType === 'regular' && draft.payday ? `on the ${ordinal(draft.payday)}` : 'on payday';
+  // Each rule gets the 3D icon of the money it's about.
+  const LEAK_ICON: Record<string, Icon3D> = {
+    delivery: 'bowl',
+    coffee: 'bowl',
+    snacks: 'bowl',
+    grab: 'car',
+    shopping: 'shop',
+    sales: 'shop',
+    goingOut: 'fun',
+    bubbleTea: 'fun',
+    games: 'fun',
+    treating: 'fun',
+    beauty: 'heart',
+    subscriptions: 'phone',
+  };
+  const rules = leakRules(draft.leaks, plan.inputs).slice(0, 2);
+  const howIcons: Icon3D[] = ['income', ...rules.map((r) => LEAK_ICON[r.key] ?? 'piggy')];
   const how = [
     `${baht(plan.monthlySave + plan.safetyMonthly)} moves to ${plan.short}${plan.safetyMonthly && draft.goalKind !== 'safety_net' ? ' and your safety net' : ''} ${day}${draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save' ? ', first thing in the morning' : ''}`,
-    ...leakRules(draft.leaks, plan.inputs)
-      .slice(0, 2)
-      .map((r) => r.rule.split('. ')[0].replace(/\.$/, '')),
+    ...rules.map((r) => r.rule.split('. ')[0].replace(/\.$/, '')),
   ];
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 40, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+      <GlowBackground mood="fast" />
       <Confetti />
       <View style={{ alignItems: 'center' }}>
         <Kip mood="celebrate" size={140} />
@@ -41,19 +58,19 @@ export default function SetupCongrats() {
         <Text style={styles.sub}>Worked out from your numbers.</Text>
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {icon}
-          {monthly ? `${baht(plan.monthlySave)} every month for ${plan.short}` : `${plan.short} in ${monthYear(plan.due)}`}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Image source={ICON3D[goalTypeIcon3D(draft.goalType)]} style={{ width: 44, height: 44 }} contentFit="contain" />
+          <Text style={[styles.cardTitle, { flex: 1 }]}>{monthly ? `${baht(plan.monthlySave)} every month for ${plan.short}` : `${plan.short} in ${monthYear(plan.due)}`}</Text>
+        </View>
         <Text style={styles.cardText}>
           {baht(plan.monthlySave)} a month · {baht(plan.dailySpend)} a day to spend
           {draft.goalKind === 'safety_net' ? '' : ' · a safety net growing from day one'}
         </Text>
         <View style={styles.rule} />
         <Text style={styles.howHead}>HOW I’LL RUN IT</Text>
-        {how.map((line) => (
-          <View key={line} style={{ flexDirection: 'row', gap: 8 }}>
-            <Text style={styles.cardText}>•</Text>
+        {how.map((line, i) => (
+          <View key={line} style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 4 }}>
+            <Image source={ICON3D[howIcons[i] ?? 'piggy']} style={{ width: 34, height: 34 }} contentFit="contain" />
             <Text style={[styles.cardText, { flex: 1 }]}>{line}</Text>
           </View>
         ))}
@@ -121,10 +138,19 @@ const styles = StyleSheet.create({
   rule: { height: 1, backgroundColor: 'rgba(17,17,17,0.1)', marginVertical: 4 },
   howHead: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
   link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20, gap: 16 },
+  screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 16 },
   h1: { fontFamily: fonts.semibold, fontSize: 32, letterSpacing: -0.6, color: colors.ink, textAlign: 'center' },
   sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center' },
-  card: { borderRadius: 22, borderWidth: 1, borderColor: colors.ink, paddingVertical: 16, paddingHorizontal: 18, gap: 6 },
+  card: {
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    gap: 6,
+    boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
+  },
   cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, paddingRight: 20 },
   cardText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
 });

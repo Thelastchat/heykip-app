@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { useSetup } from '@/lib/setup/draft';
 import { finishSetup } from '@/lib/setup/save';
 import { colors, fonts } from '@/theme';
+import { GlowBackground } from '@/components/glow/GlowBackground';
 
 export default function SetupFinish() {
   const { session, refreshProfile } = useAuth();
@@ -38,6 +39,7 @@ export default function SetupFinish() {
 
   return (
     <View style={styles.screen}>
+      <GlowBackground />
       <Kip mood="happy" size={120} />
       <Text style={styles.title}>{error ? 'Hmm, that didn’t save' : 'Setting up your month…'}</Text>
       <Text style={styles.sub}>{error ?? 'Your plan, your goal and your promise — all yours, free.'}</Text>
@@ -51,7 +53,7 @@ export default function SetupFinish() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 10 },
+  screen: { flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', padding: 28, gap: 10 },
   title: { fontFamily: fonts.semibold, fontSize: 24, color: colors.ink, textAlign: 'center' },
   sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
 });

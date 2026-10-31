@@ -1,14 +1,15 @@
 import { Redirect, router } from 'expo-router';
-import { ChatCenteredText, PushPin, ShoppingBag } from 'phosphor-react-native';
-import type { ReactNode } from 'react';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Kip } from '@/components/Kip';
+import { Glass } from '@/components/glow/Glass';
 import { SetupScreen } from '@/components/setup/kit';
 import { Button, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { useSetup } from '@/lib/setup/draft';
-import { colors, fonts, radius, shadow } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 // Setup 0 · "Hi, I'm Kip." The first screen anyone sees.
 export default function SetupIntro() {
@@ -39,27 +40,25 @@ export default function SetupIntro() {
       </View>
 
       <View style={{ gap: 8, paddingHorizontal: 6 }}>
-        <T variant="hero" style={{ textAlign: 'center' }}>
-          Hi, I’m Kip.
-        </T>
+        <T style={{ textAlign: 'center', fontFamily: fonts.regular, fontSize: 38, lineHeight: 44, letterSpacing: -1.2 }}>Hi, I’m Kip.</T>
         <Text style={styles.lead}>I help you save for the things you actually want — not just track where your money went.</Text>
       </View>
 
-      <View style={styles.card}>
-        <Feature color={colors.lime} icon={<ChatCenteredText size={20} color={colors.ink} weight="fill" />} title="Just tell me what you spent" sub="I’ll sort it. No spreadsheets." />
-        <Feature color={colors.orange} icon={<ShoppingBag size={20} color={colors.ink} weight="fill" />} title="Ask “Can I buy this?”" sub="I’ll find a way that doesn’t hurt your goals." />
-        <Feature color={colors.lavender} icon={<PushPin size={20} color={colors.ink} weight="fill" />} title="Pin your goals" sub="A trip, a phone, a car — I’ll keep them on track." />
-      </View>
+      <Glass radius={26} style={{ marginTop: 10 }} innerStyle={styles.card}>
+        <Feature icon="expense" title="Just tell me what you spent" sub="I’ll sort it. No spreadsheets." />
+        <Feature icon="shop" title="Ask “Can I buy this?”" sub="I’ll find a way that doesn’t hurt your goals." />
+        <Feature icon="plane" title="Pin your goals" sub="A trip, a phone, a car — I’ll keep them on track." />
+      </Glass>
     </SetupScreen>
   );
 }
 
-function Feature({ color, icon, title, sub }: { color: string; icon: ReactNode; title: string; sub: string }) {
+function Feature({ icon, title, sub }: { icon: Icon3D; title: string; sub: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-      <View style={[styles.dot, { backgroundColor: color }]}>{icon}</View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <Image source={ICON3D[icon]} style={{ width: 46, height: 46 }} contentFit="contain" />
       <View style={{ flex: 1, gap: 1 }}>
-        <Text style={{ fontFamily: fonts.semibold, fontSize: 16, color: colors.ink }}>{title}</Text>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 15, color: colors.ink }}>{title}</Text>
         <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted }}>{sub}</Text>
       </View>
     </View>
@@ -67,8 +66,7 @@ function Feature({ color, icon, title, sub }: { color: string; icon: ReactNode; 
 }
 
 const styles = StyleSheet.create({
-  lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 25, color: '#3D3D38', textAlign: 'center' },
-  card: { gap: 16, marginTop: 10, padding: 18, borderRadius: radius.card, backgroundColor: '#FFFFFF', ...shadow.card },
-  dot: { width: 48, height: 48, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.muted, textAlign: 'center' },
+  card: { gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
   note: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
 });

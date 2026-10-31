@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   bannerText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
   card: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingHorizontal: 14, paddingVertical: 10, gap: 2 },
   head: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingVertical: 4 },
-  edit: { height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFFFFF', justifyContent: 'center' },
+  edit: { height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', justifyContent: 'center' },
   editText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
   finding: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 7 },
   fTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },

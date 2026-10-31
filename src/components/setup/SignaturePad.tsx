@@ -35,10 +35,7 @@ export function SignaturePad({ value, onChange, height = 84 }: { value: string |
 
   return (
     <GestureDetector gesture={pan}>
-      <View
-        style={[styles.pad, { height }]}
-        onLayout={(e) => (width.current = e.nativeEvent.layout.width)}
-        accessibilityLabel="Signature pad. Sign with your finger.">
+      <View style={[styles.pad, { height }]} onLayout={(e) => (width.current = e.nativeEvent.layout.width)} accessibilityLabel="Signature pad. Sign with your finger.">
         {!d && <Text style={styles.placeholder}>Sign here with your finger</Text>}
         <Svg width="100%" height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
           {d ? <Path d={d} fill="none" stroke={colors.ink} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" /> : null}

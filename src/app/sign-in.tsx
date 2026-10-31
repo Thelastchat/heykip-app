@@ -9,6 +9,7 @@ import { Button, Muted, T } from '@/components/ui';
 import { useSetup } from '@/lib/setup/draft';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { colors, fonts, radius } from '@/theme';
+import { GlowBackground } from '@/components/glow/GlowBackground';
 
 // Email + 6-digit code. It works everywhere, including Expo Go, with no deep links.
 // Apple and Google sign-in are added once their keys are set up in Supabase.
@@ -43,6 +44,7 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <GlowBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <View style={{ minHeight: 46 }}>{canGoBack && <BackButton size={46} />}</View>
         <View style={styles.top}>
@@ -59,11 +61,7 @@ export default function SignIn() {
           </Muted>
         </View>
 
-        {!supabaseConfigured && (
-          <Muted style={{ textAlign: 'center', color: colors.orange }}>
-            Supabase isn’t connected yet. Add the keys in .env and restart.
-          </Muted>
-        )}
+        {!supabaseConfigured && <Muted style={{ textAlign: 'center', color: colors.orange }}>Supabase isn’t connected yet. Add the keys in .env and restart.</Muted>}
 
         <View style={{ gap: 12 }}>
           {step === 'email' ? (
@@ -108,13 +106,15 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1 },
   wrap: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, justifyContent: 'space-between' },
   top: { alignItems: 'center', gap: 10 },
   input: {
     height: 58,
     borderRadius: radius.field,
-    backgroundColor: colors.grey,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: 18,
     fontFamily: fonts.medium,
     fontSize: 17,

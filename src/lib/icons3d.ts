@@ -43,3 +43,22 @@ export function goalIcon3D(kind: string | null | undefined): Icon3D {
   if (kind === 'safety_net') return 'shield';
   return 'piggy';
 }
+
+/** The 3D icon for a goal type (Setup's goal ideas). Types without their own icon use the piggy bank. */
+export function goalTypeIcon3D(type: string | null | undefined): Icon3D {
+  const m: Record<string, Icon3D> = {
+    trip: 'plane',
+    gadget: 'phone',
+    emergency: 'shield',
+    car: 'car',
+    home: 'house',
+    health: 'heart',
+    beauty: 'heart',
+    clothes: 'shop',
+    card: 'bill',
+    monthly: 'income',
+    concert: 'fun',
+    wedding: 'fun',
+  };
+  return (type && m[type]) || 'piggy';
+}

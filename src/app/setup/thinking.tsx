@@ -12,6 +12,7 @@ import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { makePlan, monthYear, monthsFromNow, ordinal } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
+import { GlowBackground } from '@/components/glow/GlowBackground';
 
 type Step = { doing: string; found: string; ms: number };
 
@@ -132,6 +133,7 @@ export default function SetupThinking() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 28, paddingBottom: Math.max(insets.bottom, 16) + 18 }]}>
+      <GlowBackground />
       <View style={{ alignItems: 'center' }}>
         <Kip mood="think" size={120} />
       </View>
@@ -171,10 +173,18 @@ export default function SetupThinking() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 20, gap: 14 },
+  screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 14 },
   h1: { fontFamily: fonts.semibold, fontSize: 26, letterSpacing: -0.4, color: colors.ink },
   sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
-  list: { borderRadius: 22, backgroundColor: '#F8F6F4', paddingVertical: 8, paddingHorizontal: 16 },
+  list: {
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
+  },
   line: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 7 },
   doing: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   found: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: '#2E2E2A' },

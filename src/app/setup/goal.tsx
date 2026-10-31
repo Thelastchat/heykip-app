@@ -1,16 +1,19 @@
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { CatIcon } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
-import { Pin, Polaroid } from '@/components/board';
+import { Float } from '@/components/glow/motion';
+import { Polaroid } from '@/components/board';
 import { DateTile } from '@/components/setup/DateTile';
 import { picked, SetupScreen, SmallTile, smallValue } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { room, verdict } from '@/lib/brain';
+import { ICON3D, goalTypeIcon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { goalDone, useSetup } from '@/lib/setup/draft';
 import { applyIdea, deal, GOAL_TYPES, ideasFor, typeInfo, type GoalTypeInfo, type Idea } from '@/lib/setup/goalTypes';
@@ -62,10 +65,26 @@ export default function SetupGoal() {
     const was = typeInfo(draft.goalType, draft.goalKind);
     const title = !draft.goalTitle.trim() || draft.goalTitle === was.example || all.some((i) => i.title === draft.goalTitle) ? '' : draft.goalTitle;
     const R = room({ ...inputs, goal: { ...inputs.goal, type: t.kind === 'monthly' ? 'monthly' : 'gadget' } });
-    if (t.kind === 'monthly') update({ goalType: t.key, goalKind: 'monthly', goalTitle: title, goalMonthly: draft.goalMonthly ?? Math.max(500, Math.min(3000, Math.floor(R.comfortable / 500) * 500)), goalPerMonth: null });
+    if (t.kind === 'monthly')
+      update({ goalType: t.key, goalKind: 'monthly', goalTitle: title, goalMonthly: draft.goalMonthly ?? Math.max(500, Math.min(3000, Math.floor(R.comfortable / 500) * 500)), goalPerMonth: null });
     else if (t.kind === 'safety_net')
-      update({ goalType: t.key, goalKind: 'safety_net', goalTitle: title || 'Emergency fund', goalTarget: emergencyTargetFor({ ...draft, goalKind: 'safety_net' }), goalSaved: draft.goalSaved ?? 0, goalDue: null, goalPerMonth: null });
-    else update({ goalType: t.key, goalKind: t.kind, goalTitle: title, goalPerMonth: null, ...(draft.goalKind === 'monthly' || draft.goalKind === 'safety_net' ? { goalTarget: null, goalDue: null } : {}) });
+      update({
+        goalType: t.key,
+        goalKind: 'safety_net',
+        goalTitle: title || 'Emergency fund',
+        goalTarget: emergencyTargetFor({ ...draft, goalKind: 'safety_net' }),
+        goalSaved: draft.goalSaved ?? 0,
+        goalDue: null,
+        goalPerMonth: null,
+      });
+    else
+      update({
+        goalType: t.key,
+        goalKind: t.kind,
+        goalTitle: title,
+        goalPerMonth: null,
+        ...(draft.goalKind === 'monthly' || draft.goalKind === 'safety_net' ? { goalTarget: null, goalDue: null } : {}),
+      });
   }
 
   async function pickPhoto() {
@@ -237,30 +256,28 @@ export default function SetupGoal() {
   );
 }
 
+/** A brand colour softened to see-through, so the card sits in the glow. */
+function soft(hex: string, a = 0.55) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number; on: boolean; onPick: () => void; draftMonths: (m: number) => string }) {
   const t = typeInfo(idea.type);
   const bg = CARD[i % CARD.length];
   const amount = idea.monthly !== null ? baht(idea.monthly) : baht(idea.target ?? 0);
   const chip = idea.monthly !== null ? '♡ every month' : `⏱ ${idea.months} month${idea.months === 1 ? '' : 's'} · ${draftMonths(idea.months ?? 1)}`;
   return (
-    <View style={{ width: CARD_W, paddingTop: 2 }}>
-      <View style={[styles.card, { backgroundColor: bg, transform: [{ rotate: `${i % 2 ? 1.5 : -1.5}deg` }] }]}>
-        <Pin color={PIN[i % PIN.length] === bg ? colors.ink : PIN[i % PIN.length]} size={20} style={{ position: 'absolute', top: -9, left: CARD_W / 2 - 10 }} />
+    <View style={{ width: CARD_W, paddingTop: 34 }}>
+      <View style={[styles.card, { backgroundColor: soft(bg) }]}>
         <View style={styles.cardTop}>
-          <View style={styles.cardIcon}>
-            <CatIcon name={t.icon} size={23} />
-          </View>
           {idea.kipsPick ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Kip mood="happy" size={50} />
-              <View style={[styles.tag, { backgroundColor: colors.ink }]}>
-                <Text style={[styles.tagText, { color: '#FFFFFF' }]}>KIP’S PICK</Text>
-              </View>
+            <View style={[styles.tag, { backgroundColor: colors.ink }]}>
+              <Text style={[styles.tagText, { color: '#FFFFFF' }]}>KIP’S PICK</Text>
             </View>
           ) : (
             <View style={styles.tag}>
-              <CatIcon name="sparkle" size={11} />
-              <Text style={styles.tagText}>SUGGESTED</Text>
+              <Text style={styles.tagText}>✦ SUGGESTED</Text>
             </View>
           )}
         </View>
@@ -281,6 +298,9 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
           <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? 'Picked ✓ — edit it below' : 'Pick this goal'}</Text>
         </Pressable>
       </View>
+      <Float delay={i * 500} amount={5} style={styles.big3d}>
+        <Image source={ICON3D[goalTypeIcon3D(idea.type)]} style={{ width: 112, height: 112 }} contentFit="contain" />
+      </Float>
     </View>
   );
 }
@@ -421,13 +441,36 @@ const styles = StyleSheet.create({
   kipTag: { alignSelf: 'flex-start', height: 26, paddingLeft: 9, paddingRight: 11, borderRadius: radius.pill, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', gap: 6 },
   kipTagText: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6, color: colors.ink },
   suggestedSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-  shuffle: { height: 38, paddingLeft: 11, paddingRight: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 7, boxShadow: '0 1px 2px rgba(0,0,0,0.05), 0 6px 16px rgba(0,0,0,0.08)' },
+  shuffle: {
+    height: 38,
+    paddingLeft: 11,
+    paddingRight: 14,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05), 0 6px 16px rgba(0,0,0,0.08)',
+  },
   dotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.2)' },
   dotOn: { width: 18, backgroundColor: colors.ink },
 
-  card: { height: 300, borderRadius: 22, paddingTop: 18, paddingHorizontal: 16, paddingBottom: 16, gap: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 12px 24px rgba(60,40,20,0.16)' },
-  cardTop: { height: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  card: {
+    height: 300,
+    borderRadius: 28,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
+    boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)',
+  },
+  big3d: { position: 'absolute', right: 4, top: 0 },
+  cardTop: { height: 50, flexDirection: 'row', alignItems: 'flex-start' },
   cardIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.75)', alignItems: 'center', justifyContent: 'center' },
   tag: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.8)', flexDirection: 'row', alignItems: 'center', gap: 4 },
   tagText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.4, color: colors.ink },
@@ -440,7 +483,7 @@ const styles = StyleSheet.create({
   pickText: { fontFamily: fonts.semibold, fontSize: 15, color: '#FFFFFF' },
 
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, paddingHorizontal: 2 },
-  own: { borderRadius: 26, backgroundColor: colors.grey, paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+  own: { borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
   label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 2 },
   sticker: { width: 70, alignItems: 'center', gap: 6 },
@@ -448,10 +491,10 @@ const styles = StyleSheet.create({
   stickerOther: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(17,17,17,0.3)', backgroundColor: 'transparent' },
   stickerText: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink },
   polaroidNote: { fontSize: 17, textAlign: 'center', color: '#8E8E86', position: 'absolute', left: 0, right: 0, bottom: 2 },
-  field: { borderRadius: 16, backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
+  field: { borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
   fieldLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
   white: { backgroundColor: '#FFFFFF' },
-  quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   quickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
   fit: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

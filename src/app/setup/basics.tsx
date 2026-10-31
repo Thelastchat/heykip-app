@@ -22,14 +22,8 @@ export default function SetupBasics() {
   const cycle = payday ? `${ordinal(payday)} to ${ordinal(payday === 1 ? 31 : payday - 1)}` : 'Payday to the day before';
 
   return (
-    <SetupScreen
-      step={1}
-      footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
-      <KipSays>
-        {regular
-          ? 'A few rough numbers so I can plan your days. Guesses are fine!'
-          : 'Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.'}
-      </KipSays>
+    <SetupScreen step={1} footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
+      <KipSays>{regular ? 'A few rough numbers so I can plan your days. Guesses are fine!' : 'Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.'}</KipSays>
       <Title>How does money come in?</Title>
 
       <Segmented<IncomeType>
@@ -43,13 +37,7 @@ export default function SetupBasics() {
 
       {regular ? (
         <View style={styles.row}>
-          <MoneyTile
-            label="Income a month"
-            value={draft.monthlyIncome}
-            onChange={(monthlyIncome) => update({ monthlyIncome })}
-            placeholder="25,000"
-            style={{ flex: 1.35 }}
-          />
+          <MoneyTile label="Income a month" value={draft.monthlyIncome} onChange={(monthlyIncome) => update({ monthlyIncome })} placeholder="25,000" style={{ flex: 1.35 }} />
           <PaydayTile value={payday} onChange={(p) => update({ payday: p })} />
         </View>
       ) : (
@@ -77,18 +65,12 @@ export default function SetupBasics() {
 
       <View style={styles.row}>
         <MoneyTile label="Rent or home loan" value={draft.rent} onChange={(rent) => update({ rent })} placeholder="8,500" size={22} style={{ flex: 1 }} />
-        <MoneyTile
-          label="Other bills"
-          value={draft.bills}
-          onChange={(bills) => update({ bills })}
-          placeholder={income ? guess.toLocaleString('en-US') : '1,500'}
-          size={22}
-          style={{ flex: 1 }}
-        />
+        <MoneyTile label="Other bills" value={draft.bills} onChange={(bills) => update({ bills })} placeholder={income ? guess.toLocaleString('en-US') : '1,500'} size={22} style={{ flex: 1 }} />
       </View>
       {rentWarning(draft) && <Text style={[styles.hint, { color: colors.orange }]}>{rentWarning(draft)}</Text>}
       <Text style={styles.hint}>
-        Other bills = phone, internet, electricity, water, subscriptions (Netflix, YouTube, Spotify…) and instalments.{draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
+        Other bills = phone, internet, electricity, water, subscriptions (Netflix, YouTube, Spotify…) and instalments.
+        {draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
       </Text>
 
       {income > 0 && (
@@ -96,7 +78,8 @@ export default function SetupBasics() {
           <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Kip adds real living costs too</Text>
           <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: '#2E2E2A' }}>
             Food {baht(L.food)} ({baht(Math.round(L.food / 30))}/day) · transport {baht(L.transport)} · health {baht(L.health)} · household {baht(L.household)} ={' '}
-            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll swap them for your real ones.
+            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll
+            swap them for your real ones.
           </Text>
         </View>
       )}
@@ -108,7 +91,8 @@ export default function SetupBasics() {
 function rentWarning(d: SetupDraft): string | null {
   if (!d.rent) return null;
   if (d.incomeType === 'regular') return d.monthlyIncome && d.rent >= d.monthlyIncome ? 'That’s more than your monthly income — double-check the numbers?' : null;
-  if (d.slowMonth && d.rent >= d.slowMonth) return d.goodMonth ? 'That’s more than a slow month, so I’ll plan on an average month instead.' : 'That’s more than a slow month — add a good month too, so I can plan on an average.';
+  if (d.slowMonth && d.rent >= d.slowMonth)
+    return d.goodMonth ? 'That’s more than a slow month, so I’ll plan on an average month instead.' : 'That’s more than a slow month — add a good month too, so I can plan on an average.';
   return null;
 }
 
