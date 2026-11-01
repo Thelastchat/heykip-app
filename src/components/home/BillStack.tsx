@@ -2,7 +2,7 @@
 // Paid bills sink to the bottom (tap to undo). Kip's guesses carry a dashed "estimate" tag.
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -58,6 +58,12 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
   const unpaid = bills.filter((b) => !b.paid);
   const [openKey, setOpenKey] = useState<string | null>(unpaid[0]?.key ?? null);
   const order = [...unpaid, ...bills.filter((b) => b.paid)];
+  // A new pay cycle brings every bill back unpaid: open the first one again so "slide to mark paid" is right there.
+  const unpaidKeys = unpaid.map((b) => b.key).join('|');
+  useEffect(() => {
+    setOpenKey((k) => (k && unpaid.some((b) => b.key === k) ? k : (unpaid[0]?.key ?? null)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unpaidKeys]);
   const total = bills.reduce((a, b) => a + b.amount, 0);
   const left = unpaid.reduce((a, b) => a + b.amount, 0);
   const paidN = bills.length - unpaid.length;
