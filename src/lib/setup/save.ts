@@ -1,7 +1,6 @@
-import { File } from 'expo-file-system';
-import { Platform } from 'react-native';
-
 import { t } from '@/lib/i18n';
+import { forgetMonth } from '@/lib/month';
+import { smallPhoto } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
 import { pinColors } from '@/theme';
 
@@ -12,11 +11,6 @@ import type { SetupDraft } from './draft';
 import { isoDay, makePlan } from './plan';
 
 export type PlanChoice = 'trial' | 'free';
-
-async function photoBytes(uri: string): Promise<ArrayBuffer> {
-  if (Platform.OS === 'web') return (await fetch(uri)).arrayBuffer();
-  return new File(uri).arrayBuffer();
-}
 
 /**
  * Saves everything from Setup in one go, right after the person has an account:
@@ -30,12 +24,9 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   // 1. Goal photo → private bucket, stored by path (shown later through a signed link).
   let photoPath: string | null = null;
   if (draft.goalPhoto && !draft.goalPhoto.startsWith('http')) {
-    const ext = (draft.goalPhoto.split('.').pop() ?? 'jpg').toLowerCase().replace('jpeg', 'jpg');
-    const path = `${userId}/goal-${stamp}.${ext}`;
-    const { error } = await supabase.storage.from('goal-photos').upload(path, await photoBytes(draft.goalPhoto), {
-      contentType: ext === 'png' ? 'image/png' : ext === 'heic' ? 'image/heic' : 'image/jpeg',
-      upsert: true,
-    });
+    const photo = await smallPhoto(draft.goalPhoto, 1080);
+    const path = `${userId}/goal-${stamp}.${photo.ext}`;
+    const { error } = await supabase.storage.from('goal-photos').upload(path, photo.bytes, { contentType: photo.contentType, upsert: true });
     if (error) throw new Error(t('Couldn’t upload your photo: {reason}', { reason: error.message }));
     photoPath = `goal-photos/${path}`;
   }
@@ -102,4 +93,5 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
     })
     .eq('id', userId);
   if (profileError) throw new Error(t('Couldn’t finish setup: {reason}', { reason: profileError.message }));
+  forgetMonth(); // the plan was just written here — screens load the new one
 }

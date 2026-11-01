@@ -1,13 +1,12 @@
 // You & settings (approved mockup): who you are, your plan, the money basics Kip plans from, Kip's settings,
 // log out and delete account. Changing a basic re-plans the month — the sheet shows the new numbers first.
-import { File } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { CaretRight } from 'phosphor-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
@@ -27,6 +26,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
+import { smallPhoto } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
@@ -354,11 +354,6 @@ function SetRow({ icon, title, sub, value, soft, onPress }: { icon?: keyof typeo
 
 // ---------- sheets ----------
 
-async function photoBytes(uri: string): Promise<ArrayBuffer> {
-  if (Platform.OS === 'web') return (await fetch(uri)).arrayBuffer();
-  return new File(uri).arrayBuffer();
-}
-
 function MeSheet({
   uid,
   name,
@@ -387,11 +382,9 @@ function MeSheet({
     setError(null);
     let url = photo;
     if (photo && photo !== avatar && !photo.startsWith('http')) {
-      const ext = (photo.split('.').pop() ?? 'jpg').toLowerCase().replace('jpeg', 'jpg');
-      const path = `${uid}/avatar-${Date.now()}.${['png', 'webp', 'heic'].includes(ext) ? ext : 'jpg'}`;
-      const { error: e } = await supabase.storage
-        .from('avatars')
-        .upload(path, await photoBytes(photo), { contentType: ext === 'png' ? 'image/png' : ext === 'heic' ? 'image/heic' : ext === 'webp' ? 'image/webp' : 'image/jpeg', upsert: true });
+      const small = await smallPhoto(photo, 400);
+      const path = `${uid}/avatar-${Date.now()}.${small.ext}`;
+      const { error: e } = await supabase.storage.from('avatars').upload(path, small.bytes, { contentType: small.contentType, upsert: true });
       if (e) {
         setBusy(false);
         return setError(t('Couldn’t upload your photo: {msg}', { msg: e.message }));

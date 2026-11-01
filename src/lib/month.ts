@@ -1,7 +1,7 @@
 // Loads and saves "Your month" for the signed-in person.
 // Setup saves a starting month; anyone without one gets it rebuilt from their profile and first goal.
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { safetyNet } from '@/lib/brain';
 import { monthFrom, type MonthBudget } from '@/lib/budget';
@@ -38,36 +38,91 @@ async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
   return monthFrom(inputs, draft.budgetStyle, null, draft.incomeType === 'regular' ? draft.payday : null, safetyNet(inputs).target);
 }
 
+// One shared copy for every screen (see home.ts): screens that come into view within a few seconds share one load,
+// and a save shows up everywhere at once — so changes made on one screen still appear on the others.
+const FRESH_MS = 10_000;
+const shared: { userId: string | null; month: MonthBudget | null; at: number; inflight: Promise<MonthBudget | null> | null; saves: number; subs: Set<(m: MonthBudget | null) => void> } = {
+  userId: null,
+  month: null,
+  at: 0,
+  inflight: null,
+  saves: 0,
+  subs: new Set(),
+};
+
+/** The plan was written somewhere else (Setup): load it fresh next time. */
+export function forgetMonth() {
+  shared.at = 0;
+  shared.month = null;
+  shared.saves++;
+}
+
+function loadMonth(userId: string): Promise<MonthBudget | null> {
+  if (shared.userId === userId && shared.month && Date.now() - shared.at < FRESH_MS) return Promise.resolve(shared.month);
+  if (shared.inflight && shared.userId === userId) return shared.inflight;
+  const savesAtStart = shared.saves;
+  shared.userId = userId;
+  const p = (async () => {
+    const { data, error } = await supabase.from('profiles').select('budget').eq('id', userId).single();
+    if (error) throw error;
+    const saved = data?.budget as MonthBudget | null;
+    const next = saved?.v === 2 ? saved : await buildFromProfile(userId);
+    // A save made while this was loading wins over the slower load.
+    if (shared.saves === savesAtStart && shared.userId === userId) {
+      shared.month = next;
+      shared.at = Date.now();
+      shared.subs.forEach((f) => f(next));
+    }
+    return shared.month;
+  })().finally(() => {
+    if (shared.inflight === p) shared.inflight = null;
+  });
+  shared.inflight = p;
+  return p;
+}
+
 export function useMonth() {
   const { session } = useAuth();
   const userId = session?.user.id;
-  const [month, setMonth] = useState<MonthBudget | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [month, setMonth] = useState<MonthBudget | null>(() => (shared.userId === userId ? shared.month : null));
+  const [loading, setLoading] = useState(!(shared.userId === userId && shared.month));
   const [error, setError] = useState<string | null>(null);
 
-  // Load whenever the screen comes into view, so a change made on another screen (Profile, Your month)
-  // shows up everywhere. A save made here is never overwritten by a slower load.
-  const saving = useRef(0);
+  useEffect(() => {
+    const sub = (m: MonthBudget | null) => {
+      setMonth(m);
+      setLoading(false);
+    };
+    shared.subs.add(sub);
+    return () => {
+      shared.subs.delete(sub);
+    };
+  }, []);
+
+  // Whenever the screen comes into view (shared, so several screens don't each load it).
   useFocusEffect(
     useCallback(() => {
       if (!userId) return;
-      const at = saving.current;
-      (async () => {
-        const { data, error: e } = await supabase.from('profiles').select('budget').eq('id', userId).single();
-        if (e) setError(e.message);
-        const saved = data?.budget as MonthBudget | null;
-        const next = saved?.v === 2 ? saved : await buildFromProfile(userId);
-        if (saving.current === at) setMonth(next);
-        setLoading(false);
-      })();
+      loadMonth(userId).then(
+        (m) => {
+          setMonth(m);
+          setLoading(false);
+        },
+        (e) => {
+          setError(e?.message ?? String(e));
+          setLoading(false);
+        },
+      );
     }, [userId]),
   );
 
-  /** Update on screen straight away, then save in the background. */
+  /** Update on every screen straight away, then save in the background. */
   const save = useCallback(
     async (next: MonthBudget) => {
-      saving.current++;
-      setMonth(next);
+      shared.saves++;
+      shared.month = next;
+      shared.at = Date.now();
+      shared.subs.forEach((f) => f(next));
       if (!userId) return;
       const { error: e } = await supabase.from('profiles').update({ budget: next, budget_style: next.style }).eq('id', userId);
       setError(e ? t('Couldn’t save: {msg}', { msg: e.message }) : null);

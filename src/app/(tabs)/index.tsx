@@ -502,7 +502,7 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
       accessibilityRole="button"
       accessibilityLabel={t('{goal}, {pct}% saved', { goal: g.title, pct })}>
       {g.photo ? (
-        <Image source={{ uri: g.photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: g.photo, cacheKey: g.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }]}>
           <Float amount={6}>

@@ -306,7 +306,7 @@ function Hero({
     <Glass radius={30}>
       <View style={styles.photo}>
         {goal.photo ? (
-          <Image source={{ uri: goal.photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={{ uri: goal.photo, cacheKey: goal.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,252,154,0.5)' }]}>
             <Float amount={6}>
@@ -327,7 +327,9 @@ function Hero({
             <Text style={styles.noteText} numberOfLines={3}>
               {line}
             </Text>
-            {goal.signature ? <Image source={{ uri: goal.signature }} style={{ width: 70, height: 26, alignSelf: 'flex-end' }} contentFit="contain" /> : null}
+            {goal.signature ? (
+              <Image source={{ uri: goal.signature, cacheKey: goal.signatureKey ?? undefined }} cachePolicy="disk" style={{ width: 70, height: 26, alignSelf: 'flex-end' }} contentFit="contain" />
+            ) : null}
           </View>
         ) : null}
       </View>
