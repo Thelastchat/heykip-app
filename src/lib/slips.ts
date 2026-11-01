@@ -1,5 +1,6 @@
 // Slip reading: each picked slip is read on the server (one request each, so ✓s arrive one by one),
 // cleaned up here, checked against slips already saved, and only saved after the person checks it.
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import type { DbCat, InCat } from '@/lib/kip';
@@ -112,10 +113,28 @@ export function setPickedSlips(p: PickedSlip[]) {
 
 /** Open Photos for slips. Returns false if nothing was picked. */
 export async function pickSlips(): Promise<boolean> {
-  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, base64: true, quality: 0.6 }).catch(() => null);
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, quality: 1 }).catch(() => null);
   if (!r || r.canceled || !r.assets?.length) return false;
-  pending = r.assets.slice(0, MAX_SLIPS);
+  const picked: PickedSlip[] = [];
+  for (const a of r.assets.slice(0, MAX_SLIPS)) picked.push((await shrinkSlip(a.uri, a.width)) ?? { uri: a.uri });
+  pending = picked;
   return true;
+}
+
+/**
+ * A phone photo can be 5 MB+ as text, which stalls on a slow connection. A slip reads perfectly at 1000px wide
+ * as a JPEG (~150 KB), so every slip is made that small on the phone before it's sent.
+ */
+export async function shrinkSlip(uri: string, width?: number): Promise<PickedSlip | null> {
+  try {
+    const ref = await ImageManipulator.manipulate(uri)
+      .resize({ width: Math.min(1000, width || 1000) })
+      .renderAsync();
+    const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
+    return out.base64 ? { uri: out.uri, base64: out.base64, mimeType: 'image/jpeg' } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The slips just picked (read once). */

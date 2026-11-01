@@ -3,11 +3,10 @@
 // until they tap "Read them" — then the slips go to the same Slips screen as picking by hand.
 // The settings live on this phone (albums are this phone's), never on the server.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { Platform } from 'react-native';
 
-import { MAX_SLIPS, setPickedSlips, type PickedSlip } from '@/lib/slips';
+import { MAX_SLIPS, setPickedSlips, shrinkSlip, type PickedSlip } from '@/lib/slips';
 
 const KEY = 'heykip.autoSlips.v1';
 
@@ -113,12 +112,8 @@ export async function prepareForKip(assets: MediaLibrary.Asset[]): Promise<numbe
   for (const asset of assets) {
     try {
       const info = await MediaLibrary.getAssetInfoAsync(asset);
-      const src = info.localUri ?? asset.uri;
-      const ref = await ImageManipulator.manipulate(src)
-        .resize({ width: Math.min(1000, asset.width || 1000) })
-        .renderAsync();
-      const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
-      if (out.base64) picked.push({ uri: out.uri, base64: out.base64, mimeType: 'image/jpeg' });
+      const out = await shrinkSlip(info.localUri ?? asset.uri, asset.width);
+      if (out) picked.push(out);
     } catch {
       // A photo that can't be opened (e.g. still in iCloud) is skipped; the rest still go.
     }
