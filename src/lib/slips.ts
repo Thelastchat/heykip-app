@@ -78,12 +78,18 @@ export async function savedKeys(userId: string, keys: string[]): Promise<Set<str
 
 export async function readSlip(image: string, mediaType: string): Promise<{ ok: true; read: SlipRead } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10); // Thai date
-  const { data, error } = await supabase.functions.invoke('read-slip', { body: { image, mediaType, today } });
+  // A slip takes a few seconds; if the network stalls, give up on this one instead of "Reading…" forever.
+  const timeout = new Promise<{ data: null; error: { context: { status: number } } }>((res) => setTimeout(() => res({ data: null, error: { context: { status: 504 } } }), 60_000));
+  const { data, error } = await Promise.race([supabase.functions.invoke('read-slip', { body: { image, mediaType, today } }), timeout]);
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
     if (status === 403) return { ok: false, reason: 'consent' };
-    if (status === 503) return { ok: false, reason: 'nokey' };
+    // 503 is also what the gateway says when a request hangs; only "no key" from our server means the key is missing.
+    if (status === 503) {
+      const body = await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.().catch(() => null);
+      return { ok: false, reason: body?.error === 'no key' ? 'nokey' : 'busy' };
+    }
     if (status === undefined) return { ok: false, reason: 'offline' };
     return { ok: false, reason: 'busy' };
   }
@@ -106,8 +112,8 @@ export function setPickedSlips(p: PickedSlip[]) {
 
 /** Open Photos for slips. Returns false if nothing was picked. */
 export async function pickSlips(): Promise<boolean> {
-  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, base64: true, quality: 0.6 });
-  if (r.canceled || !r.assets?.length) return false;
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, base64: true, quality: 0.6 }).catch(() => null);
+  if (!r || r.canceled || !r.assets?.length) return false;
   pending = r.assets.slice(0, MAX_SLIPS);
   return true;
 }

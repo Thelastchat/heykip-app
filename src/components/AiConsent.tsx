@@ -2,7 +2,7 @@
 // (Talk to Kip, slips, finding slips). Required by Thailand's PDPA and App Store guideline 5.1.2(i).
 // The server checks the same answer, so nothing reaches the AI without it.
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Kip } from '@/components/Kip';
 import { SaveButton, Sheet } from '@/components/profile/Sheet';
@@ -34,8 +34,11 @@ export function useAiConsent(onPolicy?: () => void): { ensure: () => Promise<boo
 
   const close = (ok: boolean) => {
     setOpen(false);
-    answer.current?.(ok);
+    const r = answer.current;
     answer.current = null;
+    // Answer only once the sheet has slid away: on iPhone, Photos, a permission alert or another sheet
+    // opened while this one is still closing never shows up.
+    if (r) setTimeout(() => r(ok), Platform.OS === 'ios' ? 550 : 0);
   };
 
   async function allow() {

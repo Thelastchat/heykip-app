@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(45_000),
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 400,
