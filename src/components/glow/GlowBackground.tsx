@@ -51,7 +51,7 @@ function Drift({ blob, width, height, id }: { blob: Blob; width: number; height:
     transform: [{ translateX: blob.dx * t.value }, { translateY: blob.dy * t.value }, { scale: 1 + (blob.s - 1) * t.value }],
   }));
   return (
-    <Animated.View style={[{ position: 'absolute', left: blob.x * width, top: blob.y * height, width: size, height: size, opacity: blob.opacity }, style]}>
+    <Animated.View style={[{ position: 'absolute', left: blob.x * width, top: blob.y * height, width: size, height: size, opacity: blob.opacity * glow.blobOpacity }, style]}>
       <Svg width={size} height={size}>
         <Defs>
           <RadialGradient id={id} cx="50%" cy="50%" r="50%">

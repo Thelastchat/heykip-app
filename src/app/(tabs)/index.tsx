@@ -31,7 +31,7 @@ import { useMonth } from '@/lib/month';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 
 /** ฿ drawn smaller next to a big number. */
 const Big = (n: number) => (
@@ -261,7 +261,7 @@ export default function Home() {
           <Text style={styles.hello}>
             {firstName == null ? t('Hello, there') : t('Hello, {name}', { name: firstName })}
             {'\n'}
-            <Text style={{ color: '#B9B8B0' }}>{t('Today’s money')}</Text>
+            <Text style={{ color: colors.soft }}>{t('Today’s money')}</Text>
           </Text>
         </RiseIn>
 
@@ -460,7 +460,7 @@ export default function Home() {
           router.push('/add');
         }}
         style={[styles.fab, { bottom: 104 + Math.max(insets.bottom, 12) - 12 }]}>
-        <Plus size={26} color="#FFFFFF" weight="bold" />
+        <Plus size={26} color={colors.paper} weight="bold" />
       </Squish>
 
       {sheet && (
@@ -526,7 +526,7 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
         </View>
       ) : null}
       <View style={styles.strip}>
-        <Glass radius={22} shadow={false} tint="rgba(255,255,255,0.72)">
+        <Glass radius={22} shadow={false} light tint="rgba(255,255,255,0.72)">
           <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Text style={styles.stripBig}>{g.target > 0 ? t('{amount} saved', { amount: baht(g.saved) }) : t('{amount} a month', { amount: baht(perMonth) })}</Text>
@@ -569,137 +569,139 @@ function catShort(key: CatKey) {
 function LockIcon() {
   return (
     <Svg width={11} height={11} viewBox="0 0 24 24">
-      <Path fill="#FFFFFF" d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
+      <Path fill={colors.paper} d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
     </Svg>
   );
 }
 function Arrow() {
   return (
     <Svg width={12} height={12} viewBox="0 0 24 24">
-      <Path d="M5 12h13M13 6l6 6-6 6" stroke="#FFFFFF" strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 12h13M13 6l6 6-6 6" stroke={colors.paper} strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  pill: { height: 40, paddingHorizontal: 14, justifyContent: 'center' },
-  pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF' },
-  hello: { paddingHorizontal: 22, paddingTop: 26, fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
-  nums: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 22 },
-  n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 50, color: colors.ink, fontVariant: ['tabular-nums'] },
-  n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 34, color: '#B9B8B0', fontVariant: ['tabular-nums'] },
-  lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
-  overLbl: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  overText: { color: colors.orangeText, fontFamily: fonts.medium },
-  extraIn: { fontFamily: fonts.medium, fontSize: 11, color: colors.lavenderText, marginTop: 2 },
-  vbar: { width: 1, height: 54, backgroundColor: 'rgba(17,17,17,0.12)' },
-  cal: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
-  calN: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 16, color: colors.ink },
-  calS: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
-  kip: { position: 'absolute', right: 10, top: 6 },
-  kipName: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },
-  kipRole: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 1 },
-  say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: 14, maxWidth: 210, minHeight: 63 },
-  two: { flexDirection: 'row', marginTop: 14 },
-  twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: 'rgba(17,17,17,0.1)', paddingLeft: 16 },
-  twoK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  twoV: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
-  foot: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.95)',
-    backgroundColor: 'rgba(255,252,154,0.35)',
-  },
-  footText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  lockDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 34, paddingBottom: 12 },
-  secTitle: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
-  secRight: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
-  tagText: { fontFamily: fonts.semibold, fontSize: 11, color: '#FFFFFF' },
-  // swipe rows: room for shadows to fade out, then the space is pulled back — no clipped edges
-  rowOuter: { marginTop: -20, marginBottom: -30 },
-  rowInner: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 48, gap: 10 },
-  goal: { height: 270, borderRadius: 30, overflow: 'hidden', boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)' },
-  gchip: {
-    position: 'absolute',
-    left: 12,
-    top: 12,
-    height: 34,
-    paddingLeft: 4,
-    paddingRight: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    maxWidth: '70%',
-  },
-  gchipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, flexShrink: 1 },
-  note: {
-    position: 'absolute',
-    right: 16,
-    top: 60,
-    width: 150,
-    backgroundColor: colors.lime,
-    paddingTop: 13,
-    paddingHorizontal: 11,
-    paddingBottom: 8,
-    transform: [{ rotate: '3deg' }],
-    boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
-  },
-  tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: 'rgba(255,255,255,0.65)', transform: [{ rotate: '-4deg' }] },
-  noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: 'rgba(17,17,17,0.55)' },
-  noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.ink, marginTop: 2 },
-  strip: { position: 'absolute', left: 10, right: 10, bottom: 10 },
-  stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  stripSmall: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  track: { height: 8, borderRadius: 4, backgroundColor: 'rgba(17,17,17,0.08)', marginTop: 9, marginBottom: 6, overflow: 'hidden' },
-  trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
-  addGoal: {
-    width: 140,
-    height: 270,
-    borderRadius: 30,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(17,17,17,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 12,
-  },
-  addGoalText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
-  cat: { width: 136, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
-  pct: { position: 'absolute', right: 14, top: 14, fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  catName: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-  catBig: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.8, color: colors.ink, marginTop: 1, fontVariant: ['tabular-nums'] },
-  catOf: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  plus: { width: 236, height: 136, borderRadius: 26, padding: 16, backgroundColor: '#141414', boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 28px rgba(17,17,17,0.12)' },
-  plusIcon: { position: 'absolute', right: -4, top: -34 },
-  plusTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 20, color: '#FFFFFF', maxWidth: 130 },
-  plusTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(255,255,255,0.62)', marginTop: 4, maxWidth: 150 },
-  tryc: { position: 'absolute', left: 16, bottom: 14, height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.limeDeep, justifyContent: 'center' },
-  trycText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 14px 28px rgba(17,17,17,0.28)',
-  },
-  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
-  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF' },
-  bubble: { alignSelf: 'flex-start', maxWidth: '88%', borderRadius: 16, borderTopLeftRadius: 4, backgroundColor: colors.grey, paddingVertical: 9, paddingHorizontal: 12 },
-  bubbleMe: { alignSelf: 'flex-end', borderTopLeftRadius: 16, borderTopRightRadius: 4, backgroundColor: colors.lime },
-  bubbleText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+    pill: { height: 40, paddingHorizontal: 14, justifyContent: 'center' },
+    pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.paper },
+    hello: { paddingHorizontal: 22, paddingTop: 26, fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
+    nums: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 22 },
+    n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 50, color: colors.ink, fontVariant: ['tabular-nums'] },
+    n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 34, color: colors.soft, fontVariant: ['tabular-nums'] },
+    lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
+    overLbl: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    overText: { color: colors.orangeText, fontFamily: fonts.medium },
+    extraIn: { fontFamily: fonts.medium, fontSize: 11, color: colors.lavenderText, marginTop: 2 },
+    vbar: { width: 1, height: 54, backgroundColor: inkA(0.12) },
+    cal: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
+    calN: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 16, color: colors.ink },
+    calS: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
+    kip: { position: 'absolute', right: 10, top: 6 },
+    kipName: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },
+    kipRole: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 1 },
+    say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: 14, maxWidth: 210, minHeight: 63 },
+    two: { flexDirection: 'row', marginTop: 14 },
+    twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: inkA(0.1), paddingLeft: 16 },
+    twoK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    twoV: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
+    foot: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 15,
+      borderTopWidth: 1,
+      borderTopColor: glassA(0.95),
+      backgroundColor: 'rgba(255,252,154,0.35)',
+    },
+    footText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    lockDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 34, paddingBottom: 12 },
+    secTitle: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+    secRight: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
+    tagText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.paper },
+    // swipe rows: room for shadows to fade out, then the space is pulled back — no clipped edges
+    rowOuter: { marginTop: -20, marginBottom: -30 },
+    rowInner: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 48, gap: 10 },
+    goal: { height: 270, borderRadius: 30, overflow: 'hidden', boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)' },
+    gchip: {
+      position: 'absolute',
+      left: 12,
+      top: 12,
+      height: 34,
+      paddingLeft: 4,
+      paddingRight: 12,
+      borderRadius: 999,
+      backgroundColor: whiteA(0.9),
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      maxWidth: '70%',
+    },
+    gchipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent, flexShrink: 1 },
+    note: {
+      position: 'absolute',
+      right: 16,
+      top: 60,
+      width: 150,
+      backgroundColor: colors.lime,
+      paddingTop: 13,
+      paddingHorizontal: 11,
+      paddingBottom: 8,
+      transform: [{ rotate: '3deg' }],
+      boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
+    },
+    tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
+    noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: blackA(0.55) },
+    noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
+    strip: { position: 'absolute', left: 10, right: 10, bottom: 10 },
+    stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.onAccent },
+    stripSmall: { fontFamily: fonts.regular, fontSize: 12, color: colors.onAccentMuted },
+    track: { height: 8, borderRadius: 4, backgroundColor: blackA(0.08), marginTop: 9, marginBottom: 6, overflow: 'hidden' },
+    trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
+    addGoal: {
+      width: 140,
+      height: 270,
+      borderRadius: 30,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: inkA(0.16),
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      padding: 12,
+    },
+    addGoalText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
+    cat: { width: 136, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
+    pct: { position: 'absolute', right: 14, top: 14, fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    catName: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+    catBig: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.8, color: colors.ink, marginTop: 1, fontVariant: ['tabular-nums'] },
+    catOf: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    plus: { width: 236, height: 136, borderRadius: 26, padding: 16, backgroundColor: colors.solid, boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 28px rgba(17,17,17,0.12)' },
+    plusIcon: { position: 'absolute', right: -4, top: -34 },
+    plusTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 20, color: colors.onSolid, maxWidth: 130 },
+    plusTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: whiteA(0.62), marginTop: 4, maxWidth: 150 },
+    tryc: { position: 'absolute', left: 16, bottom: 14, height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.limeDeep, justifyContent: 'center' },
+    trycText: { fontFamily: fonts.medium, fontSize: 12, color: colors.onAccent },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: colors.ink,
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 14px 28px rgba(17,17,17,0.28)',
+    },
+    toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
+    toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper },
+    bubble: { alignSelf: 'flex-start', maxWidth: '88%', borderRadius: 16, borderTopLeftRadius: 4, backgroundColor: colors.grey, paddingVertical: 9, paddingHorizontal: 12 },
+    bubbleMe: { alignSelf: 'flex-end', borderTopLeftRadius: 16, borderTopRightRadius: 4, backgroundColor: colors.lime },
+    bubbleText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+  }),
+);

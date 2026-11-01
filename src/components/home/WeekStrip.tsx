@@ -3,7 +3,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { dayShort, t } from '@/lib/i18n';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed } from '@/theme';
 
 const DAY_MS = 86_400_000;
 
@@ -55,8 +55,8 @@ export function WeekStrip({
             }
             accessibilityState={{ selected: on }}
             style={[styles.day, on && styles.on, later && { opacity: 0.45 }]}>
-            <Text style={[styles.dn, on && { color: 'rgba(255,255,255,0.6)' }]}>{name}</Text>
-            <Text style={[styles.dd, on && { color: '#FFFFFF' }]}>
+            <Text style={[styles.dn, on && { color: glassA(0.6) }]}>{name}</Text>
+            <Text style={[styles.dd, on && { color: colors.paper }]}>
               {d.getDate()}
               {isPayday ? <Text style={styles.pay}>฿</Text> : null}
             </Text>
@@ -65,7 +65,7 @@ export function WeekStrip({
                 styles.dot,
                 dot === 'over' && { backgroundColor: colors.orange },
                 dot === 'under' && { backgroundColor: colors.limeDeep },
-                (dot === 'none' || dot === 'empty') && { backgroundColor: 'rgba(17,17,17,0.12)' },
+                (dot === 'none' || dot === 'empty') && { backgroundColor: inkA(0.12) },
               ]}
             />
           </Pressable>
@@ -75,12 +75,14 @@ export function WeekStrip({
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 6 },
-  day: { flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  on: { backgroundColor: colors.ink, boxShadow: '0 10px 20px rgba(17,17,17,0.18)' },
-  dn: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  pay: { fontFamily: fonts.regular, fontSize: 9, color: colors.muted },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', gap: 6 },
+    day: { flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 3 },
+    on: { backgroundColor: colors.ink, boxShadow: '0 10px 20px rgba(17,17,17,0.18)' },
+    dn: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    pay: { fontFamily: fonts.regular, fontSize: 9, color: colors.muted },
+    dot: { width: 6, height: 6, borderRadius: 3 },
+  }),
+);

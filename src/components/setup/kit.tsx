@@ -14,7 +14,7 @@ import type { IconKey } from '@/lib/budget';
 import { getLang, t } from '@/lib/i18n';
 import { ordinal } from '@/lib/setup/plan';
 import { T } from '@/components/ui';
-import { colors, fonts, glow, radius } from '@/theme';
+import { colors, fonts, glow, radius, inkA, themed } from '@/theme';
 
 export const STEPS = 4;
 
@@ -153,7 +153,9 @@ export function SmallTile({ label, children, style, onPress }: { label: string; 
   );
 }
 
-export const smallValue = { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, padding: 0 } as const;
+const smallValueStyles = themed(() => StyleSheet.create({ v: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, padding: 0 } }));
+/** The value text in a small tile (follows Light / Dark). */
+export const smallValueStyle = () => smallValueStyles.v;
 
 // Picked = its own brand colour + a black outline, everywhere in the app (ก้อย: easier to see than colour alone).
 // Lists pass a colour per option, so when several are picked at once they're still easy to tell apart.
@@ -178,7 +180,7 @@ export function Segmented<K extends string>({ options, value, onChange }: { opti
 
 export function Switch({ on }: { on: boolean }) {
   return (
-    <View style={[styles.switch, !on && { backgroundColor: 'rgba(17,17,17,0.18)' }]}>
+    <View style={[styles.switch, !on && { backgroundColor: inkA(0.18) }]}>
       <View style={[styles.knob, on ? { right: 3, backgroundColor: colors.limeDeep } : { left: 3 }]} />
     </View>
   );
@@ -205,7 +207,7 @@ export function RadioCard({ label, sub, on, onPress, color = colors.lime }: { la
         <View style={[styles.radio, on && { borderWidth: 7, borderColor: colors.ink }]} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: on ? fonts.medium : fonts.regular, fontSize: 15, color: colors.ink }}>{label}</Text>
-          {on && sub ? <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: 'rgba(17,17,17,0.65)', marginTop: 2 }}>{sub}</Text> : null}
+          {on && sub ? <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: inkA(0.65), marginTop: 2 }}>{sub}</Text> : null}
         </View>
       </Glass>
     </Pressable>
@@ -216,7 +218,7 @@ export function Chip({ label, on, onPress, color = colors.lime }: { label: strin
   return (
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={onPress}>
       <Glass radius={999} tint={on ? color : undefined} innerStyle={[styles.chip, on && styles.on]}>
-        <Text style={[styles.chipText, on && { fontFamily: fonts.medium }, on && color === colors.ink && { color: '#FFFFFF' }]}>{label}</Text>
+        <Text style={[styles.chipText, on && { fontFamily: fonts.medium }, on && color === colors.ink && { color: colors.paper }]}>{label}</Text>
       </Glass>
     </Pressable>
   );
@@ -243,39 +245,41 @@ export function PrivacyNote() {
   );
 }
 
-const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  back: { alignItems: 'center', justifyContent: 'center' },
-  bars: { flex: 1, flexDirection: 'row', gap: 5 },
-  bar: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.1)' },
-  count: { width: 36, textAlign: 'right', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  title: { fontFamily: fonts.regular, fontSize: 32, lineHeight: 37, letterSpacing: -1, color: colors.ink },
-  on: { borderWidth: 1.5, borderColor: colors.ink },
+const styles = themed(() =>
+  StyleSheet.create({
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    back: { alignItems: 'center', justifyContent: 'center' },
+    bars: { flex: 1, flexDirection: 'row', gap: 5 },
+    bar: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: inkA(0.1) },
+    count: { width: 36, textAlign: 'right', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    title: { fontFamily: fonts.regular, fontSize: 32, lineHeight: 37, letterSpacing: -1, color: colors.ink },
+    on: { borderWidth: 1.5, borderColor: colors.ink },
 
-  saysRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  saysKip: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bubble: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    saysRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    saysKip: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    bubble: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
 
-  tile: { paddingVertical: 11, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  tileLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  tileValue: { fontFamily: fonts.medium, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
-  tileInput: { flex: 1, padding: 0, margin: 0, outlineStyle: 'none' } as never,
+    tile: { paddingVertical: 11, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    tileLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    tileValue: { fontFamily: fonts.medium, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
+    tileInput: { flex: 1, padding: 0, margin: 0, outlineStyle: 'none' } as never,
 
-  small: { paddingVertical: 10, paddingHorizontal: 14 },
-  smallLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    small: { paddingVertical: 10, paddingHorizontal: 14 },
+    smallLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
 
-  segment: { padding: 4, height: 48 },
-  segmentItem: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-  segmentText: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
+    segment: { padding: 4, height: 48 },
+    segmentItem: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+    segmentText: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
 
-  switch: { width: 48, height: 28, borderRadius: radius.pill, backgroundColor: colors.ink },
-  knob: { position: 'absolute', top: 3, width: 22, height: 22, borderRadius: radius.pill, backgroundColor: '#FFFFFF' },
-  toggle: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    switch: { width: 48, height: 28, borderRadius: radius.pill, backgroundColor: colors.ink },
+    knob: { position: 'absolute', top: 3, width: 22, height: 22, borderRadius: radius.pill, backgroundColor: colors.paper },
+    toggle: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
 
-  radioCard: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: glow.glassEdge },
-  radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
+    radioCard: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: glow.glassEdge },
+    radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
 
-  chip: { height: 40, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  chipText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  goalPill: { height: 40, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-});
+    chip: { height: 40, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+    chipText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    goalPill: { height: 40, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  }),
+);

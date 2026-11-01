@@ -5,7 +5,8 @@
 import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
 import { StyleSheet, Text as RNText, TextInput as RNTextInput, type TextStyle } from 'react-native';
 
-import { fonts } from '@/theme';
+import { OnAccent } from '@/lib/accent';
+import { colors, fonts } from '@/theme';
 
 const THAI = /[\u0E00-\u0E7F]/;
 
@@ -31,11 +32,16 @@ const thaiFor = (family: string | undefined) => (family ? (TO_THAI[family] ?? fa
 // React 19: `ref` arrives as an ordinary prop and is passed straight through.
 export function Text(props: ComponentProps<typeof RNText>) {
   const parent = useContext(Inherited);
-  const own = (StyleSheet.flatten(props.style) as TextStyle | undefined)?.fontFamily;
+  const accent = useContext(OnAccent);
+  const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
+  const own = flat?.fontFamily;
   const family = own ?? parent;
   const thai = hasThai(props.children);
   const shown = thai ? thaiFor(family) : family;
-  const style = thai && shown !== own ? [props.style, { fontFamily: shown }] : props.style;
+  // On lime / pastel / photo surfaces the text stays dark, in Light and in Dark.
+  const c = flat?.color;
+  const accentColor = accent && (c === undefined || c === colors.ink || c === colors.muted) ? (c === colors.muted ? colors.onAccentMuted : colors.onAccent) : undefined;
+  const style = (thai && shown !== own) || accentColor ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, accentColor ? { color: accentColor } : null] : props.style;
   return (
     <Inherited.Provider value={family}>
       <RNText {...props} style={style} />

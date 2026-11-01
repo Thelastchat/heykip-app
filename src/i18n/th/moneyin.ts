@@ -69,6 +69,13 @@ const th: Record<string, string> = {
   'Each day': 'ใช้ได้ต่อวัน',
   'No change': 'ไม่เปลี่ยน',
 
+  // Look (Light / Dark)
+  Look: 'โหมด',
+  Light: 'สว่าง',
+  Dark: 'มืด',
+  Phone: 'ตามเครื่อง',
+  'Same as my phone': 'ตามโหมดของโทรศัพท์',
+
   // Home + Goals
   'incl. +{amount} extra': 'รวมเงินพิเศษ +{amount}',
   'saved · {amount} a month': 'เก็บแล้ว · เดือนละ {amount}',

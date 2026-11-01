@@ -8,7 +8,7 @@ import { billsTotal, savingTotal, spendingTotal, type MonthBudget } from '@/lib/
 import { baht } from '@/lib/money';
 import { getLang, t } from '@/lib/i18n';
 import { compare, replan, type Basics, type GoalNow } from '@/lib/replan';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 import { AmountInput, Delta, Pill, SaveButton, Sheet, sheet } from './Sheet';
 
@@ -174,11 +174,13 @@ function Step({ icon, onPress, label }: { icon: 'minus' | 'plus'; onPress: () =>
   );
 }
 
-const styles = StyleSheet.create({
-  pills: { flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' },
-  row: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  rowLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  stepVal: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, minWidth: 118, textAlign: 'center' },
-  step: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(17,17,17,0.07)', alignItems: 'center', justifyContent: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    pills: { flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' },
+    row: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+    rowLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    stepVal: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, minWidth: 118, textAlign: 'center' },
+    step: { width: 30, height: 30, borderRadius: 15, backgroundColor: inkA(0.07), alignItems: 'center', justifyContent: 'center' },
+  }),
+);

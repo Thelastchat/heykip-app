@@ -5,6 +5,8 @@ import { Pressable, Text, type PressableProps, type StyleProp, type TextStyle, t
 import Animated, { Easing, FadeInDown, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
+import { inkA } from '@/theme';
+
 /** Blocks rise in one after another when a screen opens. */
 export function RiseIn({ delay = 0, children, style }: { delay?: number; children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return (
@@ -67,21 +69,7 @@ export function CountUp({ value, format, style, ms = 1000 }: { value: number; fo
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** A ring that fills to `pct` (0–1). */
-export function Ring({
-  pct,
-  size = 64,
-  stroke = 6,
-  color,
-  track = 'rgba(17,17,17,0.07)',
-  delay = 400,
-}: {
-  pct: number;
-  size?: number;
-  stroke?: number;
-  color: string;
-  track?: string;
-  delay?: number;
-}) {
+export function Ring({ pct, size = 64, stroke = 6, color, track = inkA(0.07), delay = 400 }: { pct: number; size?: number; stroke?: number; color: string; track?: string; delay?: number }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const p = useSharedValue(0);

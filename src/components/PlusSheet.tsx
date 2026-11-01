@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed, whiteA, blackA } from '@/theme';
 
 export type PlusFeature = 'styles' | 'talk' | 'customize' | 'automove' | 'goals';
 
@@ -58,7 +58,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
           {perks().map((p) => (
             <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={styles.tick}>
-                <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.ink }}>✓</Text>
+                <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.onAccent }}>✓</Text>
               </View>
               <Text style={styles.perk}>{p}</Text>
             </View>
@@ -123,7 +123,7 @@ export function PaySplit({ parts, note }: { parts: { label: string; amount: numb
           .filter((p) => p.amount > 0)
           .map((p) => (
             <View key={p.label} style={{ flex: p.amount, backgroundColor: p.color, justifyContent: 'flex-end', padding: 7 }}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: p.light ? colors.ink : '#FFFFFF' }} numberOfLines={1}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: p.light ? colors.onAccent : colors.onSolid }} numberOfLines={1}>
                 {p.label}
               </Text>
             </View>
@@ -148,7 +148,7 @@ export function ChatPeek({ ask, answer }: { ask: string; answer: ReactNode }) {
   return (
     <View style={{ gap: 8, marginTop: 4 }}>
       <View style={[styles.bub, styles.bubMe]}>
-        <Text style={[styles.bubText, { color: colors.ink }]}>{ask}</Text>
+        <Text style={[styles.bubText, { color: colors.onAccent }]}>{ask}</Text>
       </View>
       <View style={styles.bub}>
         <Text style={styles.bubText}>{answer}</Text>
@@ -164,11 +164,11 @@ export function LockPeek({ rows }: { rows: { label: string; amount: number; shar
       {rows.map((r) => (
         <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Image source={ICON3D[r.icon]} style={{ width: 30, height: 30 }} contentFit="contain" />
-          <Text style={[styles.laneLabel, { width: 64, color: '#FFFFFF' }]} numberOfLines={1}>
+          <Text style={[styles.laneLabel, { width: 64, color: colors.onSolid }]} numberOfLines={1}>
             {r.label}
           </Text>
-          <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.12)' }}>
-            <View style={{ width: `${r.share * 100}%`, height: 6, borderRadius: 3, backgroundColor: r.locked ? colors.limeDeep : '#FFFFFF' }} />
+          <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: whiteA(0.12) }}>
+            <View style={{ width: `${r.share * 100}%`, height: 6, borderRadius: 3, backgroundColor: r.locked ? colors.limeDeep : colors.onSolid }} />
             <View style={[styles.knob, { left: `${r.share * 100}%` }]}>{r.locked ? <Text style={{ fontSize: 9 }}>🔒</Text> : null}</View>
           </View>
           <Text style={[styles.laneWhen, { width: 62, textAlign: 'right' }]}>฿{r.amount.toLocaleString('en-US')}</Text>
@@ -184,14 +184,14 @@ export function GoalSlots({ first }: { first: string }) {
     <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
       <View style={[styles.slot, { backgroundColor: colors.limeDeep }]}>
         <Image source={ICON3D.plane} style={{ width: 34, height: 34 }} contentFit="contain" />
-        <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }} numberOfLines={1}>
+        <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.onAccent }} numberOfLines={1}>
           {first}
         </Text>
       </View>
       {[t('A new phone'), t('Moving out')].map((s) => (
-        <View key={s} style={[styles.slot, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.25)' }]}>
-          <Text style={{ fontSize: 22, color: 'rgba(255,255,255,0.5)' }}>+</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>
+        <View key={s} style={[styles.slot, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: whiteA(0.25) }]}>
+          <Text style={{ fontSize: 22, color: whiteA(0.5) }}>+</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.5) }} numberOfLines={1}>
             {s}
           </Text>
         </View>
@@ -200,28 +200,30 @@ export function GoalSlots({ first }: { first: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(17,17,17,0.4)' },
-  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: '#141414', paddingTop: 10, paddingHorizontal: 20, gap: 16 },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
-  title: { fontFamily: fonts.medium, fontSize: 22, letterSpacing: -0.4, color: '#FFFFFF' },
-  sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  perks: { borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)', paddingVertical: 12, paddingHorizontal: 14, gap: 9 },
-  perk: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.85)' },
-  tick: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
-  cta: { height: 56, borderRadius: 999, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
-  fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: -6 },
-  notNow: { textAlign: 'center', fontFamily: fonts.medium, fontSize: 14, color: 'rgba(255,255,255,0.85)', textDecorationLine: 'underline' },
-  trade: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.55)' },
-  laneLabel: { fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.6)' },
-  laneWhen: { fontFamily: fonts.medium, fontSize: 13, color: '#FFFFFF', fontVariant: ['tabular-nums'] },
-  lane: { height: 26, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)' },
-  laneFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 },
-  plane: { position: 'absolute', top: -7, left: 0 },
-  bub: { alignSelf: 'flex-start', maxWidth: '86%', borderRadius: 16, borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.1)', paddingVertical: 9, paddingHorizontal: 12 },
-  bubMe: { alignSelf: 'flex-end', borderBottomLeftRadius: 16, borderBottomRightRadius: 5, backgroundColor: colors.lime },
-  bubText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: '#FFFFFF' },
-  knob: { position: 'absolute', top: -7, width: 20, height: 20, marginLeft: -10, borderRadius: 10, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  slot: { flex: 1, height: 84, borderRadius: 18, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 6 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: blackA(0.4) },
+    sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.solid, paddingTop: 10, paddingHorizontal: 20, gap: 16 },
+    grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: whiteA(0.2) },
+    title: { fontFamily: fonts.medium, fontSize: 22, letterSpacing: -0.4, color: colors.onSolid },
+    sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: whiteA(0.6), marginTop: 2 },
+    perks: { borderRadius: 20, backgroundColor: whiteA(0.06), paddingVertical: 12, paddingHorizontal: 14, gap: 9 },
+    perk: { fontFamily: fonts.regular, fontSize: 13, color: whiteA(0.85) },
+    tick: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
+    cta: { height: 56, borderRadius: 999, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
+    ctaText: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onAccent },
+    fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.5), marginTop: -6 },
+    notNow: { textAlign: 'center', fontFamily: fonts.medium, fontSize: 14, color: whiteA(0.85), textDecorationLine: 'underline' },
+    trade: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: whiteA(0.55) },
+    laneLabel: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.6) },
+    laneWhen: { fontFamily: fonts.medium, fontSize: 13, color: colors.onSolid, fontVariant: ['tabular-nums'] },
+    lane: { height: 26, borderRadius: 999, backgroundColor: whiteA(0.08) },
+    laneFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 },
+    plane: { position: 'absolute', top: -7, left: 0 },
+    bub: { alignSelf: 'flex-start', maxWidth: '86%', borderRadius: 16, borderBottomLeftRadius: 5, backgroundColor: whiteA(0.1), paddingVertical: 9, paddingHorizontal: 12 },
+    bubMe: { alignSelf: 'flex-end', borderBottomLeftRadius: 16, borderBottomRightRadius: 5, backgroundColor: colors.lime },
+    bubText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.onSolid },
+    knob: { position: 'absolute', top: -7, width: 20, height: 20, marginLeft: -10, borderRadius: 10, backgroundColor: colors.onSolid, alignItems: 'center', justifyContent: 'center' },
+    slot: { flex: 1, height: 84, borderRadius: 18, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 6 },
+  }),
+);

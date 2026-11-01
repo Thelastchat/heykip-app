@@ -4,7 +4,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 
 import { t } from '@/lib/i18n';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 /**
  * Sign with your finger. The signature is kept as a tiny SVG (a single path),
@@ -46,7 +46,9 @@ export function SignaturePad({ value, onChange, height = 84 }: { value: string |
   );
 }
 
-const styles = StyleSheet.create({
-  pad: { justifyContent: 'center', alignItems: 'center' },
-  placeholder: { fontFamily: fonts.hand, fontSize: 24, color: 'rgba(17,17,17,0.35)' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    pad: { justifyContent: 'center', alignItems: 'center' },
+    placeholder: { fontFamily: fonts.hand, fontSize: 24, color: inkA(0.35) },
+  }),
+);

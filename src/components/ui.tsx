@@ -1,19 +1,8 @@
 // Small shared building blocks so every screen uses the same type, buttons and cards.
 import type { ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type PressableProps,
-  type StyleProp,
-  type TextProps,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 
-import { colors, radius, shadow, type } from '@/theme';
+import { colors, radius, shadow, type, themed } from '@/theme';
 
 type Variant = keyof typeof type;
 
@@ -39,16 +28,11 @@ export function Button({ label, kind = 'primary', loading, style, disabled, ...r
       accessibilityRole="button"
       disabled={disabled || loading}
       {...rest}
-      style={({ pressed }) => [
-        styles.button,
-        primary ? styles.primary : styles.secondary,
-        (pressed || disabled) && { opacity: 0.7 },
-        style,
-      ]}>
+      style={({ pressed }) => [styles.button, primary ? styles.primary : styles.secondary, (pressed || disabled) && { opacity: 0.7 }, style]}>
       {loading ? (
-        <ActivityIndicator color={primary ? '#FFFFFF' : colors.ink} />
+        <ActivityIndicator color={primary ? colors.paper : colors.ink} />
       ) : (
-        <T variant="button" style={{ color: primary ? '#FFFFFF' : colors.ink }}>
+        <T variant="button" style={{ color: primary ? colors.paper : colors.ink }}>
           {label}
         </T>
       )}
@@ -60,9 +44,11 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  button: { height: 58, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  primary: { backgroundColor: colors.ink },
-  secondary: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.border },
-  card: { backgroundColor: '#FFFFFF', borderRadius: radius.card, padding: 16, ...shadow.card },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    button: { height: 58, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+    primary: { backgroundColor: colors.ink },
+    secondary: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border },
+    card: { backgroundColor: colors.paper, borderRadius: radius.card, padding: 16, ...shadow.card },
+  }),
+);

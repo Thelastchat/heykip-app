@@ -11,7 +11,7 @@ import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { funMinimum } from '@/lib/brain';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, parseDay, shortName } from '@/lib/setup/plan';
-import { colors, fonts, money, radius, shadow } from '@/theme';
+import { colors, fonts, money, radius, shadow, themed } from '@/theme';
 
 type Choice = { key: string; per?: number; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
 const PICK: Record<string, string> = { comfy: colors.lime, anyway: colors.lime, tight: colors.peach, keep: colors.peach, most: colors.peach, smaller: colors.sky, numbers: colors.sky };
@@ -196,7 +196,7 @@ function Choices() {
         </View>
         <View style={styles.bar}>
           {parts.map(([n, c], i) => (
-            <View key={i} style={{ flex: n, backgroundColor: c, borderRightWidth: i < parts.length - 1 ? 2 : 0, borderRightColor: '#FFFFFF' }} />
+            <View key={i} style={{ flex: n, backgroundColor: c, borderRightWidth: i < parts.length - 1 ? 2 : 0, borderRightColor: colors.paper }} />
           ))}
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, columnGap: 12 }}>
@@ -233,7 +233,7 @@ function Choices() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={{ fontFamily: fonts.semibold, fontSize: 16, color: colors.ink }}>{c.title}</Text>
                   {c.tag ? (
-                    <View style={[styles.tag, { backgroundColor: on ? '#FFFFFF' : (c.tagColor ?? colors.lime) }]}>
+                    <View style={[styles.tag, { backgroundColor: on ? colors.paper : (c.tagColor ?? colors.lime) }]}>
                       <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{c.tag}</Text>
                     </View>
                   ) : null}
@@ -253,22 +253,24 @@ function Choices() {
   );
 }
 
-const styles = StyleSheet.create({
-  where: { borderRadius: 20, backgroundColor: '#F8F6F4', paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
-  small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-  bar: { flexDirection: 'row', height: 14, borderRadius: radius.pill, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(17,17,17,0.08)' },
-  option: {
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: '#F8F6F4',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  optionOn: { borderColor: colors.ink },
-  radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
-  tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    where: { borderRadius: 20, backgroundColor: colors.card, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
+    bar: { flexDirection: 'row', height: 14, borderRadius: radius.pill, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(17,17,17,0.08)' },
+    option: {
+      borderRadius: 18,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      backgroundColor: colors.card,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      gap: 12,
+      alignItems: 'flex-start',
+    },
+    optionOn: { borderColor: colors.ink },
+    radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
+    tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
+  }),
+);

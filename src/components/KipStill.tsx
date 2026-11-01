@@ -2,12 +2,5 @@
 import { Image } from 'expo-image';
 
 export function KipStill({ size }: { size: number }) {
-  return (
-    <Image
-      source={require('@/assets/kip/kip-with-eyes.png')}
-      style={{ width: size, height: size }}
-      contentFit="contain"
-      accessibilityLabel="Kip"
-    />
-  );
+  return <Image source={require('@/assets/kip/kip-with-eyes.png')} style={{ width: size, height: size }} contentFit="contain" accessibilityLabel="Kip" />;
 }

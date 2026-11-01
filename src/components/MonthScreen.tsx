@@ -37,7 +37,7 @@ import { t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { shortDate } from '@/lib/setup/plan';
-import { colors, fonts, glow, money, radius } from '@/theme';
+import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -136,9 +136,9 @@ export function MonthScreen({
 
         {/* where every baht goes */}
         <RiseIn delay={90} style={styles.flowBar}>
-          <FlowPart flex={saving} color={colors.limeDeep} label={t('Saving')} amount={saving} delay={0} />
-          <FlowPart flex={bills} color={colors.ink} label={t('Bills')} amount={bills} delay={100} light />
-          <FlowPart flex={spending} color="rgba(255,255,255,0.78)" label={t('To spend')} amount={spending} delay={200} />
+          <FlowPart flex={saving} color={colors.limeDeep} label={t('Saving')} amount={saving} delay={0} kind="accent" />
+          <FlowPart flex={bills} color={colors.solid} label={t('Bills')} amount={bills} delay={100} kind="solid" />
+          <FlowPart flex={spending} color={glassA(0.78)} label={t('To spend')} amount={spending} delay={200} kind="plain" />
         </RiseIn>
         <Text style={styles.note}>{t('Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.')}</Text>
 
@@ -189,7 +189,7 @@ export function MonthScreen({
             <Row glyph={{ name: 'Other bills', tint: colors.sand }} title={t('Other bills')} sub={t('Kip’s guess — shrinks as you add real ones')} amount={`~${baht(month.bills.guess)}`} divider />
             <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={styles.addRow} accessibilityRole="button">
               <View style={styles.addDot}>
-                <Plus size={13} color="#FFFFFF" weight="bold" />
+                <Plus size={13} color={colors.paper} weight="bold" />
               </View>
               <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>{t('Add a bill · Netflix, phone, gym…')}</Text>
             </Pressable>
@@ -348,16 +348,16 @@ function tintFor(name: string) {
   return ({ house: colors.lavender, bolt: colors.lime, drop: colors.sky, phone: colors.peach, wifi: colors.sage, play: colors.pink, receipt: colors.sand } as const)[g];
 }
 
-function FlowPart({ flex, color, label, amount, delay, light }: { flex: number; color: string; label: string; amount: number; delay: number; light?: boolean }) {
+function FlowPart({ flex, color, label, amount, delay, kind }: { flex: number; color: string; label: string; amount: number; delay: number; kind: 'accent' | 'solid' | 'plain' }) {
   if (flex <= 0) return null;
   return (
     <Animated.View
       entering={FadeInLeft.delay(300 + delay).duration(700)}
       style={{ flex, backgroundColor: color, justifyContent: 'flex-end', paddingHorizontal: 8, paddingVertical: 7, overflow: 'hidden' }}>
-      <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: light ? '#FFFFFF' : colors.ink }} numberOfLines={1}>
+      <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: kind === 'solid' ? colors.onSolid : kind === 'accent' ? colors.onAccent : colors.ink }} numberOfLines={1}>
         {label}
       </Text>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 10, color: light ? 'rgba(255,255,255,0.7)' : 'rgba(17,17,17,0.6)' }} numberOfLines={1}>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 10, color: kind === 'solid' ? whiteA(0.7) : kind === 'accent' ? blackA(0.6) : inkA(0.6) }} numberOfLines={1}>
         {baht(amount)}
       </Text>
     </Animated.View>
@@ -410,7 +410,7 @@ function Row({
 function MiniLock() {
   return (
     <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
-      <Lock size={9} color="#FFFFFF" weight="fill" />
+      <Lock size={9} color={colors.paper} weight="fill" />
     </View>
   );
 }
@@ -420,7 +420,7 @@ function Section({ n, title, right }: { n: number; title: string; right: string 
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 28, paddingBottom: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={styles.nDot}>
-          <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: '#FFFFFF' }}>{n}</Text>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.paper }}>{n}</Text>
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -578,7 +578,7 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
         {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', t('Gym'), t('Phone instalment')].map((n) => (
           <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky, borderColor: colors.ink }]} accessibilityRole="button">
-            <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: colors.ink }}>{n}</Text>
+            <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: name === n ? colors.onAccent : colors.ink }}>{n}</Text>
           </Pressable>
         ))}
       </View>
@@ -665,12 +665,12 @@ function Option({ title, sub, on, tag, onPress, color = colors.lime }: { title: 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>{title}</Text>
           {tag ? (
-            <View style={[styles.tag, on && { backgroundColor: '#FFFFFF' }]}>
+            <View style={[styles.tag, on && { backgroundColor: colors.paper }]}>
               <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{tag}</Text>
             </View>
           ) : null}
         </View>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: on ? 'rgba(17,17,17,0.7)' : colors.muted }} numberOfLines={3}>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: on ? inkA(0.7) : colors.muted }} numberOfLines={3}>
           {sub}
         </Text>
       </View>
@@ -679,66 +679,68 @@ function Option({ title, sub, on, tag, onPress, color = colors.lime }: { title: 
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  muted: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center' },
-  stylePill: { height: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  big: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 52, color: colors.ink, fontVariant: ['tabular-nums'], marginTop: 4 },
-  flowBar: { flexDirection: 'row', gap: 3, height: 54, marginHorizontal: 18, marginTop: 18, borderRadius: 18, overflow: 'hidden' },
-  note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 22, marginTop: 10 },
-  sectionTitle: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  nDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  cardWrap: { paddingHorizontal: 18 },
-  card: { paddingVertical: 4, paddingHorizontal: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  divider: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  rowName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
-  amount: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-  gico: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  xBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  addDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  editPill: { height: 30, paddingHorizontal: 10, borderRadius: 999, backgroundColor: glow.control, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  leftovers: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: 'rgba(247,244,247,0.88)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.9)',
-  },
+const styles = themed(() =>
+  StyleSheet.create({
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+    muted: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center' },
+    stylePill: { height: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    heroLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    big: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 52, color: colors.ink, fontVariant: ['tabular-nums'], marginTop: 4 },
+    flowBar: { flexDirection: 'row', gap: 3, height: 54, marginHorizontal: 18, marginTop: 18, borderRadius: 18, overflow: 'hidden' },
+    note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 22, marginTop: 10 },
+    sectionTitle: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+    nDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    cardWrap: { paddingHorizontal: 18 },
+    card: { paddingVertical: 4, paddingHorizontal: 16 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    divider: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    rowName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
+    amount: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    gico: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    xBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
+    addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    addDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    editPill: { height: 30, paddingHorizontal: 10, borderRadius: 999, backgroundColor: glow.control, flexDirection: 'row', alignItems: 'center', gap: 5 },
+    leftovers: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    footer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      backgroundColor: colors.sheet,
+      borderTopWidth: 1,
+      borderTopColor: colors.line,
+    },
 
-  scrim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.38)' },
-  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.15)' },
-  option: {
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: colors.grey,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  optionOn: { borderColor: colors.ink },
-  radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: '#C9C9C2' },
-  tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },
-  check: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: '#C9C9C2', alignItems: 'center', justifyContent: 'center' },
-  moneyField: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'baseline' },
-  moneyText: { fontFamily: fonts.bold, fontSize: 34, letterSpacing: -1, color: colors.ink, fontVariant: ['tabular-nums'] },
-  step: { flex: 1, height: 40, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
-  takeBox: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 6, paddingHorizontal: 14 },
-  quickChip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
-  field: { height: 50, borderRadius: 14, backgroundColor: colors.grey, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  fieldText: { fontFamily: fonts.semibold, fontSize: 18, color: colors.ink, fontVariant: ['tabular-nums'] },
-  impact: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.ink, paddingVertical: 2 },
-  was: { fontFamily: fonts.regular, fontSize: 13, color: '#A9A9A1', textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
-});
+    scrim: { flex: 1, backgroundColor: inkA(0.38) },
+    sheet: { backgroundColor: colors.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
+    grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: inkA(0.15) },
+    option: {
+      borderRadius: 18,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      backgroundColor: colors.grey,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    optionOn: { borderColor: colors.ink },
+    radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
+    tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, backgroundColor: colors.lime, justifyContent: 'center' },
+    check: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: colors.faint, alignItems: 'center', justifyContent: 'center' },
+    moneyField: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'baseline' },
+    moneyText: { fontFamily: fonts.bold, fontSize: 34, letterSpacing: -1, color: colors.ink, fontVariant: ['tabular-nums'] },
+    step: { flex: 1, height: 40, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
+    takeBox: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 6, paddingHorizontal: 14 },
+    quickChip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
+    field: { height: 50, borderRadius: 14, backgroundColor: colors.grey, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+    fieldText: { fontFamily: fonts.semibold, fontSize: 18, color: colors.ink, fontVariant: ['tabular-nums'] },
+    impact: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.ink, paddingVertical: 2 },
+    was: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+  }),
+);

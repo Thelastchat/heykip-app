@@ -5,14 +5,7 @@ import { KipStill } from './KipStill';
 import type { KipProps } from './kip/KipJelly';
 
 export function Kip(props: KipProps) {
-  return (
-    <WithSkiaWeb
-      getComponent={() => import('./kip/KipJelly')}
-      fallback={<KipStill size={props.size ?? 160} />}
-      opts={{ locateFile: () => '/canvaskit.wasm' }}
-      componentProps={props}
-    />
-  );
+  return <WithSkiaWeb getComponent={() => import('./kip/KipJelly')} fallback={<KipStill size={props.size ?? 160} />} opts={{ locateFile: () => '/canvaskit.wasm' }} componentProps={props} />;
 }
 
 export type { KipProps } from './kip/KipJelly';

@@ -9,7 +9,7 @@ import { SaveButton, Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { rich, t } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 /** True when Kip may read for this person right now. */
 export const aiAllowed = (p: { ai_consent_at: string | null; ai_off: boolean } | null) => !!p?.ai_consent_at && !p.ai_off;
@@ -105,11 +105,13 @@ export function PrivacyLink({ onPress }: { onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  line: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  num: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(17,17,17,0.06)', alignItems: 'center', justifyContent: 'center' },
-  numText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  text: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
-  b: { fontFamily: fonts.medium },
-  fine: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, textAlign: 'center', marginBottom: 4 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    line: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+    num: { width: 26, height: 26, borderRadius: 13, backgroundColor: inkA(0.06), alignItems: 'center', justifyContent: 'center' },
+    numText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    text: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
+    b: { fontFamily: fonts.medium },
+    fine: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, textAlign: 'center', marginBottom: 4 },
+  }),
+);

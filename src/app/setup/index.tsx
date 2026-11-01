@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { useSetup } from '@/lib/setup/draft';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 // Setup 0 · "Hi, I'm Kip." The first screen anyone sees.
 export default function SetupIntro() {
@@ -66,8 +66,10 @@ function Feature({ icon, title, sub }: { icon: Icon3D; title: string; sub: strin
   );
 }
 
-const styles = StyleSheet.create({
-  lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.muted, textAlign: 'center' },
-  card: { gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  note: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.muted, textAlign: 'center' },
+    card: { gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
+    note: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+  }),
+);

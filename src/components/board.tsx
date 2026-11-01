@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-import { colors } from '@/theme';
+import { colors, glassA, themed } from '@/theme';
 
 /** A glossy push pin. Goal 1 is always orange, 2 lavender, 3 sky. */
 export function Pin({ color, size = 18, style }: { color: string; size?: number; style?: StyleProp<ViewStyle> }) {
@@ -103,10 +103,12 @@ export function CorkBoard({ height, children, style }: { height: number; childre
   );
 }
 
-const styles = StyleSheet.create({
-  polaroid: { backgroundColor: '#FFFFFF', borderRadius: 5, boxShadow: '0 1px 2px rgba(0,0,0,0.10), 0 10px 22px rgba(60,40,20,0.18)' },
-  noPhoto: { borderRadius: 2, backgroundColor: '#EFE6DA', alignItems: 'center', justifyContent: 'center' },
-  postIt: { backgroundColor: colors.lime, paddingTop: 16, paddingHorizontal: 10, paddingBottom: 10, gap: 3, boxShadow: '0 8px 16px rgba(60,40,20,0.16)' },
-  tape: { position: 'absolute', top: -7, left: '50%', marginLeft: -20, width: 40, height: 14, backgroundColor: 'rgba(255,255,255,0.6)', transform: [{ rotate: '-5deg' }] },
-  board: { borderRadius: 26, overflow: 'hidden', backgroundColor: '#E9DCC9', boxShadow: 'inset 0 0 0 1px rgba(122,84,48,0.10)' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    polaroid: { backgroundColor: colors.paper, borderRadius: 5, boxShadow: '0 1px 2px rgba(0,0,0,0.10), 0 10px 22px rgba(60,40,20,0.18)' },
+    noPhoto: { borderRadius: 2, backgroundColor: '#EFE6DA', alignItems: 'center', justifyContent: 'center' },
+    postIt: { backgroundColor: colors.lime, paddingTop: 16, paddingHorizontal: 10, paddingBottom: 10, gap: 3, boxShadow: '0 8px 16px rgba(60,40,20,0.16)' },
+    tape: { position: 'absolute', top: -7, left: '50%', marginLeft: -20, width: 40, height: 14, backgroundColor: glassA(0.6), transform: [{ rotate: '-5deg' }] },
+    board: { borderRadius: 26, overflow: 'hidden', backgroundColor: '#E9DCC9', boxShadow: 'inset 0 0 0 1px rgba(122,84,48,0.10)' },
+  }),
+);

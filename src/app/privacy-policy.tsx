@@ -8,7 +8,7 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { monthLong, shownYear, t } from '@/lib/i18n';
 import { POLICY_UPDATED, PRIVACY_EMAIL } from '@/lib/privacy';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 export default function PrivacyPolicy() {
   const insets = useSafeAreaInsets();
@@ -80,9 +80,11 @@ export default function PrivacyPolicy() {
   );
 }
 
-const styles = StyleSheet.create({
-  updated: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center' },
-  h: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  dot: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
-  p: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    updated: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center' },
+    h: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+    dot: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
+    p: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
+  }),
+);

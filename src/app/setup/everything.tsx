@@ -15,7 +15,7 @@ import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { fullDate, LEAKS, makePlan, monthYear, monthsFromNow, parseDay } from '@/lib/setup/plan';
 import { PAYDAY } from '@/lib/setup/rules';
-import { colors, fonts, money } from '@/theme';
+import { colors, fonts, money, glassA, themed } from '@/theme';
 
 // Everything the person told Kip, what Kip found in it, and an Edit on each part.
 // Coming back from an edit, Kip redoes the plan (a short "updating" moment) and says so.
@@ -136,7 +136,7 @@ export default function SetupEverything() {
       </View>
 
       {updating ? (
-        <View style={[styles.banner, { backgroundColor: '#F8F6F4' }]}>
+        <View style={[styles.banner, { backgroundColor: colors.card }]}>
           <Kip mood="think" size={40} />
           <Text style={styles.bannerText}>{t('Updating your plan with the new numbers…')}</Text>
         </View>
@@ -238,19 +238,21 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  h1: { fontFamily: fonts.semibold, fontSize: 30, letterSpacing: -0.7, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
-  banner: { borderRadius: 18, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bannerText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-  card: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingHorizontal: 14, paddingVertical: 10, gap: 2 },
-  head: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingVertical: 4 },
-  edit: { height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', justifyContent: 'center' },
-  editText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
-  finding: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 7 },
-  fTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
-  fSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: '#2E2E2A' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, paddingVertical: 6 },
-  k: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
-  v: { flexShrink: 1, textAlign: 'right', fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    h1: { fontFamily: fonts.semibold, fontSize: 30, letterSpacing: -0.7, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
+    banner: { borderRadius: 18, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    bannerText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+    card: { borderRadius: 18, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 10, gap: 2 },
+    head: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingVertical: 4 },
+    edit: { height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
+    editText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
+    finding: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 7 },
+    fTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+    fSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: '#2E2E2A' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, paddingVertical: 6 },
+    k: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
+    v: { flexShrink: 1, textAlign: 'right', fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
+  }),
+);

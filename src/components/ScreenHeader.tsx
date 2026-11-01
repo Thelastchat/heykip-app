@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { T } from '@/components/ui';
 import { Glass } from '@/components/glow/Glass';
 import { t } from '@/lib/i18n';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 // Round white back/close button + centred title + optional right slot, as on the canvas.
 export function ScreenHeader({ title, close, right }: { title?: string; close?: boolean; right?: ReactNode }) {
@@ -23,7 +23,9 @@ export function ScreenHeader({ title, close, right }: { title?: string; close?: 
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  round: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+    round: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  }),
+);

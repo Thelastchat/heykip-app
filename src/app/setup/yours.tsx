@@ -15,7 +15,7 @@ import { getLang, rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { makePlan, monthYear, type Plan } from '@/lib/setup/plan';
-import { colors, fonts, money, shadow } from '@/theme';
+import { colors, fonts, money, shadow, inkA, themed } from '@/theme';
 
 const names = (): Record<string, string> => ({
   rent: t('Rent'),
@@ -368,7 +368,7 @@ export default function SetupYours() {
         <Text style={styles.section}>{t('HOW LOCKS WORK')}</Text>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
           <View style={[styles.lockBtn, { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-            <Lock size={14} color="#FFFFFF" weight="fill" />
+            <Lock size={14} color={colors.paper} weight="fill" />
           </View>
           <Text
             style={{
@@ -479,8 +479,8 @@ function Note({
           }}>
           {note.blocked.locks.goal && (
             <Pressable onPress={() => onUnlock('goal')} style={[styles.unlock, { backgroundColor: colors.ink }]} accessibilityRole="button">
-              <LockOpen size={13} color="#FFFFFF" weight="bold" />
-              <Text style={[styles.unlockText, { color: '#FFFFFF' }]}>{t('Unlock {short}', { short })}</Text>
+              <LockOpen size={13} color={colors.paper} weight="bold" />
+              <Text style={[styles.unlockText, { color: colors.paper }]}>{t('Unlock {short}', { short })}</Text>
             </Pressable>
           )}
           {note.blocked.locks.fun && (
@@ -601,8 +601,8 @@ function LockPill({ on, onPress, label }: { on: boolean; onPress: () => void; la
       accessibilityState={{ checked: on }}
       accessibilityLabel={label}
       style={[styles.lockPill, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-      {on ? <Lock size={13} color="#FFFFFF" weight="fill" /> : <LockOpen size={13} color={colors.ink} weight="bold" />}
-      <Text style={[styles.unlockText, on && { color: '#FFFFFF' }]}>{on ? t('Locked') : t('Lock')}</Text>
+      {on ? <Lock size={13} color={colors.paper} weight="fill" /> : <LockOpen size={13} color={colors.ink} weight="bold" />}
+      <Text style={[styles.unlockText, on && { color: colors.paper }]}>{on ? t('Locked') : t('Lock')}</Text>
     </Pressable>
   );
 }
@@ -616,155 +616,157 @@ function LockButton({ on, onPress }: { on: boolean; onPress: () => void }) {
       accessibilityState={{ checked: on }}
       accessibilityLabel={on ? t('Unlock fun money') : t('Lock fun money')}
       style={[styles.lockBtn, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-      {on ? <Lock size={14} color="#FFFFFF" weight="fill" /> : <LockOpen size={14} color={colors.ink} weight="bold" />}
+      {on ? <Lock size={14} color={colors.paper} weight="fill" /> : <LockOpen size={14} color={colors.ink} weight="bold" />}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  lockPill: {
-    height: 30,
-    paddingLeft: 9,
-    paddingRight: 11,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: 'rgba(17,17,17,0.18)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  lockBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: 'rgba(17,17,17,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -4,
-  },
-  unlock: {
-    height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  unlockText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
-  howLocks: {
-    borderRadius: 16,
-    backgroundColor: '#F8F6F4',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 8,
-  },
-  sub: {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.muted,
-    marginTop: -8,
-  },
-  goalBox: {
-    borderRadius: 20,
-    backgroundColor: colors.peach,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  tiny: {
-    fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.muted,
-  },
-  section: {
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: colors.muted,
-  },
-  card: {
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 2,
-    ...shadow.card,
-  },
-  row: {
-    paddingVertical: 9,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(17,17,17,0.06)',
-  },
-  amount: {
-    height: 36,
-    width: 104,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: colors.grey,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  amountInput: {
-    flex: 1,
-    minWidth: 0,
-    width: '100%',
-    textAlign: 'right',
-    padding: 0,
-  },
-  amountText: {
-    fontFamily: fonts.bold,
-    fontSize: 15,
-    color: colors.ink,
-    fontVariant: ['tabular-nums'],
-  },
-  note: { gap: 8, borderRadius: 14, backgroundColor: '#F8F6F4', padding: 10 },
-  dest: {
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: 'rgba(17,17,17,0.12)',
-    justifyContent: 'center',
-  },
-  result: {
-    borderRadius: 18,
-    backgroundColor: colors.lime,
-    borderWidth: 1,
-    borderColor: colors.ink,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  resultLine: {
-    fontFamily: fonts.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.ink,
-  },
-  heads: {
-    borderRadius: 16,
-    backgroundColor: colors.sky,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 4,
-  },
-  foot: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.muted,
-    paddingHorizontal: 4,
-  },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    lockPill: {
+      height: 30,
+      paddingLeft: 9,
+      paddingRight: 11,
+      borderRadius: 999,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: inkA(0.18),
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    lockBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: inkA(0.18),
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: -4,
+    },
+    unlock: {
+      height: 32,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      backgroundColor: colors.paper,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    unlockText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
+    howLocks: {
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      gap: 8,
+    },
+    sub: {
+      fontFamily: fonts.regular,
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.muted,
+      marginTop: -8,
+    },
+    goalBox: {
+      borderRadius: 20,
+      backgroundColor: colors.peach,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 6,
+    },
+    tiny: {
+      fontFamily: fonts.regular,
+      fontSize: 11,
+      lineHeight: 15,
+      color: colors.muted,
+    },
+    section: {
+      fontFamily: fonts.bold,
+      fontSize: 11,
+      letterSpacing: 0.5,
+      color: colors.muted,
+    },
+    card: {
+      borderRadius: 18,
+      backgroundColor: colors.paper,
+      paddingHorizontal: 14,
+      paddingVertical: 2,
+      ...shadow.card,
+    },
+    row: {
+      paddingVertical: 9,
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: inkA(0.06),
+    },
+    amount: {
+      height: 36,
+      width: 104,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: colors.grey,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+    amountInput: {
+      flex: 1,
+      minWidth: 0,
+      width: '100%',
+      textAlign: 'right',
+      padding: 0,
+    },
+    amountText: {
+      fontFamily: fonts.bold,
+      fontSize: 15,
+      color: colors.ink,
+      fontVariant: ['tabular-nums'],
+    },
+    note: { gap: 8, borderRadius: 14, backgroundColor: colors.card, padding: 10 },
+    dest: {
+      height: 30,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: inkA(0.12),
+      justifyContent: 'center',
+    },
+    result: {
+      borderRadius: 18,
+      backgroundColor: colors.lime,
+      borderWidth: 1,
+      borderColor: colors.ink,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 6,
+    },
+    resultLine: {
+      fontFamily: fonts.regular,
+      fontSize: 15,
+      lineHeight: 21,
+      color: colors.ink,
+    },
+    heads: {
+      borderRadius: 16,
+      backgroundColor: colors.sky,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      gap: 4,
+    },
+    foot: {
+      fontFamily: fonts.regular,
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.muted,
+      paddingHorizontal: 4,
+    },
+  }),
+);

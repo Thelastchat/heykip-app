@@ -70,6 +70,11 @@ const phoneLang = (): Lang => {
 // Changing language redraws the app from the start; this remembers which screen to come back to.
 let returnTo: string | null = null;
 /** The screen to reopen after a language change (read once). */
+/** After the app redraws (language or look changed), go back to this screen. */
+export function setReturnTo(path: string | null) {
+  returnTo = path;
+}
+
 export function takeReturnTo() {
   const r = returnTo;
   returnTo = null;

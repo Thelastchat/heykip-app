@@ -9,7 +9,7 @@ import { getLang, rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { basicsDone, plannedIncome, useSetup, type IncomeType, type SetupDraft } from '@/lib/setup/draft';
 import { ordinal } from '@/lib/setup/plan';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 // Setup 1/6 · How does money come in?
 export default function SetupBasics() {
@@ -129,11 +129,13 @@ function PaydayTile({ value, onChange }: { value: number | null; onChange: (n: n
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
-  payday: { flex: 1, borderRadius: 18, backgroundColor: colors.roseBeige, paddingVertical: 12, paddingHorizontal: 16 },
-  label: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  big: { fontFamily: fonts.bold, fontSize: 26, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
-  hint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
-  living: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingVertical: 12, paddingHorizontal: 16, gap: 6 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', gap: 8 },
+    payday: { flex: 1, borderRadius: 18, backgroundColor: colors.roseBeige, paddingVertical: 12, paddingHorizontal: 16 },
+    label: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    big: { fontFamily: fonts.bold, fontSize: 26, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
+    hint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingHorizontal: 4 },
+    living: { borderRadius: 18, backgroundColor: colors.card, paddingVertical: 12, paddingHorizontal: 16, gap: 6 },
+  }),
+);

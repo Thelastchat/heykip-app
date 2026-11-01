@@ -13,7 +13,7 @@ import { rich, t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 export type MoneyFrom = 'bonus' | 'leftover' | 'side' | 'gift';
 const FROM: { key: MoneyFrom; label: string; icon: Icon3D }[] = [
@@ -189,7 +189,7 @@ export function PutMoneySheet({
                 </Text>
                 {goal.target > 0 && (
                   <>
-                    <Bar label={t('Before')} pct={before} color="rgba(17,17,17,0.25)" />
+                    <Bar label={t('Before')} pct={before} color={inkA(0.25)} />
                     <Bar label={t('After')} pct={after} color={colors.limeDeep} />
                   </>
                 )}
@@ -214,41 +214,43 @@ function Bar({ label, pct, color }: { label: string; pct: number; color: string 
         <Text style={styles.small}>{label}</Text>
         <Text style={[styles.small, { color: colors.ink, fontFamily: fonts.medium }]}>{Math.round(pct)}%</Text>
       </View>
-      <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(17,17,17,0.07)' }}>
+      <View style={{ height: 10, borderRadius: 5, backgroundColor: inkA(0.07) }}>
         <View style={{ width: `${Math.max(pct, 1.5)}%`, height: 10, borderRadius: 5, backgroundColor: color }} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  dim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.3)' },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    backgroundColor: 'rgba(253,251,247,0.97)',
-    paddingTop: 10,
-    paddingHorizontal: 18,
-    gap: 14,
-  },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.15)' },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: -0.4, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
-  amount: { fontFamily: fonts.regular, fontSize: 56, letterSpacing: -2.4, color: colors.ink, fontVariant: ['tabular-nums'], padding: 0 },
-  amountB: { fontFamily: fonts.regular, fontSize: 30, color: colors.ink },
-  pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  on: { borderWidth: 1.5, borderColor: colors.ink },
-  label: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, marginBottom: -6 },
-  chip: { height: 40, paddingLeft: 5, paddingRight: 13, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  moves: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  movesText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-  small: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  saveText: { fontFamily: fonts.medium, fontSize: 16, color: '#FFFFFF' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    dim: { flex: 1, backgroundColor: inkA(0.3) },
+    sheet: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      backgroundColor: colors.sheet,
+      paddingTop: 10,
+      paddingHorizontal: 18,
+      gap: 14,
+    },
+    grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: inkA(0.15) },
+    title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: -0.4, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+    amount: { fontFamily: fonts.regular, fontSize: 56, letterSpacing: -2.4, color: colors.ink, fontVariant: ['tabular-nums'], padding: 0 },
+    amountB: { fontFamily: fonts.regular, fontSize: 30, color: colors.ink },
+    pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+    pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    on: { borderWidth: 1.5, borderColor: colors.ink },
+    label: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, marginBottom: -6 },
+    chip: { height: 40, paddingLeft: 5, paddingRight: 13, flexDirection: 'row', alignItems: 'center', gap: 4 },
+    moves: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    movesText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+    small: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    saveText: { fontFamily: fonts.medium, fontSize: 16, color: colors.paper },
+  }),
+);

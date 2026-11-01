@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
 import { monthShort, t } from '@/lib/i18n';
 import { isoDay, parseDay, shortDate } from '@/lib/setup/plan';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, inkA, themed } from '@/theme';
 
-import { SmallTile, smallValue } from './kit';
+import { SmallTile, smallValueStyle } from './kit';
 
 /** "By when?" — a tile that opens the system date picker. Only future dates. */
 export function DateTile({ label, value, onChange, style, emptyLabel }: { label: string; value: string | null; onChange: (iso: string) => void; style?: StyleProp<ViewStyle>; emptyLabel?: string }) {
@@ -22,7 +22,7 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
   if (Platform.OS === 'web') {
     return (
       <SmallTile label={label} style={style}>
-        <TextInput value={value ?? ''} onChangeText={(t) => /^\d{4}-\d{2}-\d{2}$/.test(t) && onChange(t)} placeholder="2026-12-19" placeholderTextColor={colors.faint} style={smallValue} />
+        <TextInput value={value ?? ''} onChangeText={(t) => /^\d{4}-\d{2}-\d{2}$/.test(t) && onChange(t)} placeholder="2026-12-19" placeholderTextColor={colors.faint} style={smallValueStyle()} />
       </SmallTile>
     );
   }
@@ -39,7 +39,7 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
   return (
     <>
       <SmallTile label={label} style={style} onPress={show}>
-        <Text style={[smallValue, !value && !emptyLabel && { color: colors.faint }]} numberOfLines={1}>
+        <Text style={[smallValueStyle(), !value && !emptyLabel && { color: colors.faint }]} numberOfLines={1}>
           {value ? shortDate(parseDay(value)) : (emptyLabel ?? `19 ${monthShort(11)}`)}
         </Text>
       </SmallTile>
@@ -61,8 +61,10 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
   );
 }
 
-const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.25)' },
-  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: radius.cardLg, borderTopRightRadius: radius.cardLg, paddingTop: 18, paddingHorizontal: 20, gap: 8 },
-  sheetTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    scrim: { flex: 1, backgroundColor: inkA(0.25) },
+    sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radius.cardLg, borderTopRightRadius: radius.cardLg, paddingTop: 18, paddingHorizontal: 20, gap: 8 },
+    sheetTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, textAlign: 'center' },
+  }),
+);

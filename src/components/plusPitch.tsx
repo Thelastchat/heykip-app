@@ -9,7 +9,7 @@ import { billsTotal, dailyOf, savingTotal, spendingTotal, STYLES, type MonthBudg
 import { rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { monthYear, monthsFromNow, ordinal } from '@/lib/setup/plan';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, whiteA } from '@/theme';
 
 export type Pitch = { title: string; sub: string; body?: ReactNode };
 
@@ -67,7 +67,7 @@ export function plusPitch(month: MonthBudget | null, goalShort: string, funLeft:
             { label: t('Bills'), amount: billsTotal(month), color: '#3A3A3A' },
             { label: goalShort, amount: month.goal.amount + month.goalExtra, color: colors.limeDeep, light: true },
             { label: t('Safety net'), amount: month.safety.amount, color: colors.sage, light: true },
-            { label: t('To spend'), amount: spendingTotal(month), color: 'rgba(255,255,255,0.88)', light: true },
+            { label: t('To spend'), amount: spendingTotal(month), color: whiteA(0.88), light: true },
           ]}
           note={
             month.payday

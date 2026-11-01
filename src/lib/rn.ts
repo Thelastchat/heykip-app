@@ -19,13 +19,5 @@ export {
   View,
   useWindowDimensions,
 } from 'react-native';
-export type {
-  ImageSourcePropType,
-  PressableProps,
-  StyleProp,
-  TextInputProps,
-  TextProps,
-  TextStyle,
-  ViewStyle,
-} from 'react-native';
+export type { ImageSourcePropType, PressableProps, StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
 export { Text, TextInput } from './thaiText';

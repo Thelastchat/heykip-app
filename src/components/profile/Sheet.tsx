@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 export function Sheet({ open, onClose, title, sub, children }: { open: boolean; onClose: () => void; title: string; sub?: string; children: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -87,33 +87,35 @@ export function SaveButton({ label, onPress, disabled, danger }: { label: string
   );
 }
 
-export const sheet = StyleSheet.create({
-  dim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.3)' },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: '92%',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    backgroundColor: 'rgba(253,251,247,0.97)',
-    paddingTop: 10,
-    paddingHorizontal: 18,
-    gap: 12,
-  },
-  grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.15)' },
-  title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: -0.4, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
-  amount: { fontFamily: fonts.regular, fontSize: 54, letterSpacing: -2.2, color: colors.ink, fontVariant: ['tabular-nums'], padding: 0 },
-  amountB: { fontFamily: fonts.regular, fontSize: 28, color: colors.muted, marginRight: 2 },
-  pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  on: { borderWidth: 1.5, borderColor: colors.ink },
-  deltaNow: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
-  deltaWas: { fontFamily: fonts.regular, color: colors.faint, textDecorationLine: 'line-through' },
-  save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  saveText: { fontFamily: fonts.medium, fontSize: 16, color: '#FFFFFF' },
-  field: { fontFamily: fonts.regular, fontSize: 17, color: colors.ink, height: 52, paddingHorizontal: 16 },
-});
+export const sheet = themed(() =>
+  StyleSheet.create({
+    dim: { flex: 1, backgroundColor: inkA(0.3) },
+    sheet: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      maxHeight: '92%',
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      backgroundColor: colors.sheet,
+      paddingTop: 10,
+      paddingHorizontal: 18,
+      gap: 12,
+    },
+    grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: inkA(0.15) },
+    title: { fontFamily: fonts.medium, fontSize: 21, letterSpacing: -0.4, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
+    amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+    amount: { fontFamily: fonts.regular, fontSize: 54, letterSpacing: -2.2, color: colors.ink, fontVariant: ['tabular-nums'], padding: 0 },
+    amountB: { fontFamily: fonts.regular, fontSize: 28, color: colors.muted, marginRight: 2 },
+    pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+    pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    on: { borderWidth: 1.5, borderColor: colors.ink },
+    deltaNow: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
+    deltaWas: { fontFamily: fonts.regular, color: colors.faint, textDecorationLine: 'line-through' },
+    save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    saveText: { fontFamily: fonts.medium, fontSize: 16, color: colors.paper },
+    field: { fontFamily: fonts.regular, fontSize: 17, color: colors.ink, height: 52, paddingHorizontal: 16 },
+  }),
+);

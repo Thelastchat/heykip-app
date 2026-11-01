@@ -91,12 +91,7 @@ export default function KipJelly({ mood = 'idle', size = 160, style }: KipProps)
   });
 
   return (
-    <View
-      style={[{ width: size, height: size }, style]}
-      onTouchStart={() => pokes.set(pokes.get() + 1)}
-      accessible
-      accessibilityRole="image"
-      accessibilityLabel="Kip">
+    <View style={[{ width: size, height: size }, style]} onTouchStart={() => pokes.set(pokes.get() + 1)} accessible accessibilityRole="image" accessibilityLabel="Kip">
       <View pointerEvents="none" style={{ position: 'absolute', left: -inset, top: -inset }}>
         <Canvas style={{ width: C, height: C }}>
           {image && (
@@ -113,14 +108,7 @@ export default function KipJelly({ mood = 'idle', size = 160, style }: KipProps)
 }
 
 /** Pose + eyes → the shader's uniforms (minus placement, which depends on the canvas). */
-function shaderInputs(
-  pose: Pose,
-  t: number,
-  amp: number,
-  e: { w: number; h: number; top: number; dx: number; dy: number },
-  blink: number,
-  happy: boolean,
-) {
+function shaderInputs(pose: Pose, t: number, amp: number, e: { w: number; h: number; top: number; dx: number; dy: number }, blink: number, happy: boolean) {
   'worklet';
   return {
     sx: pose.sx,
@@ -135,4 +123,3 @@ function shaderInputs(
     happy: happy ? 1 : 0,
   };
 }
-

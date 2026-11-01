@@ -14,7 +14,7 @@ import { SaveButton, Sheet } from '@/components/profile/Sheet';
 import { rich, t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 export type OverInfo = {
   spentToday: number;
@@ -260,16 +260,18 @@ function Change({ icon, title, sub, from, to, warn, line }: { icon: Icon3D; titl
   );
 }
 
-const styles = StyleSheet.create({
-  kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  bub: { padding: 12, paddingHorizontal: 14, borderTopLeftRadius: 6 },
-  say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
-  b: { fontFamily: fonts.semibold },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.07)' },
-  title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-  from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
-  to: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-  link: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center', textDecorationLine: 'underline', paddingVertical: 4 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    bub: { padding: 12, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+    b: { fontFamily: fonts.semibold },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.07) },
+    title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    to: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    link: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center', textDecorationLine: 'underline', paddingVertical: 4 },
+  }),
+);

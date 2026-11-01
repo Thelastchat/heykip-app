@@ -24,7 +24,7 @@ import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat 
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 type Entry = { id: string; kind: 'spend' | 'income'; amount: number; note: string | null; occurred_at: string; source: string; cat: string };
 
@@ -284,8 +284,8 @@ function Chip({ icon, label, amount, on, onPress, inn }: { icon?: keyof typeof I
     <Squish onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}>
       <Glass radius={999} tint={on ? colors.ink : undefined} innerStyle={[styles.chip, !icon && { paddingLeft: 14 }]}>
         {icon && <Image source={ICON3D[icon]} style={{ width: 26, height: 26 }} contentFit="contain" />}
-        <Text style={[styles.chipText, on && { color: '#FFFFFF' }]}>{label}</Text>
-        {amount ? <Text style={[styles.chipAmt, inn && !on && { color: colors.lavenderText }, on && { color: '#FFFFFF' }]}>{amount}</Text> : null}
+        <Text style={[styles.chipText, on && { color: colors.paper }]}>{label}</Text>
+        {amount ? <Text style={[styles.chipAmt, inn && !on && { color: colors.lavenderText }, on && { color: colors.paper }]}>{amount}</Text> : null}
       </Glass>
     </Squish>
   );
@@ -343,33 +343,35 @@ function Row({ entry, first, onDelete, onPress }: { entry: Entry; first: boolean
   );
 }
 
-const styles = StyleSheet.create({
-  switcher: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  arrow: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  month: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },
-  range: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2 },
-  sum: { padding: 16, gap: 12 },
-  sumRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
-  big: { fontFamily: fonts.medium, fontSize: 34, letterSpacing: -1.2, color: colors.ink, fontVariant: ['tabular-nums'] },
-  in: { fontFamily: fonts.medium, fontSize: 19, color: colors.lavenderText, fontVariant: ['tabular-nums'] },
-  bar: { height: 8, borderRadius: 9, backgroundColor: 'rgba(17,17,17,0.08)', overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 9, backgroundColor: colors.ink },
-  chip: { height: 38, paddingLeft: 6, paddingRight: 13, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
-  chipAmt: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, fontVariant: ['tabular-nums'] },
-  dayRow: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 4, marginTop: 8 },
-  day: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  dayAmt: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, backgroundColor: '#FCFAF6' },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  amt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-  tag: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.06)' },
-  tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
-  del: { width: 88, backgroundColor: colors.orangeText, alignItems: 'center', justifyContent: 'center' },
-  delText: { fontFamily: fonts.medium, fontSize: 14, color: '#FFFFFF' },
-  cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
-  catPick: { height: 42, paddingLeft: 6, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  catText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    switcher: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+    arrow: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    month: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },
+    range: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2 },
+    sum: { padding: 16, gap: 12 },
+    sumRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
+    big: { fontFamily: fonts.medium, fontSize: 34, letterSpacing: -1.2, color: colors.ink, fontVariant: ['tabular-nums'] },
+    in: { fontFamily: fonts.medium, fontSize: 19, color: colors.lavenderText, fontVariant: ['tabular-nums'] },
+    bar: { height: 8, borderRadius: 9, backgroundColor: inkA(0.08), overflow: 'hidden' },
+    fill: { height: '100%', borderRadius: 9, backgroundColor: colors.ink },
+    chip: { height: 38, paddingLeft: 6, paddingRight: 13, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
+    chipAmt: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, fontVariant: ['tabular-nums'] },
+    dayRow: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 4, marginTop: 8 },
+    day: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    dayAmt: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, fontVariant: ['tabular-nums'] },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, backgroundColor: colors.card },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    amt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
+    tag: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: inkA(0.06) },
+    tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
+    del: { width: 88, backgroundColor: colors.orangeText, alignItems: 'center', justifyContent: 'center' },
+    delText: { fontFamily: fonts.medium, fontSize: 14, color: colors.paper },
+    cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
+    catPick: { height: 42, paddingLeft: 6, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    catText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
+  }),
+);

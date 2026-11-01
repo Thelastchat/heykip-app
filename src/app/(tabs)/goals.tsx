@@ -22,7 +22,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 
 type Move = { id: string; amount: number; source: 'payday' | 'extra' | 'cover'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
 const FROM_LABEL: Record<string, string> = {
@@ -122,7 +122,7 @@ export default function Goals() {
           <Text style={styles.h1}>
             {t('Your goals')}
             {'\n'}
-            <Text style={{ color: '#B9B8B0' }}>{t('and why you save')}</Text>
+            <Text style={{ color: colors.soft }}>{t('and why you save')}</Text>
           </Text>
           <Glass radius={999} style={{ position: 'absolute', right: 22, top: 0 }} innerStyle={styles.pinned}>
             <Text style={styles.pinnedText}>{t('{n} of 3 pinned', { n: goals.length })}</Text>
@@ -358,9 +358,9 @@ function Hero({
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
           <Squish onPress={onPut} style={[styles.btn, { flex: 1.4, backgroundColor: colors.ink }]} accessibilityRole="button" accessibilityLabel={t('Put money in')}>
-            <Text style={[styles.btnText, { color: '#FFFFFF' }]}>{t('+ Put money in')}</Text>
+            <Text style={[styles.btnText, { color: colors.paper }]}>{t('+ Put money in')}</Text>
           </Squish>
-          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: 'rgba(17,17,17,0.07)' }]} accessibilityRole="button" accessibilityLabel={t('Edit the plan')}>
+          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: inkA(0.07) }]} accessibilityRole="button" accessibilityLabel={t('Edit the plan')}>
             <Text style={styles.btnText}>{t('Edit')}</Text>
           </Squish>
         </View>
@@ -394,8 +394,8 @@ function Fact({ k, v }: { k: string; v: string }) {
 
 function HistRow({ icon, title, sub, amount, first, lime }: { icon: Icon3D; title: string; sub: string; amount: number; first: boolean; lime?: boolean }) {
   return (
-    <View style={[styles.hist, !first && { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' }]}>
-      <View style={[styles.histIc, { backgroundColor: lime ? colors.lime : 'rgba(255,255,255,0.6)' }]}>
+    <View style={[styles.hist, !first && { borderTopWidth: 1, borderTopColor: inkA(0.06) }]}>
+      <View style={[styles.histIc, { backgroundColor: lime ? colors.lime : glassA(0.6) }]}>
         <Image source={ICON3D[icon]} style={{ width: 32, height: 32 }} contentFit="contain" />
       </View>
       <View style={{ flex: 1 }}>
@@ -428,71 +428,73 @@ function Section({ title, right, tag }: { title: string; right?: string; tag?: s
 function LockIcon() {
   return (
     <Svg width={10} height={10} viewBox="0 0 24 24">
-      <Path fill="#FFFFFF" d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
+      <Path fill={colors.paper} d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  head: { paddingHorizontal: 22, paddingTop: 34 },
-  h1: { fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
-  pinned: { height: 30, paddingHorizontal: 12, justifyContent: 'center' },
-  pinnedText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-  totals: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 18 },
-  n1: { fontFamily: fonts.medium, fontSize: 44, letterSpacing: -2, lineHeight: 48, color: colors.ink, fontVariant: ['tabular-nums'] },
-  n2: { fontFamily: fonts.regular, fontSize: 28, letterSpacing: -1, lineHeight: 32, color: '#B9B8B0', fontVariant: ['tabular-nums'] },
-  lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
-  vbar: { width: 1, height: 50, backgroundColor: 'rgba(17,17,17,0.12)' },
-  sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-  photo: { height: 210, overflow: 'hidden' },
-  chip: {
-    position: 'absolute',
-    left: 12,
-    top: 12,
-    height: 34,
-    paddingLeft: 4,
-    paddingRight: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    maxWidth: '62%',
-  },
-  chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, flexShrink: 1 },
-  note: {
-    position: 'absolute',
-    right: 14,
-    top: 52,
-    width: 150,
-    backgroundColor: colors.lime,
-    paddingTop: 13,
-    paddingHorizontal: 11,
-    paddingBottom: 7,
-    transform: [{ rotate: '3deg' }],
-    boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
-  },
-  tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: 'rgba(255,255,255,0.65)', transform: [{ rotate: '-4deg' }] },
-  noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: 'rgba(17,17,17,0.55)' },
-  noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.ink, marginTop: 2 },
-  heroBig: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
-  fact: { flex: 1, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.5)', paddingVertical: 9, paddingHorizontal: 12 },
-  btn: { height: 50, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  btnText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 22, paddingTop: 30, paddingBottom: 12 },
-  secTitle: { fontFamily: fonts.medium, fontSize: 19, color: colors.ink },
-  tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
-  tagText: { fontFamily: fonts.semibold, fontSize: 11, color: '#FFFFFF' },
-  pot: { paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-  slot: { flex: 1, height: 150, borderRadius: 26, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(17,17,17,0.16)', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10 },
-  slotText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
-  lk: { position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  hist: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  histIc: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  histTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  histAmt: { fontFamily: fonts.medium, fontSize: 15, color: '#5D7D4E', fontVariant: ['tabular-nums'] },
-  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
-  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    head: { paddingHorizontal: 22, paddingTop: 34 },
+    h1: { fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
+    pinned: { height: 30, paddingHorizontal: 12, justifyContent: 'center' },
+    pinnedText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
+    totals: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 18 },
+    n1: { fontFamily: fonts.medium, fontSize: 44, letterSpacing: -2, lineHeight: 48, color: colors.ink, fontVariant: ['tabular-nums'] },
+    n2: { fontFamily: fonts.regular, fontSize: 28, letterSpacing: -1, lineHeight: 32, color: colors.soft, fontVariant: ['tabular-nums'] },
+    lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
+    vbar: { width: 1, height: 50, backgroundColor: inkA(0.12) },
+    sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
+    photo: { height: 210, overflow: 'hidden' },
+    chip: {
+      position: 'absolute',
+      left: 12,
+      top: 12,
+      height: 34,
+      paddingLeft: 4,
+      paddingRight: 12,
+      borderRadius: 999,
+      backgroundColor: glassA(0.9),
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      maxWidth: '62%',
+    },
+    chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, flexShrink: 1 },
+    note: {
+      position: 'absolute',
+      right: 14,
+      top: 52,
+      width: 150,
+      backgroundColor: colors.lime,
+      paddingTop: 13,
+      paddingHorizontal: 11,
+      paddingBottom: 7,
+      transform: [{ rotate: '3deg' }],
+      boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
+    },
+    tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
+    noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: blackA(0.55) },
+    noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
+    heroBig: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
+    fact: { flex: 1, borderRadius: 16, backgroundColor: glassA(0.5), paddingVertical: 9, paddingHorizontal: 12 },
+    btn: { height: 50, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    btnText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 22, paddingTop: 30, paddingBottom: 12 },
+    secTitle: { fontFamily: fonts.medium, fontSize: 19, color: colors.ink },
+    tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
+    tagText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.paper },
+    pot: { paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+    potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    slot: { flex: 1, height: 150, borderRadius: 26, borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.16), alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10 },
+    slotText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
+    lk: { position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    hist: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    histIc: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    histTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    histAmt: { fontFamily: fonts.medium, fontSize: 15, color: '#5D7D4E', fontVariant: ['tabular-nums'] },
+    toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
+    toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper },
+  }),
+);

@@ -19,7 +19,7 @@ import { baht } from '@/lib/money';
 import { useSetup, type SideIncome } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, monthsUntil, parseDay, shortName, sideTotal } from '@/lib/setup/plan';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, glassA, inkA, themed } from '@/theme';
 
 const ZONE = { too: colors.orange, tight: colors.peach, comfy: colors.lime } as const;
 type Zone = keyof typeof ZONE;
@@ -242,7 +242,7 @@ export function FindWhatWorks() {
               </View>
               <Text style={styles.date}>
                 {rich('{kept} **of {target}**', { kept: baht(keepBudget), target: baht(base.goal.target) }, (x) => (
-                  <Text style={{ fontFamily: fonts.medium, fontSize: 14, letterSpacing: 0, color: 'rgba(17,17,17,0.6)' }}>{x}</Text>
+                  <Text style={{ fontFamily: fonts.medium, fontSize: 14, letterSpacing: 0, color: inkA(0.6) }}>{x}</Text>
                 ))}
               </Text>
               <View style={styles.sum}>
@@ -261,7 +261,7 @@ export function FindWhatWorks() {
                     v={baht(extraAt(keepMonths))}
                   />
                 )}
-                <View style={{ height: 1, backgroundColor: 'rgba(17,17,17,0.08)' }} />
+                <View style={{ height: 1, backgroundColor: inkA(0.08) }} />
                 <SumRow k={draft.goalKind === 'trip' ? t('Trip budget') : t('Your goal')} v={baht(keepBudget)} bold />
               </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -348,7 +348,7 @@ export function FindWhatWorks() {
                 <Text style={styles.subLabel}>{side.kind === 'once' ? t('HOW MUCH?') : t('HOW MUCH A MONTH?')}</Text>
                 <View style={{ gap: 4 }}>
                   <AmountInput value={side.amount} onChange={(amount) => setSide((x) => ({ ...x, amount }))} label={side.kind === 'once' ? t('Bonus amount') : t('Side work a month')} />
-                  <Text style={[styles.addonSub, { color: 'rgba(17,17,17,0.7)' }]}>
+                  <Text style={[styles.addonSub, { color: inkA(0.7) }]}>
                     {side.kind === 'once' ? t('a bonus, a gift, money you’ll sell something for') : t('e.g. weekend shifts, freelance, selling online')}
                   </Text>
                 </View>
@@ -400,13 +400,11 @@ export function FindWhatWorks() {
                       ))}
                     </Text>
                     <Pressable onPress={() => changeSide({ kind: 'monthly', amount: neededForDate, months: null })} style={styles.useBtn} accessibilityRole="button">
-                      <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' }}>{t('Use {amount}', { amount: baht(neededForDate) })}</Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: colors.paper }}>{t('Use {amount}', { amount: baht(neededForDate) })}</Text>
                     </Pressable>
                   </View>
                 )}
-                <Text style={[styles.addonSub, { fontSize: 11, color: 'rgba(17,17,17,0.65)' }]}>
-                  {t('Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.')}
-                </Text>
+                <Text style={[styles.addonSub, { fontSize: 11, color: inkA(0.65) }]}>{t('Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.')}</Text>
               </View>
             </AddOnRow>
           </View>
@@ -430,7 +428,7 @@ export function FindWhatWorks() {
         style={[styles.addon, mode === 'nodate' && { backgroundColor: colors.pink, borderColor: colors.ink }]}
         accessibilityRole="button">
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-          <CatBadge name="sparkle" color={mode === 'nodate' ? '#FFFFFF' : colors.pink} size={32} />
+          <CatBadge name="sparkle" color={mode === 'nodate' ? colors.paper : colors.pink} size={32} />
           <View style={{ flex: 1, gap: 1 }}>
             <Text style={styles.addonTitle}>{mode === 'nodate' ? t('Back to a date') : t('No date — just save every month')}</Text>
             <Text style={styles.addonSub}>
@@ -548,8 +546,8 @@ function AddOnRow({ icon, color, title, effect, on, onPress, children }: { icon:
   return (
     <View style={[styles.addon, on && { backgroundColor: color, borderColor: colors.ink }]}>
       <Pressable onPress={onPress} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={title}>
-        <View style={[styles.box, on && styles.boxOn]}>{on && <Check size={14} color="#FFFFFF" weight="bold" />}</View>
-        <CatBadge name={icon} color={on ? '#FFFFFF' : color} size={32} />
+        <View style={[styles.box, on && styles.boxOn]}>{on && <Check size={14} color={colors.paper} weight="bold" />}</View>
+        <CatBadge name={icon} color={on ? colors.paper : color} size={32} />
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={styles.addonTitle}>{title}</Text>
           <Text style={[styles.addonSub, on && { color: colors.ink }]}>{effect}</Text>
@@ -582,67 +580,79 @@ function AmountInput({ value, onChange, label }: { value: number; onChange: (n: 
   );
 }
 
-const styles = StyleSheet.create({
-  miniSeg: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)' },
-  miniItem: { flex: 1, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-  miniOn: { backgroundColor: '#FFFFFF', borderColor: colors.ink },
-  miniText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-  subLabel: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: 'rgba(17,17,17,0.6)' },
-  chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
-  chipOn: { borderColor: colors.ink },
-  kipTip: { borderRadius: 14, backgroundColor: colors.lime, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  useBtn: { height: 30, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
-  seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)' },
-  segItem: { flex: 1, borderRadius: radius.pill, paddingVertical: 8, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-  segOn: { backgroundColor: '#FFFFFF', borderColor: colors.ink },
-  segTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
-  segSub: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-  sum: { borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingVertical: 10, paddingHorizontal: 12, gap: 6 },
-  chip: { height: 24, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', justifyContent: 'center' },
-  count: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  addon: { borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(17,17,17,0.12)', backgroundColor: 'rgba(255,255,255,0.55)', paddingVertical: 12, paddingHorizontal: 14, gap: 10 },
-  addonTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
-  addonSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
-  box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: '#C9C9C2', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-  h1: { fontFamily: fonts.semibold, fontSize: 27, letterSpacing: -0.5, color: colors.ink },
-  section: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 4, paddingTop: 4 },
-  dial: { borderRadius: 22, borderWidth: 1.5, borderColor: colors.ink, padding: 14, gap: 10 },
-  zoneTag: { height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', justifyContent: 'center' },
-  zoneTagText: { fontFamily: fonts.bold, fontSize: 11, color: colors.ink },
-  date: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink },
-  dialBox: { borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8, gap: 2 },
-  track: { height: 10, borderRadius: radius.pill, overflow: 'hidden', flexDirection: 'row', marginBottom: 3 },
-  marker: { position: 'absolute', top: 0, width: 60, alignItems: 'center' },
-  markerText: { fontFamily: fonts.bold, fontSize: 9, color: '#FFFFFF', backgroundColor: colors.ink, borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' },
-  thumb: { position: 'absolute', bottom: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: colors.ink, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' },
-  zoneLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-  stat: { flex: 1, minWidth: 0, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingVertical: 9, paddingHorizontal: 11 },
-  statK: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-  statV: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
-  dialNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink },
-  lever: {
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 10,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
-  },
-  amount: {
-    alignSelf: 'flex-start',
-    height: 36,
-    minWidth: 130,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  amountText: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    miniSeg: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: radius.pill, backgroundColor: glassA(0.55) },
+    miniItem: { flex: 1, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+    miniOn: { backgroundColor: colors.paper, borderColor: colors.ink },
+    miniText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+    subLabel: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: inkA(0.6) },
+    chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
+    chipOn: { borderColor: colors.ink },
+    kipTip: { borderRadius: 14, backgroundColor: colors.lime, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    useBtn: { height: 30, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
+    seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95) },
+    segItem: { flex: 1, borderRadius: radius.pill, paddingVertical: 8, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+    segOn: { backgroundColor: colors.paper, borderColor: colors.ink },
+    segTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
+    segSub: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    sum: { borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 10, paddingHorizontal: 12, gap: 6 },
+    chip: { height: 24, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
+    count: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    addon: { borderRadius: 18, borderWidth: 1.5, borderColor: inkA(0.12), backgroundColor: glassA(0.55), paddingVertical: 12, paddingHorizontal: 14, gap: 10 },
+    addonTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+    addonSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
+    box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.faint, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    boxOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+    h1: { fontFamily: fonts.semibold, fontSize: 27, letterSpacing: -0.5, color: colors.ink },
+    section: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 4, paddingTop: 4 },
+    dial: { borderRadius: 22, borderWidth: 1.5, borderColor: colors.ink, padding: 14, gap: 10 },
+    zoneTag: { height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
+    zoneTagText: { fontFamily: fonts.bold, fontSize: 11, color: colors.ink },
+    date: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink },
+    dialBox: { borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8, gap: 2 },
+    track: { height: 10, borderRadius: radius.pill, overflow: 'hidden', flexDirection: 'row', marginBottom: 3 },
+    marker: { position: 'absolute', top: 0, width: 60, alignItems: 'center' },
+    markerText: { fontFamily: fonts.bold, fontSize: 9, color: colors.paper, backgroundColor: colors.ink, borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' },
+    thumb: {
+      position: 'absolute',
+      bottom: 0,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: colors.ink,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    },
+    zoneLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    stat: { flex: 1, minWidth: 0, borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 9, paddingHorizontal: 11 },
+    statK: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    statV: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
+    dialNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink },
+    lever: {
+      borderRadius: 18,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      backgroundColor: colors.paper,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      gap: 10,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)',
+    },
+    amount: {
+      alignSelf: 'flex-start',
+      height: 36,
+      minWidth: 130,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: glassA(0.55),
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    amountText: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+  }),
+);

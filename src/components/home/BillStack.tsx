@@ -11,7 +11,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Glass } from '@/components/glow/Glass';
 import { rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
-import { colors, fonts, glow } from '@/theme';
+import { colors, fonts, glow, glassA, inkA, themed } from '@/theme';
 
 export type Bill = { key: string; name: string; amount: number; estimate?: boolean; paid: boolean };
 type Glyph = 'house' | 'bolt' | 'drop' | 'phone' | 'wifi' | 'play' | 'receipt';
@@ -82,7 +82,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         </View>
         <View style={{ flexDirection: 'row', gap: 3, height: 8 }}>
           {bills.map((b) => (
-            <View key={b.key} style={{ flex: Math.max(b.amount, total * 0.06), borderRadius: 9, backgroundColor: b.paid ? colors.ink : 'rgba(17,17,17,0.08)' }} />
+            <View key={b.key} style={{ flex: Math.max(b.amount, total * 0.06), borderRadius: 9, backgroundColor: b.paid ? colors.ink : inkA(0.08) }} />
           ))}
         </View>
       </View>
@@ -104,11 +104,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
               } else setOpenKey(isOpen ? null : b.key);
             }}
             style={{ marginTop: i === 0 ? 0 : order[i - 1].key === open ? -14 : -62, zIndex: i }}>
-            <Glass
-              radius={26}
-              tint={b.paid ? 'rgba(255,255,255,0.2)' : isOpen ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.34)'}
-              shadow={false}
-              style={[styles.cardShadow, isOpen && styles.openShadow]}>
+            <Glass radius={26} tint={b.paid ? glassA(0.2) : isOpen ? glassA(0.5) : glassA(0.34)} shadow={false} style={[styles.cardShadow, isOpen && styles.openShadow]}>
               <View style={[styles.card, { height: isOpen ? 152 : last ? 72 : 132 }]}>
                 <View style={styles.strip}>
                   <View style={[styles.ic, { backgroundColor: b.paid ? colors.ink : KIND[g] }]}>{b.paid ? <Check /> : <GlyphIcon g={g} />}</View>
@@ -139,7 +135,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
 
       <Pressable onPress={() => router.push('/month')} style={styles.add} accessibilityRole="button" accessibilityLabel={t('Add a bill')}>
         <View style={styles.addDot}>
-          <Text style={{ color: '#FFFFFF', fontSize: 18, lineHeight: 20 }}>+</Text>
+          <Text style={{ color: colors.paper, fontSize: 18, lineHeight: 20 }}>+</Text>
         </View>
         <Text style={styles.addText}>{t('Add a bill')}</Text>
       </Pressable>
@@ -150,7 +146,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
 function Check() {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24">
-      <Path d="M5 12.5 10 17l9-10" stroke="#FFFFFF" strokeWidth={2.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 12.5 10 17l9-10" stroke={colors.paper} strokeWidth={2.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
@@ -190,7 +186,7 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.knob, knob]}>
           <Svg width={18} height={18} viewBox="0 0 24 24">
-            <Path d="M5 12h13M13 6l6 6-6 6" stroke="#FFFFFF" strokeWidth={2.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M5 12h13M13 6l6 6-6 6" stroke={colors.paper} strokeWidth={2.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Animated.View>
       </GestureDetector>
@@ -198,47 +194,49 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  sum: { marginBottom: 14 },
-  sumText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  cardShadow: { boxShadow: '0 -6px 16px rgba(17,17,17,0.045)' },
-  openShadow: { boxShadow: '0 -6px 16px rgba(17,17,17,0.05), 0 14px 30px rgba(17,17,17,0.08)' },
-  card: { paddingHorizontal: 16, paddingVertical: 14 },
-  strip: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 44 },
-  ic: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  name: { fontFamily: fonts.medium, fontSize: 17, letterSpacing: -0.2, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  amt: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
-  done: { textDecorationLine: 'line-through', opacity: 0.45 },
-  est: { height: 18, paddingHorizontal: 7, borderRadius: 9, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, justifyContent: 'center' },
-  estText: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
-  slide: { marginTop: 16, height: 50, borderRadius: 999, backgroundColor: glow.control, borderWidth: 1, borderColor: 'rgba(17,17,17,0.06)', justifyContent: 'center', overflow: 'hidden' },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999, backgroundColor: colors.limeDeep },
-  slideText: { textAlign: 'center', paddingLeft: 34, fontFamily: fonts.medium, fontSize: 14, color: colors.ink, opacity: 0.75 },
-  knob: {
-    position: 'absolute',
-    left: 3,
-    top: 2,
-    width: KNOB,
-    height: KNOB,
-    borderRadius: KNOB / 2,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-  },
-  add: {
-    marginTop: 10,
-    height: 64,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(17,17,17,0.16)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  addDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  addText: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    sum: { marginBottom: 14 },
+    sumText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    cardShadow: { boxShadow: '0 -6px 16px rgba(17,17,17,0.045)' },
+    openShadow: { boxShadow: '0 -6px 16px rgba(17,17,17,0.05), 0 14px 30px rgba(17,17,17,0.08)' },
+    card: { paddingHorizontal: 16, paddingVertical: 14 },
+    strip: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 44 },
+    ic: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    name: { fontFamily: fonts.medium, fontSize: 17, letterSpacing: -0.2, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    amt: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
+    done: { textDecorationLine: 'line-through', opacity: 0.45 },
+    est: { height: 18, paddingHorizontal: 7, borderRadius: 9, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, justifyContent: 'center' },
+    estText: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
+    slide: { marginTop: 16, height: 50, borderRadius: 999, backgroundColor: glow.control, borderWidth: 1, borderColor: inkA(0.06), justifyContent: 'center', overflow: 'hidden' },
+    fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999, backgroundColor: colors.limeDeep },
+    slideText: { textAlign: 'center', paddingLeft: 34, fontFamily: fonts.medium, fontSize: 14, color: colors.ink, opacity: 0.75 },
+    knob: {
+      position: 'absolute',
+      left: 3,
+      top: 2,
+      width: KNOB,
+      height: KNOB,
+      borderRadius: KNOB / 2,
+      backgroundColor: colors.ink,
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+    },
+    add: {
+      marginTop: 10,
+      height: 64,
+      borderRadius: 26,
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: inkA(0.16),
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    addDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    addText: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
+  }),
+);

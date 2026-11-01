@@ -23,7 +23,7 @@ import { checkParts, fromKind, giveJob, moveSaving, savingMoved, savingThisCycle
 import { useMonth } from '@/lib/month';
 import { shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 type Choice = { key: string; icon: Icon3D; title: string; sub: string; parts: Part[]; button: string };
 
@@ -303,26 +303,28 @@ function Row({ icon, title, sub, to, line }: { icon: Icon3D; title: string; sub?
   );
 }
 
-const styles = StyleSheet.create({
-  cap: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted, marginLeft: 4 },
-  big: { fontFamily: fonts.medium, fontSize: 36, letterSpacing: -1, color: colors.ink, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  subC: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: -4 },
-  extra: { fontFamily: fonts.medium, fontSize: 36, letterSpacing: -1, color: colors.lavenderText, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  chip: { alignSelf: 'center', backgroundColor: colors.lilac, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: -4 },
-  chipText: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText },
-  opt: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11 },
-  optOn: { borderWidth: 1.5, borderColor: colors.ink },
-  optTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  optSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.faint },
-  radioOn: { borderWidth: 7, borderColor: colors.ink },
-  kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  bub: { padding: 12, paddingHorizontal: 14 },
-  say: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
-  b: { fontFamily: fonts.semibold },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.07)' },
-  to: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  hr: { height: 1, backgroundColor: 'rgba(17,17,17,0.08)', marginVertical: 4 },
-  err: { fontFamily: fonts.regular, fontSize: 13, color: colors.orangeText, textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    cap: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted, marginLeft: 4 },
+    big: { fontFamily: fonts.medium, fontSize: 36, letterSpacing: -1, color: colors.ink, textAlign: 'center', fontVariant: ['tabular-nums'] },
+    subC: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: -4 },
+    extra: { fontFamily: fonts.medium, fontSize: 36, letterSpacing: -1, color: colors.lavenderText, textAlign: 'center', fontVariant: ['tabular-nums'] },
+    chip: { alignSelf: 'center', backgroundColor: colors.lilac, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: -4 },
+    chipText: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText },
+    opt: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11 },
+    optOn: { borderWidth: 1.5, borderColor: colors.ink },
+    optTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    optSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
+    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.faint },
+    radioOn: { borderWidth: 7, borderColor: colors.ink },
+    kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    bub: { padding: 12, paddingHorizontal: 14 },
+    say: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
+    b: { fontFamily: fonts.semibold },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.07) },
+    to: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+    hr: { height: 1, backgroundColor: inkA(0.08), marginVertical: 4 },
+    err: { fontFamily: fonts.regular, fontSize: 13, color: colors.orangeText, textAlign: 'center' },
+  }),
+);

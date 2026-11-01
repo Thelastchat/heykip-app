@@ -9,7 +9,7 @@ import { Button, Muted, T } from '@/components/ui';
 import { t } from '@/lib/i18n';
 import { useSetup } from '@/lib/setup/draft';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, glassA, themed } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 
 // Email + 6-digit code. It works everywhere, including Expo Go, with no deep links.
@@ -106,19 +106,21 @@ export default function SignIn() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  wrap: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, justifyContent: 'space-between' },
-  top: { alignItems: 'center', gap: 10 },
-  input: {
-    height: 58,
-    borderRadius: radius.field,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    paddingHorizontal: 18,
-    fontFamily: fonts.medium,
-    fontSize: 17,
-    color: colors.ink,
-  },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    safe: { flex: 1 },
+    wrap: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, justifyContent: 'space-between' },
+    top: { alignItems: 'center', gap: 10 },
+    input: {
+      height: 58,
+      borderRadius: radius.field,
+      backgroundColor: glassA(0.55),
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      paddingHorizontal: 18,
+      fontFamily: fonts.medium,
+      fontSize: 17,
+      color: colors.ink,
+    },
+  }),
+);

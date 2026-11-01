@@ -46,7 +46,7 @@ import { useMonth } from '@/lib/month';
 import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
-import { colors, fonts, glow } from '@/theme';
+import { colors, fonts, glow, inkA, themed } from '@/theme';
 
 type Turn = {
   id: number;
@@ -319,7 +319,7 @@ export default function Talk() {
           />
         </Glass>
         <Squish onPress={() => send()} style={[styles.send, !text.trim() && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel={t('Send')}>
-          <ArrowUp size={20} color="#FFFFFF" weight="bold" />
+          <ArrowUp size={20} color={colors.paper} weight="bold" />
         </Squish>
       </View>
 
@@ -487,7 +487,7 @@ function Answer({
           </View>
           {plan.fits && plan.moves.length > 0 && (
             <>
-              <View style={{ height: 1, backgroundColor: 'rgba(17,17,17,0.07)' }} />
+              <View style={{ height: 1, backgroundColor: inkA(0.07) }} />
               <Text style={styles.cap}>{t('KIP’S PLAN')}</Text>
               {plan.moves.map((m) => (
                 <View key={m.from} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -538,41 +538,43 @@ function Answer({
   return <KipLine text={reply.reply} />;
 }
 
-const styles = StyleSheet.create({
-  secRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  inPill: { backgroundColor: 'rgba(220,210,247,0.75)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
-  inPillText: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText, fontVariant: ['tabular-nums'] },
-  hr: { height: 1, backgroundColor: 'rgba(17,17,17,0.07)', marginVertical: 2 },
-  goalBar: { height: 10, borderRadius: 5, backgroundColor: 'rgba(17,17,17,0.07)', overflow: 'hidden' },
-  goalBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 5 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 },
-  round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
-  statusText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  hey: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted },
-  h1: { fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -1, color: colors.ink, textAlign: 'center' },
-  sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-  me: { alignSelf: 'flex-end', maxWidth: '80%', backgroundColor: colors.ink, borderRadius: 22, borderBottomRightRadius: 6, paddingVertical: 11, paddingHorizontal: 15 },
-  meText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: '#FFFFFF' },
-  kipBub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
-  kipText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
-  cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 0.8, color: colors.muted },
-  itemName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  itemAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-  price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
-  x: { width: 22, height: 22, borderRadius: 11, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
-  dark: { height: 52, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  darkText: { fontFamily: fonts.medium, fontSize: 15, color: '#FFFFFF' },
-  light: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  lightText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sug: { height: 38, paddingHorizontal: 13, justifyContent: 'center' },
-  sugText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingTop: 6 },
-  mic: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
-  inputWrap: { height: 50, paddingHorizontal: 16, justifyContent: 'center' },
-  input: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
-  send: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
-  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF', textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    secRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    inPill: { backgroundColor: 'rgba(220,210,247,0.75)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+    inPillText: { fontFamily: fonts.medium, fontSize: 12, color: '#5B4A96', fontVariant: ['tabular-nums'] }, // on the lavender pill: same in both looks
+    hr: { height: 1, backgroundColor: inkA(0.07), marginVertical: 2 },
+    goalBar: { height: 10, borderRadius: 5, backgroundColor: inkA(0.07), overflow: 'hidden' },
+    goalBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 5 },
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 },
+    round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
+    statusText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    hey: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted },
+    h1: { fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -1, color: colors.ink, textAlign: 'center' },
+    sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
+    me: { alignSelf: 'flex-end', maxWidth: '80%', backgroundColor: colors.ink, borderRadius: 22, borderBottomRightRadius: 6, paddingVertical: 11, paddingHorizontal: 15 },
+    meText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.paper },
+    kipBub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    kipText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+    cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 0.8, color: colors.muted },
+    itemName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    itemAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+    price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
+    x: { width: 22, height: 22, borderRadius: 11, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
+    dark: { height: 52, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    darkText: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
+    light: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    lightText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    sug: { height: 38, paddingHorizontal: 13, justifyContent: 'center' },
+    sugText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
+    bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingTop: 6 },
+    mic: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
+    inputWrap: { height: 50, paddingHorizontal: 16, justifyContent: 'center' },
+    input: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
+    send: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
+    toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
+  }),
+);

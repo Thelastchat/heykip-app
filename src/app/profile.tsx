@@ -26,9 +26,10 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
+import { useLook } from '@/lib/look';
 import { smallPhoto } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed, whiteA } from '@/theme';
 
 type Row = {
   display_name: string | null;
@@ -66,6 +67,7 @@ export default function Profile() {
   const [toast, setToast] = useState<string | null>(null);
   const uid = session?.user.id;
   const { lang, setLang } = useLang();
+  const { look, setLook } = useLook();
 
   const load = useCallback(async () => {
     if (!uid) return;
@@ -250,7 +252,23 @@ export default function Profile() {
                     accessibilityRole="button"
                     accessibilityState={{ selected: lang === l }}
                     accessibilityLabel={l === 'en' ? 'English' : 'ไทย'}>
-                    <Text style={[styles.segText, lang === l && { color: '#FFFFFF' }]}>{l === 'en' ? 'English' : 'ไทย'}</Text>
+                    <Text style={[styles.segText, lang === l && { color: colors.paper }]}>{l === 'en' ? 'English' : 'ไทย'}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <View style={[styles.row, styles.rowLine]}>
+              <Text style={[styles.rowTitle, { flex: 1 }]}>{t('Look')}</Text>
+              <View style={styles.seg}>
+                {(['light', 'dark', 'system'] as const).map((l) => (
+                  <Pressable
+                    key={l}
+                    onPress={() => look !== l && setLook(l, '/profile')}
+                    style={[styles.segBtn, look === l && styles.segOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: look === l }}
+                    accessibilityLabel={l === 'light' ? t('Light') : l === 'dark' ? t('Dark') : t('Same as my phone')}>
+                    <Text style={[styles.segText, look === l && { color: colors.paper }]}>{l === 'light' ? t('Light') : l === 'dark' ? t('Dark') : t('Phone')}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -463,34 +481,36 @@ function DeleteSheet({ onClose, onError }: { onClose: () => void; onError: (t: s
   );
 }
 
-const styles = StyleSheet.create({
-  me: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  ava: { width: 58, height: 58, borderRadius: 29, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF6CF', borderWidth: 1, borderColor: '#FFFFFF' },
-  name: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  chip: { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.07)', alignItems: 'center', justifyContent: 'center' },
-  chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  plus: { borderRadius: 26, padding: 16, backgroundColor: colors.ink, flexDirection: 'row', alignItems: 'center', gap: 14, boxShadow: '0 14px 30px rgba(17,17,17,0.22)' } as never,
-  ringNum: { position: 'absolute', fontFamily: fonts.semibold, fontSize: 14, color: '#FFFFFF' },
-  plusTitle: { fontFamily: fonts.medium, fontSize: 16, color: '#FFFFFF' },
-  plusSub: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  go: { height: 36, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
-  goText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 1, color: colors.muted, marginLeft: 4, marginBottom: -6 },
-  group: { paddingHorizontal: 16, paddingVertical: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  rowLine: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  rowVal: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 130 },
-  small: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-  note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginHorizontal: 4, marginTop: -6 },
-  seg: { flexDirection: 'row', backgroundColor: 'rgba(17,17,17,0.07)', borderRadius: 999, padding: 3 },
-  segBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, alignItems: 'center' },
-  segOn: { backgroundColor: colors.ink },
-  segText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-  foot: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 6, marginTop: 4 },
-  footText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-  err: { fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' },
-  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
-  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF', textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    me: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+    ava: { width: 58, height: 58, borderRadius: 29, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF6CF', borderWidth: 1, borderColor: colors.paper },
+    name: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    chip: { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: inkA(0.07), alignItems: 'center', justifyContent: 'center' },
+    chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    plus: { borderRadius: 26, padding: 16, backgroundColor: colors.solid, flexDirection: 'row', alignItems: 'center', gap: 14, boxShadow: '0 14px 30px rgba(17,17,17,0.22)' } as never,
+    ringNum: { position: 'absolute', fontFamily: fonts.semibold, fontSize: 14, color: colors.onSolid },
+    plusTitle: { fontFamily: fonts.medium, fontSize: 16, color: colors.onSolid },
+    plusSub: { fontFamily: fonts.regular, fontSize: 13, color: whiteA(0.6), marginTop: 2 },
+    go: { height: 36, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
+    goText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
+    cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 1, color: colors.muted, marginLeft: 4, marginBottom: -6 },
+    group: { paddingHorizontal: 16, paddingVertical: 4 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    rowLine: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    rowVal: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 130 },
+    small: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
+    note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginHorizontal: 4, marginTop: -6 },
+    seg: { flexDirection: 'row', backgroundColor: inkA(0.07), borderRadius: 999, padding: 3 },
+    segBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, alignItems: 'center' },
+    segOn: { backgroundColor: colors.ink },
+    segText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+    foot: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 6, marginTop: 4 },
+    footText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    err: { fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' },
+    toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
+    toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
+  }),
+);

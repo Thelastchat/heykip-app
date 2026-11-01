@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { LangProvider, takeReturnTo } from '@/lib/i18n';
+import { LookProvider, useLook } from '@/lib/look';
 import { SetupProvider, useSetup } from '@/lib/setup/draft';
 import { colors } from '@/theme';
 
@@ -81,14 +82,22 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <LangProvider>
-        <AuthProvider>
-          <SetupProvider>
-            <StatusBar style="dark" />
-            <RootStack />
-          </SetupProvider>
-        </AuthProvider>
-      </LangProvider>
+      <LookProvider>
+        <LangProvider>
+          <AuthProvider>
+            <SetupProvider>
+              <Bar />
+              <RootStack />
+            </SetupProvider>
+          </AuthProvider>
+        </LangProvider>
+      </LookProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** Dark text on Light, light text on Dark. */
+function Bar() {
+  const { scheme } = useLook();
+  return <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />;
 }

@@ -10,7 +10,7 @@ import { Kip } from '@/components/Kip';
 import { Float } from '@/components/glow/motion';
 import { Polaroid } from '@/components/board';
 import { DateTile } from '@/components/setup/DateTile';
-import { picked, SetupScreen, SmallTile, smallValue } from '@/components/setup/kit';
+import { picked, SetupScreen, SmallTile, smallValueStyle } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { room, verdict } from '@/lib/brain';
 import { rich, t } from '@/lib/i18n';
@@ -19,7 +19,7 @@ import { baht } from '@/lib/money';
 import { goalDone, useSetup } from '@/lib/setup/draft';
 import { applyIdea, deal, GOAL_TYPES, ideasFor, typeInfo, type GoalTypeInfo, type Idea } from '@/lib/setup/goalTypes';
 import { emergencyTargetFor, inputsFrom, monthYear, monthsFromNow, parseDay, fullDate } from '@/lib/setup/plan';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, radius, glassA, inkA, themed } from '@/theme';
 
 // Card colours along the carousel, none alike next to each other (from the canvas).
 const CARD = [colors.sage, colors.orange, colors.sky, colors.lime, colors.lavender, colors.pink];
@@ -218,7 +218,7 @@ export default function SetupGoal() {
                 placeholder={t('e.g. {example}', { example: type.example })}
                 placeholderTextColor={colors.faint}
                 maxLength={40}
-                style={[smallValue, { fontSize: 16 }]}
+                style={[smallValueStyle(), { fontSize: 16 }]}
                 accessibilityLabel={t('Name your goal')}
               />
             </View>
@@ -231,7 +231,7 @@ export default function SetupGoal() {
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <BahtField label={t('Each month')} value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
               <SmallTile label={t('For')} style={[styles.white, { flex: 1 }]}>
-                <Text style={smallValue}>{t('Ongoing')}</Text>
+                <Text style={smallValueStyle()}>{t('Ongoing')}</Text>
               </SmallTile>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -276,7 +276,7 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
         <View style={styles.cardTop}>
           {idea.kipsPick ? (
             <View style={[styles.tag, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.tagText, { color: '#FFFFFF' }]}>{t('KIP’S PICK')}</Text>
+              <Text style={[styles.tagText, { color: colors.paper }]}>{t('KIP’S PICK')}</Text>
             </View>
           ) : (
             <View style={styles.tag}>
@@ -297,7 +297,7 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
         <Text style={styles.why} numberOfLines={3}>
           {idea.why}
         </Text>
-        <Pressable onPress={onPick} style={[styles.pickBtn, on && { backgroundColor: '#FFFFFF' }]} accessibilityRole="button" accessibilityLabel={t('Pick {title}', { title: idea.title })}>
+        <Pressable onPress={onPick} style={[styles.pickBtn, on && { backgroundColor: colors.paper }]} accessibilityRole="button" accessibilityLabel={t('Pick {title}', { title: idea.title })}>
           <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? t('Picked ✓ — edit it below') : t('Pick this goal')}</Text>
         </Pressable>
       </View>
@@ -316,7 +316,7 @@ function FitCheck() {
   const monthly = draft.goalKind === 'monthly';
   let text: ReactNode;
   let mood: 'idle' | 'happy' | 'careful' = 'idle';
-  let bg: string = '#FFFFFF';
+  let bg: string = colors.paper;
 
   if (monthly) {
     const m = draft.goalMonthly ?? 0;
@@ -373,7 +373,7 @@ function FitCheck() {
   return (
     <View style={[styles.fit, { backgroundColor: bg }]}>
       <Kip mood={mood} size={34} />
-      <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: bg === '#FFFFFF' ? colors.muted : colors.ink }}>{text}</Text>
+      <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: bg === colors.paper ? colors.muted : colors.ink }}>{text}</Text>
     </View>
   );
 }
@@ -385,7 +385,7 @@ function BahtField({ label, value, onChange, placeholder, flex = 1 }: { label: s
   return (
     <SmallTile label={label} style={[styles.white, { flex, minWidth: 0 }]} onPress={() => input.current?.focus()}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-        <Text style={[smallValue, value === null && { color: colors.faint }]}>฿</Text>
+        <Text style={[smallValueStyle(), value === null && { color: colors.faint }]}>฿</Text>
         <TextInput
           ref={input}
           value={value === null ? '' : value.toLocaleString('en-US')}
@@ -396,7 +396,7 @@ function BahtField({ label, value, onChange, placeholder, flex = 1 }: { label: s
           placeholder={placeholder}
           placeholderTextColor={colors.faint}
           keyboardType="number-pad"
-          style={[smallValue, { flex: 1 }]}
+          style={[smallValueStyle(), { flex: 1 }]}
           accessibilityLabel={label}
         />
       </View>
@@ -404,72 +404,74 @@ function BahtField({ label, value, onChange, placeholder, flex = 1 }: { label: s
   );
 }
 
-const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 },
-  h1: { fontFamily: fonts.semibold, fontSize: 30, lineHeight: 34, letterSpacing: -0.7, color: colors.ink },
-  h2: { fontFamily: fonts.semibold, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
-  muted12: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-  hand: { fontFamily: fonts.hand, fontSize: 20, color: '#4A4A44' },
+const styles = themed(() =>
+  StyleSheet.create({
+    titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 },
+    h1: { fontFamily: fonts.semibold, fontSize: 30, lineHeight: 34, letterSpacing: -0.7, color: colors.ink },
+    h2: { fontFamily: fonts.semibold, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+    muted12: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
+    hand: { fontFamily: fonts.hand, fontSize: 20, color: '#4A4A44' },
 
-  suggested: { marginHorizontal: -6, paddingTop: 8, paddingBottom: 8 },
-  suggestedHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 16 },
-  kipTag: { alignSelf: 'flex-start', height: 26, paddingLeft: 9, paddingRight: 11, borderRadius: radius.pill, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kipTagText: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6, color: colors.ink },
-  suggestedSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-  shuffle: {
-    height: 38,
-    paddingLeft: 11,
-    paddingRight: 14,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05), 0 6px 16px rgba(0,0,0,0.08)',
-  },
-  dotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.2)' },
-  dotOn: { width: 18, backgroundColor: colors.ink },
+    suggested: { marginHorizontal: -6, paddingTop: 8, paddingBottom: 8 },
+    suggestedHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 16 },
+    kipTag: { alignSelf: 'flex-start', height: 26, paddingLeft: 9, paddingRight: 11, borderRadius: radius.pill, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    kipTagText: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6, color: colors.ink },
+    suggestedSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
+    shuffle: {
+      height: 38,
+      paddingLeft: 11,
+      paddingRight: 14,
+      borderRadius: radius.pill,
+      backgroundColor: glassA(0.55),
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05), 0 6px 16px rgba(0,0,0,0.08)',
+    },
+    dotsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18 },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: inkA(0.2) },
+    dotOn: { width: 18, backgroundColor: colors.ink },
 
-  card: {
-    height: 300,
-    borderRadius: 28,
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)',
-  },
-  big3d: { position: 'absolute', right: 4, top: 0 },
-  cardTop: { height: 50, flexDirection: 'row', alignItems: 'flex-start' },
-  cardIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.75)', alignItems: 'center', justifyContent: 'center' },
-  tag: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.8)', flexDirection: 'row', alignItems: 'center', gap: 4 },
-  tagText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.4, color: colors.ink },
-  cardTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginTop: 2 },
-  cardAmount: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
-  chip: { alignSelf: 'flex-start', height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center' },
-  chipText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
-  why: { flex: 1, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: 'rgba(17,17,17,0.78)' },
-  pickBtn: { height: 44, borderRadius: radius.pill, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  pickText: { fontFamily: fonts.semibold, fontSize: 15, color: '#FFFFFF' },
+    card: {
+      height: 300,
+      borderRadius: 28,
+      paddingTop: 16,
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)',
+    },
+    big3d: { position: 'absolute', right: 4, top: 0 },
+    cardTop: { height: 50, flexDirection: 'row', alignItems: 'flex-start' },
+    cardIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: glassA(0.75), alignItems: 'center', justifyContent: 'center' },
+    tag: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: glassA(0.8), flexDirection: 'row', alignItems: 'center', gap: 4 },
+    tagText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.4, color: colors.ink },
+    cardTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginTop: 2 },
+    cardAmount: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
+    chip: { alignSelf: 'flex-start', height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: glassA(0.8), justifyContent: 'center' },
+    chipText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
+    why: { flex: 1, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: inkA(0.78) },
+    pickBtn: { height: 44, borderRadius: radius.pill, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    pickText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.paper },
 
-  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, paddingHorizontal: 2 },
-  own: { borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
-  label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 2 },
-  sticker: { width: 70, alignItems: 'center', gap: 6 },
-  stickerDot: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
-  stickerOther: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(17,17,17,0.3)', backgroundColor: 'transparent' },
-  stickerText: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink },
-  polaroidNote: { fontSize: 17, textAlign: 'center', color: '#8E8E86', position: 'absolute', left: 0, right: 0, bottom: 2 },
-  field: { borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)', paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
-  fieldLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-  white: { backgroundColor: '#FFFFFF' },
-  quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  quickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  fit: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
-});
+    sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, paddingHorizontal: 2 },
+    own: { borderRadius: 26, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+    labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
+    label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 2 },
+    sticker: { width: 70, alignItems: 'center', gap: 6 },
+    stickerDot: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+    stickerOther: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.3), backgroundColor: 'transparent' },
+    stickerText: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink },
+    polaroidNote: { fontSize: 17, textAlign: 'center', color: '#8E8E86', position: 'absolute', left: 0, right: 0, bottom: 2 },
+    field: { borderRadius: 16, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
+    fieldLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    white: { backgroundColor: colors.paper },
+    quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+    quickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    fit: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  }),
+);

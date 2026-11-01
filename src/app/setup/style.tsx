@@ -8,7 +8,7 @@ import { rich, t } from '@/lib/i18n';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { inputsFrom, LEAKS } from '@/lib/setup/plan';
 import { LEAK_COLOR, leakRules, PAYDAY } from '@/lib/setup/rules';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 const ANSWERS: { key: MoneyStyle; color: string }[] = [
   { key: 'treat', color: colors.lavender },
@@ -71,8 +71,10 @@ export default function SetupStyle() {
   );
 }
 
-const styles = StyleSheet.create({
-  rules: { borderRadius: 18, backgroundColor: '#F8F6F4', paddingHorizontal: 14, paddingVertical: 4 },
-  rulesHead: { paddingTop: 10, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
-  rule: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 8 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    rules: { borderRadius: 18, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 4 },
+    rulesHead: { paddingTop: 10, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
+    rule: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 8 },
+  }),
+);

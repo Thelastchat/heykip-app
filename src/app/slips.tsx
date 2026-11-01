@@ -27,7 +27,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, takePickedSlips, type PickedSlip, type Slip } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed } from '@/theme';
 
 const AT_ONCE = 3; // slips read side by side
 const SPEND: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
@@ -326,7 +326,7 @@ function Thumb({ slip }: { slip: Slip }) {
       <Animated.View style={[styles.scan, scan]} pointerEvents="none" />
       {slip.state !== 'reading' && (
         <View style={[styles.tick, slip.state !== 'done' && { backgroundColor: colors.faint }]}>
-          {slip.state === 'done' ? <Check size={12} color="#FFFFFF" weight="bold" /> : <Minus size={12} color="#FFFFFF" weight="bold" />}
+          {slip.state === 'done' ? <Check size={12} color={colors.paper} weight="bold" /> : <Minus size={12} color={colors.paper} weight="bold" />}
         </View>
       )}
     </View>
@@ -370,7 +370,7 @@ function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
         ) : (
           <Pressable onPress={onCategory} hitSlop={6} style={[styles.cat, isIn && { backgroundColor: 'rgba(220,210,247,0.75)' }]} accessibilityRole="button" accessibilityLabel={t('Change category')}>
             <Image source={ICON3D[isIn ? inCatIcon(slip.category as InCat) : dbCatIcon(slip.category as DbCat)]} style={{ width: 22, height: 22 }} contentFit="contain" />
-            <Text style={[styles.catText, isIn && { color: colors.lavenderText }]}>{isIn ? IN_CAT_NAME[slip.category as InCat] : DB_CAT_NAME[slip.category as DbCat]}</Text>
+            <Text style={[styles.catText, isIn && { color: '#5B4A96' }]}>{isIn ? IN_CAT_NAME[slip.category as InCat] : DB_CAT_NAME[slip.category as DbCat]}</Text>
             <CaretDown size={10} color={colors.muted} weight="bold" />
           </Pressable>
         )}
@@ -379,51 +379,53 @@ function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  thumb: {
-    width: '31%',
-    aspectRatio: 0.58,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(17,17,17,0.06)',
-    boxShadow: '0 10px 24px rgba(17,17,17,0.08)',
-  } as never,
-  scan: { position: 'absolute', left: 0, right: 0, top: 0, height: 46, backgroundColor: 'rgba(255,244,122,0.55)' },
-  tick: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  big: { fontFamily: fonts.medium, fontSize: 22, letterSpacing: -0.4, color: colors.ink, textAlign: 'center' },
-  sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
-  small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-  bub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
-  bubText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
-  row: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mini: { width: 44, height: 60, borderRadius: 9, borderWidth: 1, borderColor: 'rgba(17,17,17,0.08)', backgroundColor: '#FFFFFF' },
-  name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  amt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-  struck: { textDecorationLine: 'line-through', color: colors.muted },
-  cat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 28,
-    paddingLeft: 4,
-    paddingRight: 9,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
-  catText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-  tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: 'rgba(17,17,17,0.07)' },
-  tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
-  sum: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2, gap: 10 },
-  foot: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 10 },
-  dark: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  darkText: { fontFamily: fonts.medium, fontSize: 16, color: '#FFFFFF' },
-  light: { height: 56, alignItems: 'center', justifyContent: 'center' },
-  lightText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
-  catPick: { height: 42, paddingLeft: 6, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    thumb: {
+      width: '31%',
+      aspectRatio: 0.58,
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: inkA(0.06),
+      boxShadow: '0 10px 24px rgba(17,17,17,0.08)',
+    } as never,
+    scan: { position: 'absolute', left: 0, right: 0, top: 0, height: 46, backgroundColor: 'rgba(255,244,122,0.55)' },
+    tick: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    big: { fontFamily: fonts.medium, fontSize: 22, letterSpacing: -0.4, color: colors.ink, textAlign: 'center' },
+    sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
+    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
+    bub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    bubText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+    row: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    mini: { width: 44, height: 60, borderRadius: 9, borderWidth: 1, borderColor: inkA(0.08), backgroundColor: colors.paper },
+    name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    amt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    struck: { textDecorationLine: 'line-through', color: colors.muted },
+    cat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      height: 28,
+      paddingLeft: 4,
+      paddingRight: 9,
+      borderRadius: 999,
+      backgroundColor: glassA(0.75),
+      borderWidth: 1,
+      borderColor: colors.paper,
+    },
+    catText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
+    tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: inkA(0.07) },
+    tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
+    sum: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2, gap: 10 },
+    foot: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 10 },
+    dark: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    darkText: { fontFamily: fonts.medium, fontSize: 16, color: colors.paper },
+    light: { height: 56, alignItems: 'center', justifyContent: 'center' },
+    lightText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+    cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
+    catPick: { height: 42, paddingLeft: 6, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  }),
+);

@@ -29,7 +29,8 @@ import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { useAiConsent } from '@/components/AiConsent';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts, money } from '@/theme';
+import { colors, fonts, money, inkA, themed } from '@/theme';
+import { Accent } from '@/lib/accent';
 
 type Kind = 'spend' | 'income';
 type Cat = { key: string; name: string; icon: IconKey; color: string; i3?: Icon3D };
@@ -328,7 +329,7 @@ export default function Add() {
                 <Text style={styles.slipText}>{t('Slip')}</Text>
                 {!isPlus && (
                   <View style={styles.lk}>
-                    <Lock size={9} color="#FFFFFF" weight="fill" />
+                    <Lock size={9} color={colors.paper} weight="fill" />
                   </View>
                 )}
               </Glass>
@@ -455,7 +456,9 @@ export default function Add() {
                 style={[styles.whenRow, on && { backgroundColor: colors.lime, borderColor: colors.ink }]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}>
-                <Text style={styles.chipText}>{i === 0 ? t('Today') : i === 1 ? t('Yesterday') : dayName(d)}</Text>
+                <Accent on={on}>
+                  <Text style={styles.chipText}>{i === 0 ? t('Today') : i === 1 ? t('Yesterday') : dayName(d)}</Text>
+                </Accent>
               </Pressable>
             );
           })}
@@ -500,7 +503,7 @@ function Switch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void })
       <Animated.View style={[styles.segKnob, { width: w / 2 - 4 }, knob]} />
       {(['spend', 'income'] as Kind[]).map((k) => (
         <Pressable key={k} onPress={() => onChange(k)} style={styles.segBtn} accessibilityRole="tab" accessibilityState={{ selected: kind === k }}>
-          <Text style={[styles.segText, kind === k && { color: '#FFFFFF' }]}>{k === 'spend' ? t('Spent') : t('Got paid')}</Text>
+          <Text style={[styles.segText, kind === k && { color: colors.paper }]}>{k === 'spend' ? t('Spent') : t('Got paid')}</Text>
         </Pressable>
       ))}
     </Glass>
@@ -517,28 +520,30 @@ function Caret() {
   return <Animated.View style={[styles.caret, a]} />;
 }
 
-const styles = StyleSheet.create({
-  slip: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  slipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  lk: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  seg: { flexDirection: 'row', height: 48, padding: 4 },
-  segKnob: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 999, backgroundColor: colors.ink },
-  segBtn: { flex: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  segText: { fontFamily: fonts.medium, fontSize: 15, color: colors.muted },
-  amount: { fontFamily: fonts.regular, fontSize: 64, letterSpacing: -3, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 320 },
-  caret: { width: 3, height: 54, backgroundColor: colors.ink, marginLeft: 4, borderRadius: 2 },
-  kipLine: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24 },
-  hint: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted, textAlign: 'center', flexShrink: 1 },
-  chip: { height: 46, paddingLeft: 5, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  chipOn: { borderWidth: 1.5, borderColor: colors.ink },
-  chipText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
-  field: { minHeight: 56, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fieldK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-  fieldV: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
-  key: { height: 50, alignItems: 'center', justifyContent: 'center' },
-  keyText: { fontFamily: fonts.regular, fontSize: 24, color: colors.ink },
-  backdrop: { flex: 1, backgroundColor: 'rgba(17,17,17,0.45)' },
-  whenSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 8 },
-  whenTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginBottom: 4 },
-  whenRow: { height: 48, borderRadius: 14, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: 16, justifyContent: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    slip: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    slipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+    lk: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    seg: { flexDirection: 'row', height: 48, padding: 4 },
+    segKnob: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 999, backgroundColor: colors.ink },
+    segBtn: { flex: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    segText: { fontFamily: fonts.medium, fontSize: 15, color: colors.muted },
+    amount: { fontFamily: fonts.regular, fontSize: 64, letterSpacing: -3, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 320 },
+    caret: { width: 3, height: 54, backgroundColor: colors.ink, marginLeft: 4, borderRadius: 2 },
+    kipLine: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24 },
+    hint: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted, textAlign: 'center', flexShrink: 1 },
+    chip: { height: 46, paddingLeft: 5, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    chipOn: { borderWidth: 1.5, borderColor: colors.ink },
+    chipText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
+    field: { minHeight: 56, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    fieldK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    fieldV: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
+    key: { height: 50, alignItems: 'center', justifyContent: 'center' },
+    keyText: { fontFamily: fonts.regular, fontSize: 24, color: colors.ink },
+    backdrop: { flex: 1, backgroundColor: inkA(0.45) },
+    whenSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 8 },
+    whenTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginBottom: 4 },
+    whenRow: { height: 48, borderRadius: 14, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: 16, justifyContent: 'center' },
+  }),
+);

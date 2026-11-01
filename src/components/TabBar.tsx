@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
 import { t } from '@/lib/i18n';
-import { colors } from '@/theme';
+import { colors, themed } from '@/theme';
 
 // Floating 3-item bar: Home · Kip (centre, opens Talk) · Goals.
 export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
@@ -26,7 +26,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
       <View style={styles.bar}>
         <Glass radius={999} style={StyleSheet.absoluteFill} innerStyle={{ flex: 1 }} />
         <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
-          <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? '#FFFFFF' : colors.ink} />
+          <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? colors.paper : colors.ink} />
         </TabIcon>
 
         <Pressable
@@ -41,7 +41,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         </Pressable>
 
         <TabIcon label={t('Goals')} active={current === 'goals'} onPress={() => go('goals')}>
-          <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? '#FFFFFF' : colors.ink} />
+          <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? colors.paper : colors.ink} />
         </TabIcon>
       </View>
     </View>
@@ -62,25 +62,27 @@ function TabIcon({ label, active, onPress, children }: { label: string; active: 
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
-  bar: {
-    width: 256,
-    height: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-  },
-  icon: { width: 52, height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  kip: {
-    top: -20,
-    width: 70,
-    height: 70,
-    borderRadius: 999,
-    backgroundColor: colors.lime,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 0 0 6px #FFFFFF',
-  },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
+    bar: {
+      width: 256,
+      height: 72,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+    },
+    icon: { width: 52, height: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    kip: {
+      top: -20,
+      width: 70,
+      height: 70,
+      borderRadius: 999,
+      backgroundColor: colors.lime,
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 0 0 6px #FFFFFF',
+    },
+  }),
+);

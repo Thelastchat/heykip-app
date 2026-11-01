@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Kip, KIP_MOODS, type KipMood } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Muted, T } from '@/components/ui';
-import { colors, radius, shadow } from '@/theme';
+import { colors, radius, shadow, themed } from '@/theme';
 
 // Kip's moods, from the canvas board. A review screen: tap a mood, tap Kip to poke him.
 const MOODS: Record<KipMood, { name: string; what: string; where: string }> = {
@@ -24,9 +24,7 @@ export default function KipMoods() {
   const info = MOODS[mood];
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 20 }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 20 }}>
       <ScreenHeader title="Kip’s moods" />
 
       <View style={styles.stage}>
@@ -43,13 +41,10 @@ export default function KipMoods() {
         {KIP_MOODS.map((m) => {
           const on = m === mood;
           return (
-            <Pressable
-              key={m}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              onPress={() => setMood(m)}
-              style={[styles.chip, on && styles.chipOn]}>
-              <T variant="label" style={{ color: colors.ink, fontFamily: on ? 'Geist_600SemiBold' : undefined }}>{MOODS[m].name}</T>
+            <Pressable key={m} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setMood(m)} style={[styles.chip, on && styles.chipOn]}>
+              <T variant="label" style={{ color: colors.ink, fontFamily: on ? 'Geist_600SemiBold' : undefined }}>
+                {MOODS[m].name}
+              </T>
             </Pressable>
           );
         })}
@@ -60,9 +55,21 @@ export default function KipMoods() {
   );
 }
 
-const styles = StyleSheet.create({
-  stage: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, borderRadius: radius.cardLg, backgroundColor: colors.grey },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  chip: { paddingHorizontal: 16, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent', ...shadow.card },
-  chipOn: { backgroundColor: colors.lime, borderColor: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    stage: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, borderRadius: radius.cardLg, backgroundColor: colors.grey },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+    chip: {
+      paddingHorizontal: 16,
+      height: 40,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.paper,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      ...shadow.card,
+    },
+    chipOn: { backgroundColor: colors.lime, borderColor: colors.ink },
+  }),
+);

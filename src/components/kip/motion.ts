@@ -35,9 +35,7 @@ export function poseFor(t: number, mood: KipMood, seed: number): Pose {
   switch (mood) {
     case 'listen': {
       // Reacts to an imaginary voice level, with natural pauses.
-      const level =
-        Math.max(0, 0.5 + 0.3 * Math.sin(t * 7.3) + 0.2 * Math.sin(t * 12.1 + 1) + 0.15 * Math.sin(t * 3.1)) *
-        (Math.sin(t * 0.9) > -0.5 ? 1 : 0.15);
+      const level = Math.max(0, 0.5 + 0.3 * Math.sin(t * 7.3) + 0.2 * Math.sin(t * 12.1 + 1) + 0.15 * Math.sin(t * 3.1)) * (Math.sin(t * 0.9) > -0.5 ? 1 : 0.15);
       return { sx: 1 - 0.045 * level, sy: 1 + 0.03 * breath + 0.08 * level, rot: 0, jump: 0, wob: 0.01 + 0.012 * level };
     }
     case 'think':

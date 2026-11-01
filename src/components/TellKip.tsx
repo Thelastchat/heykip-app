@@ -16,7 +16,7 @@ import { getLang, rich, t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, savedVoiceLang, useVoice, voiceModule } from '@/lib/voice';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 export type KipTask = 'extra' | 'over' | 'month';
 type Reason = 'plus' | 'consent' | 'nokey' | 'busy' | 'offline';
@@ -82,11 +82,17 @@ export function TellKipBox({ placeholder, onAsk, disabled }: { placeholder: stri
       />
       {text.trim() && !listening ? (
         <Squish onPress={send} style={styles.round} accessibilityRole="button" accessibilityLabel={t('Send to Kip')}>
-          {disabled ? <ActivityIndicator color="#FFFFFF" size="small" /> : <ArrowUp size={17} color="#FFFFFF" weight="bold" />}
+          {disabled ? <ActivityIndicator color={colors.paper} size="small" /> : <ArrowUp size={17} color={colors.paper} weight="bold" />}
         </Squish>
       ) : (
         <Squish onPress={mic} style={styles.round} accessibilityRole="button" accessibilityLabel={listening ? t('Stop listening') : t('Talk to Kip')}>
-          {disabled ? <ActivityIndicator color="#FFFFFF" size="small" /> : listening ? <Stop size={15} color="#FFFFFF" weight="fill" /> : <Microphone size={17} color="#FFFFFF" weight="fill" />}
+          {disabled ? (
+            <ActivityIndicator color={colors.paper} size="small" />
+          ) : listening ? (
+            <Stop size={15} color={colors.paper} weight="fill" />
+          ) : (
+            <Microphone size={17} color={colors.paper} weight="fill" />
+          )}
         </Squish>
       )}
     </Glass>
@@ -192,20 +198,22 @@ export function TellKipPlus({ onPlus }: { onPlus: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
-  input: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.ink, paddingVertical: 6 },
-  round: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  me: { alignSelf: 'flex-end', maxWidth: '86%', backgroundColor: colors.ink, borderRadius: 20, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 10 },
-  meText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: '#FFFFFF' },
-  kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  bub: { padding: 12, paddingHorizontal: 14 },
-  say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.07)' },
-  title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-  from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
-  to: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-  back: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textDecorationLine: 'underline' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    box: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
+    input: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.ink, paddingVertical: 6 },
+    round: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    me: { alignSelf: 'flex-end', maxWidth: '86%', backgroundColor: colors.ink, borderRadius: 20, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 10 },
+    meText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.paper },
+    kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    bub: { padding: 12, paddingHorizontal: 14 },
+    say: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.07) },
+    title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    to: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    back: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textDecorationLine: 'underline' },
+  }),
+);

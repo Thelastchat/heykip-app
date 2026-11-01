@@ -12,7 +12,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
 import type { VoiceLang, VoiceState } from '@/lib/voice';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 
 export function Listening({
   name,
@@ -135,35 +135,37 @@ function Bar({ i, h, level, live }: { i: number; h: number; level: number; live:
   return <Animated.View style={[styles.bar, i === 2 && { backgroundColor: colors.limeDeep }, a]} />;
 }
 
-const styles = StyleSheet.create({
-  body: { flex: 1, paddingHorizontal: 18 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  lang: { height: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  langText: { fontFamily: fonts.medium, fontSize: 14, color: colors.faint },
-  langOn: { color: colors.ink },
-  langSep: { fontFamily: fonts.medium, fontSize: 14, color: colors.faint },
-  hey: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted },
-  h1: { fontFamily: fonts.regular, fontSize: 30, lineHeight: 38, letterSpacing: -1, color: colors.ink, textAlign: 'center' },
-  stage: { alignSelf: 'center', width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  wave: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,244,122,0.55)' },
-  said: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 30, color: colors.ink, textAlign: 'center', paddingHorizontal: 8, marginTop: 6 },
-  hint: { fontFamily: fonts.regular, fontSize: 16, color: colors.muted },
-  caret: { color: colors.ink, fontFamily: fonts.regular },
-  mic: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: colors.ink,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    boxShadow: '0 14px 28px rgba(17,17,17,0.3)',
-  } as never,
-  bar: { width: 4, borderRadius: 2, backgroundColor: '#FFFFFF' },
-  micLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    body: { flex: 1, paddingHorizontal: 18 },
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    statusText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    lang: { height: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    langText: { fontFamily: fonts.medium, fontSize: 14, color: colors.faint },
+    langOn: { color: colors.ink },
+    langSep: { fontFamily: fonts.medium, fontSize: 14, color: colors.faint },
+    hey: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted },
+    h1: { fontFamily: fonts.regular, fontSize: 30, lineHeight: 38, letterSpacing: -1, color: colors.ink, textAlign: 'center' },
+    stage: { alignSelf: 'center', width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+    wave: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,244,122,0.55)' },
+    said: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 30, color: colors.ink, textAlign: 'center', paddingHorizontal: 8, marginTop: 6 },
+    hint: { fontFamily: fonts.regular, fontSize: 16, color: colors.muted },
+    caret: { color: colors.ink, fontFamily: fonts.regular },
+    mic: {
+      width: 84,
+      height: 84,
+      borderRadius: 42,
+      backgroundColor: colors.ink,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      boxShadow: '0 14px 28px rgba(17,17,17,0.3)',
+    } as never,
+    bar: { width: 4, borderRadius: 2, backgroundColor: colors.paper },
+    micLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+  }),
+);

@@ -12,7 +12,7 @@ import { baht } from '@/lib/money';
 import { useSetup } from '@/lib/setup/draft';
 import { makePlan, monthYear } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { ICON3D, goalTypeIcon3D, type Icon3D } from '@/lib/icons3d';
 
@@ -148,23 +148,25 @@ function Confetti() {
   );
 }
 
-const styles = StyleSheet.create({
-  rule: { height: 1, backgroundColor: 'rgba(17,17,17,0.1)', marginVertical: 4 },
-  howHead: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
-  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
-  screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 16 },
-  h1: { fontFamily: fonts.semibold, fontSize: 32, letterSpacing: -0.6, color: colors.ink, textAlign: 'center' },
-  sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center' },
-  card: {
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    gap: 6,
-    boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
-  },
-  cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, paddingRight: 20 },
-  cardText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    rule: { height: 1, backgroundColor: inkA(0.1), marginVertical: 4 },
+    howHead: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
+    link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
+    screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 16 },
+    h1: { fontFamily: fonts.semibold, fontSize: 32, letterSpacing: -0.6, color: colors.ink, textAlign: 'center' },
+    sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center' },
+    card: {
+      borderRadius: 26,
+      backgroundColor: glassA(0.5),
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      gap: 6,
+      boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
+    },
+    cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink, paddingRight: 20 },
+    cardText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
+  }),
+);

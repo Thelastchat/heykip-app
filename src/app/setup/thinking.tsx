@@ -13,7 +13,7 @@ import { baht } from '@/lib/money';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { makePlan, monthYear, monthsFromNow } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, glassA, inkA, themed } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 
 type Step = { doing: string; found: string; ms: number };
@@ -161,7 +161,7 @@ export default function SetupThinking() {
             <View key={n} style={styles.line}>
               {state === 'done' ? (
                 <View style={styles.tick}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: fonts.bold, marginTop: -1 }}>✓</Text>
+                  <Text style={{ color: colors.paper, fontSize: 12, fontFamily: fonts.bold, marginTop: -1 }}>✓</Text>
                 </View>
               ) : state === 'now' ? (
                 <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
@@ -169,7 +169,7 @@ export default function SetupThinking() {
                 <View style={styles.empty} />
               )}
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.doing, state === 'now' && { fontFamily: fonts.semibold }, state === 'next' && { color: '#A9A9A1' }]}>{s.doing}</Text>
+                <Text style={[styles.doing, state === 'now' && { fontFamily: fonts.semibold }, state === 'next' && { color: colors.faint }]}>{s.doing}</Text>
                 {state === 'done' && <Text style={styles.found}>{s.found}</Text>}
               </View>
             </View>
@@ -185,25 +185,27 @@ export default function SetupThinking() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 14 },
-  h1: { fontFamily: fonts.semibold, fontSize: 26, letterSpacing: -0.4, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
-  list: {
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
-  },
-  line: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 7 },
-  doing: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  found: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: '#2E2E2A' },
-  tick: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  spinner: { width: 22, height: 22, borderRadius: 11, borderWidth: 3, borderColor: colors.lime, borderTopColor: colors.ink },
-  empty: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D6D6CF' },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(17,17,17,0.08)', overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 14 },
+    h1: { fontFamily: fonts.semibold, fontSize: 26, letterSpacing: -0.4, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
+    list: {
+      borderRadius: 26,
+      backgroundColor: glassA(0.5),
+      borderWidth: 1,
+      borderColor: glassA(0.95),
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      boxShadow: '0 16px 36px rgba(17,17,17,0.06)',
+    },
+    line: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 7 },
+    doing: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+    found: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: '#2E2E2A' },
+    tick: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    spinner: { width: 22, height: 22, borderRadius: 11, borderWidth: 3, borderColor: colors.lime, borderTopColor: colors.ink },
+    empty: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D6D6CF' },
+    track: { height: 6, borderRadius: 3, backgroundColor: inkA(0.08), overflow: 'hidden' },
+    fill: { height: 6, borderRadius: 3, backgroundColor: colors.ink },
+  }),
+);

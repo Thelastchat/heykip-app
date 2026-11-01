@@ -16,7 +16,7 @@ import { RiseIn, Squish } from '@/components/glow/motion';
 import { SaveButton, Sheet } from '@/components/profile/Sheet';
 import { askPhotos, autoSlipsAvailable, isPhotosDenied, checkNew, findAlbums, loadAuto, markChecked, prepareForKip, saveAuto, type AutoSlips, type FoundAlbum, type NewSlips } from '@/lib/autoslips';
 import { dayShort, monthShort, t } from '@/lib/i18n';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 function sinceText(ms: number) {
@@ -88,7 +88,7 @@ export function SlipFinder({ isPlus }: { isPlus: boolean }) {
             {found.albums.join(', ')} · {sinceText(found.since)}
           </Text>
           <Squish onPress={readThem} disabled={busy} style={styles.pill} accessibilityRole="button">
-            {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.pillText}>{t('Read them')}</Text>}
+            {busy ? <ActivityIndicator color={colors.paper} size="small" /> : <Text style={styles.pillText}>{t('Read them')}</Text>}
           </Squish>
         </View>
       </Glass>
@@ -183,7 +183,7 @@ export function AlbumSheet({ albums, onClose, onDone }: { albums: FoundAlbum[]; 
               <Switch
                 value={!!on[a.id]}
                 onValueChange={(v) => setOn((x) => ({ ...x, [a.id]: v }))}
-                trackColor={{ true: colors.ink, false: 'rgba(17,17,17,0.15)' }}
+                trackColor={{ true: colors.ink, false: inkA(0.15) }}
                 thumbColor="#FFFFFF"
                 {...({ activeThumbColor: '#FFFFFF', activeTrackColor: colors.ink } as object)}
                 accessibilityLabel={a.title}
@@ -221,51 +221,53 @@ function Stack({ n, uris }: { n: number; uris: string[] }) {
 /** A tiny drawn slip for the "Turn on" card (no real photos yet). */
 function FakeSlip() {
   return (
-    <View style={{ flex: 1, padding: 4, gap: 3, backgroundColor: '#FFFFFF' }}>
+    <View style={{ flex: 1, padding: 4, gap: 3, backgroundColor: colors.paper }}>
       <View style={{ height: 6, borderRadius: 2, backgroundColor: colors.limeDeep }} />
       {[1, 0.7, 1, 0.6].map((w, i) => (
-        <View key={i} style={{ height: 3, width: `${w * 100}%`, borderRadius: 2, backgroundColor: 'rgba(17,17,17,0.1)' }} />
+        <View key={i} style={{ height: 3, width: `${w * 100}%`, borderRadius: 2, backgroundColor: inkA(0.1) }} />
       ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  title: { fontFamily: fonts.medium, fontSize: 16, letterSpacing: -0.2, color: colors.ink },
-  sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
-  pill: { alignSelf: 'flex-start', height: 36, minWidth: 96, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  pillText: { fontFamily: fonts.medium, fontSize: 13, color: '#FFFFFF' },
-  x: { position: 'absolute', top: 12, right: 12, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(17,17,17,0.06)', alignItems: 'center', justifyContent: 'center' },
-  stack: { width: 64, height: 76 },
-  paper: {
-    position: 'absolute',
-    width: 40,
-    height: 68,
-    borderRadius: 7,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(17,17,17,0.08)',
-    backgroundColor: '#FFFFFF',
-    boxShadow: '0 6px 14px rgba(17,17,17,0.12)',
-  } as never,
-  count: {
-    position: 'absolute',
-    right: -2,
-    top: -6,
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 5,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  countText: { fontFamily: fonts.semibold, fontSize: 12, color: '#FFFFFF' },
-  alb: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  thumb: { width: 40, height: 40, borderRadius: 10, overflow: 'hidden', backgroundColor: '#DFE7EF' },
-  albTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    card: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+    title: { fontFamily: fonts.medium, fontSize: 16, letterSpacing: -0.2, color: colors.ink },
+    sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
+    pill: { alignSelf: 'flex-start', height: 36, minWidth: 96, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+    pillText: { fontFamily: fonts.medium, fontSize: 13, color: colors.paper },
+    x: { position: 'absolute', top: 12, right: 12, width: 24, height: 24, borderRadius: 12, backgroundColor: inkA(0.06), alignItems: 'center', justifyContent: 'center' },
+    stack: { width: 64, height: 76 },
+    paper: {
+      position: 'absolute',
+      width: 40,
+      height: 68,
+      borderRadius: 7,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: inkA(0.08),
+      backgroundColor: colors.paper,
+      boxShadow: '0 6px 14px rgba(17,17,17,0.12)',
+    } as never,
+    count: {
+      position: 'absolute',
+      right: -2,
+      top: -6,
+      minWidth: 22,
+      height: 22,
+      borderRadius: 11,
+      paddingHorizontal: 5,
+      backgroundColor: colors.ink,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.paper,
+    },
+    countText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.paper },
+    alb: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    thumb: { width: 40, height: 40, borderRadius: 10, overflow: 'hidden', backgroundColor: '#DFE7EF' },
+    albTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+  }),
+);

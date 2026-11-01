@@ -21,7 +21,7 @@ import { autoSlipsAvailable, loadAuto, saveAuto, type AutoSlips } from '@/lib/au
 import { ICON3D } from '@/lib/icons3d';
 import { PRIVACY_EMAIL } from '@/lib/privacy';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 export default function Privacy() {
   const insets = useSafeAreaInsets();
@@ -123,7 +123,7 @@ export default function Privacy() {
             <Switch
               value={on}
               onValueChange={toggleAi}
-              trackColor={{ true: colors.ink, false: 'rgba(17,17,17,0.15)' }}
+              trackColor={{ true: colors.ink, false: inkA(0.15) }}
               thumbColor="#FFFFFF"
               {...({ activeThumbColor: '#FFFFFF', activeTrackColor: colors.ink } as object)}
               accessibilityLabel={t('Let Kip read for me')}
@@ -140,7 +140,7 @@ export default function Privacy() {
                 onValueChange={(v) => {
                   if (!v) stopFinding();
                 }}
-                trackColor={{ true: colors.ink, false: 'rgba(17,17,17,0.15)' }}
+                trackColor={{ true: colors.ink, false: inkA(0.15) }}
                 thumbColor="#FFFFFF"
                 {...({ activeThumbColor: '#FFFFFF', activeTrackColor: colors.ink } as object)}
                 accessibilityLabel={t('Kip finds slips')}
@@ -206,17 +206,19 @@ function Row({ title, sub, value, line, danger, onPress }: { title: string; sub:
   );
 }
 
-const styles = StyleSheet.create({
-  hero: { padding: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  body: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.ink },
-  cap: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, marginLeft: 4, marginBottom: -6 },
-  group: { paddingHorizontal: 16, paddingVertical: 2 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  line: { borderTopWidth: 1, borderTopColor: 'rgba(17,17,17,0.06)' },
-  rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-  small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 1 },
-  val: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
-  toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
-  toastText: { fontFamily: fonts.regular, fontSize: 13, color: '#FFFFFF', textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    hero: { padding: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    body: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.ink },
+    cap: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, marginLeft: 4, marginBottom: -6 },
+    group: { paddingHorizontal: 16, paddingVertical: 2 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    line: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
+    rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 1 },
+    val: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
+    toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
+    toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
+  }),
+);

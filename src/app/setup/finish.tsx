@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { useSetup } from '@/lib/setup/draft';
 import { finishSetup } from '@/lib/setup/save';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, themed } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 
 export default function SetupFinish() {
@@ -53,8 +53,10 @@ export default function SetupFinish() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', padding: 28, gap: 10 },
-  title: { fontFamily: fonts.semibold, fontSize: 24, color: colors.ink, textAlign: 'center' },
-  sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
-});
+const styles = themed(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', padding: 28, gap: 10 },
+    title: { fontFamily: fonts.semibold, fontSize: 24, color: colors.ink, textAlign: 'center' },
+    sub: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.muted, textAlign: 'center' },
+  }),
+);
