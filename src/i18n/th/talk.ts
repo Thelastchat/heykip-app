@@ -17,7 +17,7 @@ const th: Record<string, string> = {
   Transport: 'เดินทาง',
   Shopping: 'ช้อปปิ้ง',
   Fun: 'เที่ยวเล่น',
-  'Health & beauty': 'สุขภาพและความสวย',
+  'Health & beauty': 'สุขภาพและความงาม',
   'Home & bills': 'บ้านและบิล',
   Travel: 'เที่ยว',
   'Family & pets': 'ครอบครัวและสัตว์เลี้ยง',

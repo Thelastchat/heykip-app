@@ -55,7 +55,7 @@ const th: Record<string, string> = {
   Transport: 'เดินทาง',
   Shopping: 'ช้อปปิ้ง',
   Fun: 'เที่ยวเล่น',
-  'Health & beauty': 'สุขภาพและความสวย',
+  'Health & beauty': 'สุขภาพและความงาม',
   Health: 'สุขภาพ',
   Learning: 'เรียนรู้',
   Giving: 'ให้คนอื่น',

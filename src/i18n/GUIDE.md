@@ -45,7 +45,7 @@
 | Plus / HeyKip Plus | Plus / HeyKip Plus (keep in English) |
 
 ## Words
-- Categories: Food & drinks → อาหารและเครื่องดื่ม · Food → อาหาร · Transport → เดินทาง · Shopping → ช้อปปิ้ง · Fun → เที่ยวเล่น · Health & beauty → สุขภาพและความสวย · Health → สุขภาพ · Household / Household & other → ของใช้ / ของใช้และอื่นๆ · Learning → เรียนรู้ · Giving → ให้คนอื่น · Home & bills → บ้านและบิล · Travel → เที่ยว · Family & pets → ครอบครัวและสัตว์เลี้ยง · Installments → ผ่อน · Other → อื่นๆ · Spend freely → ใช้ได้อิสระ
+- Categories: Food & drinks → อาหารและเครื่องดื่ม · Food → อาหาร · Transport → เดินทาง · Shopping → ช้อปปิ้ง · Fun → เที่ยวเล่น · Health & beauty → สุขภาพและความงาม · Health → สุขภาพ · Household / Household & other → ของใช้ / ของใช้และอื่นๆ · Learning → เรียนรู้ · Giving → ให้คนอื่น · Home & bills → บ้านและบิล · Travel → เที่ยว · Family & pets → ครอบครัวและสัตว์เลี้ยง · Installments → ผ่อน · Other → อื่นๆ · Spend freely → ใช้ได้อิสระ
 - Income: Pay → เงินเดือน · Side gig(s) → งานเสริม · Gift(s) → ของขวัญ/เงินให้ · Usual pay → เงินเดือนปกติ · payday → วันเงินเดือนออก
 - Goal / goals → เป้าหมาย · saving → เก็บเงิน · budget → งบ · bill → บิล · rent → ค่าห้อง · plan → แผน · on track → ทันตามแผน · sooner → เร็วขึ้น · pace → แผน (e.g. "faster than plan" → "เร็วกว่าแผน")
 - Money styles: Kip’s plan → แผนของ Kip · Save first → เก็บก่อน · 50 / 30 / 20 → 50 / 30 / 20 · 6 Jars → 6 โหล
