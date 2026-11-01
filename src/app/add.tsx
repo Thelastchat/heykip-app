@@ -320,7 +320,7 @@ export default function Add() {
         <ScreenHeader
           title={t('Add it yourself')}
           right={
-            <Squish onPress={() => setSlip(true)} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
+            <Squish onPress={() => (isPlus ? router.push('/slips') : setSlip(true))} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
               <Glass radius={23} innerStyle={styles.slip}>
                 <Receipt size={17} color={colors.ink} weight="fill" />
                 <Text style={styles.slipText}>{t('Slip')}</Text>
@@ -336,7 +336,6 @@ export default function Add() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {slip && isPlus && <Text style={[styles.hint, styles.soon]}>{t('Slip reading is almost here — for now, type it in. It takes 3 seconds.')}</Text>}
         <View style={{ paddingHorizontal: 18 }}>
           <Switch kind={kind} onChange={switchKind} />
         </View>
@@ -510,7 +509,6 @@ const styles = StyleSheet.create({
   slip: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
   slipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
   lk: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-  soon: { marginHorizontal: 18, backgroundColor: colors.lime, borderRadius: 14, padding: 10, color: colors.ink },
   seg: { flexDirection: 'row', height: 48, padding: 4 },
   segKnob: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 999, backgroundColor: colors.ink },
   segBtn: { flex: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },

@@ -1,6 +1,6 @@
 // One soft field behind the whole screen, with slow-drifting glows. It never scrolls, so the cards
 // float over a single surface. The glow warms to peach when spending runs a bit fast.
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop, Circle } from 'react-native-svg';
@@ -13,6 +13,8 @@ type Blob = { color: string; size: number; x: number; y: number; dx: number; dy:
 
 export function GlowBackground({ mood = 'calm' }: { mood?: GlowMood }) {
   const { width, height } = useWindowDimensions();
+  // Each background gets its own gradient names: on web, two screens can be on the page at once.
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const blobs: Blob[] = [
     { color: mood === 'fast' ? glow.peachWarm : glow.peach, size: 1.0, x: 0.55, y: -0.08, dx: -40, dy: 50, s: 1.12, ms: 12000, opacity: 0.6 },
     { color: mood === 'fast' ? glow.peach : glow.cream, size: 0.75, x: 0.0, y: 0.12, dx: -30, dy: 40, s: 1.12, ms: 16000, opacity: 0.5 },
@@ -23,17 +25,17 @@ export function GlowBackground({ mood = 'calm' }: { mood?: GlowMood }) {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
         <Defs>
-          <LinearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`field${uid}`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={glow.field[0]} />
             <Stop offset="0.4" stopColor={glow.field[1]} />
             <Stop offset="0.75" stopColor={glow.field[2]} />
             <Stop offset="1" stopColor={glow.field[3]} />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width={width} height={height} fill="url(#field)" />
+        <Rect x="0" y="0" width={width} height={height} fill={`url(#field${uid})`} />
       </Svg>
       {blobs.map((b, i) => (
-        <Drift key={i} blob={b} width={width} height={height} id={`g${i}`} />
+        <Drift key={i} blob={b} width={width} height={height} id={`g${uid}${i}`} />
       ))}
     </View>
   );
