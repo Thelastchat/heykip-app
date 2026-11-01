@@ -56,6 +56,7 @@ export function SlipFinder({ isPlus }: { isPlus: boolean }) {
 
   async function readThem() {
     if (!found || !auto || busy) return;
+    if (!(await ai.ensure())) return;
     setBusy(true);
     const n = await prepareForKip(found.assets);
     await markChecked(auto, found.assets);

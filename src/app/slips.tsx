@@ -14,6 +14,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
+import { useAiConsent } from '@/components/AiConsent';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
@@ -57,6 +58,7 @@ export default function Slips() {
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const started = useRef(false);
+  const ai = useAiConsent(() => router.push('/privacy-policy'));
 
   useEffect(() => {
     supabase
@@ -84,7 +86,7 @@ export default function Slips() {
     });
   }, []);
 
-  async function readAll(assets: PickedSlip[]) {
+  async function readAll(assets: PickedSlip[], retried = false): Promise<void> {
     const results: Slip[] = assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' }));
     let next = 0;
     let stop: string | null = null;
@@ -93,12 +95,22 @@ export default function Slips() {
         const i = next++;
         const p = payload(assets[i]);
         const res = p ? await readSlip(p.image, p.type) : null;
-        if (res && !res.ok && (res.reason === 'plus' || res.reason === 'nokey' || res.reason === 'offline')) stop = res.reason;
+        if (res && !res.ok && (res.reason === 'plus' || res.reason === 'consent' || res.reason === 'nokey' || res.reason === 'offline')) stop = res.reason;
         results[i] = cleanSlip(`s${i}`, assets[i].uri, res && res.ok ? res.read : null);
         setSlips([...results]);
       }
     };
     await Promise.all(Array.from({ length: Math.min(AT_ONCE, assets.length) }, worker));
+    // Kip hasn't been allowed to read yet (or reading was turned off): ask right here, then read again.
+    if (stop === 'consent') {
+      if (!retried && (await ai.ensure())) {
+        setSlips(assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' })));
+        return readAll(assets, true);
+      }
+      setProblem(t('Kip’s reading is turned off — turn it on in Profile → Privacy & data.'));
+      setPhase('review');
+      return;
+    }
     if (stop) {
       setProblem(
         stop === 'offline'
@@ -251,6 +263,7 @@ export default function Slips() {
         </>
       )}
 
+      {ai.sheet}
       {editingSlip && (
         <Sheet open onClose={() => setEditing(null)} title={editingSlip.money === 'in' ? t('What was it?') : t('What was it for?')} sub={editingSlip.name || undefined}>
           <View style={styles.cats}>
