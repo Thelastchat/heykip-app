@@ -2,6 +2,8 @@
 // The native piece isn't inside Expo Go, so it's loaded carefully: in Expo Go `voiceModule()` is null and
 // the app falls back to typing (the keyboard's own mic still works there).
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requireOptionalNativeModule } from 'expo';
+import { Platform } from 'react-native';
 import { getLocales } from 'expo-localization';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -11,6 +13,9 @@ export type VoiceLang = 'th-TH' | 'en-US';
 let cached: SpeechModule | null | undefined;
 export function voiceModule(): SpeechModule | null {
   if (cached !== undefined) return cached;
+  // Ask first, quietly: loading the library when its native part is missing (Expo Go) shows a red error
+  // screen in development even though the error is caught. On web the browser's own speech is used.
+  if (Platform.OS !== 'web' && !requireOptionalNativeModule('ExpoSpeechRecognition')) return (cached = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const m = require('expo-speech-recognition').ExpoSpeechRecognitionModule as SpeechModule;
