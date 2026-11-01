@@ -24,6 +24,7 @@ import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
+import { pickSlips } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money } from '@/theme';
 
@@ -320,7 +321,10 @@ export default function Add() {
         <ScreenHeader
           title={t('Add it yourself')}
           right={
-            <Squish onPress={() => (isPlus ? router.push('/slips') : setSlip(true))} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
+            <Squish
+              onPress={async () => (isPlus ? (await pickSlips()) && router.push('/slips') : setSlip(true))}
+              accessibilityRole="button"
+              accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
               <Glass radius={23} innerStyle={styles.slip}>
                 <Receipt size={17} color={colors.ink} weight="fill" />
                 <Text style={styles.slipText}>{t('Slip')}</Text>

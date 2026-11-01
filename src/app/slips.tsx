@@ -23,11 +23,10 @@ import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, type Slip } from '@/lib/slips';
+import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, takePickedSlips, type Slip } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
-const MAX = 10;
 const AT_ONCE = 3; // slips read side by side
 const SPEND: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const INCOME: InCat[] = ['pay', 'side_gigs', 'gifts', 'other'];
@@ -52,7 +51,7 @@ export default function Slips() {
   const { session } = useAuth();
   const { month } = useMonth();
   const { spent } = useHome(month);
-  const [phase, setPhase] = useState<'picking' | 'reading' | 'review'>('picking');
+  const [phase, setPhase] = useState<'reading' | 'review'>('reading');
   const [slips, setSlips] = useState<Slip[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
@@ -68,19 +67,22 @@ export default function Slips() {
       .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 
-  // Open Photos straight away; cancelling goes back.
+  // The slips were picked on the + screen; start reading them. Nothing picked → back.
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    (async () => {
-      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX, base64: true, quality: 0.6 });
-      if (r.canceled || !r.assets.length) return router.canGoBack() ? router.back() : router.replace('/');
-      const assets = r.assets.slice(0, MAX);
-      const first: Slip[] = assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' }));
-      setSlips(first);
-      setPhase('reading');
-      await readAll(assets);
-    })();
+    const assets = takePickedSlips();
+    if (!assets?.length) {
+      router.canGoBack() ? router.back() : router.replace('/');
+      return;
+    }
+    setSlips(assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' })));
+    setPhase('reading');
+    readAll(assets).catch((e) => {
+      // Never leave the person staring at "Reading…": show what we have and say what went wrong.
+      setProblem(t('Something went wrong while reading — try again? ({msg})', { msg: String(e?.message ?? e).slice(0, 80) }));
+      setPhase('review');
+    });
   }, []);
 
   async function readAll(assets: ImagePicker.ImagePickerAsset[]) {
@@ -110,7 +112,7 @@ export default function Slips() {
       return;
     }
     const keys = results.filter((s) => s.state === 'done').map(slipKey);
-    const saved = session ? await savedKeys(session.user.id, keys) : new Set<string>();
+    const saved = session ? await savedKeys(session.user.id, keys).catch(() => new Set<string>()) : new Set<string>();
     setSlips(markAlready(results, saved));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setPhase('review');

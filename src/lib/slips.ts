@@ -1,5 +1,7 @@
 // Slip reading: each picked slip is read on the server (one request each, so ✓s arrive one by one),
 // cleaned up here, checked against slips already saved, and only saved after the person checks it.
+import * as ImagePicker from 'expo-image-picker';
+
 import type { DbCat, InCat } from '@/lib/kip';
 import { supabase } from '@/lib/supabase';
 
@@ -86,4 +88,25 @@ export async function readSlip(image: string, mediaType: string): Promise<{ ok: 
   }
   if (!data || typeof data !== 'object' || !('is_slip' in data)) return { ok: false, reason: 'busy' };
   return { ok: true, read: data as SlipRead };
+}
+
+// ---------- picking ----------
+// Photos opens from the + screen (never while a screen is still sliding in — on iPhone that can close
+// the new screen together with Photos), then the picked slips are handed to the Slips screen.
+export const MAX_SLIPS = 10;
+let pending: ImagePicker.ImagePickerAsset[] | null = null;
+
+/** Open Photos for slips. Returns false if nothing was picked. */
+export async function pickSlips(): Promise<boolean> {
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, base64: true, quality: 0.6 });
+  if (r.canceled || !r.assets?.length) return false;
+  pending = r.assets.slice(0, MAX_SLIPS);
+  return true;
+}
+
+/** The slips just picked (read once). */
+export function takePickedSlips() {
+  const p = pending;
+  pending = null;
+  return p;
 }

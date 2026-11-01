@@ -30,6 +30,7 @@ const th: Record<string, string> = {
   ' · saved before': ' · จดไว้แล้ว',
   'Already in': 'จดแล้ว',
   'Change category': 'เปลี่ยนหมวด',
+  'Something went wrong while reading — try again? ({msg})': 'อ่านสลิปแล้วมีอะไรผิดพลาดนิดหน่อย ลองใหม่อีกทีนะ ({msg})',
 };
 
 export default th;
