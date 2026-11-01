@@ -52,11 +52,22 @@ export async function saveAuto(a: AutoSlips) {
 }
 
 /** Ask iPhone/Android for Photos. 'limited' = they picked only some photos (still works for those). */
+/**
+ * Ask iPhone/Android for Photos. Finding slips needs Full Access: with "Limited" (only some photos picked)
+ * the phone won't let Kip look inside albums. Kip still only ever looks in the albums the person turns on.
+ */
 export async function askPhotos(): Promise<'all' | 'limited' | 'denied'> {
-  const r = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
-  if (!r.granted) return 'denied';
-  return r.accessPrivileges === 'limited' ? 'limited' : 'all';
+  try {
+    const r = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
+    if (!r.granted) return 'denied';
+    return r.accessPrivileges === 'limited' ? 'limited' : 'all';
+  } catch {
+    return 'denied';
+  }
 }
+
+/** True when the error is the phone saying "no Photos access". */
+export const isPhotosDenied = (e: unknown) => /permission|E_NO_PERMISSIONS|not authorized|authoriz/i.test(String((e as Error)?.message ?? e));
 
 /** Albums to offer: every bank album found (on), plus Screenshots (off — it holds everything else too). */
 export async function findAlbums(): Promise<FoundAlbum[]> {
@@ -77,7 +88,7 @@ export async function findAlbums(): Promise<FoundAlbum[]> {
 export async function checkNew(a: AutoSlips): Promise<NewSlips | null> {
   if (!a.on || !a.albums.length) return null;
   const perm = await MediaLibrary.getPermissionsAsync(false, ['photo']).catch(() => null);
-  if (!perm?.granted) return null;
+  if (!perm?.granted || perm.accessPrivileges === 'limited') return null;
   const found: { asset: MediaLibrary.Asset; album: string }[] = [];
   for (const al of a.albums) {
     const page = await MediaLibrary.getAssetsAsync({

@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { Glass } from '@/components/glow/Glass';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { SaveButton, Sheet } from '@/components/profile/Sheet';
-import { askPhotos, autoSlipsAvailable, checkNew, findAlbums, loadAuto, markChecked, prepareForKip, saveAuto, type AutoSlips, type FoundAlbum, type NewSlips } from '@/lib/autoslips';
+import { askPhotos, autoSlipsAvailable, isPhotosDenied, checkNew, findAlbums, loadAuto, markChecked, prepareForKip, saveAuto, type AutoSlips, type FoundAlbum, type NewSlips } from '@/lib/autoslips';
 import { dayShort, monthShort, t } from '@/lib/i18n';
 import { colors, fonts } from '@/theme';
 
@@ -32,7 +32,7 @@ export function SlipFinder({ isPlus }: { isPlus: boolean }) {
   const [auto, setAuto] = useState<AutoSlips | null | undefined>(undefined);
   const [found, setFound] = useState<NewSlips | null>(null);
   const [albums, setAlbums] = useState<FoundAlbum[] | null>(null);
-  const [problem, setProblem] = useState<'denied' | null>(null);
+  const [problem, setProblem] = useState<'denied' | 'limited' | 'failed' | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -50,16 +50,26 @@ export function SlipFinder({ isPlus }: { isPlus: boolean }) {
   async function turnOn() {
     if (!(await ai.ensure())) return;
     const access = await askPhotos();
-    if (access === 'denied') return setProblem('denied');
-    setAlbums(await findAlbums());
+    if (access !== 'all') return setProblem(access);
+    try {
+      setAlbums(await findAlbums());
+    } catch (e) {
+      setProblem(isPhotosDenied(e) ? 'limited' : 'failed');
+    }
   }
 
   async function readThem() {
     if (!found || !auto || busy) return;
     if (!(await ai.ensure())) return;
     setBusy(true);
-    const n = await prepareForKip(found.assets);
-    await markChecked(auto, found.assets);
+    let n = 0;
+    try {
+      n = await prepareForKip(found.assets);
+      await markChecked(auto, found.assets);
+    } catch (e) {
+      setBusy(false);
+      return setProblem(isPhotosDenied(e) ? 'limited' : 'failed');
+    }
     setBusy(false);
     setFound(null);
     if (n > 0) router.push('/slips');
@@ -123,15 +133,31 @@ export function SlipFinder({ isPlus }: { isPlus: boolean }) {
           }}
         />
       )}
-      {problem === 'denied' && (
-        <Sheet open onClose={() => setProblem(null)} title={t('Kip needs Photos')} sub={t('Turn on Photos for HeyKip in Settings, then come back and tap Turn on.')}>
-          <SaveButton
-            label={t('Open Settings')}
-            onPress={() => {
-              setProblem(null);
-              Linking.openSettings();
-            }}
-          />
+      {problem && (
+        <Sheet
+          open
+          onClose={() => setProblem(null)}
+          title={problem === 'failed' ? t('Kip couldn’t open your albums') : t('Kip needs Full Access to Photos')}
+          sub={
+            problem === 'failed'
+              ? t('Something went wrong — try again in a moment. You can still add slips with Slip on the + screen.')
+              : t('To look inside your bank albums, Photos must be set to Full Access. Kip still only looks in the albums you turn on — never your other photos.')
+          }>
+          {problem !== 'failed' && (
+            <>
+              <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Settings → HeyKip (or Expo Go while testing) → Photos → Full Access')}</Text>
+              <SaveButton
+                label={t('Open Settings')}
+                onPress={() => {
+                  setProblem(null);
+                  Linking.openSettings();
+                }}
+              />
+            </>
+          )}
+          <Text style={[styles.sub, { textAlign: 'center', marginBottom: 6 }]} onPress={() => setProblem(null)}>
+            {t('Not now — you can still pick slips yourself')}
+          </Text>
         </Sheet>
       )}
       {ai.sheet}
