@@ -18,6 +18,6 @@
     "expo-env.d.ts"
   ],
   "exclude": [
-    "supabase/functions"
+    "supabase/functions", "scripts/check-i18n.ts"
   ]
 }

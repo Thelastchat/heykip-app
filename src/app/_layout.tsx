@@ -1,16 +1,6 @@
 import { Caveat_600SemiBold } from '@expo-google-fonts/caveat';
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-  useFonts,
-} from '@expo-google-fonts/geist';
-import {
-  IBMPlexSansThai_400Regular,
-  IBMPlexSansThai_500Medium,
-  IBMPlexSansThai_600SemiBold,
-} from '@expo-google-fonts/ibm-plex-sans-thai';
+import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold, useFonts } from '@expo-google-fonts/geist';
+import { IBMPlexSansThai_400Regular, IBMPlexSansThai_500Medium, IBMPlexSansThai_600SemiBold } from '@expo-google-fonts/ibm-plex-sans-thai';
 import { MrsSaintDelafield_400Regular } from '@expo-google-fonts/mrs-saint-delafield';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +9,7 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { LangProvider } from '@/lib/i18n';
 import { SetupProvider, useSetup } from '@/lib/setup/draft';
 import { colors } from '@/theme';
 
@@ -79,12 +70,14 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <SetupProvider>
-          <StatusBar style="dark" />
-          <RootStack />
-        </SetupProvider>
-      </AuthProvider>
+      <LangProvider>
+        <AuthProvider>
+          <SetupProvider>
+            <StatusBar style="dark" />
+            <RootStack />
+          </SetupProvider>
+        </AuthProvider>
+      </LangProvider>
     </GestureHandlerRootView>
   );
 }

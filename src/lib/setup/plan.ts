@@ -1,6 +1,6 @@
 import { billsGuess, living, livingFor, livingTotal, plan as splitMonth, room, safetyNet, verdict, type GoalType, type Inputs, type Result, type Verdict } from '@/lib/brain';
 import type { SideIncome } from './draft';
-import { getCalendars } from 'expo-localization';
+import { monthLong, monthShort, shownYear } from '@/lib/i18n';
 
 import { baht } from '@/lib/money';
 
@@ -8,7 +8,6 @@ import { plannedIncome, type GoalKind, type Leak, type SetupDraft } from './draf
 
 // Kip's plan for Setup, worked out from what the person told us. The maths lives in brain.ts
 // (realistic living costs → safety net → goal → fun); this file turns it into dates and words.
-
 
 export type Plan = {
   inputs: Inputs;
@@ -50,26 +49,16 @@ function dayInMonth(year: number, month: number, day: number) {
   return new Date(year, month, Math.min(day, last));
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const shortDate = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())}`;
+export const longDate = (d: Date) => `${d.getDate()} ${monthLong(d.getMonth())}`;
+// Years: Buddhist era (2570) in Thai, or when the phone uses the Buddhist calendar — see i18n.
+// Dates are still stored the normal way (2026).
+export { shownYear };
 
-export const shortDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-export const longDate = (d: Date) => `${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
-// Years follow the phone: if it's set to the Thai Buddhist calendar (2569), every year Kip shows is too,
-// so the dates match the date picker. Dates are still stored the normal way (2026).
-const BUDDHIST = (() => {
-  try {
-    return getCalendars()[0]?.calendar === 'buddhist';
-  } catch {
-    return false;
-  }
-})();
-export const shownYear = (d: Date) => d.getFullYear() + (BUDDHIST ? 543 : 0);
-
-export const fullDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${shownYear(d)}`;
+export const fullDate = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())} ${shownYear(d)}`;
 
 export function ordinal(n: number) {
-  const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
+  const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : (({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th');
   return `${n}${s}`;
 }
 
@@ -182,7 +171,7 @@ export function monthsFromNow(months: number, d: SetupDraft, now = new Date()): 
   const day = d.incomeType === 'regular' && d.payday ? d.payday : now.getDate();
   return dayInMonth(now.getFullYear(), now.getMonth() + months, day);
 }
-export const monthYear = (d: Date) => `${MONTHS[d.getMonth()]} ${shownYear(d)}`;
+export const monthYear = (d: Date) => `${monthShort(d.getMonth())} ${shownYear(d)}`;
 /** Paydays until the date: whole calendar months, so a date picked as "N months from now" always counts as N. */
 export const monthsUntil = (iso: string, now = new Date()) => {
   const d = parseDay(iso);
@@ -250,16 +239,13 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
   const v = verdict(inputs);
   const result = splitMonth(inputs, d.budgetStyle, d.goalPerMonth);
   const short = d.goalKind === 'monthly' ? d.goalTitle.trim() || 'Savings' : shortName(d.goalTitle, d.goalKind);
-  const due =
-    result.goalMonths !== null
-      ? monthsFromNow(result.goalMonths, d, now)
-      : d.goalDue
-        ? parseDay(d.goalDue)
-        : monthsFromNow(12, d, now);
+  const due = result.goalMonths !== null ? monthsFromNow(result.goalMonths, d, now) : d.goalDue ? parseDay(d.goalDue) : monthsFromNow(12, d, now);
   const mode: Plan['mode'] = v.kind === 'noRoom' ? 'noRoom' : v.kind === 'notByThen' && !d.goalPerMonth ? 'stretch' : 'ok';
 
   const picked = LEAKS.map((l) => l.key).filter((k) => d.leaks.includes(k));
-  const notPicked = (['coffee', 'goingOut', 'beauty', 'bubbleTea', 'snacks', 'delivery', 'shopping', 'grab', 'games', 'treating', 'subscriptions', 'sales'] as Leak[]).filter((k) => !d.leaks.includes(k));
+  const notPicked = (['coffee', 'goingOut', 'beauty', 'bubbleTea', 'snacks', 'delivery', 'shopping', 'grab', 'games', 'treating', 'subscriptions', 'sales'] as Leak[]).filter(
+    (k) => !d.leaks.includes(k),
+  );
   const changes = picked.slice(0, 2).map((k) => CHANGE[k]);
   if (changes.length === 0) changes.push('Spending stays under your daily number');
   const stays = notPicked.slice(0, 2).map((k) => STAY[k]);
