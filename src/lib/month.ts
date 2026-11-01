@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from 'react';
 import { safetyNet } from '@/lib/brain';
 import { monthFrom, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 import { EMPTY_DRAFT, type BudgetStyle, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
 import { inputsFrom } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
@@ -69,7 +70,7 @@ export function useMonth() {
       setMonth(next);
       if (!userId) return;
       const { error: e } = await supabase.from('profiles').update({ budget: next, budget_style: next.style }).eq('id', userId);
-      setError(e ? `Couldn’t save: ${e.message}` : null);
+      setError(e ? t('Couldn’t save: {msg}', { msg: e.message }) : null);
     },
     [userId],
   );

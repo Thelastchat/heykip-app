@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
+import { rich, t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
@@ -16,10 +17,34 @@ import { colors, fonts } from '@/theme';
 
 export type MoneyFrom = 'bonus' | 'leftover' | 'side' | 'gift';
 const FROM: { key: MoneyFrom; label: string; icon: Icon3D }[] = [
-  { key: 'bonus', label: 'Bonus', icon: 'income' },
-  { key: 'leftover', label: 'Leftover money', icon: 'piggy' },
-  { key: 'side', label: 'Side gig', icon: 'phone' },
-  { key: 'gift', label: 'Gift', icon: 'fun' },
+  {
+    key: 'bonus',
+    get label() {
+      return t('Bonus');
+    },
+    icon: 'income',
+  },
+  {
+    key: 'leftover',
+    get label() {
+      return t('Leftover money');
+    },
+    icon: 'piggy',
+  },
+  {
+    key: 'side',
+    get label() {
+      return t('Side gig');
+    },
+    icon: 'phone',
+  },
+  {
+    key: 'gift',
+    get label() {
+      return t('Gift');
+    },
+    icon: 'fun',
+  },
 ];
 const QUICK = [500, 1000, 2000];
 
@@ -27,12 +52,12 @@ const QUICK = [500, 1000, 2000];
 export function soonerText(extra: number, perMonth: number) {
   if (perMonth <= 0) return null;
   const months = extra / perMonth;
-  if (months >= 1.5) return `${Math.round(months)} months sooner`;
-  if (months >= 0.9) return 'a month sooner';
+  if (months >= 1.5) return t('{n} months sooner', { n: Math.round(months) });
+  if (months >= 0.9) return t('a month sooner');
   const weeks = Math.round(months * 4.33);
-  if (weeks >= 2) return `${weeks} weeks sooner`;
-  if (weeks === 1) return 'a week sooner';
-  return 'a few days sooner';
+  if (weeks >= 2) return t('{n} weeks sooner', { n: weeks });
+  if (weeks === 1) return t('a week sooner');
+  return t('a few days sooner');
 }
 
 export function PutMoneySheet({
@@ -65,7 +90,7 @@ export function PutMoneySheet({
     setError(null);
     const { data, error: e } = await supabase.rpc('put_in_goal', { p_goal: goal.id, p_amount: a, p_source: 'extra', p_from: from });
     setBusy(false);
-    if (e) return setError(`Couldn’t save: ${e.message}`);
+    if (e) return setError(t('Couldn’t save: {error}', { error: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onDone(Number(data ?? goal.saved + a));
   }
@@ -73,14 +98,14 @@ export function PutMoneySheet({
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.dim} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={styles.grip} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Kip mood="happy" size={50} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Put money in {goal.name}</Text>
-              <Text style={styles.sub}>Extra money gets you there sooner.</Text>
+              <Text style={styles.title}>{t('Put money in {goal}', { goal: goal.name })}</Text>
+              <Text style={styles.sub}>{t('Extra money gets you there sooner.')}</Text>
             </View>
           </View>
 
@@ -90,15 +115,15 @@ export function PutMoneySheet({
               <TextInput
                 autoFocus
                 value={amount === null ? '' : amount.toLocaleString('en-US')}
-                onChangeText={(t) => {
-                  const d = t.replace(/[^\d]/g, '');
+                onChangeText={(v) => {
+                  const d = v.replace(/[^\d]/g, '');
                   setAmount(d ? Math.min(Number(d), 9_999_999) : null);
                 }}
                 keyboardType="number-pad"
                 placeholder="0"
                 placeholderTextColor={colors.faint}
                 style={[styles.amount, { minWidth: 60, outlineStyle: 'none' } as never]}
-                accessibilityLabel="Amount"
+                accessibilityLabel={t('Amount')}
               />
             </View>
           ) : (
@@ -127,13 +152,15 @@ export function PutMoneySheet({
             })}
             <Squish onPress={() => setCustom(true)} accessibilityRole="radio" accessibilityState={{ selected: custom }}>
               <Glass radius={999} tint={custom ? colors.lime : undefined} innerStyle={[styles.pill, custom && styles.on]}>
-                <Text style={[styles.pillText, custom && { fontFamily: fonts.medium }]}>Other</Text>
+                <Text style={[styles.pillText, custom && { fontFamily: fonts.medium }]}>{t('Other')}</Text>
               </Glass>
             </Squish>
           </View>
 
           <Text style={styles.label}>
-            Where’s it from? <Text style={{ color: colors.muted, fontFamily: fonts.regular }}>· helps Kip plan</Text>
+            {rich('Where’s it from? **· helps Kip plan**', undefined, (s) => (
+              <Text style={{ color: colors.muted, fontFamily: fonts.regular }}>{s}</Text>
+            ))}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
             {FROM.map((f) => {
@@ -154,22 +181,16 @@ export function PutMoneySheet({
               <Image source={ICON3D[goal.icon]} style={{ width: 40, height: 40 }} contentFit="contain" />
               <View style={{ flex: 1, gap: 8 }}>
                 <Text style={styles.movesText}>
-                  {done ? (
-                    <>
-                      That’s <Text style={{ fontFamily: fonts.semibold }}>everything</Text> — {goal.name} is fully paid for 🎉
-                    </>
-                  ) : sooner ? (
-                    <>
-                      That moves {goal.name} <Text style={{ fontFamily: fonts.semibold }}>{sooner}</Text>.
-                    </>
-                  ) : (
-                    <>Every baht counts — {goal.name} gets a little closer.</>
-                  )}
+                  {done
+                    ? rich('That’s **everything** — {goal} is fully paid for 🎉', { goal: goal.name }, (s) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>)
+                    : sooner
+                      ? rich('That moves {goal} **{when}**.', { goal: goal.name, when: sooner }, (s) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>)
+                      : t('Every baht counts — {goal} gets a little closer.', { goal: goal.name })}
                 </Text>
                 {goal.target > 0 && (
                   <>
-                    <Bar label="Before" pct={before} color="rgba(17,17,17,0.25)" />
-                    <Bar label="After" pct={after} color={colors.limeDeep} />
+                    <Bar label={t('Before')} pct={before} color="rgba(17,17,17,0.25)" />
+                    <Bar label={t('After')} pct={after} color={colors.limeDeep} />
                   </>
                 )}
               </View>
@@ -177,8 +198,8 @@ export function PutMoneySheet({
           )}
 
           {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
-          <Squish onPress={save} style={[styles.save, (a <= 0 || busy) && { opacity: 0.5 }]} accessibilityRole="button" accessibilityLabel={`Put ${baht(a)} in`}>
-            <Text style={styles.saveText}>{busy ? 'Saving…' : a > 0 ? `Put ${baht(a)} in` : 'Put money in'}</Text>
+          <Squish onPress={save} style={[styles.save, (a <= 0 || busy) && { opacity: 0.5 }]} accessibilityRole="button" accessibilityLabel={t('Put {amount} in', { amount: baht(a) })}>
+            <Text style={styles.saveText}>{busy ? t('Saving…') : a > 0 ? t('Put {amount} in', { amount: baht(a) }) : t('Put money in')}</Text>
           </Squish>
         </View>
       </KeyboardAvoidingView>

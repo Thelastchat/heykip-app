@@ -10,13 +10,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Kip } from '@/components/Kip';
 import { Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
 export type PlusFeature = 'styles' | 'talk' | 'customize' | 'automove' | 'goals';
 
-const PERKS = ['All 4 money styles — switch any time', 'Talk to Kip · “Can I buy this?”', 'Payday auto-move & nudges', 'Customize & locks · 3 goals · slip photos'];
+const perks = () => [t('All 4 money styles — switch any time'), t('Talk to Kip · “Can I buy this?”'), t('Payday auto-move & nudges'), t('Customize & locks · 3 goals · slip photos')];
 
 export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: { open: boolean; onClose: () => void; onUnlocked: () => void; title: string; sub: string; children?: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -33,7 +34,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
       .update({ plan: 'trial', trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString() })
       .eq('id', session.user.id);
     setBusy(false);
-    if (e) return setError(`Couldn’t start your trial: ${e.message}`);
+    if (e) return setError(t('Couldn’t start your trial: {msg}', { msg: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     await refreshProfile();
     onClose();
@@ -42,7 +43,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('Close')} />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -54,7 +55,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
         </View>
         {children}
         <View style={styles.perks}>
-          {PERKS.map((p) => (
+          {perks().map((p) => (
             <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={styles.tick}>
                 <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.ink }}>✓</Text>
@@ -64,12 +65,12 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
           ))}
         </View>
         {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
-        <Squish onPress={startTrial} style={[styles.cta, busy && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel="Try free for 7 days">
-          <Text style={styles.ctaText}>{busy ? 'Starting…' : 'Try free for 7 days'}</Text>
+        <Squish onPress={startTrial} style={[styles.cta, busy && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel={t('Try free for 7 days')}>
+          <Text style={styles.ctaText}>{busy ? t('Starting…') : t('Try free for 7 days')}</Text>
         </Squish>
-        <Text style={styles.fine}>฿1.9 a day after · reminder 2 days before · cancel in 2 taps</Text>
+        <Text style={styles.fine}>{t('฿1.9 a day after · reminder 2 days before · cancel in 2 taps')}</Text>
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
-          <Text style={styles.notNow}>Not now</Text>
+          <Text style={styles.notNow}>{t('Not now')}</Text>
         </Pressable>
       </View>
     </Modal>
@@ -187,11 +188,11 @@ export function GoalSlots({ first }: { first: string }) {
           {first}
         </Text>
       </View>
-      {['A new phone', 'Moving out'].map((t) => (
-        <View key={t} style={[styles.slot, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.25)' }]}>
+      {[t('A new phone'), t('Moving out')].map((s) => (
+        <View key={s} style={[styles.slot, { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.25)' }]}>
           <Text style={{ fontSize: 22, color: 'rgba(255,255,255,0.5)' }}>+</Text>
           <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: 'rgba(255,255,255,0.5)' }} numberOfLines={1}>
-            {t}
+            {s}
           </Text>
         </View>
       ))}

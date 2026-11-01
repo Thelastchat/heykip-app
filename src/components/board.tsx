@@ -63,9 +63,7 @@ export function Polaroid({
         {photo ? (
           <Image source={{ uri: photo }} style={{ height: photoHeight, borderRadius: 2 }} contentFit="cover" transition={150} />
         ) : (
-          <View style={[styles.noPhoto, { height: photoHeight }, empty && { backgroundColor: empty.color }]}>
-            {empty ? empty.icon : <ImageIcon size={28} color="rgba(122,84,48,0.45)" />}
-          </View>
+          <View style={[styles.noPhoto, { height: photoHeight }, empty && { backgroundColor: empty.color }]}>{empty ? empty.icon : <ImageIcon size={28} color="rgba(122,84,48,0.45)" />}</View>
         )}
         {children}
       </View>

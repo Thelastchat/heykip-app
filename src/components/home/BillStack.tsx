@@ -9,6 +9,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTi
 import Svg, { Path } from 'react-native-svg';
 
 import { Glass } from '@/components/glow/Glass';
+import { rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { colors, fonts, glow } from '@/theme';
 
@@ -67,12 +68,11 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
       <View style={styles.sum}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
           <Text style={styles.sumText}>
-            <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>
-              {paidN} of {bills.length}
-            </Text>{' '}
-            paid
+            {rich('**{n} of {total}** paid', { n: paidN, total: bills.length }, (s) => (
+              <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{s}</Text>
+            ))}
           </Text>
-          <Text style={styles.sumText}>{left === 0 ? 'All paid 🎉' : `${baht(left)} to go`}</Text>
+          <Text style={styles.sumText}>{left === 0 ? t('All paid 🎉') : t('{amount} to go', { amount: baht(left) })}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 3, height: 8 }}>
           {bills.map((b) => (
@@ -89,7 +89,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
           <Pressable
             key={b.key}
             accessibilityRole="button"
-            accessibilityLabel={`${b.name} ${baht(b.amount)}${b.paid ? ', paid' : ''}`}
+            accessibilityLabel={b.paid ? t('{name} {amount}, paid', { name: b.name, amount: baht(b.amount) }) : `${b.name} ${baht(b.amount)}`}
             onPress={() => {
               Haptics.selectionAsync().catch(() => {});
               if (b.paid) {
@@ -111,10 +111,10 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
                       {b.name}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.sub}>{b.paid ? 'Paid ✓' : b.estimate ? 'Usually' : 'Monthly'}</Text>
+                      <Text style={styles.sub}>{b.paid ? t('Paid ✓') : b.estimate ? t('Usually') : t('Monthly')}</Text>
                       {b.estimate && !b.paid && (
                         <View style={styles.est}>
-                          <Text style={styles.estText}>estimate</Text>
+                          <Text style={styles.estText}>{t('estimate')}</Text>
                         </View>
                       )}
                     </View>
@@ -131,11 +131,11 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         );
       })}
 
-      <Pressable onPress={() => router.push('/month')} style={styles.add} accessibilityRole="button" accessibilityLabel="Add a bill">
+      <Pressable onPress={() => router.push('/month')} style={styles.add} accessibilityRole="button" accessibilityLabel={t('Add a bill')}>
         <View style={styles.addDot}>
           <Text style={{ color: '#FFFFFF', fontSize: 18, lineHeight: 20 }}>+</Text>
         </View>
-        <Text style={styles.addText}>Add a bill</Text>
+        <Text style={styles.addText}>{t('Add a bill')}</Text>
       </Pressable>
     </View>
   );
@@ -176,11 +176,11 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
       style={styles.slide}
       onLayout={(e) => setW(e.nativeEvent.layout.width)}
       accessibilityRole="adjustable"
-      accessibilityLabel="Slide to mark paid"
-      accessibilityActions={[{ name: 'activate', label: 'Mark as paid' }]}
+      accessibilityLabel={t('Slide to mark paid')}
+      accessibilityActions={[{ name: 'activate', label: t('Mark as paid') }]}
       onAccessibilityAction={done}>
       <Animated.View style={[styles.fill, fill]} />
-      <Text style={styles.slideText}>Slide to mark paid</Text>
+      <Text style={styles.slideText}>{t('Slide to mark paid')}</Text>
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.knob, knob]}>
           <Svg width={18} height={18} viewBox="0 0 24 24">

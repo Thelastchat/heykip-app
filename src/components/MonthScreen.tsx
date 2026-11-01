@@ -32,6 +32,7 @@ import {
   type FreedTo,
   type MonthBudget,
 } from '@/lib/budget';
+import { t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { shortDate } from '@/lib/setup/plan';
@@ -77,7 +78,7 @@ export function MonthScreen({
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
         <GlowBackground />
-        {loading ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.muted}>{error ?? 'Finish Setup to see your month.'}</Text>}
+        {loading ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.muted}>{error ?? t('Finish Setup to see your month.')}</Text>}
       </View>
     );
   }
@@ -109,9 +110,12 @@ export function MonthScreen({
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 100 }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 18 }}>
           <ScreenHeader
-            title="Your month"
+            title={t('Your month')}
             right={
-              <Squish onPress={() => (isPlus ? setSheet({ stage: 'style' }) : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={`Money style: ${style.name}. Change`}>
+              <Squish
+                onPress={() => (isPlus ? setSheet({ stage: 'style' }) : onLocked?.('styles'))}
+                accessibilityRole="button"
+                accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
                 <Glass radius={999} innerStyle={styles.stylePill}>
                   <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>{style.name}</Text>
                   {isPlus ? <CaretDown size={11} color={colors.ink} weight="bold" /> : <MiniLock />}
@@ -122,9 +126,7 @@ export function MonthScreen({
         </View>
 
         <RiseIn delay={40} style={{ paddingHorizontal: 22, paddingTop: 22 }}>
-          <Text style={styles.heroLabel}>
-            {shortDate(from)} – {shortDate(to)} · your pay
-          </Text>
+          <Text style={styles.heroLabel}>{t('{from} – {to} · your pay', { from: shortDate(from), to: shortDate(to) })}</Text>
           <Text style={styles.big}>
             <Text style={{ fontSize: 26, fontFamily: fonts.regular }}>฿</Text>
             {month.income.toLocaleString('en-US')}
@@ -133,62 +135,69 @@ export function MonthScreen({
 
         {/* where every baht goes */}
         <RiseIn delay={90} style={styles.flowBar}>
-          <FlowPart flex={saving} color={colors.limeDeep} label="Saving" amount={saving} delay={0} />
-          <FlowPart flex={bills} color={colors.ink} label="Bills" amount={bills} delay={100} light />
-          <FlowPart flex={spending} color="rgba(255,255,255,0.78)" label="To spend" amount={spending} delay={200} />
+          <FlowPart flex={saving} color={colors.limeDeep} label={t('Saving')} amount={saving} delay={0} />
+          <FlowPart flex={bills} color={colors.ink} label={t('Bills')} amount={bills} delay={100} light />
+          <FlowPart flex={spending} color="rgba(255,255,255,0.78)" label={t('To spend')} amount={spending} delay={200} />
         </RiseIn>
-        <Text style={styles.note}>Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.</Text>
+        <Text style={styles.note}>{t('Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.')}</Text>
 
         {/* 1 · Saving first */}
-        <Section n={1} title="Saving first" right={`${baht(saving)} · on payday`} />
+        <Section n={1} title={t('Saving first')} right={t('{amt} · on payday', { amt: baht(saving) })} />
         <RiseIn delay={140} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             <Row
               icon={month.goal.isSafetyNet ? 'shield' : 'plane'}
               title={month.goal.title}
-              sub={month.goalExtra > 0 ? `Includes ${baht(month.goalExtra)} moved from your budgets` : 'Goes out first, every payday'}
+              sub={month.goalExtra > 0 ? t('Includes {amt} moved from your budgets', { amt: baht(month.goalExtra) }) : t('Goes out first, every payday')}
               amount={baht(goalAmount)}
-              amountSub="a month"
+              amountSub={t('a month')}
             />
             {!month.goal.isSafetyNet && (
-              <Row icon="shield" title="Safety net" sub={`Until you have ${baht(month.safety.target)} — 3 months of basics`} amount={baht(month.safety.amount)} amountSub="a month" divider />
+              <Row
+                icon="shield"
+                title={t('Safety net')}
+                sub={t('Until you have {amt} — 3 months of basics', { amt: baht(month.safety.target) })}
+                amount={baht(month.safety.amount)}
+                amountSub={t('a month')}
+                divider
+              />
             )}
           </Glass>
         </RiseIn>
 
         {/* 2 · Bills */}
-        <Section n={2} title="Bills" right={baht(bills)} />
+        <Section n={2} title={t('Bills')} right={baht(bills)} />
         <RiseIn delay={180} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
-            <Row glyph={{ name: 'Rent', tint: colors.lavender }} title="Rent" sub="You told me" amount={baht(month.bills.rent)} />
+            <Row glyph={{ name: 'Rent', tint: colors.lavender }} title={t('Rent')} sub={t('You told me')} amount={baht(month.bills.rent)} />
             {(month.bills.items ?? []).map((b, i) => (
               <Row
                 key={`${b.name}-${i}`}
                 glyph={{ name: b.name, tint: tintFor(b.name) }}
                 title={b.name}
-                sub="Monthly"
+                sub={t('Monthly')}
                 amount={baht(b.amount)}
                 divider
                 right={
-                  <Pressable onPress={() => save(removeBill(month, i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${b.name}`} style={styles.xBtn}>
+                  <Pressable onPress={() => save(removeBill(month, i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Remove {name}', { name: b.name })} style={styles.xBtn}>
                     <X size={12} color={colors.muted} weight="bold" />
                   </Pressable>
                 }
               />
             ))}
-            <Row glyph={{ name: 'Other bills', tint: colors.sand }} title="Other bills" sub="Kip’s guess — shrinks as you add real ones" amount={`~${baht(month.bills.guess)}`} divider />
+            <Row glyph={{ name: 'Other bills', tint: colors.sand }} title={t('Other bills')} sub={t('Kip’s guess — shrinks as you add real ones')} amount={`~${baht(month.bills.guess)}`} divider />
             <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={styles.addRow} accessibilityRole="button">
               <View style={styles.addDot}>
                 <Plus size={13} color="#FFFFFF" weight="bold" />
               </View>
-              <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>Add a bill · Netflix, phone, gym…</Text>
+              <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>{t('Add a bill · Netflix, phone, gym…')}</Text>
             </Pressable>
           </Glass>
         </RiseIn>
         {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
-        <Section n={3} title="Spending" right={`${baht(spending)} · ${baht(dailyOf(month))} a day`} />
+        <Section n={3} title={t('Spending')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
         <RiseIn delay={220} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             {month.spend.map((s, i) => {
@@ -200,7 +209,7 @@ export function MonthScreen({
                   key={s.key}
                   onPress={() => edit(s.key)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${c.name}, ${baht(s.amount)}, ${baht(left)} left. Change`}
+                  accessibilityLabel={t('{name}, {amount}, {left} left. Change', { name: c.name, amount: baht(s.amount), left: baht(left) })}
                   style={[styles.row, i > 0 && styles.divider]}>
                   <View style={{ width: 48, height: 48 }}>
                     <Ring pct={s.amount ? left / s.amount : 0} size={48} stroke={4.5} color={colors.limeDeep} delay={300 + i * 60} />
@@ -209,15 +218,15 @@ export function MonthScreen({
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.rowName}>{c.name}</Text>
                     <Text style={styles.sub} numberOfLines={1}>
-                      {HINT[s.key]}
+                      {hintFor(s.key)}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.amount}>{baht(s.amount)}</Text>
-                    {spent ? <Text style={styles.sub}>{baht(left)} left</Text> : null}
+                    {spent ? <Text style={styles.sub}>{t('{amt} left', { amt: baht(left) })}</Text> : null}
                   </View>
                   <View style={styles.editPill}>
-                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>Edit</Text>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>{t('Edit')}</Text>
                     {!isPlus && <MiniLock />}
                   </View>
                 </Pressable>
@@ -226,26 +235,29 @@ export function MonthScreen({
           </Glass>
         </RiseIn>
 
-        <Text style={styles.note}>Changing a number? Kip rebalances the rest so your month still adds up.{!isPlus ? ' Changing amounts and money styles is ✦ Plus.' : ''}</Text>
+        <Text style={styles.note}>
+          {t('Changing a number? Kip rebalances the rest so your month still adds up.')}
+          {!isPlus ? t(' Changing amounts and money styles is ✦ Plus.') : ''}
+        </Text>
         <RiseIn delay={260} style={styles.cardWrap}>
           <Glass radius={22} innerStyle={styles.leftovers}>
             <Image source={ICON3D.shield} style={{ width: 40, height: 40 }} contentFit="contain" />
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.ink }}>Leftovers go to your safety net</Text>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.ink }}>{t('Leftovers go to your safety net')}</Text>
               <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>
-                Daily money you didn’t spend, and any of my bill guess you didn’t need — moved on payday.
+                {t('Daily money you didn’t spend, and any of my bill guess you didn’t need — moved on payday.')}
               </Text>
             </View>
           </Glass>
         </RiseIn>
         <Text style={styles.note}>
-          Starting split based on what Thai households spend (Ministry of Commerce, 2025), adjusted for one person. After your first month, I’ll match it to how you really spend.
+          {t('Starting split based on what Thai households spend (Ministry of Commerce, 2025), adjusted for one person. After your first month, I’ll match it to how you really spend.')}
         </Text>
         {error ? <Text style={[styles.note, { color: colors.orange }]}>{error}</Text> : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-        <Button label="Looks good" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+        <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       </View>
       <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>
         {sheet?.stage === 'style' && (
@@ -266,8 +278,17 @@ export function MonthScreen({
               save(r.month);
               setNotice(
                 r.fromFun === 0 && r.fromGoal === 0
-                  ? `${name} added — it fits inside my bill guess, so nothing else changed.`
-                  : `${name} added: ${[r.fromGuess ? `${baht(r.fromGuess)} from my bill guess` : '', r.fromFun ? `${baht(r.fromFun)} from fun money` : '', r.fromGoal ? `${baht(r.fromGoal)} from ${month.goal.title}` : ''].filter(Boolean).join(', ')}.`,
+                  ? t('{name} added — it fits inside my bill guess, so nothing else changed.', { name })
+                  : t('{name} added: {parts}.', {
+                      name,
+                      parts: [
+                        r.fromGuess ? t('{amt} from my bill guess', { amt: baht(r.fromGuess) }) : '',
+                        r.fromFun ? t('{amt} from fun money', { amt: baht(r.fromFun) }) : '',
+                        r.fromGoal ? t('{amt} from {goal}', { amt: baht(r.fromGoal), goal: month.goal.title }) : '',
+                      ]
+                        .filter(Boolean)
+                        .join(', '),
+                    }),
               );
               setSheet(null);
             }}
@@ -304,17 +325,21 @@ export function MonthScreen({
   );
 }
 
-const HINT: Record<CatKey, string> = {
-  food: '฿150 a day at least',
-  transport: 'BTS/MRT, bus or bike taxi',
-  shopping: 'Clothes, gadgets, online',
-  fun: 'Going out, treats, hobbies',
-  health_beauty: 'Pharmacy, haircut, toiletries',
-  learning: 'Courses, books',
-  giving: 'Family, merit, gifts',
-  other: 'Laundry, small things',
-  spend_freely: 'One pot for everything day to day',
-};
+/** The small line under each spending category. */
+function hintFor(k: CatKey) {
+  const hint: Record<CatKey, string> = {
+    food: t('฿150 a day at least'),
+    transport: t('BTS/MRT, bus or bike taxi'),
+    shopping: t('Clothes, gadgets, online'),
+    fun: t('Going out, treats, hobbies'),
+    health_beauty: t('Pharmacy, haircut, toiletries'),
+    learning: t('Courses, books'),
+    giving: t('Family, merit, gifts'),
+    other: t('Laundry, small things'),
+    spend_freely: t('One pot for everything day to day'),
+  };
+  return hint[k];
+}
 
 function tintFor(name: string) {
   const g = glyphFor(name);
@@ -409,7 +434,7 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
           <View style={styles.grabber} />
           {children}
@@ -436,10 +461,10 @@ function SheetTitle({ mood, title, sub }: { mood: 'happy' | 'think' | 'idle'; ti
 function StylePicker({ current, onPick }: { current: MonthBudget['style']; onPick: (k: MonthBudget['style']) => void }) {
   return (
     <>
-      <SheetTitle mood="idle" title="Money style" sub="Your goal, safety net and bills stay the same. This only changes how spending is split." />
+      <SheetTitle mood="idle" title={t('Money style')} sub={t('Your goal, safety net and bills stay the same. This only changes how spending is split.')} />
       <View style={{ gap: 8 }}>
         {STYLES.map((s) => (
-          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? 'RECOMMENDED' : undefined} onPress={() => onPick(s.key)} />
+          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? t('RECOMMENDED') : undefined} onPress={() => onPick(s.key)} />
         ))}
       </View>
     </>
@@ -459,7 +484,7 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
         <CatBadge name={c.icon} color={c.color} size={44} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 20, color: colors.ink }}>{c.name}</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>Now {baht(cur)} a month</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{t('Now {amt} a month', { amt: baht(cur) })}</Text>
         </View>
       </View>
       <Pressable onPress={() => input.current?.focus()} style={styles.moneyField}>
@@ -475,7 +500,7 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
           keyboardType="number-pad"
           selectTextOnFocus
           style={[styles.moneyText, { flex: 1, padding: 0 }]}
-          accessibilityLabel={`${c.name} budget`}
+          accessibilityLabel={t('{name} budget', { name: c.name })}
         />
       </Pressable>
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -486,10 +511,10 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
         ))}
       </View>
       {cat === 'food' && v < 4500 && (
-        <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s {baht(Math.round(v / 30))} a day — below ฿150 a day is very hard to keep.</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>{t('That’s {amt} a day — below ฿150 a day is very hard to keep.', { amt: baht(Math.round(v / 30)) })}</Text>
       )}
-      {(value ?? 0) > max && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s all your spending money — {baht(max)} at most.</Text>}
-      <Button label={v === cur ? 'Done' : `Set to ${baht(v)}`} onPress={() => onDone(Math.round(v / 10) * 10)} />
+      {(value ?? 0) > max && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>{t('That’s all your spending money — {amt} at most.', { amt: baht(max) })}</Text>}
+      <Button label={v === cur ? t('Done') : t('Set to {amt}', { amt: baht(v) })} onPress={() => onDone(Math.round(v / 10) * 10)} />
     </>
   );
 }
@@ -499,29 +524,33 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
   const freed = cur - to;
   const [dest, setDest] = useState<FreedTo>('goal');
   const [always, setAlways] = useState(false);
-  const goalName = month.goal.isSafetyNet ? 'Safety net' : month.goal.title;
+  const goalName = month.goal.isSafetyNet ? t('Safety net') : month.goal.title;
   const amt = (k: CatKey) => month.spend.find((s) => s.key === k)?.amount ?? 0;
   const funKey: CatKey = month.spend.some((s) => s.key === 'fun') ? 'fun' : 'spend_freely';
   const options: { key: FreedTo; title: string; sub: string; tag?: string; color: string }[] = [
     {
       key: 'goal',
       title: goalName,
-      sub: `${baht(month.goal.amount + month.goalExtra)} → ${baht(month.goal.amount + month.goalExtra + freed)} a month · get there sooner`,
-      tag: 'KIP’S PICK',
+      sub: t('{from} → {to} a month · get there sooner', { from: baht(month.goal.amount + month.goalExtra), to: baht(month.goal.amount + month.goalExtra + freed) }),
+      tag: t('KIP’S PICK'),
       color: money.goalChoice,
     },
     ...(cat !== 'food' && month.spend.some((s) => s.key === 'food')
-      ? [{ key: 'food' as const, title: 'Food & drinks', sub: `${baht(amt('food'))} → ${baht(amt('food') + freed)} a month`, color: colors.lime }]
+      ? [{ key: 'food' as const, title: t('Food & drinks'), sub: t('{from} → {to} a month', { from: baht(amt('food')), to: baht(amt('food') + freed) }), color: colors.lime }]
       : []),
     ...(cat !== 'transport' && month.spend.some((s) => s.key === 'transport')
-      ? [{ key: 'transport' as const, title: 'Transport', sub: `${baht(amt('transport'))} → ${baht(amt('transport') + freed)} a month`, color: colors.sky }]
+      ? [{ key: 'transport' as const, title: t('Transport'), sub: t('{from} → {to} a month', { from: baht(amt('transport')), to: baht(amt('transport') + freed) }), color: colors.sky }]
       : []),
-    ...(cat !== funKey ? [{ key: 'fun' as const, title: 'Fun money', sub: `${baht(amt(funKey))} → ${baht(amt(funKey) + freed)} a month`, color: money.fun }] : []),
+    ...(cat !== funKey ? [{ key: 'fun' as const, title: t('Fun money'), sub: t('{from} → {to} a month', { from: baht(amt(funKey)), to: baht(amt(funKey) + freed) }), color: money.fun }] : []),
   ];
   const label = options.find((o) => o.key === dest)?.title ?? goalName;
   return (
     <>
-      <SheetTitle mood="happy" title={`Nice — ${baht(freed)} freed up`} sub={`${CATEGORY[cat].name} ${baht(cur)} → ${baht(to)}. Where should it go? (Bills stay as they are.)`} />
+      <SheetTitle
+        mood="happy"
+        title={t('Nice — {amt} freed up', { amt: baht(freed) })}
+        sub={t('{name} {from} → {to}. Where should it go? (Bills stay as they are.)', { name: CATEGORY[cat].name, from: baht(cur), to: baht(to) })}
+      />
       <View style={{ gap: 8 }}>
         {options.map((o) => (
           <Option key={o.key} title={o.title} sub={o.sub} tag={o.tag} color={o.color} on={dest === o.key} onPress={() => setDest(o.key)} />
@@ -529,9 +558,9 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
       </View>
       <Pressable onPress={() => setAlways(!always)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} accessibilityRole="checkbox" accessibilityState={{ checked: always }}>
         <View style={[styles.check, always && { backgroundColor: colors.lime, borderColor: colors.ink }]}>{always && <Check size={12} color={colors.ink} weight="bold" />}</View>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>Do this every time I lower a budget</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{t('Do this every time I lower a budget')}</Text>
       </Pressable>
-      <Button label={`Move ${baht(freed)} to ${label}`} onPress={() => onDone(dest, always)} />
+      <Button label={t('Move {amt} to {to}', { amt: baht(freed), to: label })} onPress={() => onDone(dest, always)} />
     </>
   );
 }
@@ -539,20 +568,20 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
 function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, amount: number) => void }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState<number | null>(null);
-  const preview = amount ? addBill(month, name || 'New bill', amount) : null;
-  const goalName = month.goal.isSafetyNet ? 'your safety net' : month.goal.title;
+  const preview = amount ? addBill(month, name || t('New bill'), amount) : null;
+  const goalName = month.goal.isSafetyNet ? t('your safety net') : month.goal.title;
   return (
     <>
-      <SheetTitle mood="think" title="Add a bill" sub="Anything that comes every month: subscriptions, a gym, a phone instalment." />
+      <SheetTitle mood="think" title={t('Add a bill')} sub={t('Anything that comes every month: subscriptions, a gym, a phone instalment.')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', 'Gym', 'Phone instalment'].map((n) => (
+        {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', t('Gym'), t('Phone instalment')].map((n) => (
           <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky, borderColor: colors.ink }]} accessibilityRole="button">
             <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: colors.ink }}>{n}</Text>
           </Pressable>
         ))}
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <TextInput value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={colors.faint} style={[styles.field, { flex: 1.4 }]} accessibilityLabel="Bill name" />
+        <TextInput value={name} onChangeText={setName} placeholder={t('Name')} placeholderTextColor={colors.faint} style={[styles.field, { flex: 1.4 }]} accessibilityLabel={t('Bill name')} />
         <View style={[styles.field, { flex: 1, flexDirection: 'row', alignItems: 'center' }]}>
           <Text style={styles.fieldText}>฿</Text>
           <TextInput
@@ -565,26 +594,28 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
             placeholderTextColor={colors.faint}
             keyboardType="number-pad"
             style={[styles.fieldText, { flex: 1, padding: 0 }]}
-            accessibilityLabel="Amount a month"
+            accessibilityLabel={t('Amount a month')}
           />
         </View>
       </View>
       {preview && (
         <View style={styles.takeBox}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, paddingVertical: 6 }}>What it does to your month</Text>
-          {preview.fromGuess > 0 && <Text style={styles.impact}>✓ {baht(preview.fromGuess)} fits inside my bill guess — that’s what the guess is for.</Text>}
-          {preview.fromFun > 0 && <Text style={styles.impact}>• {baht(preview.fromFun)} less fun money a month.</Text>}
-          {preview.fromGoal > 0 && (
-            <Text style={styles.impact}>
-              • {baht(preview.fromGoal)} less for {goalName} a month — it’ll take a little longer.
-            </Text>
-          )}
-          {preview.short > 0 && <Text style={[styles.impact, { color: colors.orange }]}>• {baht(preview.short)} more than your month can carry. Something else has to go.</Text>}
-          {preview.fromFun === 0 && preview.fromGoal === 0 && preview.short === 0 && <Text style={styles.impact}>Nothing else changes.</Text>}
-          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>{baht((amount ?? 0) * 12)} a year. Worth it? Only you can say — I just make sure you see it.</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, paddingVertical: 6 }}>{t('What it does to your month')}</Text>
+          {preview.fromGuess > 0 && <Text style={styles.impact}>{t('✓ {amt} fits inside my bill guess — that’s what the guess is for.', { amt: baht(preview.fromGuess) })}</Text>}
+          {preview.fromFun > 0 && <Text style={styles.impact}>{t('• {amt} less fun money a month.', { amt: baht(preview.fromFun) })}</Text>}
+          {preview.fromGoal > 0 && <Text style={styles.impact}>{t('• {amt} less for {goal} a month — it’ll take a little longer.', { amt: baht(preview.fromGoal), goal: goalName })}</Text>}
+          {preview.short > 0 && <Text style={[styles.impact, { color: colors.orange }]}>{t('• {amt} more than your month can carry. Something else has to go.', { amt: baht(preview.short) })}</Text>}
+          {preview.fromFun === 0 && preview.fromGoal === 0 && preview.short === 0 && <Text style={styles.impact}>{t('Nothing else changes.')}</Text>}
+          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>
+            {t('{amt} a year. Worth it? Only you can say — I just make sure you see it.', { amt: baht((amount ?? 0) * 12) })}
+          </Text>
         </View>
       )}
-      <Button label={amount ? `Add ${name || 'bill'} · ${baht(amount)} a month` : 'Add bill'} disabled={!amount || !name.trim()} onPress={() => amount && onAdd(name.trim(), amount)} />
+      <Button
+        label={amount ? t('Add {name} · {amt} a month', { name: name || t('bill'), amt: baht(amount) }) : t('Add bill')}
+        disabled={!amount || !name.trim()}
+        onPress={() => amount && onAdd(name.trim(), amount)}
+      />
     </>
   );
 }
@@ -595,7 +626,11 @@ function Take({ month, cat, to, onYes, onChoose }: { month: MonthBudget; cat: Ca
   const got = cuts.reduce((a, c) => a + c.was - c.now, 0);
   return (
     <>
-      <SheetTitle mood="think" title={`${CATEGORY[cat].name.split(' &')[0]} gets ${baht(got)} more`} sub={`${baht(cur)} → ${baht(cur + got)}. I’ll take a little from each of these:`} />
+      <SheetTitle
+        mood="think"
+        title={t('{name} gets {amt} more', { name: CATEGORY[cat].name.split(' &')[0], amt: baht(got) })}
+        sub={t('{from} → {to}. I’ll take a little from each of these:', { from: baht(cur), to: baht(cur + got) })}
+      />
       <View style={styles.takeBox}>
         {cuts
           .filter((c) => c.was !== c.now)
@@ -609,13 +644,13 @@ function Take({ month, cat, to, onYes, onChoose }: { month: MonthBudget; cat: Ca
             </View>
           ))}
       </View>
-      {got < to - cur && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>That’s everything the other categories can give.</Text>}
+      {got < to - cur && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange }}>{t('That’s everything the other categories can give.')}</Text>}
       <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>
-        {month.goal.isSafetyNet ? 'Your safety net' : `${month.goal.title}, your safety net`} and bills stay exactly the same.
+        {month.goal.isSafetyNet ? t('Your safety net and bills stay exactly the same.') : t('{goal}, your safety net and bills stay exactly the same.', { goal: month.goal.title })}
       </Text>
-      <Button label="Yes, do it" onPress={onYes} />
+      <Button label={t('Yes, do it')} onPress={onYes} />
       <Pressable onPress={onChoose} hitSlop={8} style={{ alignSelf: 'center' }} accessibilityRole="button">
-        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' }}>Let me choose</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' }}>{t('Let me choose')}</Text>
       </Pressable>
     </>
   );
@@ -665,7 +700,17 @@ const styles = StyleSheet.create({
   addDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   editPill: { height: 30, paddingHorizontal: 10, borderRadius: 999, backgroundColor: glow.control, flexDirection: 'row', alignItems: 'center', gap: 5 },
   leftovers: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(247,244,247,0.88)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.9)' },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: 'rgba(247,244,247,0.88)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.9)',
+  },
 
   scrim: { flex: 1, backgroundColor: 'rgba(17,17,17,0.38)' },
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },

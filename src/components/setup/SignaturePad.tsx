@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 
+import { t } from '@/lib/i18n';
 import { colors, fonts } from '@/theme';
 
 /**
@@ -35,8 +36,8 @@ export function SignaturePad({ value, onChange, height = 84 }: { value: string |
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={[styles.pad, { height }]} onLayout={(e) => (width.current = e.nativeEvent.layout.width)} accessibilityLabel="Signature pad. Sign with your finger.">
-        {!d && <Text style={styles.placeholder}>Sign here with your finger</Text>}
+      <View style={[styles.pad, { height }]} onLayout={(e) => (width.current = e.nativeEvent.layout.width)} accessibilityLabel={t('Signature pad. Sign with your finger.')}>
+        {!d && <Text style={styles.placeholder}>{t('Sign here with your finger')}</Text>}
         <Svg width="100%" height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
           {d ? <Path d={d} fill="none" stroke={colors.ink} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" /> : null}
         </Svg>

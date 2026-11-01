@@ -5,6 +5,7 @@ import { PlusSheet } from '@/components/PlusSheet';
 import { plusPitch } from '@/components/plusPitch';
 import { useAuth } from '@/lib/auth';
 import { useHome } from '@/lib/home';
+import { t } from '@/lib/i18n';
 import { useMonth } from '@/lib/month';
 
 // Your month — where this month's money goes: saving first, then bills, then everyday spending.
@@ -15,9 +16,9 @@ export default function YourMonth() {
   const { profile } = useAuth();
   const [locked, setLocked] = useState<null | 'styles' | 'customize'>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
-  const goal = month?.goal.title ?? 'your goal';
+  const goal = month?.goal.title ?? t('your goal');
   const funLeft = Math.max(0, (month?.spend.find((x) => x.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
-  const pitch = plusPitch(month, goal.split(' ')[0] === 'Safety' ? 'your safety net' : goal.replace(/ trip$/i, ''), funLeft);
+  const pitch = plusPitch(month, goal.split(' ')[0] === 'Safety' ? t('your safety net') : goal.replace(/ trip$/i, ''), funLeft);
   return (
     <>
       <MonthScreen month={month} loading={loading} error={error} save={save} spent={spent.byCat} isPlus={isPlus} onLocked={setLocked} />

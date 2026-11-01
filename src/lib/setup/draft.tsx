@@ -161,8 +161,7 @@ export function plannedIncome(d: SetupDraft): number {
   return (d.incomeType === 'regular' ? d.monthlyIncome : d.slowMonth) ?? 0;
 }
 
-export const basicsDone = (d: SetupDraft) =>
-  d.incomeType === 'regular' ? Boolean(d.monthlyIncome && d.payday) : Boolean(d.slowMonth);
+export const basicsDone = (d: SetupDraft) => (d.incomeType === 'regular' ? Boolean(d.monthlyIncome && d.payday) : Boolean(d.slowMonth));
 
 export const goalDone = (d: SetupDraft) =>
   d.goalKind === 'monthly'

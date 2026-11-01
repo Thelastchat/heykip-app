@@ -4,15 +4,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
-import { BackButton, SetupScreen } from '@/components/setup/kit';
+import { BackButton, nth, SetupScreen } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { livingFor, room, safetyNet, verdict } from '@/lib/brain';
 import type { IconKey } from '@/lib/budget';
 import { CATEGORY } from '@/lib/budget';
+import { rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
-import { fullDate, LEAKS, makePlan, monthYear, monthsFromNow, ordinal, parseDay } from '@/lib/setup/plan';
+import { fullDate, LEAKS, makePlan, monthYear, monthsFromNow, parseDay } from '@/lib/setup/plan';
 import { PAYDAY } from '@/lib/setup/rules';
 import { colors, fonts, money } from '@/theme';
 
@@ -51,11 +52,11 @@ export default function SetupEverything() {
       seen.current = now;
       setUpdating(true);
       setUpdated(false);
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         setUpdating(false);
         setUpdated(true);
       }, 1400);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }, [draft]),
   );
 
@@ -64,7 +65,7 @@ export default function SetupEverything() {
   const L = livingFor(i);
   const fixed = i.rent + i.bills;
   const share = i.income ? Math.round((fixed / i.income) * 100) : 0;
-  const t = typeInfo(draft.goalType, draft.goalKind);
+  const kind = typeInfo(draft.goalType, draft.goalKind);
   const monthly = draft.goalKind === 'monthly';
   const emergency = draft.goalKind === 'safety_net';
   const v = verdict(i);
@@ -76,69 +77,82 @@ export default function SetupEverything() {
     {
       icon: 'rent',
       color: money.fixed,
-      title: `Rent & bills are ${share}% of your pay`,
-      sub: share <= 30 ? 'Healthy — under 30% is the usual guide.' : 'Above the usual 30% guide — that’s why fun money is tighter.',
+      title: t('Rent & bills are {share}% of your pay', { share }),
+      sub: share <= 30 ? t('Healthy — under 30% is the usual guide.') : t('Above the usual 30% guide — that’s why fun money is tighter.'),
     },
     {
       icon: 'food',
       color: CATEGORY.food.color,
-      title: 'Food is your biggest daily cost',
-      sub: `${baht(Math.round(L.food / 30))} a day.${draft.leaks.includes('delivery') ? ' Delivery is where I’ll watch.' : ''}`,
+      title: t('Food is your biggest daily cost'),
+      sub: draft.leaks.includes('delivery')
+        ? t('{perDay} a day. Delivery is where I’ll watch.', { perDay: baht(Math.round(L.food / 30)) })
+        : t('{perDay} a day.', { perDay: baht(Math.round(L.food / 30)) }),
     },
     ...(emergency
       ? []
-      : [{ icon: 'shield' as IconKey, color: money.safetyNet, title: 'A safety net from day one', sub: `${baht(plan.safetyMonthly)} a month — full at ${baht(safetyNet(i).target)}.` }]),
+      : [
+          {
+            icon: 'shield' as IconKey,
+            color: money.safetyNet,
+            title: t('A safety net from day one'),
+            sub: t('{amount} a month — full at {target}.', { amount: baht(plan.safetyMonthly), target: baht(safetyNet(i).target) }),
+          },
+        ]),
     monthly
       ? {
-          icon: t.icon,
-          color: t.color,
-          title: v.kind === 'doable' ? `${plan.short} fits comfortably` : `${plan.short} is a stretch`,
+          icon: kind.icon,
+          color: kind.color,
+          title: v.kind === 'doable' ? t('{goal} fits comfortably', { goal: plan.short }) : t('{goal} is a stretch', { goal: plan.short }),
           sub:
             v.kind === 'doable'
-              ? `${baht(plan.monthlySave)} a month = ${baht(plan.monthlySave * 12)} in a year.`
-              : `${baht(R.comfortable)} a month is comfortable — ${baht(plan.monthlySave)} is planned.`,
+              ? t('{amount} a month = {year} in a year.', { amount: baht(plan.monthlySave), year: baht(plan.monthlySave * 12) })
+              : t('{comfy} a month is comfortable — {amount} is planned.', { comfy: baht(R.comfortable), amount: baht(plan.monthlySave) }),
         }
       : {
-          icon: t.icon,
-          color: t.color,
-          title: v.kind === 'doable' ? `${plan.short} fits at a comfortable pace` : `${plan.short} needs a longer runway`,
+          icon: kind.icon,
+          color: kind.color,
+          title: v.kind === 'doable' ? t('{goal} fits at a comfortable pace', { goal: plan.short }) : t('{goal} needs a longer runway', { goal: plan.short }),
           sub:
             v.kind === 'doable'
-              ? `${monthYear(plan.due)} — ${baht(plan.monthlySave)} a month.`
+              ? t('{date} — {amount} a month.', { date: monthYear(plan.due), amount: baht(plan.monthlySave) })
               : comfy.kind === 'doable'
-                ? `${monthYear(monthsFromNow(comfy.months, draft))} at a comfortable pace${plan.due ? ` — planned for ${monthYear(plan.due)}` : ''}.`
-                : `Planned for ${monthYear(plan.due)}.`,
+                ? plan.due
+                  ? t('{date} at a comfortable pace — planned for {planned}.', { date: monthYear(monthsFromNow(comfy.months, draft)), planned: monthYear(plan.due) })
+                  : t('{date} at a comfortable pace.', { date: monthYear(monthsFromNow(comfy.months, draft)) })
+                : t('Planned for {date}.', { date: monthYear(plan.due) }),
         },
   ];
 
   const edit = (href: string) => router.push(`${href}?edit=1` as Href);
 
   return (
-    <SetupScreen step={undefined} footer={<Button label="Done" disabled={updating} onPress={() => router.back()} />}>
+    <SetupScreen step={undefined} footer={<Button label={t('Done')} disabled={updating} onPress={() => router.back()} />}>
       <BackButton />
       <View style={{ gap: 6 }}>
         <Text style={styles.h1} accessibilityRole="header">
-          Here’s everything
+          {t('Here’s everything')}
         </Text>
-        <Text style={styles.sub}>This is what I used. Change anything and I’ll redo the plan in a few seconds.</Text>
+        <Text style={styles.sub}>{t('This is what I used. Change anything and I’ll redo the plan in a few seconds.')}</Text>
       </View>
 
       {updating ? (
         <View style={[styles.banner, { backgroundColor: '#F8F6F4' }]}>
           <Kip mood="think" size={40} />
-          <Text style={styles.bannerText}>Updating your plan with the new numbers…</Text>
+          <Text style={styles.bannerText}>{t('Updating your plan with the new numbers…')}</Text>
         </View>
       ) : updated ? (
         <View style={[styles.banner, { backgroundColor: colors.lime }]}>
           <Kip mood="happy" size={40} />
           <Text style={styles.bannerText}>
-            <Text style={{ fontFamily: fonts.semibold }}>Updated.</Text> Everything below is your new plan.
+            {rich('**Updated.** Everything below is your new plan.', undefined, (s) => (
+              <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>
+            ))}
           </Text>
         </View>
       ) : null}
 
       <View style={[styles.card, { opacity: updating ? 0.4 : 1 }]}>
-        <Text style={styles.head}>WHAT I FOUND</Text>
+        <Text style={styles.head}>{t('WHAT I FOUND')}</Text>
         {findings.map((f) => (
           <View key={f.title} style={styles.finding}>
             <CatBadge name={f.icon} color={f.color} size={30} />
@@ -150,39 +164,51 @@ export default function SetupEverything() {
         ))}
       </View>
 
-      <Section title="MONEY IN" onEdit={() => edit('/setup/basics')}>
-        <Row k={draft.incomeType === 'regular' ? 'Take-home pay' : 'A slow month'} v={baht(i.income)} />
-        <Row k="Payday" v={draft.incomeType === 'regular' && draft.payday ? `${ordinal(draft.payday)}${draft.monthStartsOnPayday ? ' · month starts on payday' : ''}` : 'Changes'} />
+      <Section title={t('MONEY IN')} onEdit={() => edit('/setup/basics')}>
+        <Row k={draft.incomeType === 'regular' ? t('Take-home pay') : t('A slow month')} v={baht(i.income)} />
+        <Row
+          k={t('Payday')}
+          v={draft.incomeType === 'regular' && draft.payday ? (draft.monthStartsOnPayday ? t('{day} · month starts on payday', { day: nth(draft.payday) }) : nth(draft.payday)) : t('Changes')}
+        />
       </Section>
-      <Section title="FIXED COSTS" onEdit={() => edit('/setup/basics')}>
-        <Row k="Rent" v={baht(i.rent)} />
-        <Row k="Other bills" v={`${baht(i.bills)}${draft.bills === null ? ' · Kip’s guess' : ''}`} />
+      <Section title={t('FIXED COSTS')} onEdit={() => edit('/setup/basics')}>
+        <Row k={t('Rent')} v={baht(i.rent)} />
+        <Row k={t('Other bills')} v={draft.bills === null ? t('{amount} · Kip’s guess', { amount: baht(i.bills) }) : baht(i.bills)} />
       </Section>
-      <Section title="LIVING (KIP’S REALISTIC NUMBERS)" onEdit={() => edit('/setup/yours')}>
-        <Row k="Food" v={`${baht(L.food)} · ${baht(Math.round(L.food / 30))}/day`} />
-        <Row k="Transport" v={baht(L.transport)} />
-        <Row k="Health & personal" v={baht(L.health)} />
-        <Row k="Household" v={baht(L.household)} />
+      <Section title={t('LIVING (KIP’S REALISTIC NUMBERS)')} onEdit={() => edit('/setup/yours')}>
+        <Row k={t('Food')} v={t('{amount} · {perDay}/day', { amount: baht(L.food), perDay: baht(Math.round(L.food / 30)) })} />
+        <Row k={t('Transport')} v={baht(L.transport)} />
+        <Row k={t('Health & personal')} v={baht(L.health)} />
+        <Row k={t('Household')} v={baht(L.household)} />
       </Section>
-      <Section title="YOUR HABITS" onEdit={() => edit('/setup/style')}>
-        <Row k="On payday" v={draft.moneyStyle ? PAYDAY[draft.moneyStyle].label.replace('Honestly? ', '') : '—'} />
-        <Row k="Money leaks" v={leaks.length ? leaks.join(', ') : 'None picked'} />
+      <Section title={t('YOUR HABITS')} onEdit={() => edit('/setup/style')}>
+        <Row k={t('On payday')} v={draft.moneyStyle ? PAYDAY[draft.moneyStyle].label.replace('Honestly? ', '') : '—'} />
+        <Row k={t('Money leaks')} v={leaks.length ? leaks.join(', ') : t('None picked')} />
       </Section>
-      <Section title="YOUR GOAL" onEdit={() => edit('/setup/goal')}>
-        <Row k={plan.short} v={monthly ? `${baht(draft.goalMonthly ?? 0)} a month` : baht(i.goal.target)} />
-        {!monthly && <Row k="Saved so far" v={baht(i.goal.saved)} />}
+      <Section title={t('YOUR GOAL')} onEdit={() => edit('/setup/goal')}>
+        <Row k={plan.short} v={monthly ? t('{amount} a month', { amount: baht(draft.goalMonthly ?? 0) }) : baht(i.goal.target)} />
+        {!monthly && <Row k={t('Saved so far')} v={baht(i.goal.saved)} />}
         {!monthly && draft.sideIncome && (
           <Row
-            k="Extra money"
+            k={t('Extra money')}
             v={
               draft.sideIncome.kind === 'once'
-                ? `${baht(draft.sideIncome.amount)} bonus`
-                : `${baht(draft.sideIncome.amount)}/mo side work${draft.sideIncome.months ? ` × ${draft.sideIncome.months}` : ''}`
+                ? t('{amount} bonus', { amount: baht(draft.sideIncome.amount) })
+                : draft.sideIncome.months
+                  ? t('{amount}/mo side work × {months}', { amount: baht(draft.sideIncome.amount), months: draft.sideIncome.months })
+                  : t('{amount}/mo side work', { amount: baht(draft.sideIncome.amount) })
             }
           />
         )}
         {!monthly && !emergency && draft.goalDue && (
-          <Row k="You asked for" v={`${fullDate(parseDay(draft.goalDue))}${monthYear(plan.due) !== monthYear(parseDay(draft.goalDue)) ? ` → planned ${monthYear(plan.due)}` : ''}`} />
+          <Row
+            k={t('You asked for')}
+            v={
+              monthYear(plan.due) !== monthYear(parseDay(draft.goalDue))
+                ? t('{asked} → planned {planned}', { asked: fullDate(parseDay(draft.goalDue)), planned: monthYear(plan.due) })
+                : fullDate(parseDay(draft.goalDue))
+            }
+          />
         )}
       </Section>
     </SetupScreen>
@@ -194,8 +220,8 @@ function Section({ title, onEdit, children }: { title: string; onEdit: () => voi
     <View style={styles.card}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text style={styles.head}>{title}</Text>
-        <Pressable onPress={onEdit} hitSlop={10} style={styles.edit} accessibilityRole="button" accessibilityLabel={`Edit ${title.toLowerCase()}`}>
-          <Text style={styles.editText}>Edit</Text>
+        <Pressable onPress={onEdit} hitSlop={10} style={styles.edit} accessibilityRole="button" accessibilityLabel={t('Edit {section}', { section: title.toLowerCase() })}>
+          <Text style={styles.editText}>{t('Edit')}</Text>
         </Pressable>
       </View>
       {children}

@@ -67,7 +67,16 @@ const phoneLang = (): Lang => {
   }
 };
 
-const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({ lang: 'en', setLang: () => {} });
+// Changing language redraws the app from the start; this remembers which screen to come back to.
+let returnTo: string | null = null;
+/** The screen to reopen after a language change (read once). */
+export function takeReturnTo() {
+  const r = returnTo;
+  returnTo = null;
+  return r;
+}
+
+const LangContext = createContext<{ lang: Lang; setLang: (l: Lang, stayOn?: string) => void }>({ lang: 'en', setLang: () => {} });
 export const useLang = () => useContext(LangContext);
 
 /** Loads the saved language (or the phone's) before showing anything; changing it redraws the whole app. */
@@ -82,7 +91,8 @@ export function LangProvider({ children }: { children: ReactNode }) {
         setState(l);
       });
   }, []);
-  const setLang = useCallback((l: Lang) => {
+  const setLang = useCallback((l: Lang, stayOn?: string) => {
+    returnTo = stayOn ?? null;
     current = l;
     AsyncStorage.setItem(KEY, l).catch(() => {});
     setState(l);

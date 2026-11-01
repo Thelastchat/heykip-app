@@ -13,6 +13,7 @@ import { DateTile } from '@/components/setup/DateTile';
 import { picked, SetupScreen, SmallTile, smallValue } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { room, verdict } from '@/lib/brain';
+import { rich, t } from '@/lib/i18n';
 import { ICON3D, goalTypeIcon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { goalDone, useSetup } from '@/lib/setup/draft';
@@ -59,19 +60,19 @@ export default function SetupGoal() {
     setTimeout(() => scroll.current?.scrollTo({ y: formY.current - 12, animated: true }), 60);
   }
 
-  function pickType(t: GoalTypeInfo) {
+  function pickType(g: GoalTypeInfo) {
     Haptics.selectionAsync().catch(() => {});
-    if (t.key === draft.goalType) return;
+    if (g.key === draft.goalType) return;
     const was = typeInfo(draft.goalType, draft.goalKind);
     const title = !draft.goalTitle.trim() || draft.goalTitle === was.example || all.some((i) => i.title === draft.goalTitle) ? '' : draft.goalTitle;
-    const R = room({ ...inputs, goal: { ...inputs.goal, type: t.kind === 'monthly' ? 'monthly' : 'gadget' } });
-    if (t.kind === 'monthly')
-      update({ goalType: t.key, goalKind: 'monthly', goalTitle: title, goalMonthly: draft.goalMonthly ?? Math.max(500, Math.min(3000, Math.floor(R.comfortable / 500) * 500)), goalPerMonth: null });
-    else if (t.kind === 'safety_net')
+    const R = room({ ...inputs, goal: { ...inputs.goal, type: g.kind === 'monthly' ? 'monthly' : 'gadget' } });
+    if (g.kind === 'monthly')
+      update({ goalType: g.key, goalKind: 'monthly', goalTitle: title, goalMonthly: draft.goalMonthly ?? Math.max(500, Math.min(3000, Math.floor(R.comfortable / 500) * 500)), goalPerMonth: null });
+    else if (g.kind === 'safety_net')
       update({
-        goalType: t.key,
+        goalType: g.key,
         goalKind: 'safety_net',
-        goalTitle: title || 'Emergency fund',
+        goalTitle: title || t('Emergency fund'),
         goalTarget: emergencyTargetFor({ ...draft, goalKind: 'safety_net' }),
         goalSaved: draft.goalSaved ?? 0,
         goalDue: null,
@@ -79,8 +80,8 @@ export default function SetupGoal() {
       });
     else
       update({
-        goalType: t.key,
-        goalKind: t.kind,
+        goalType: g.key,
+        goalKind: g.kind,
         goalTitle: title,
         goalPerMonth: null,
         ...(draft.goalKind === 'monthly' || draft.goalKind === 'safety_net' ? { goalTarget: null, goalDue: null } : {}),
@@ -100,10 +101,10 @@ export default function SetupGoal() {
   const chosenIdea = all.find((i) => i.title === draft.goalTitle && (i.target === draft.goalTarget || (i.monthly !== null && i.monthly === draft.goalMonthly)));
 
   return (
-    <SetupScreen step={3} scrollRef={scroll} footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!goalDone(draft)} onPress={next} />}>
+    <SetupScreen step={3} scrollRef={scroll} footer={<Button label={editing ? t('Update my plan') : t('Next')} disabled={!goalDone(draft)} onPress={next} />}>
       <View style={styles.titleRow}>
         <Text style={styles.h1} accessibilityRole="header">
-          What are you{'\n'}saving for?
+          {t('What are you\nsaving for?')}
         </Text>
         <Kip mood="idle" size={70} />
       </View>
@@ -115,15 +116,17 @@ export default function SetupGoal() {
             <View style={{ flex: 1, gap: 6 }}>
               <View style={styles.kipTag}>
                 <CatIcon name="sparkle" size={13} />
-                <Text style={styles.kipTagText}>SUGGESTED BY KIP</Text>
+                <Text style={styles.kipTagText}>{t('SUGGESTED BY KIP')}</Text>
               </View>
               <Text style={styles.suggestedSub}>
-                Ideas sized to <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>your {baht(inputs.income)}</Text>. They’re only ideas — nothing is set until you pick one.
+                {rich('Ideas sized to **your {income}**. They’re only ideas — nothing is set until you pick one.', { income: baht(inputs.income) }, (s) => (
+                  <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>{s}</Text>
+                ))}
               </Text>
             </View>
-            <Pressable onPress={shuffle} style={styles.shuffle} accessibilityRole="button" accessibilityLabel="Shuffle ideas" hitSlop={6}>
+            <Pressable onPress={shuffle} style={styles.shuffle} accessibilityRole="button" accessibilityLabel={t('Shuffle ideas')} hitSlop={6}>
               <CatIcon name="shuffle" size={17} />
-              <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Shuffle</Text>
+              <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>{t('Shuffle')}</Text>
             </Pressable>
           </View>
 
@@ -136,7 +139,7 @@ export default function SetupGoal() {
             contentContainerStyle={{ paddingHorizontal: 22, gap: GAP, paddingTop: 14, paddingBottom: 18 }}
             onScroll={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / (CARD_W + GAP)))}
             scrollEventThrottle={32}
-            accessibilityLabel="Kip’s suggestions, swipe for more">
+            accessibilityLabel={t('Kip’s suggestions, swipe for more')}>
             {deck.map((idea, i) => (
               <IdeaCard key={`${shuffles}-${idea.id}`} idea={idea} i={i} on={chosenIdea?.id === idea.id} onPick={() => pickIdea(idea)} draftMonths={(m) => monthYear(monthsFromNow(m, draft))} />
             ))}
@@ -148,7 +151,7 @@ export default function SetupGoal() {
                 <View key={d.id} style={[styles.dot, i === Math.min(page, deck.length - 1) && styles.dotOn]} />
               ))}
             </View>
-            <Text style={styles.hand}>swipe for more →</Text>
+            <Text style={styles.hand}>{t('swipe for more →')}</Text>
           </View>
         </View>
       )}
@@ -159,34 +162,34 @@ export default function SetupGoal() {
           formY.current = e.nativeEvent.layout.y;
         }}
         style={styles.sectionHead}>
-        <Text style={styles.h2}>{chosenIdea ? 'Your goal' : 'Or make your own'}</Text>
-        <Text style={styles.muted12}>{chosenIdea ? 'change anything' : 'nothing fits? build it'}</Text>
+        <Text style={styles.h2}>{chosenIdea ? t('Your goal') : t('Or make your own')}</Text>
+        <Text style={styles.muted12}>{chosenIdea ? t('change anything') : t('nothing fits? build it')}</Text>
       </View>
 
       <View style={styles.own}>
         <View style={styles.labelRow}>
-          <Text style={styles.label}>1 · WHAT KIND OF GOAL?</Text>
-          <Text style={[styles.hand, { fontSize: 18 }]}>swipe →</Text>
+          <Text style={styles.label}>{t('1 · WHAT KIND OF GOAL?')}</Text>
+          <Text style={[styles.hand, { fontSize: 18 }]}>{t('swipe →')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -14 }} contentContainerStyle={{ paddingHorizontal: 14, gap: 6 }} accessibilityRole="radiogroup">
-          {GOAL_TYPES.map((t) => {
-            const on = draft.goalType ? draft.goalType === t.key : t.key === type.key && Boolean(draft.goalTitle);
+          {GOAL_TYPES.map((g) => {
+            const on = draft.goalType ? draft.goalType === g.key : g.key === type.key && Boolean(draft.goalTitle);
             return (
-              <Pressable key={t.key} onPress={() => pickType(t)} style={styles.sticker} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={t.label}>
-                <View style={[styles.stickerDot, t.key === 'other' && !on && styles.stickerOther, on && picked(t.color)]}>
-                  <CatIcon name={t.icon} size={t.key === 'other' ? 20 : 26} />
+              <Pressable key={g.key} onPress={() => pickType(g)} style={styles.sticker} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={g.label}>
+                <View style={[styles.stickerDot, g.key === 'other' && !on && styles.stickerOther, on && picked(g.color)]}>
+                  <CatIcon name={g.icon} size={g.key === 'other' ? 20 : 26} />
                 </View>
                 <Text style={[styles.stickerText, on && { fontFamily: fonts.semibold }]} numberOfLines={1}>
-                  {t.label}
+                  {g.label}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
 
-        <Text style={styles.label}>2 · MAKE IT YOURS</Text>
+        <Text style={styles.label}>{t('2 · MAKE IT YOURS')}</Text>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 6 }}>
-          <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? 'Change photo' : 'Add a photo'}>
+          <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? t('Change photo') : t('Add a photo')}>
             <Polaroid
               photo={draft.goalPhoto}
               width={Math.min(132, width * 0.34)}
@@ -199,36 +202,36 @@ export default function SetupGoal() {
                 icon: (
                   <View style={{ alignItems: 'center', gap: 6 }}>
                     <CatIcon name="camera" size={26} />
-                    <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>Add a photo</Text>
+                    <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Add a photo')}</Text>
                   </View>
                 ),
               }}>
-              <Text style={[styles.hand, styles.polaroidNote]}>{draft.goalPhoto ? 'my dream' : 'your dream here'}</Text>
+              <Text style={[styles.hand, styles.polaroidNote]}>{draft.goalPhoto ? t('my dream') : t('your dream here')}</Text>
             </Polaroid>
           </Pressable>
           <View style={{ flex: 1, gap: 8 }}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Name your goal</Text>
+              <Text style={styles.fieldLabel}>{t('Name your goal')}</Text>
               <TextInput
                 value={draft.goalTitle}
                 onChangeText={(goalTitle) => update({ goalTitle })}
-                placeholder={`e.g. ${type.example}`}
+                placeholder={t('e.g. {example}', { example: type.example })}
                 placeholderTextColor={colors.faint}
                 maxLength={40}
                 style={[smallValue, { fontSize: 16 }]}
-                accessibilityLabel="Name your goal"
+                accessibilityLabel={t('Name your goal')}
               />
             </View>
-            <Text style={styles.muted12}>A photo of the real thing keeps you going on payday.</Text>
+            <Text style={styles.muted12}>{t('A photo of the real thing keeps you going on payday.')}</Text>
           </View>
         </View>
 
         {monthly ? (
           <>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <BahtField label="Each month" value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
-              <SmallTile label="For" style={[styles.white, { flex: 1 }]}>
-                <Text style={smallValue}>Ongoing</Text>
+              <BahtField label={t('Each month')} value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
+              <SmallTile label={t('For')} style={[styles.white, { flex: 1 }]}>
+                <Text style={smallValue}>{t('Ongoing')}</Text>
               </SmallTile>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -244,9 +247,9 @@ export default function SetupGoal() {
           </>
         ) : (
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <BahtField label="How much?" value={draft.goalTarget} onChange={(goalTarget) => update({ goalTarget })} placeholder="0" flex={1.2} />
-            <BahtField label="Saved so far" value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" />
-            <DateTile label="By when?" value={draft.goalDue} onChange={(goalDue) => update({ goalDue })} style={[styles.white, { flex: 1 }]} emptyLabel={emergency ? 'No rush' : 'Pick'} />
+            <BahtField label={t('How much?')} value={draft.goalTarget} onChange={(goalTarget) => update({ goalTarget })} placeholder="0" flex={1.2} />
+            <BahtField label={t('Saved so far')} value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" />
+            <DateTile label={t('By when?')} value={draft.goalDue} onChange={(goalDue) => update({ goalDue })} style={[styles.white, { flex: 1 }]} emptyLabel={emergency ? t('No rush') : t('Pick')} />
           </View>
         )}
 
@@ -263,21 +266,21 @@ function soft(hex: string, a = 0.55) {
 }
 
 function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number; on: boolean; onPick: () => void; draftMonths: (m: number) => string }) {
-  const t = typeInfo(idea.type);
   const bg = CARD[i % CARD.length];
   const amount = idea.monthly !== null ? baht(idea.monthly) : baht(idea.target ?? 0);
-  const chip = idea.monthly !== null ? '♡ every month' : `⏱ ${idea.months} month${idea.months === 1 ? '' : 's'} · ${draftMonths(idea.months ?? 1)}`;
+  const date = draftMonths(idea.months ?? 1);
+  const chip = idea.monthly !== null ? t('♡ every month') : idea.months === 1 ? t('⏱ {n} month · {date}', { n: idea.months, date }) : t('⏱ {n} months · {date}', { n: String(idea.months), date });
   return (
     <View style={{ width: CARD_W, paddingTop: 34 }}>
       <View style={[styles.card, { backgroundColor: soft(bg) }]}>
         <View style={styles.cardTop}>
           {idea.kipsPick ? (
             <View style={[styles.tag, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.tagText, { color: '#FFFFFF' }]}>KIP’S PICK</Text>
+              <Text style={[styles.tagText, { color: '#FFFFFF' }]}>{t('KIP’S PICK')}</Text>
             </View>
           ) : (
             <View style={styles.tag}>
-              <Text style={styles.tagText}>✦ SUGGESTED</Text>
+              <Text style={styles.tagText}>{t('✦ SUGGESTED')}</Text>
             </View>
           )}
         </View>
@@ -286,7 +289,7 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
         </Text>
         <Text style={styles.cardAmount}>
           {amount}
-          {idea.monthly !== null && <Text style={{ fontSize: 16 }}>/mo</Text>}
+          {idea.monthly !== null && <Text style={{ fontSize: 16 }}>{t('/mo')}</Text>}
         </Text>
         <View style={styles.chip}>
           <Text style={styles.chipText}>{chip}</Text>
@@ -294,8 +297,8 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
         <Text style={styles.why} numberOfLines={3}>
           {idea.why}
         </Text>
-        <Pressable onPress={onPick} style={[styles.pickBtn, on && { backgroundColor: '#FFFFFF' }]} accessibilityRole="button" accessibilityLabel={`Pick ${idea.title}`}>
-          <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? 'Picked ✓ — edit it below' : 'Pick this goal'}</Text>
+        <Pressable onPress={onPick} style={[styles.pickBtn, on && { backgroundColor: '#FFFFFF' }]} accessibilityRole="button" accessibilityLabel={t('Pick {title}', { title: idea.title })}>
+          <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? t('Picked ✓ — edit it below') : t('Pick this goal')}</Text>
         </Pressable>
       </View>
       <Float delay={i * 500} amount={5} style={styles.big3d}>
@@ -317,37 +320,25 @@ function FitCheck() {
 
   if (monthly) {
     const m = draft.goalMonthly ?? 0;
-    if (!m) text = 'Pick an amount for each month and I’ll check it fits.';
+    if (!m) text = t('Pick an amount for each month and I’ll check it fits.');
     else if (m <= R.comfortable) {
       mood = 'happy';
       bg = colors.lime;
-      text = (
-        <>
-          <B>Fits your month.</B> {baht(m)} a month = <B>{baht(m * 12)}</B> in a year, and fun money stays {baht(R.left - m)}.
-        </>
-      );
+      text = rich('**Fits your month.** {amount} a month = **{year}** in a year, and fun money stays {fun}.', { amount: baht(m), year: baht(m * 12), fun: baht(R.left - m) }, (s) => <B>{s}</B>);
     } else if (m <= R.most) {
       mood = 'careful';
       bg = colors.peach;
-      text = (
-        <>
-          <B>Possible, but tight.</B> Fun money drops to {baht(R.left - m)}. {baht(R.comfortable)} a month is comfortable.
-        </>
-      );
+      text = rich('**Possible, but tight.** Fun money drops to {fun}. {comfy} a month is comfortable.', { fun: baht(R.left - m), comfy: baht(R.comfortable) }, (s) => <B>{s}</B>);
     } else {
       mood = 'careful';
       bg = '#F8E1D8';
-      text = (
-        <>
-          <B>That’s more than fits.</B> After rent, bills, living and a safety net, the most is {baht(Math.max(0, R.most))} a month.
-        </>
-      );
+      text = rich('**That’s more than fits.** After rent, bills, living and a safety net, the most is {most} a month.', { most: baht(Math.max(0, R.most)) }, (s) => <B>{s}</B>);
     }
   } else if (!draft.goalTarget) {
-    text = 'Type an amount and I’ll check it fits your month — and tell you a date that works.';
+    text = t('Type an amount and I’ll check it fits your month — and tell you a date that works.');
   } else if ((draft.goalSaved ?? 0) >= draft.goalTarget) {
     mood = 'happy';
-    text = 'You’ve already saved enough for this one — make it bigger, or pick another goal.';
+    text = t('You’ve already saved enough for this one — make it bigger, or pick another goal.');
   } else {
     const v = verdict(inputs);
     const comfy = verdict({ ...inputs, goal: { ...inputs.goal, months: null } });
@@ -355,43 +346,27 @@ function FitCheck() {
     if (v.kind === 'noRoom') {
       mood = 'careful';
       bg = '#F8E1D8';
-      text = (
-        <>
-          <B>Your costs already use up your pay.</B> I’ll show you a few ways to make room next.
-        </>
-      );
+      text = rich('**Your costs already use up your pay.** I’ll show you a few ways to make room next.', undefined, (s) => <B>{s}</B>);
     } else if (!draft.goalDue && draft.goalKind !== 'safety_net') {
-      text = comfyDate ? (
-        <>
-          At a comfortable pace you’d have it by <B>{comfyDate}</B>. Pick that date — or another one.
-        </>
-      ) : (
-        'Pick a date and I’ll check it.'
-      );
+      text = comfyDate ? rich('At a comfortable pace you’d have it by **{date}**. Pick that date — or another one.', { date: comfyDate }, (s) => <B>{s}</B>) : t('Pick a date and I’ll check it.');
     } else if (v.kind === 'doable') {
       mood = 'happy';
       bg = colors.lime;
-      text = (
-        <>
-          <B>Fits your month.</B> {baht(v.perMonth)} a month gets you there{draft.goalDue ? ` by ${fullDate(parseDay(draft.goalDue))}` : ` in ${v.months} months`}.
-        </>
-      );
+      text = draft.goalDue
+        ? rich('**Fits your month.** {amount} a month gets you there by {date}.', { amount: baht(v.perMonth), date: fullDate(parseDay(draft.goalDue)) }, (s) => <B>{s}</B>)
+        : rich('**Fits your month.** {amount} a month gets you there in {n} months.', { amount: baht(v.perMonth), n: v.months }, (s) => <B>{s}</B>);
     } else if (v.kind === 'tight') {
       mood = 'careful';
       bg = colors.peach;
-      text = (
-        <>
-          <B>Possible, but tight.</B> {baht(v.perMonth)} a month leaves {baht(v.funLeft)} for fun.{comfyDate ? ` ${comfyDate} is comfortable.` : ''}
-        </>
-      );
+      text = comfyDate
+        ? rich('**Possible, but tight.** {amount} a month leaves {fun} for fun. {date} is comfortable.', { amount: baht(v.perMonth), fun: baht(v.funLeft), date: comfyDate }, (s) => <B>{s}</B>)
+        : rich('**Possible, but tight.** {amount} a month leaves {fun} for fun.', { amount: baht(v.perMonth), fun: baht(v.funLeft) }, (s) => <B>{s}</B>);
     } else {
       mood = 'careful';
       bg = '#F8E1D8';
-      text = (
-        <>
-          <B>That date needs {baht(v.need)} a month</B> — more than fits.{comfyDate ? ` Comfortable: ${comfyDate}.` : ''} I’ll show you options next.
-        </>
-      );
+      text = comfyDate
+        ? rich('**That date needs {need} a month** — more than fits. Comfortable: {date}. I’ll show you options next.', { need: baht(v.need), date: comfyDate }, (s) => <B>{s}</B>)
+        : rich('**That date needs {need} a month** — more than fits. I’ll show you options next.', { need: baht(v.need) }, (s) => <B>{s}</B>);
     }
   }
 

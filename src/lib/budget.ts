@@ -1,29 +1,154 @@
 // "Your month": how this month's money is split, and how it re-balances when a budget changes.
 // The numbers come from Kip's brain (brain.ts): 1 saving first (goal + safety net), 2 bills, 3 living + fun by category.
 import { livingFor, plan as splitMonth, type Inputs, type Result } from '@/lib/brain';
+import { t } from '@/lib/i18n';
 import type { BudgetStyle } from '@/lib/setup/draft';
 import { colors, money } from '@/theme';
 
 export type CatKey = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
-export type IconKey = 'food' | 'travel' | 'shop' | 'fun' | 'health' | 'book' | 'gift' | 'more' | 'rent' | 'bill' | 'shield' | 'cash' | 'plane' | 'phone' | 'family' | 'lipstick' | 'shirt' | 'note' | 'ring' | 'sparkle' | 'shuffle' | 'camera' | 'plus';
+export type IconKey =
+  | 'food'
+  | 'travel'
+  | 'shop'
+  | 'fun'
+  | 'health'
+  | 'book'
+  | 'gift'
+  | 'more'
+  | 'rent'
+  | 'bill'
+  | 'shield'
+  | 'cash'
+  | 'plane'
+  | 'phone'
+  | 'family'
+  | 'lipstick'
+  | 'shirt'
+  | 'note'
+  | 'ring'
+  | 'sparkle'
+  | 'shuffle'
+  | 'camera'
+  | 'plus';
 
+// Names are getters so they're translated when read, not when this file loads.
 export const CATEGORY: Record<CatKey, { name: string; color: string; icon: IconKey }> = {
-  food: { name: 'Food & drinks', color: colors.lime, icon: 'food' },
-  transport: { name: 'Transport', color: colors.sky, icon: 'travel' },
-  shopping: { name: 'Shopping', color: colors.pink, icon: 'shop' },
-  fun: { name: 'Fun', color: money.fun, icon: 'fun' },
-  health_beauty: { name: 'Health & beauty', color: colors.lavender, icon: 'health' },
-  learning: { name: 'Learning', color: colors.clay, icon: 'book' },
-  giving: { name: 'Giving', color: colors.peach, icon: 'gift' },
-  other: { name: 'Household & other', color: colors.grey, icon: 'more' },
-  spend_freely: { name: 'Spend freely', color: colors.lime, icon: 'cash' },
+  food: {
+    get name() {
+      return t('Food & drinks');
+    },
+    color: colors.lime,
+    icon: 'food',
+  },
+  transport: {
+    get name() {
+      return t('Transport');
+    },
+    color: colors.sky,
+    icon: 'travel',
+  },
+  shopping: {
+    get name() {
+      return t('Shopping');
+    },
+    color: colors.pink,
+    icon: 'shop',
+  },
+  fun: {
+    get name() {
+      return t('Fun');
+    },
+    color: money.fun,
+    icon: 'fun',
+  },
+  health_beauty: {
+    get name() {
+      return t('Health & beauty');
+    },
+    color: colors.lavender,
+    icon: 'health',
+  },
+  learning: {
+    get name() {
+      return t('Learning');
+    },
+    color: colors.clay,
+    icon: 'book',
+  },
+  giving: {
+    get name() {
+      return t('Giving');
+    },
+    color: colors.peach,
+    icon: 'gift',
+  },
+  other: {
+    get name() {
+      return t('Household & other');
+    },
+    color: colors.grey,
+    icon: 'more',
+  },
+  spend_freely: {
+    get name() {
+      return t('Spend freely');
+    },
+    color: colors.lime,
+    icon: 'cash',
+  },
 };
 
 export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: string; desc: string }[] = [
-  { key: 'kip', name: 'Kip’s plan', tag: 'RECOMMENDED', tagColor: colors.lime, desc: 'Living costs first, a little safety net, then as much for your goal as you can comfortably save.' },
-  { key: 'savefirst', name: 'Save first', tag: 'FASTEST', tagColor: colors.sage, desc: 'The most Kip will plan goes out on payday. The rest is one pot — no categories to track.' },
-  { key: '503020', name: '50 / 30 / 20', tag: 'THE CLASSIC', tagColor: colors.roseBeige, desc: '20% saved, the rest on needs and wants.' },
-  { key: 'jars', name: '6 Jars', tag: 'GROW YOURSELF', tagColor: colors.lilac, desc: 'Jars for learning and giving too, plus a bigger safety net.' },
+  {
+    key: 'kip',
+    get name() {
+      return t('Kip’s plan');
+    },
+    get tag() {
+      return t('RECOMMENDED');
+    },
+    tagColor: colors.lime,
+    get desc() {
+      return t('Living costs first, a little safety net, then as much for your goal as you can comfortably save.');
+    },
+  },
+  {
+    key: 'savefirst',
+    get name() {
+      return t('Save first');
+    },
+    get tag() {
+      return t('FASTEST');
+    },
+    tagColor: colors.sage,
+    get desc() {
+      return t('The most Kip will plan goes out on payday. The rest is one pot — no categories to track.');
+    },
+  },
+  {
+    key: '503020',
+    name: '50 / 30 / 20',
+    get tag() {
+      return t('THE CLASSIC');
+    },
+    tagColor: colors.roseBeige,
+    get desc() {
+      return t('20% saved, the rest on needs and wants.');
+    },
+  },
+  {
+    key: 'jars',
+    get name() {
+      return t('6 Jars');
+    },
+    get tag() {
+      return t('GROW YOURSELF');
+    },
+    tagColor: colors.lilac,
+    get desc() {
+      return t('Jars for learning and giving too, plus a bigger safety net.');
+    },
+  },
 ];
 
 // ---------- the month ----------

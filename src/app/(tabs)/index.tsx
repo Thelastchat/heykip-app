@@ -18,8 +18,9 @@ import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillStack, type Bill } from '@/components/home/BillStack';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { plan as splitMonth, type Style } from '@/lib/brain';
-import { CATEGORY, savingTotal, STYLES, type MonthBudget } from '@/lib/budget';
+import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
+import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -28,8 +29,6 @@ import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /** ฿ drawn smaller next to a big number. */
 const Big = (n: number) => (
@@ -60,7 +59,7 @@ export default function Home() {
 
   const now = new Date();
   const goal = goals[0];
-  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
+  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
 
   // ---- the month in numbers (the same numbers as the + screen) ----
   const { P, spendBudget, leftMonth, dailyToday, leftToday, pace } = monthNumbers(month, spent, now);
@@ -83,12 +82,17 @@ export default function Home() {
     setKipMood(fast ? 'careful' : 'happy');
   }, [spent.today, fast]);
 
+  // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
     spent.total === 0
-      ? `Your plan is running. Tell me what you spend and I’ll keep ${short} on track.`
+      ? t('Your plan is running. Tell me what you spend and I’ll keep {goal} on track.', { goal: short })
       : pace <= 0
-        ? `You’re doing great — ${baht(-pace)} under pace. ${short} is on track${goalDate ? ` for ${monthYear(goalDate)}` : ''}.`
-        : `A bit fast this month — ${baht(pace)} over pace. Keep to ${baht(dailyToday)} a day and ${short} stays on ${goalDate ? monthYear(goalDate) : 'track'}.`;
+        ? goalDate
+          ? t('You’re doing great — {amount} under pace. {goal} is on track for {date}.', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
+          : t('You’re doing great — {amount} under pace. {goal} is on track.', { amount: baht(-pace), goal: short })
+        : goalDate
+          ? t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on {date}.', { amount: baht(pace), daily: baht(dailyToday), goal: short, date: monthYear(goalDate) })
+          : t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on track.', { amount: baht(pace), daily: baht(dailyToday), goal: short });
 
   // ---- Plus ----
   function openFeature(f: PlusFeature) {
@@ -102,11 +106,15 @@ export default function Home() {
     if (f === 'automove' && session) {
       await supabase.from('profiles').update({ split_when_paid: true }).eq('id', session.user.id);
       await refreshProfile();
-      flash(`On ✓ — ${baht(saving)} moves to ${short} ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}`);
+      flash(
+        month?.payday
+          ? t('On ✓ — {amount} moves to {goal} on the {day}', { amount: baht(saving), goal: short, day: ordinal(month.payday), n: month.payday })
+          : t('On ✓ — {amount} moves to {goal} on payday', { amount: baht(saving), goal: short }),
+      );
     }
   }
-  function flash(t: string) {
-    setToast(t);
+  function flash(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(null), 2600);
   }
 
@@ -118,21 +126,25 @@ export default function Home() {
     {
       f: 'styles',
       icon: 'piggy',
-      title: 'Money styles',
+      title: t('Money styles'),
       teaser:
         styleCompare && styleCompare.sooner > 0
-          ? `${short} ${styleCompare.sooner} month${styleCompare.sooner > 1 ? 's' : ''} sooner with ${styleCompare.best.s.name}`
-          : 'Try Save first, 50/30/20 or 6 Jars',
+          ? styleCompare.sooner > 1
+            ? t('{goal} {n} months sooner with {style}', { goal: short, n: styleCompare.sooner, style: t(styleCompare.best.s.name) })
+            : t('{goal} {n} month sooner with {style}', { goal: short, n: styleCompare.sooner, style: t(styleCompare.best.s.name) })
+          : t('Try Save first, 50/30/20 or 6 Jars'),
     },
     {
       f: 'automove',
       icon: 'income',
-      title: 'Payday auto-move',
-      teaser: `${baht(saving)} moves itself ${month?.payday ? `on the ${ordinal(month.payday)}` : 'on payday'}`,
+      title: t('Payday auto-move'),
+      teaser: month?.payday
+        ? t('{amount} moves itself on the {day}', { amount: baht(saving), day: ordinal(month.payday), n: month.payday })
+        : t('{amount} moves itself on payday', { amount: baht(saving) }),
       on: !!profile?.split_when_paid,
     },
-    { f: 'customize', icon: 'shield', title: 'Customize & locks', teaser: `Lock ${short}, move food & fun your way` },
-    { f: 'talk', icon: 'phone', title: 'Talk to Kip', teaser: '“Can I afford hotpot on Friday?”' },
+    { f: 'customize', icon: 'shield', title: t('Customize & locks'), teaser: t('Lock {goal}, move food & fun your way', { goal: short }) },
+    { f: 'talk', icon: 'phone', title: t('Talk to Kip'), teaser: t('“Can I afford hotpot on Friday?”') },
   ];
 
   // ---- bills (paid marks reset each pay period) ----
@@ -140,9 +152,9 @@ export default function Home() {
   const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
   const bills: Bill[] = month
     ? [
-        ...(month.bills.rent > 0 ? [{ key: 'rent', name: 'Rent', amount: month.bills.rent }] : []),
+        ...(month.bills.rent > 0 ? [{ key: 'rent', name: t('Rent'), amount: month.bills.rent }] : []),
         ...(month.bills.items ?? []).map((b) => ({ key: `item:${b.name}`, name: b.name, amount: b.amount })),
-        ...(month.bills.guess > 0 ? [{ key: 'guess', name: 'Other bills', amount: month.bills.guess, estimate: true }] : []),
+        ...(month.bills.guess > 0 ? [{ key: 'guess', name: t('Other bills'), amount: month.bills.guess, estimate: true }] : []),
       ].map((b) => ({ ...b, paid: paidKeys.includes(b.key) }))
     : [];
   function setPaid(key: string, paid: boolean) {
@@ -151,7 +163,7 @@ export default function Home() {
     if (paid) keys.add(key);
     else keys.delete(key);
     save({ ...month, paid: { period: pk, keys: [...keys] } } as MonthBudget);
-    if (paid) flash(`${bills.find((b) => b.key === key)?.name ?? 'Bill'} paid ✓`);
+    if (paid) flash(t('{name} paid ✓', { name: bills.find((b) => b.key === key)?.name ?? t('Bill') }));
   }
 
   // Left to spend: whatever is going faster than plan comes first, so it's never hidden off-screen.
@@ -166,6 +178,7 @@ export default function Home() {
 
   const shownSpent = spent.byDay[selectedDay] ?? 0;
   const sel = new Date(selectedDay);
+  const firstName = profile?.display_name?.split(' ')[0];
 
   return (
     <View style={{ flex: 1 }}>
@@ -176,19 +189,19 @@ export default function Home() {
           <Glass radius={999} shadow innerStyle={styles.pill}>
             <Text style={styles.pillText}>
               🔥 {streak > 0 ? <Text style={{ fontFamily: fonts.medium }}>{streak}</Text> : null}
-              <Text style={{ color: colors.muted, fontSize: 12 }}>{streak > 0 ? ` day${streak > 1 ? 's' : ''} logged` : ' Log today to start a streak'}</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>{' ' + (streak > 0 ? (streak > 1 ? t('days logged') : t('day logged')) : t('Log today to start a streak'))}</Text>
             </Text>
           </Glass>
-          <Pressable accessibilityRole="button" accessibilityLabel="Profile and settings" onPress={() => router.push('/profile')} style={styles.avatar}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Profile and settings')} onPress={() => router.push('/profile')} style={styles.avatar}>
             {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 40, height: 40 }} /> : <UserCircle size={40} color={colors.ink} weight="light" />}
           </Pressable>
         </RiseIn>
 
         <RiseIn delay={60}>
           <Text style={styles.hello}>
-            Hello, {profile?.display_name?.split(' ')[0] ?? 'there'}
+            {firstName == null ? t('Hello, there') : t('Hello, {name}', { name: firstName })}
             {'\n'}
-            <Text style={{ color: '#B9B8B0' }}>Today’s money</Text>
+            <Text style={{ color: '#B9B8B0' }}>{t('Today’s money')}</Text>
           </Text>
         </RiseIn>
 
@@ -196,16 +209,16 @@ export default function Home() {
         <RiseIn delay={120} style={styles.nums}>
           <View>
             <CountUp value={isTodaySelected ? leftToday : shownSpent} format={Big} style={styles.n1} />
-            <Text style={styles.lbl}>{isTodaySelected ? 'Left today' : `Spent ${DAYS[sel.getDay()]} ${sel.getDate()}`}</Text>
+            <Text style={styles.lbl}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
           </View>
           <View style={styles.vbar} />
           <View style={{ flexShrink: 1 }}>
             <CountUp value={leftMonth} format={(n) => <>{Big(n)}</>} style={styles.n2} />
-            <Text style={styles.lbl}>Left this month</Text>
+            <Text style={styles.lbl}>{t('Left this month')}</Text>
           </View>
           <Glass radius={25} style={{ marginLeft: 'auto' }} innerStyle={styles.cal}>
             <Text style={styles.calN}>{P.daysLeft}</Text>
-            <Text style={styles.calS}>days</Text>
+            <Text style={styles.calS}>{t('days')}</Text>
           </Glass>
         </RiseIn>
 
@@ -221,23 +234,21 @@ export default function Home() {
                 <Kip mood={kipMood} size={104} />
               </View>
               <Text style={styles.kipName}>Kip</Text>
-              <Text style={styles.kipRole}>Your money buddy</Text>
+              <Text style={styles.kipRole}>{t('Your money buddy')}</Text>
               <Text style={styles.say}>{say}</Text>
               <View style={styles.two}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.twoK}>Spent today</Text>
-                  <Text style={styles.twoV}>
-                    {baht(spent.today)} of {baht(dailyToday)}
-                  </Text>
+                  <Text style={styles.twoK}>{t('Spent today')}</Text>
+                  <Text style={styles.twoV}>{t('{spent} of {total}', { spent: baht(spent.today), total: baht(dailyToday) })}</Text>
                 </View>
                 <View style={[styles.twoR]}>
                   <Text style={styles.twoK}>{short}</Text>
-                  <Text style={styles.twoV}>{goalDate ? monthYear(goalDate) : goal?.monthly ? `${baht(goal.monthly)}/mo` : '—'}</Text>
+                  <Text style={styles.twoV}>{goalDate ? monthYear(goalDate) : goal?.monthly ? t('{amount}/mo', { amount: baht(goal.monthly) }) : '—'}</Text>
                 </View>
               </View>
             </View>
-            <Squish onPress={() => openFeature('talk')} style={styles.foot} accessibilityRole="button" accessibilityLabel={isPlus ? 'Ask Kip anything' : 'Ask Kip anything — Plus'}>
-              <Text style={styles.footText}>Ask Kip anything</Text>
+            <Squish onPress={() => openFeature('talk')} style={styles.foot} accessibilityRole="button" accessibilityLabel={isPlus ? t('Ask Kip anything') : t('Ask Kip anything — Plus')}>
+              <Text style={styles.footText}>{t('Ask Kip anything')}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {!isPlus && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>Plus</Text>}
                 <View style={styles.lockDot}>{isPlus ? <Arrow /> : <LockIcon />}</View>
@@ -248,12 +259,12 @@ export default function Home() {
 
         {/* goal */}
         <RiseIn delay={300}>
-          <Section title="Your goal" right={`1 of ${isPlus ? 3 : 1}`} />
+          <Section title={t('Your goal')} right={t('{n} of {total}', { n: 1, total: isPlus ? 3 : 1 })} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {goal && <GoalCard g={goal} perMonth={month?.goal.amount ?? 0} width={Math.min(312, width - 60)} />}
-            <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel="Pin 2 more goals">
+            <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel={t('Pin 2 more goals')}>
               <Image source={ICON3D.piggy} style={{ width: 66, height: 66 }} contentFit="contain" />
-              <Text style={styles.addGoalText}>{isPlus ? 'Add a goal' : 'Pin 2 more goals'}</Text>
+              <Text style={styles.addGoalText}>{isPlus ? t('Add a goal') : t('Pin 2 more goals')}</Text>
               {!isPlus && (
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>✦ PLUS</Text>
@@ -265,11 +276,15 @@ export default function Home() {
 
         {/* left to spend */}
         <RiseIn delay={360}>
-          <Section title="Left to spend" right="Your month" onRight={() => router.push('/month')} />
+          <Section title={t('Left to spend')} right={t('Your month')} onRight={() => router.push('/month')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {spendTiles.map(({ s, left, going }, i) => {
               return (
-                <Squish key={s.key} onPress={() => router.push('/month')} accessibilityRole="button" accessibilityLabel={`${CATEGORY[s.key].name}: ${baht(left)} left of ${baht(s.amount)}`}>
+                <Squish
+                  key={s.key}
+                  onPress={() => router.push('/month')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('{category}: {left} left of {total}', { category: t(CATEGORY[s.key].name), left: baht(left), total: baht(s.amount) })}>
                   <Glass radius={24} innerStyle={styles.cat}>
                     <View style={{ width: 64, height: 64, marginBottom: 10 }}>
                       <Ring pct={s.amount ? left / s.amount : 0} color={going ? colors.orange : colors.limeDeep} delay={500 + i * 80} />
@@ -277,18 +292,18 @@ export default function Home() {
                         <Image source={ICON3D[CAT_ICON3D[s.key]]} style={{ width: 40, height: 40, margin: 12 }} contentFit="contain" />
                       </Float>
                     </View>
-                    <Text style={styles.pct}>{s.amount ? Math.round((left / s.amount) * 100) : 0}% left</Text>
+                    <Text style={styles.pct}>{t('{pct}% left', { pct: s.amount ? Math.round((left / s.amount) * 100) : 0 })}</Text>
                     <Text style={styles.catName} numberOfLines={1}>
-                      {CATEGORY[s.key].name.split(' &')[0]}
+                      {catShort(s.key)}
                     </Text>
                     <Text style={styles.catBig}>{baht(left)}</Text>
                     {going ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.orange }} />
-                        <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.orangeText }}>Going fast</Text>
+                        <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.orangeText }}>{t('Going fast')}</Text>
                       </View>
                     ) : (
-                      <Text style={styles.catOf}>of {baht(s.amount)}</Text>
+                      <Text style={styles.catOf}>{t('of {amount}', { amount: baht(s.amount) })}</Text>
                     )}
                   </Glass>
                 </Squish>
@@ -299,17 +314,17 @@ export default function Home() {
 
         {/* Plus */}
         <RiseIn delay={420}>
-          <Section title="Do more with Kip" tag="✦ PLUS" />
+          <Section title={t('Do more with Kip')} tag="✦ PLUS" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.rowOuter, { marginTop: -38 }]} contentContainerStyle={[styles.rowInner, { paddingTop: 40 }]}>
             {plusCards.map((c, i) => (
-              <Squish key={c.f} onPress={() => openFeature(c.f)} style={styles.plus} accessibilityRole="button" accessibilityLabel={`${c.title}${isPlus ? '' : ' — Plus'}`}>
+              <Squish key={c.f} onPress={() => openFeature(c.f)} style={styles.plus} accessibilityRole="button" accessibilityLabel={isPlus ? c.title : t('{title} — Plus', { title: c.title })}>
                 <Float delay={i * 700} style={styles.plusIcon}>
                   <Image source={ICON3D[c.icon]} style={{ width: 96, height: 96 }} contentFit="contain" />
                 </Float>
                 <Text style={styles.plusTitle}>{c.title}</Text>
                 <Text style={styles.plusTeaser}>{c.teaser}</Text>
                 <View style={styles.tryc}>
-                  <Text style={styles.trycText}>{isPlus ? (c.on ? 'On ✓' : 'Open') : '✦ Try free'}</Text>
+                  <Text style={styles.trycText}>{isPlus ? (c.on ? t('On ✓') : t('Open')) : t('✦ Try free')}</Text>
                 </View>
               </Squish>
             ))}
@@ -319,7 +334,7 @@ export default function Home() {
         {/* bills */}
         {bills.length > 0 && (
           <RiseIn delay={480} style={{ paddingHorizontal: 18 }}>
-            <Section title="Bills this month" right={`${baht(bills.reduce((a, b) => a + b.amount, 0))} · set aside`} inset={false} />
+            <Section title={t('Bills this month')} right={t('{amount} · set aside', { amount: baht(bills.reduce((a, b) => a + b.amount, 0)) })} inset={false} />
             <BillStack bills={bills} onPaid={setPaid} />
           </RiseIn>
         )}
@@ -334,7 +349,7 @@ export default function Home() {
       <Squish
         haptic={false}
         accessibilityRole="button"
-        accessibilityLabel="Add it yourself"
+        accessibilityLabel={t('Add it yourself')}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           router.push('/add');
@@ -370,13 +385,17 @@ function Section({ title, right, onRight, tag, inset = true }: { title: string; 
 }
 
 function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width: number }) {
-  const t = typeInfo(g.goalType, g.kind as never);
+  const type = typeInfo(g.goalType, g.kind as never);
   const short = g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never);
   const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
   const days = g.due ? Math.max(0, Math.round((parseDay(g.due).getTime() - Date.now()) / 86_400_000)) : null;
   const line = (g.promise ?? '').split('\n')[0];
   return (
-    <Squish onPress={() => router.push('/goals')} style={[styles.goal, { width, backgroundColor: t.color }]} accessibilityRole="button" accessibilityLabel={`${g.title}, ${pct}% saved`}>
+    <Squish
+      onPress={() => router.push('/goals')}
+      style={[styles.goal, { width, backgroundColor: type.color }]}
+      accessibilityRole="button"
+      accessibilityLabel={t('{goal}, {pct}% saved', { goal: g.title, pct })}>
       {g.photo ? (
         <Image source={{ uri: g.photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
@@ -389,14 +408,13 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
       <View style={styles.gchip}>
         <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 26, height: 26 }} contentFit="contain" />
         <Text style={styles.gchipText} numberOfLines={1}>
-          {short}
-          {days !== null ? ` · ${days} days` : ''}
+          {days !== null ? t('{goal} · {n} days', { goal: short, n: days }) : short}
         </Text>
       </View>
       {line ? (
         <View style={styles.note}>
           <View style={styles.tape} />
-          <Text style={styles.noteHead}>MY PROMISE</Text>
+          <Text style={styles.noteHead}>{t('MY PROMISE')}</Text>
           <Text style={styles.noteText} numberOfLines={3}>
             {line}
           </Text>
@@ -406,7 +424,7 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
         <Glass radius={22} shadow={false} tint="rgba(255,255,255,0.72)">
           <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Text style={styles.stripBig}>{g.target > 0 ? `${baht(g.saved)} saved` : `${baht(perMonth)} a month`}</Text>
+              <Text style={styles.stripBig}>{g.target > 0 ? t('{amount} saved', { amount: baht(g.saved) }) : t('{amount} a month', { amount: baht(perMonth) })}</Text>
               {g.target > 0 && <Text style={styles.stripSmall}>{pct}%</Text>}
             </View>
             {g.target > 0 && (
@@ -415,8 +433,8 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
                   <View style={[styles.trackFill, { width: `${Math.max(pct, 2)}%` }]} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={styles.stripSmall}>{baht(perMonth)} a month</Text>
-                  <Text style={styles.stripSmall}>of {baht(g.target)}</Text>
+                  <Text style={styles.stripSmall}>{t('{amount} a month', { amount: baht(perMonth) })}</Text>
+                  <Text style={styles.stripSmall}>{t('of {amount}', { amount: baht(g.target) })}</Text>
                 </View>
               </>
             )}
@@ -425,6 +443,22 @@ function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width
       </View>
     </Squish>
   );
+}
+
+/** The short category name on a tile ("Food", not "Food & drinks"). */
+function catShort(key: CatKey) {
+  const short: Partial<Record<CatKey, string>> = {
+    food: t('Food'),
+    transport: t('Transport'),
+    shopping: t('Shopping'),
+    fun: t('Fun'),
+    health_beauty: t('Health'),
+    learning: t('Learning'),
+    giving: t('Giving'),
+    other: t('Household'),
+    spend_freely: t('Spend freely'),
+  };
+  return short[key] ?? t(CATEGORY[key].name.split(' &')[0]);
 }
 
 function LockIcon() {

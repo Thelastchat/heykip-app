@@ -16,6 +16,7 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 import { CATEGORY } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
@@ -60,7 +61,8 @@ type Turn = {
 };
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
-const SUGGEST = ['Chicken rice 60, Thai tea 45 and Grab 80', 'Got paid 18,000 today', 'Can I buy a shirt for 890?', 'How am I doing this month?', 'ข้าวกะเพรา 70 กาแฟ 55'];
+/** Suggestion chips — a function so they follow the app's language. */
+const suggestions = () => [t('Chicken rice 60, Thai tea 45 and Grab 80'), t('Got paid 18,000 today'), t('Can I buy a shirt for 890?'), t('How am I doing this month?'), 'ข้าวกะเพรา 70 กาแฟ 55'];
 const SPEND_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const IN_CATS: InCat[] = ['pay', 'side_gigs', 'gifts', 'other'];
 
@@ -99,7 +101,7 @@ export default function Talk() {
   }, []);
 
   const goal = goals[0];
-  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
+  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
   const arrives = goal?.due ? monthYear(parseDay(goal.due)) : null;
   const goalIcon = goal ? (goal.goalType ? goalTypeIcon3D(goal.goalType) : goalIcon3D(goal.kind)) : 'piggy';
   const perMonth = month ? month.goal.amount + month.goalExtra : 0;
@@ -119,25 +121,25 @@ export default function Talk() {
     // The phone stopped by itself (long silence, or a hiccup): use what it heard.
     setListening(false);
     if (heard) send(heard);
-    else flash('I didn’t catch that — try again?');
+    else flash(t('I didn’t catch that — try again?'));
   });
 
   async function listen(l = lang) {
     if (!isPlus) return setLocked(true);
-    if (!voiceModule()) return flash('Talking out loud works in the HeyKip app build. For now, tap 🎤 on your keyboard.');
+    if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap 🎤 on your keyboard.'));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setListening(true);
     const problem = await voice.start(l);
     if (problem) {
       setListening(false);
-      flash(problem === 'denied' ? 'I need the microphone — turn it on for HeyKip in Settings.' : 'Listening isn’t working right now — type it instead?');
+      flash(problem === 'denied' ? t('I need the microphone — turn it on for HeyKip in Settings.') : t('Listening isn’t working right now — type it instead?'));
     }
   }
   async function doneTalking() {
     const heard = await voice.finish();
     setListening(false);
     if (heard) send(heard);
-    else flash('I didn’t catch that — try again?');
+    else flash(t('I didn’t catch that — try again?'));
   }
   function stopTalking() {
     voice.cancel();
@@ -150,11 +152,11 @@ export default function Talk() {
     listen(l);
   }
 
-  function flash(t: string) {
-    setToast(t);
+  function flash(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(null), 2400);
   }
-  const update = (id: number, patch: Partial<Turn>) => setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  const update = (id: number, patch: Partial<Turn>) => setTurns((ts) => ts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
   async function send(said = text) {
     const msg = said.trim();
@@ -174,51 +176,51 @@ export default function Talk() {
         state: 'error',
         error:
           res.reason === 'nokey'
-            ? 'I’m not switched on yet — my AI key still needs to be added in Supabase.'
+            ? t('I’m not switched on yet — my AI key still needs to be added in Supabase.')
             : res.reason === 'plus'
-              ? 'Talking to me is a Plus feature.'
+              ? t('Talking to me is a Plus feature.')
               : res.reason === 'offline'
-                ? 'I can’t reach the internet right now. Try again in a moment?'
-                : 'I got a bit muddled. Try saying it another way?',
+                ? t('I can’t reach the internet right now. Try again in a moment?')
+                : t('I got a bit muddled. Try saying it another way?'),
       });
     if (!res.ok && res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
   }
 
-  async function saveItems(t: Turn, items: Item[]) {
+  async function saveItems(turn: Turn, items: Item[]) {
     if (!session || items.length === 0) return;
     const rows = items.map((it) => {
       const kind = isIn(it) ? 'income' : 'spend';
       return { user_id: session.user.id, kind, amount: it.amount, category_id: ids[`${kind}:${it.category}`] ?? ids[`${kind}:other`] ?? null, note: it.name, source: 'typed' };
     });
     const { error } = await supabase.from('transactions').insert(rows);
-    if (error) return flash(`Couldn’t save: ${error.message}`);
+    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const ins = items.filter(isIn);
     const { extra, from } = incomeNotes(ins, month);
-    update(t.id, { saved: true, extra: extra > 0 ? { amount: extra, from, note: ins.map((i) => i.name).join(', ') } : null });
+    update(turn.id, { saved: true, extra: extra > 0 ? { amount: extra, from, note: ins.map((i) => i.name).join(', ') } : null });
     reload();
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
   }
 
-  async function putExtra(t: Turn) {
-    if (!goalInfo || !t.extra) return;
-    const { data, error } = await supabase.rpc('put_in_goal', { p_goal: goalInfo.id, p_amount: t.extra.amount, p_source: 'extra', p_from: t.extra.from, p_note: t.extra.note.slice(0, 120) });
-    if (error) return flash(`Couldn’t save: ${error.message}`);
+  async function putExtra(turn: Turn) {
+    if (!goalInfo || !turn.extra) return;
+    const { data, error } = await supabase.rpc('put_in_goal', { p_goal: goalInfo.id, p_amount: turn.extra.amount, p_source: 'extra', p_from: turn.extra.from, p_note: turn.extra.note.slice(0, 120) });
+    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(t.id, { extraDone: { put: true, total: Number(data ?? goalInfo.saved + t.extra.amount) } });
+    update(turn.id, { extraDone: { put: true, total: Number(data ?? goalInfo.saved + turn.extra.amount) } });
     reload();
   }
 
-  async function buyIt(t: Turn, item: LogItem, plan: BuyPlan) {
+  async function buyIt(turn: Turn, item: LogItem, plan: BuyPlan) {
     if (!session || !month) return;
     const { error } = await supabase
       .from('transactions')
       .insert({ user_id: session.user.id, kind: 'spend', amount: item.amount, category_id: ids[`spend:${item.category}`] ?? null, note: item.name, source: 'typed' });
-    if (error) return flash(`Couldn’t save: ${error.message}`);
+    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     save(applyBuy(month, plan));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(t.id, { bought: true });
+    update(turn.id, { bought: true });
     reload();
   }
 
@@ -226,14 +228,14 @@ export default function Talk() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <GlowBackground />
       <View style={[styles.top, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" accessibilityLabel="Close">
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" accessibilityLabel={t('Close')}>
           <Glass radius={22} innerStyle={styles.round}>
             <X size={16} color={colors.ink} weight="bold" />
           </Glass>
         </Pressable>
         <Glass radius={999} innerStyle={styles.status}>
-          <View style={[styles.dot, turns.some((t) => t.state === 'thinking') && { backgroundColor: colors.orange }]} />
-          <Text style={styles.statusText}>{turns.some((t) => t.state === 'thinking') ? 'Thinking…' : isPlus ? 'Kip · Plus' : 'Kip · Plus feature'}</Text>
+          <View style={[styles.dot, turns.some((x) => x.state === 'thinking') && { backgroundColor: colors.orange }]} />
+          <Text style={styles.statusText}>{turns.some((x) => x.state === 'thinking') ? t('Thinking…') : isPlus ? 'Kip · Plus' : t('Kip · Plus feature')}</Text>
         </Glass>
         <View style={{ width: 44 }} />
       </View>
@@ -245,38 +247,38 @@ export default function Talk() {
         showsVerticalScrollIndicator={false}>
         {turns.length === 0 && (
           <RiseIn style={{ alignItems: 'center', gap: 4, marginTop: 10 }}>
-            <Text style={styles.hey}>Hey {first ?? 'there'}</Text>
-            <Text style={styles.h1}>What did you spend today?</Text>
+            <Text style={styles.hey}>{first != null ? t('Hey {name}', { name: first }) : t('Hey there')}</Text>
+            <Text style={styles.h1}>{t('What did you spend today?')}</Text>
             <View style={{ marginVertical: 18 }}>
               <Kip mood="listen" size={170} />
             </View>
             <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>
-              Just type it like you’d text a friend — what you spent, money that came in, or “Can I buy…?”. {n ? `You have ${baht(n.leftToday)} left today.` : ''}
+              {t('Just type it like you’d text a friend — what you spent, money that came in, or “Can I buy…?”.')} {n ? t('You have {amount} left today.', { amount: baht(n.leftToday) }) : ''}
             </Text>
           </RiseIn>
         )}
 
-        {turns.map((t) => (
-          <View key={t.id} style={{ gap: 10 }}>
+        {turns.map((turn) => (
+          <View key={turn.id} style={{ gap: 10 }}>
             <View style={styles.me}>
-              <Text style={styles.meText}>{t.me}</Text>
+              <Text style={styles.meText}>{turn.me}</Text>
             </View>
-            {t.state === 'thinking' && <KipLine mood="think" text="Let me look…" />}
-            {t.state === 'error' && <KipLine mood="careful" text={t.error ?? ''} />}
-            {t.state === 'done' && t.reply && (
+            {turn.state === 'thinking' && <KipLine mood="think" text={t('Let me look…')} />}
+            {turn.state === 'error' && <KipLine mood="careful" text={turn.error ?? ''} />}
+            {turn.state === 'done' && turn.reply && (
               <Answer
-                t={t}
-                reply={t.reply}
+                turn={turn}
+                reply={turn.reply}
                 month={month}
-                plan={t.plan ?? null}
+                plan={turn.plan ?? null}
                 goal={{ name: short, arrives, icon: goalIcon }}
                 goalInfo={goalInfo}
                 spent={spent}
-                onSave={(items) => saveItems(t, items)}
-                onPutExtra={() => putExtra(t)}
-                onKeepExtra={() => update(t.id, { extraDone: { put: false } })}
-                onBuy={(item, plan) => buyIt(t, item, plan)}
-                onNotNow={() => update(t.id, { dismissed: true })}
+                onSave={(items) => saveItems(turn, items)}
+                onPutExtra={() => putExtra(turn)}
+                onKeepExtra={() => update(turn.id, { extraDone: { put: false } })}
+                onBuy={(item, plan) => buyIt(turn, item, plan)}
+                onNotNow={() => update(turn.id, { dismissed: true })}
               />
             )}
           </View>
@@ -290,7 +292,7 @@ export default function Talk() {
           keyboardShouldPersistTaps="handled"
           style={{ flexGrow: 0 }}
           contentContainerStyle={{ paddingHorizontal: 18, gap: 7, paddingBottom: 10 }}>
-          {SUGGEST.map((s) => (
+          {suggestions().map((s) => (
             <Squish key={s} onPress={() => send(s)} accessibilityRole="button">
               <Glass radius={999} innerStyle={styles.sug}>
                 <Text style={styles.sugText}>{s}</Text>
@@ -301,7 +303,7 @@ export default function Talk() {
       )}
 
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel="Talk to Kip out loud">
+        <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel={t('Talk to Kip out loud')}>
           <Glass radius={25} innerStyle={styles.mic}>
             <Microphone size={20} color={colors.ink} weight="bold" />
           </Glass>
@@ -311,16 +313,16 @@ export default function Talk() {
             value={text}
             onChangeText={setText}
             onFocus={() => !isPlus && setLocked(true)}
-            placeholder={isPlus ? 'Lunch 60, got paid 18,000… or “Can I buy…?”' : 'Talk to Kip is a Plus feature'}
+            placeholder={isPlus ? t('Lunch 60, got paid 18,000… or “Can I buy…?”') : t('Talk to Kip is a Plus feature')}
             placeholderTextColor={colors.faint}
             style={styles.input}
             onSubmitEditing={() => send()}
             returnKeyType="send"
             maxLength={300}
-            accessibilityLabel="Message Kip"
+            accessibilityLabel={t('Message Kip')}
           />
         </Glass>
-        <Squish onPress={() => send()} style={[styles.send, !text.trim() && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel="Send">
+        <Squish onPress={() => send()} style={[styles.send, !text.trim() && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel={t('Send')}>
           <ArrowUp size={20} color="#FFFFFF" weight="bold" />
         </Squish>
       </View>
@@ -354,7 +356,7 @@ function KipLine({ text, mood = 'happy' }: { text: string; mood?: 'happy' | 'thi
 }
 
 function Answer({
-  t,
+  turn,
   reply,
   month,
   plan,
@@ -367,7 +369,7 @@ function Answer({
   onBuy,
   onNotNow,
 }: {
-  t: Turn;
+  turn: Turn;
   reply: KipReply;
   month: ReturnType<typeof useMonth>['month'];
   plan: BuyPlan | null;
@@ -390,7 +392,7 @@ function Answer({
     const { notes } = incomeNotes(ins, month);
     // Left for today once these are saved (bills don't touch today's money).
     const todayOut = month ? outs.filter((o) => budgetKey(o.category, month) !== 'bills').reduce((a, o) => a + o.amount, 0) : 0;
-    const leftAfter = month && !t.saved ? monthNumbers(month, { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }).leftToday : null;
+    const leftAfter = month && !turn.saved ? monthNumbers(month, { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }).leftToday : null;
     const remove = (it: Item) => setItems((xs) => xs.filter((x) => x !== it));
     const row = (it: Item, i: number, note: { text: string; extra: boolean } | null) => (
       <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -403,23 +405,23 @@ function Answer({
           {isIn(it) ? '+' : ''}
           {baht(it.amount)}
         </Text>
-        {!t.saved && (
-          <Pressable onPress={() => remove(it)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.name}`} style={styles.x}>
+        {!turn.saved && (
+          <Pressable onPress={() => remove(it)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Remove {name}', { name: it.name })} style={styles.x}>
             <X size={11} color={colors.muted} weight="bold" />
           </Pressable>
         )}
       </View>
     );
-    const extra = t.extra;
+    const extra = turn.extra;
     return (
       <>
         <KipLine text={reply.reply} />
         <Glass radius={24} innerStyle={{ padding: 14, gap: 10 }}>
-          {t.saved && <Text style={styles.cap}>SAVED ✓</Text>}
+          {turn.saved && <Text style={styles.cap}>{t('SAVED ✓')}</Text>}
           {ins.length > 0 && (
             <>
               <View style={styles.secRow}>
-                <Text style={styles.cap}>MONEY IN</Text>
+                <Text style={styles.cap}>{t('MONEY IN')}</Text>
                 <View style={styles.inPill}>
                   <Text style={styles.inPillText}>+{baht(inTotal)}</Text>
                 </View>
@@ -431,40 +433,48 @@ function Answer({
           {outs.length > 0 && (
             <>
               <View style={styles.secRow}>
-                <Text style={styles.cap}>{ins.length ? 'SPENT' : t.saved ? 'SPENT' : 'KIP HEARD · TAP × TO REMOVE'}</Text>
+                <Text style={styles.cap}>{ins.length ? t('SPENT') : turn.saved ? t('SPENT') : t('KIP HEARD · TAP × TO REMOVE')}</Text>
                 <Text style={[styles.cap, { color: colors.ink }]}>
                   {baht(outTotal)}
-                  {leftAfter !== null ? ` · ${baht(leftAfter)} left today` : ''}
+                  {leftAfter !== null ? ` · ${t('{amount} left today', { amount: baht(leftAfter) })}` : ''}
                 </Text>
               </View>
               {outs.map((it, i) => row(it, i, null))}
             </>
           )}
-          {!t.saved && (
+          {!turn.saved && (
             <Squish onPress={() => onSave(items)} style={styles.dark} accessibilityRole="button">
               <Text style={styles.darkText}>
-                {items.length > 1 ? `Save all ${items.length}` : 'Save it'}
+                {items.length > 1 ? t('Save all {n}', { n: items.length }) : t('Save it')}
                 {ins.length ? '' : ` · ${baht(outTotal)}`}
               </Text>
             </Squish>
           )}
         </Glass>
 
-        {t.saved && extra && goalInfo && <ExtraOffer extra={extra.amount} goal={goalInfo} done={t.extraDone} hasPay={ins.some((i) => i.category === 'pay')} onPut={onPutExtra} onKeep={onKeepExtra} />}
+        {turn.saved && extra && goalInfo && (
+          <ExtraOffer extra={extra.amount} goal={goalInfo} done={turn.extraDone} hasPay={ins.some((i) => i.category === 'pay')} onPut={onPutExtra} onKeep={onKeepExtra} />
+        )}
       </>
     );
   }
 
   if (reply.kind === 'buy' && reply.buy && plan && month) {
     const it = reply.buy;
-    const catName = plan.key === 'bills' ? 'Home & bills' : CATEGORY[plan.key].name;
+    const catName = plan.key === 'bills' ? t('Home & bills') : CATEGORY[plan.key].name;
     const answer = !plan.fits
-      ? `Not this month, honestly. It’s ${baht(plan.short)} more than your budgets can spare — it would have to come from ${goal.name}.`
+      ? t('Not this month, honestly. It’s {short} more than your budgets can spare — it would have to come from {goal}.', { short: baht(plan.short), goal: goal.name })
       : plan.moves.length
-        ? `Yes, you can. ${catName} has ${baht(it.amount - plan.moves.reduce((a, m) => a + m.amount, 0))} left, so I’d borrow ${baht(plan.moves.reduce((a, m) => a + m.amount, 0))} from ${plan.moves.length > 1 ? `${plan.moves.length} other budgets` : CATEGORY[plan.moves[0].from].name}. ${goal.name} isn’t touched.`
+        ? t('Yes, you can. {cat} has {left} left, so I’d borrow {borrow} from {from}. {goal} isn’t touched.', {
+            cat: catName,
+            left: baht(it.amount - plan.moves.reduce((a, m) => a + m.amount, 0)),
+            borrow: baht(plan.moves.reduce((a, m) => a + m.amount, 0)),
+            from: plan.moves.length > 1 ? t('{n} other budgets', { n: plan.moves.length }) : CATEGORY[plan.moves[0].from].name,
+            goal: goal.name,
+          })
         : plan.key === 'bills'
-          ? `Yes — bills are already in your plan, so this won’t touch today’s money.`
-          : `Yes, it fits. ${catName} still has ${baht(plan.left)} left after this.`;
+          ? t('Yes — bills are already in your plan, so this won’t touch today’s money.')
+          : t('Yes, it fits. {cat} still has {left} left after this.', { cat: catName, left: baht(plan.left) });
     return (
       <>
         <KipLine text={answer} mood={plan.fits ? 'happy' : 'careful'} />
@@ -480,14 +490,14 @@ function Answer({
           {plan.fits && plan.moves.length > 0 && (
             <>
               <View style={{ height: 1, backgroundColor: 'rgba(17,17,17,0.07)' }} />
-              <Text style={styles.cap}>KIP’S PLAN</Text>
+              <Text style={styles.cap}>{t('KIP’S PLAN')}</Text>
               {plan.moves.map((m) => (
                 <View key={m.from} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Image source={ICON3D[CAT_ICON3D[m.from]]} style={{ width: 36, height: 36 }} contentFit="contain" />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName}>{CATEGORY[m.from].name}</Text>
                     <Text style={[styles.sub, m.tight && { color: colors.orangeText }]}>
-                      {baht(m.leftAfter)} left after{m.tight ? ' — go easy here' : ''}
+                      {m.tight ? t('{amount} left after — go easy here', { amount: baht(m.leftAfter) }) : t('{amount} left after', { amount: baht(m.leftAfter) })}
                     </Text>
                   </View>
                   <Text style={styles.itemAmt}>−{baht(m.amount)}</Text>
@@ -500,27 +510,25 @@ function Answer({
           <Glass radius={22} tint="rgba(255,252,154,0.55)" innerStyle={{ padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Image source={ICON3D[goal.icon]} style={{ width: 40, height: 40 }} contentFit="contain" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>
-                {goal.name} stays {goal.arrives ? `on ${goal.arrives}` : 'on track'}
-              </Text>
-              <Text style={styles.sub}>Your savings aren’t used for this</Text>
+              <Text style={styles.itemName}>{goal.arrives ? t('{goal} stays on {when}', { goal: goal.name, when: goal.arrives }) : t('{goal} stays on track', { goal: goal.name })}</Text>
+              <Text style={styles.sub}>{t('Your savings aren’t used for this')}</Text>
             </View>
           </Glass>
         )}
-        {t.bought ? (
-          <Text style={[styles.sub, { textAlign: 'center' }]}>Bought ✓ — I’ve logged it{plan.fits && plan.moves.length ? ' and moved the money' : ''}.</Text>
-        ) : t.dismissed ? (
-          <Text style={[styles.sub, { textAlign: 'center' }]}>Okay — no change. Good call checking first.</Text>
+        {turn.bought ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{plan.fits && plan.moves.length ? t('Bought ✓ — I’ve logged it and moved the money.') : t('Bought ✓ — I’ve logged it.')}</Text>
+        ) : turn.dismissed ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Okay — no change. Good call checking first.')}</Text>
         ) : (
           <View style={{ gap: 8 }}>
             {plan.fits && (
               <Squish onPress={() => onBuy(it, plan)} style={styles.dark} accessibilityRole="button">
-                <Text style={styles.darkText}>{plan.moves.length ? 'Buy it — move the money' : 'I bought it — log it'}</Text>
+                <Text style={styles.darkText}>{plan.moves.length ? t('Buy it — move the money') : t('I bought it — log it')}</Text>
               </Squish>
             )}
             <Squish onPress={onNotNow} accessibilityRole="button">
               <Glass radius={999} innerStyle={styles.light}>
-                <Text style={styles.lightText}>Not now</Text>
+                <Text style={styles.lightText}>{t('Not now')}</Text>
               </Glass>
             </Squish>
           </View>
@@ -540,13 +548,19 @@ function ExtraOffer({ extra, goal, done, hasPay, onPut, onKeep }: { extra: numbe
   const after = target ? Math.min(1, (goal.saved + extra) / target) : 0;
   return (
     <>
-      <KipLine text={`${hasPay ? 'Your pay is what your plan already runs on. ' : ''}The ${baht(extra)} is extra — want it to get you to ${goal.name} sooner?`} />
+      <KipLine
+        text={
+          hasPay
+            ? t('Your pay is what your plan already runs on. The {amount} is extra — want it to get you to {goal} sooner?', { amount: baht(extra), goal: goal.name })
+            : t('The {amount} is extra — want it to get you to {goal} sooner?', { amount: baht(extra), goal: goal.name })
+        }
+      />
       <Glass radius={26} innerStyle={{ padding: 16, gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Image source={ICON3D[goal.icon]} style={{ width: 48, height: 48 }} contentFit="contain" />
           <View style={{ flex: 1 }}>
             <Text style={[styles.itemName, { fontSize: 17 }]}>{goal.name}</Text>
-            <Text style={styles.sub}>{target ? `${baht(goal.saved)} of ${baht(target)}` : `${baht(goal.saved)} saved`}</Text>
+            <Text style={styles.sub}>{target ? t('{saved} of {target}', { saved: baht(goal.saved), target: baht(target) }) : t('{saved} saved', { saved: baht(goal.saved) })}</Text>
           </View>
           <Text style={styles.price}>+{baht(extra)}</Text>
         </View>
@@ -559,26 +573,26 @@ function ExtraOffer({ extra, goal, done, hasPay, onPut, onKeep }: { extra: numbe
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={styles.sub}>
             {goal.arrives ? `${goal.arrives} → ` : ''}
-            <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{sooner ?? 'sooner'}</Text>
+            <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{sooner ?? t('sooner')}</Text>
           </Text>
           <Text style={styles.sub}>{baht(goal.saved + extra)}</Text>
         </View>
       </Glass>
       {done ? (
-        <Text style={[styles.sub, { textAlign: 'center' }]}>{done.put ? `Put in ✓ — ${goal.name} is at ${baht(done.total)} now.` : 'Okay — it’s yours to spend. Today’s money stays the same.'}</Text>
+        <Text style={[styles.sub, { textAlign: 'center' }]}>
+          {done.put ? t('Put in ✓ — {goal} is at {total} now.', { goal: goal.name, total: baht(done.total) }) : t('Okay — it’s yours to spend. Today’s money stays the same.')}
+        </Text>
       ) : (
         <View style={{ gap: 8 }}>
           <Squish onPress={onPut} style={styles.dark} accessibilityRole="button">
-            <Text style={styles.darkText}>
-              Put {baht(extra)} in {goal.name}
-            </Text>
+            <Text style={styles.darkText}>{t('Put {amount} in {goal}', { amount: baht(extra), goal: goal.name })}</Text>
           </Squish>
           <Squish onPress={onKeep} accessibilityRole="button">
             <Glass radius={999} innerStyle={styles.light}>
-              <Text style={styles.lightText}>Keep it to spend</Text>
+              <Text style={styles.lightText}>{t('Keep it to spend')}</Text>
             </Glass>
           </Squish>
-          <Text style={[styles.sub, { textAlign: 'center' }]}>Today’s money stays the same either way</Text>
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Today’s money stays the same either way')}</Text>
         </View>
       )}
     </>

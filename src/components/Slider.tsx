@@ -23,7 +23,12 @@ export function Slider({ value, max, step = 100, onChange, label, locked = false
       onChange(v);
     }
   };
-  const pan = Gesture.Pan().runOnJS(true).enabled(!locked).minDistance(0).onBegin((e) => at(e.x)).onUpdate((e) => at(e.x));
+  const pan = Gesture.Pan()
+    .runOnJS(true)
+    .enabled(!locked)
+    .minDistance(0)
+    .onBegin((e) => at(e.x))
+    .onUpdate((e) => at(e.x));
 
   return (
     <GestureDetector gesture={pan}>
@@ -52,5 +57,14 @@ const styles = StyleSheet.create({
   hit: { height: 32, justifyContent: 'center' },
   track: { position: 'absolute', left: 0, right: 0, height: 6, borderRadius: radius.pill, backgroundColor: 'rgba(17,17,17,0.10)' },
   fill: { position: 'absolute', left: 0, height: 6, borderRadius: radius.pill, backgroundColor: colors.ink },
-  thumb: { position: 'absolute', width: 28, height: 28, borderRadius: radius.pill, backgroundColor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },
+  thumb: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

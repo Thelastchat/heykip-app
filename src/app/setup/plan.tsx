@@ -7,23 +7,25 @@ import { SetupScreen, Title } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { livingFor, plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, STYLES } from '@/lib/budget';
+import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { inputsFrom, monthYear, monthsFromNow, ordinal, shortName, sideTotal } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts, money, radius } from '@/theme';
 
+/** "Best for you if: …" — the whole sentence, so Thai can word it freely. */
 const BEST: Record<Style, (d: SetupDraft, short: string) => string> = {
   kip: (d) =>
     ({
-      disappears: 'payday money “just disappears”. It saves first, keeps real life covered, and still leaves fun.',
-      treat: 'you like a payday treat. Saving moves first, and the treat is planned in your fun money.',
-      bills: 'you pay the bills, then see. Now your saving moves the same day, so nothing is left to chance.',
-      save: 'you already save first. It keeps that habit — and covers real life too.',
-    })[d.moneyStyle ?? 'disappears'],
-  savefirst: (_d, short) => `you want ${short} as soon as possible. The most Kip will plan goes out on payday; the rest is one pot — no categories to track.`,
-  '503020': () => 'you like a simple rule: half for needs, the rest for wants and saving.',
-  jars: () => 'you want to grow: jars for learning and giving too, plus a bigger safety net.',
+      disappears: () => t('Best for you if: payday money “just disappears”. It saves first, keeps real life covered, and still leaves fun.'),
+      treat: () => t('Best for you if: you like a payday treat. Saving moves first, and the treat is planned in your fun money.'),
+      bills: () => t('Best for you if: you pay the bills, then see. Now your saving moves the same day, so nothing is left to chance.'),
+      save: () => t('Best for you if: you already save first. It keeps that habit — and covers real life too.'),
+    })[d.moneyStyle ?? 'disappears'](),
+  savefirst: (_d, short) => t('Best for you if: you want {short} as soon as possible. The most Kip will plan goes out on payday; the rest is one pot — no categories to track.', { short }),
+  '503020': () => t('Best for you if: you like a simple rule: half for needs, the rest for wants and saving.'),
+  jars: () => t('Best for you if: you want to grow: jars for learning and giving too, plus a bigger safety net.'),
 };
 
 // Setup 4/6 · Pick your plan — each money style, worked out in full for this person.
@@ -31,23 +33,23 @@ export default function SetupPlan() {
   const { draft, update } = useSetup();
   const i = inputsFrom(draft);
   const monthly = draft.goalKind === 'monthly';
-  const short = monthly ? draft.goalTitle.trim() || 'Savings' : shortName(draft.goalTitle, draft.goalKind);
+  const short = monthly ? draft.goalTitle.trim() || t('Savings') : shortName(draft.goalTitle, draft.goalKind);
   const style = draft.budgetStyle;
   const s = STYLES.find((x) => x.key === style) ?? STYLES[0];
   const r = splitMonth(i, style, draft.goalPerMonth);
   const L = livingFor(i);
   const due = r.goalMonths ? monthsFromNow(r.goalMonths, draft) : null;
   const funAll = r.fun + r.learn + r.give;
-  const payday = draft.incomeType === 'regular' && draft.payday ? `On the ${ordinal(draft.payday)}` : 'On payday';
-  const early = draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save' ? ' first thing in the morning' : '';
+  const payday = draft.incomeType === 'regular' && draft.payday ? ordinal(draft.payday) : null;
+  const early = draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save';
 
   const bar: [number, string, string][] = (
     [
-      [r.fixed, money.fixed, `Rent & bills ${baht(r.fixed)}`],
-      [r.living, money.living, `Living ${baht(r.living)}`],
-      [r.net + r.invest, money.safetyNet, `Safety net ${baht(r.net + r.invest)}`],
+      [r.fixed, money.fixed, t('Rent & bills {amount}', { amount: baht(r.fixed) })],
+      [r.living, money.living, t('Living {amount}', { amount: baht(r.living) })],
+      [r.net + r.invest, money.safetyNet, t('Safety net {amount}', { amount: baht(r.net + r.invest) })],
       [r.goal, money.goal, `${short} ${baht(r.goal)}`],
-      [funAll, money.fun, style === 'savefirst' ? `Spend freely ${baht(funAll)}` : `Fun ${baht(funAll)}`],
+      [funAll, money.fun, style === 'savefirst' ? t('Spend freely {amount}', { amount: baht(funAll) }) : t('Fun {amount}', { amount: baht(funAll) })],
     ] as [number, string, string][]
   ).filter(([n]) => n > 0);
 
@@ -57,29 +59,34 @@ export default function SetupPlan() {
     icon: 'food' | 'travel' | 'health' | 'fun';
     color: string;
   }[] = [
-    { k: 'Food', v: L.food / 30, icon: 'food', color: CATEGORY.food.color },
+    { k: t('Food'), v: L.food / 30, icon: 'food', color: CATEGORY.food.color },
     {
-      k: 'Transport',
+      k: t('Transport'),
       v: L.transport / 30,
       icon: 'travel',
       color: CATEGORY.transport.color,
     },
     {
-      k: 'Health & home',
+      k: t('Health & home'),
       v: (L.health + L.household) / 30,
       icon: 'health',
       color: CATEGORY.health_beauty.color,
     },
-    { k: 'Fun', v: funAll / 30, icon: 'fun', color: money.fun },
+    { k: t('Fun'), v: funAll / 30, icon: 'fun', color: money.fun },
   ];
 
   // Road to the goal: now, two stops, the goal.
   const road: { when: string; amount: string }[] = [];
   if (monthly) {
-    road.push({ when: 'Now', amount: baht(0) }, { when: '3 months', amount: baht(r.goal * 3) }, { when: '6 months', amount: baht(r.goal * 6) }, { when: '1 year', amount: baht(r.goal * 12) });
+    road.push(
+      { when: t('Now'), amount: baht(0) },
+      { when: t('3 months'), amount: baht(r.goal * 3) },
+      { when: t('6 months'), amount: baht(r.goal * 6) },
+      { when: t('1 year'), amount: baht(r.goal * 12) },
+    );
   } else if (r.goalMonths && due) {
     const n = r.goalMonths;
-    road.push({ when: 'Now', amount: baht(i.goal.saved) });
+    road.push({ when: t('Now'), amount: baht(i.goal.saved) });
     for (const m of [Math.round(n / 3), Math.round((2 * n) / 3)].filter((m, k, a) => m > 0 && m < n && a.indexOf(m) === k)) {
       road.push({
         when: monthYear(monthsFromNow(m, draft)),
@@ -89,26 +96,44 @@ export default function SetupPlan() {
     road.push({ when: monthYear(due), amount: `${short}!` });
   }
 
+  // Where the payday money goes: "฿X to Japan, ฿Y to your safety net, ฿Z to your freedom jar".
+  const list = [
+    t('{amount} to {short}', { amount: baht(r.goal), short }),
+    ...(r.net ? [t('{amount} to your safety net', { amount: baht(r.net) })] : []),
+    ...(r.invest ? [t('{amount} to your freedom jar', { amount: baht(r.invest) })] : []),
+  ].join(', ');
   const rules = [
     r.goal + r.net > 0
-      ? `${payday}, ${baht(r.goal + r.net + r.invest)} moves out${early}: ${baht(r.goal)} to ${short}${r.net ? `, ${baht(r.net)} to your safety net` : ''}${r.invest ? `, ${baht(r.invest)} to your freedom jar` : ''}.`
-      : `${payday}, rent and bills go first.`,
+      ? movesOut(payday, early, baht(r.goal + r.net + r.invest), list)
+      : payday
+        ? t('On the {day}, rent and bills go first.', { day: payday })
+        : t('On payday, rent and bills go first.'),
     ...(draft.sideIncome && !monthly
       ? [
           draft.sideIncome.kind === 'once'
-            ? `When your ${baht(draft.sideIncome.amount)} bonus arrives, log it — it goes straight to ${short}.`
-            : `Side work: log your ${baht(draft.sideIncome.amount)} on the 1st${draft.sideIncome.months ? ` for ${draft.sideIncome.months} months` : ''} — it goes straight to ${short}. Missed a month? I’ll show the new date, no guilt.`,
+            ? t('When your {amount} bonus arrives, log it — it goes straight to {short}.', { amount: baht(draft.sideIncome.amount), short })
+            : draft.sideIncome.months
+              ? t('Side work: log your {amount} on the 1st for {months} months — it goes straight to {short}. Missed a month? I’ll show the new date, no guilt.', {
+                  amount: baht(draft.sideIncome.amount),
+                  months: draft.sideIncome.months,
+                  short,
+                })
+              : t('Side work: log your {amount} on the 1st — it goes straight to {short}. Missed a month? I’ll show the new date, no guilt.', { amount: baht(draft.sideIncome.amount), short }),
         ]
       : []),
-    `You get ${baht(r.daily)} a day. Spend less → the rest goes to ${draft.goalKind === 'safety_net' ? short : 'your safety net'} on payday.`,
+    draft.goalKind === 'safety_net'
+      ? t('You get {daily} a day. Spend less → the rest goes to {short} on payday.', { daily: baht(r.daily), short })
+      : t('You get {daily} a day. Spend less → the rest goes to your safety net on payday.', { daily: baht(r.daily) }),
     ...leakRules(draft.leaks, i).map((x) => `${x.title}: ${x.rule}`),
-    monthly ? `Bad month? I lower ${short} first — never food or rent — and tell you.` : `Bad month? I lower ${short} first — never food or rent — and tell you the new date.`,
-    monthly ? 'Bonus or a good month? Put it in — I’ll show you what it adds up to.' : `Bonus or a good month? Put it in and I show you how much sooner ${short} gets.`,
+    monthly
+      ? t('Bad month? I lower {short} first — never food or rent — and tell you.', { short })
+      : t('Bad month? I lower {short} first — never food or rent — and tell you the new date.', { short }),
+    monthly ? t('Bonus or a good month? Put it in — I’ll show you what it adds up to.') : t('Bonus or a good month? Put it in and I show you how much sooner {short} gets.', { short }),
   ];
 
   const tabFor = (k: Style) => {
     const x = splitMonth(i, k, k === style ? draft.goalPerMonth : null);
-    const when = monthly ? `${baht(x.goal + x.net)}/mo` : x.goalMonths ? monthYear(monthsFromNow(x.goalMonths, draft)) : 'Not yet';
+    const when = monthly ? t('{amount}/mo', { amount: baht(x.goal + x.net) }) : x.goalMonths ? monthYear(monthsFromNow(x.goalMonths, draft)) : t('Not yet');
     return { when, day: baht(x.daily), r: x };
   };
   const kipR = tabFor('kip').r;
@@ -117,35 +142,42 @@ export default function SetupPlan() {
     if (!monthly && r.goalMonths && kipR.goalMonths && r.goalMonths !== kipR.goalMonths) {
       const m = Math.abs(r.goalMonths - kipR.goalMonths);
       vsKip.push({
-        text: `${short} ${m} month${m > 1 ? 's' : ''} ${r.goalMonths < kipR.goalMonths ? 'sooner' : 'later'}`,
+        text:
+          r.goalMonths < kipR.goalMonths
+            ? m > 1
+              ? t('{short} {m} months sooner', { short, m })
+              : t('{short} {m} month sooner', { short, m })
+            : m > 1
+              ? t('{short} {m} months later', { short, m })
+              : t('{short} {m} month later', { short, m }),
         good: r.goalMonths < kipR.goalMonths,
       });
     }
     const saved = r.savedIn12 - kipR.savedIn12;
     if (Math.abs(saved) >= 100)
       vsKip.push({
-        text: `${baht(Math.abs(saved))} ${saved > 0 ? 'more' : 'less'} saved a year`,
+        text: saved > 0 ? t('{amount} more saved a year', { amount: baht(Math.abs(saved)) }) : t('{amount} less saved a year', { amount: baht(Math.abs(saved)) }),
         good: saved > 0,
       });
     const day = r.daily - kipR.daily;
     if (Math.abs(day) >= 10)
       vsKip.push({
-        text: `${baht(Math.abs(day))} ${day > 0 ? 'more' : 'less'} a day`,
+        text: day > 0 ? t('{amount} more a day', { amount: baht(Math.abs(day)) }) : t('{amount} less a day', { amount: baht(Math.abs(day)) }),
         good: day > 0,
       });
   }
 
   return (
-    <SetupScreen step={4} footer={<Button label={`Choose ${s.name}`} onPress={() => router.push('/setup/sign')} />}>
-      <Title>Pick your plan</Title>
-      <Text style={styles.sub}>Same pay, four ways to run it. Tap a tab — the page under it is that plan.</Text>
+    <SetupScreen step={4} footer={<Button label={t('Choose {name}', { name: s.name })} onPress={() => router.push('/setup/sign')} />}>
+      <Title>{t('Pick your plan')}</Title>
+      <Text style={styles.sub}>{t('Same pay, four ways to run it. Tap a tab — the page under it is that plan.')}</Text>
 
       <View>
         {/* A binder: each style is a tab with its own headline numbers; the picked tab joins the page below it. */}
         <View style={styles.tabs} accessibilityRole="tablist">
           {STYLES.map((x) => {
             const on = x.key === style;
-            const t = tabFor(x.key);
+            const tab = tabFor(x.key);
             return (
               <Pressable
                 key={x.key}
@@ -153,16 +185,16 @@ export default function SetupPlan() {
                 style={[styles.tab, on ? [styles.tabOn, { backgroundColor: x.tagColor }] : styles.tabOff]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${x.name}: ${t.when}, ${t.day} a day`}>
+                accessibilityLabel={t('{name}: {when}, {day} a day', { name: x.name, when: tab.when, day: tab.day })}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Text style={[styles.tabName, on && { fontFamily: fonts.bold }]} numberOfLines={1}>
                     {x.name.replace('50 / 30 / 20', '50/30/20')}
                   </Text>
                 </View>
                 <Text style={[styles.tabWhen, on && { fontSize: 15 }]} numberOfLines={1}>
-                  {t.when}
+                  {tab.when}
                 </Text>
-                <Text style={[styles.tabDay, on && { color: colors.ink }]}>{t.day}/day</Text>
+                <Text style={[styles.tabDay, on && { color: colors.ink }]}>{t('{amount}/day', { amount: tab.day })}</Text>
               </Pressable>
             );
           })}
@@ -188,12 +220,12 @@ export default function SetupPlan() {
                 <Text style={styles.tagText}>{s.tag}</Text>
               </View>
             </View>
-            <Text style={styles.heroText}>Best for you if: {BEST[style](draft, short)}</Text>
+            <Text style={styles.heroText}>{BEST[style](draft, short)}</Text>
           </View>
 
           {style !== 'kip' && (
             <View style={{ gap: 6, paddingHorizontal: 2 }}>
-              <Text style={[styles.head, { color: 'rgba(17,17,17,0.6)' }]}>VS KIP’S PLAN</Text>
+              <Text style={[styles.head, { color: 'rgba(17,17,17,0.6)' }]}>{t('VS KIP’S PLAN')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {vsKip.length ? (
                   vsKip.map((d) => (
@@ -211,7 +243,7 @@ export default function SetupPlan() {
                   ))
                 ) : (
                   <View style={styles.diff}>
-                    <Text style={styles.diffText}>Same as Kip’s plan for you — your date already needs the most you can save.</Text>
+                    <Text style={styles.diffText}>{t('Same as Kip’s plan for you — your date already needs the most you can save.')}</Text>
                   </View>
                 )}
               </View>
@@ -219,14 +251,14 @@ export default function SetupPlan() {
           )}
 
           <View style={styles.stats}>
-            <Stat k={short} v={monthly ? `${baht(r.goal)}/mo` : due ? monthYear(due) : 'Not yet'} />
-            <Stat k="Saved in 1 year" v={baht(r.savedIn12)} sub={r.netIn12 > 0 ? `${short} ${baht(r.goalIn12)} + safety ${baht(r.netIn12)}` : undefined} />
-            <Stat k="Spend a day" v={baht(r.daily)} />
-            <Stat k={style === 'savefirst' ? 'After saving' : 'Fun a month'} v={style === 'savefirst' ? 'One pot' : baht(funAll)} />
+            <Stat k={short} v={monthly ? t('{amount}/mo', { amount: baht(r.goal) }) : due ? monthYear(due) : t('Not yet')} />
+            <Stat k={t('Saved in 1 year')} v={baht(r.savedIn12)} sub={r.netIn12 > 0 ? t('{short} {goal} + safety {net}', { short, goal: baht(r.goalIn12), net: baht(r.netIn12) }) : undefined} />
+            <Stat k={t('Spend a day')} v={baht(r.daily)} />
+            <Stat k={style === 'savefirst' ? t('After saving') : t('Fun a month')} v={style === 'savefirst' ? t('One pot') : baht(funAll)} />
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.head}>YOUR MONTH</Text>
+            <Text style={styles.head}>{t('YOUR MONTH')}</Text>
             <View style={styles.bar}>
               {bar.map(([n, c], k) => (
                 <View
@@ -264,7 +296,7 @@ export default function SetupPlan() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.head}>A NORMAL DAY · {baht(r.daily)}</Text>
+            <Text style={styles.head}>{t('A NORMAL DAY · {amount}', { amount: baht(r.daily) })}</Text>
             <View style={{ flexDirection: 'row' }}>
               {day.map((d) => (
                 <View key={d.k} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
@@ -278,7 +310,7 @@ export default function SetupPlan() {
 
           {road.length > 1 && (
             <View style={styles.card}>
-              <Text style={styles.head}>ROAD TO {short.toUpperCase()}</Text>
+              <Text style={styles.head}>{t('ROAD TO {short}', { short: short.toUpperCase() })}</Text>
               <View style={styles.roadLine}>
                 <View style={styles.roadTrack} />
                 {road.map((_, k) => (
@@ -318,7 +350,7 @@ export default function SetupPlan() {
           )}
 
           <View style={styles.card}>
-            <Text style={styles.head}>HOW KIP RUNS IT</Text>
+            <Text style={styles.head}>{t('HOW KIP RUNS IT')}</Text>
             {rules.map((line, k) => (
               <Fragment key={k}>
                 <View style={styles.rule}>
@@ -332,19 +364,25 @@ export default function SetupPlan() {
           </View>
         </View>
       </View>
-      <Pressable onPress={() => router.push('/setup/yours')} style={styles.customize} accessibilityRole="button" accessibilityLabel="Customize your plan">
+      <Pressable onPress={() => router.push('/setup/yours')} style={styles.customize} accessibilityRole="button" accessibilityLabel={t('Customize your plan')}>
         <CatBadge name="cash" color={colors.peach} size={34} />
         <View style={{ flex: 1, gap: 1 }}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>Customize</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>Change food, fun or the goal amount · lock what matters</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>{t('Customize')}</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted }}>{t('Change food, fun or the goal amount · lock what matters')}</Text>
         </View>
         <Text style={{ fontFamily: fonts.semibold, fontSize: 20, color: colors.ink }}>›</Text>
       </Pressable>
-      <Text style={[styles.foot, { marginTop: -6 }]}>Optional — most people go straight on.</Text>
+      <Text style={[styles.foot, { marginTop: -6 }]}>{t('Optional — most people go straight on.')}</Text>
 
-      <Text style={styles.foot}>This is a starting plan. After a few weeks of real spending — subscriptions especially — I’ll update it with your real numbers.</Text>
+      <Text style={styles.foot}>{t('This is a starting plan. After a few weeks of real spending — subscriptions especially — I’ll update it with your real numbers.')}</Text>
     </SetupScreen>
   );
+}
+
+/** Rule 1 of "How Kip runs it": the payday move, as one whole sentence. day = "25th" (or null for changing pay). */
+function movesOut(day: string | null, early: boolean, total: string, list: string) {
+  if (day) return early ? t('On the {day}, {total} moves out first thing in the morning: {list}.', { day, total, list }) : t('On the {day}, {total} moves out: {list}.', { day, total, list });
+  return early ? t('On payday, {total} moves out first thing in the morning: {list}.', { total, list }) : t('On payday, {total} moves out: {list}.', { total, list });
 }
 
 function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {

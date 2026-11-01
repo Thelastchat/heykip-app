@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
+import { t } from '@/lib/i18n';
 import { colors, fonts } from '@/theme';
 
 export function Sheet({ open, onClose, title, sub, children }: { open: boolean; onClose: () => void; title: string; sub?: string; children: ReactNode }) {
@@ -12,7 +13,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={sheet.grip} />
           <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
@@ -36,8 +37,8 @@ export function AmountInput({ value, onChange, autoFocus, label }: { value: numb
       <TextInput
         autoFocus={autoFocus}
         value={value === null ? '' : value.toLocaleString('en-US')}
-        onChangeText={(t) => {
-          const d = t.replace(/[^\d]/g, '');
+        onChangeText={(s) => {
+          const d = s.replace(/[^\d]/g, '');
           onChange(d ? Math.min(Number(d), 9_999_999) : null);
         }}
         keyboardType="number-pad"

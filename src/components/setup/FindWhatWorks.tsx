@@ -14,6 +14,7 @@ import { KipSays, SetupScreen } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { livingFor, plan as splitMonth, room, verdict, type Inputs } from '@/lib/brain';
 import type { IconKey } from '@/lib/budget';
+import { rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SideIncome } from '@/lib/setup/draft';
 import { typeInfo } from '@/lib/setup/goalTypes';
@@ -38,7 +39,7 @@ export function FindWhatWorks() {
   const askedMonths = draft.goalDue ? monthsUntil(draft.goalDue) : null;
   const v0 = verdict(base);
   const R0 = room(base);
-  const t = typeInfo(draft.goalType, draft.goalKind);
+  const type = typeInfo(draft.goalType, draft.goalKind);
 
   const [mode, setMode] = useState<Mode>('move');
   const [ticked, setTicked] = useState<Record<AddOn, boolean>>({ saved: false, delivery: false, extra: Boolean(draft.sideIncome) });
@@ -91,10 +92,25 @@ export function FindWhatWorks() {
 
   // Lead with the path, then the gap — same facts, but it starts from what works.
   const comfyStart = monthYear(monthsFromNow(Math.max(1, Math.ceil(Math.max(0, base.goal.target - base.goal.saved) / Math.max(R0.comfortable, 100))), draft));
+  const funLeft = baht(v0.kind === 'tight' ? v0.funLeft : 0);
   const say =
     v0.kind === 'notByThen'
-      ? `${short} is doable — comfortably by ${comfyStart}. Want it sooner? ${asked ? `${fullDate(asked)} is ${baht(v0.need - R0.most)} a month away.` : 'Let’s look.'} Let’s find the way that suits you 👇`
-      : `${short}${asked ? ` by ${fullDate(asked)}` : ''} works — it’s just tight (fun money drops to ${baht(v0.kind === 'tight' ? v0.funLeft : 0)}). ${comfyStart} is comfortable. Let’s find the way that suits you 👇`;
+      ? asked
+        ? t('{short} is doable — comfortably by {comfy}. Want it sooner? {date} is {amount} a month away. Let’s find the way that suits you 👇', {
+            short,
+            comfy: comfyStart,
+            date: fullDate(asked),
+            amount: baht(v0.need - R0.most),
+          })
+        : t('{short} is doable — comfortably by {comfy}. Want it sooner? Let’s look. Let’s find the way that suits you 👇', { short, comfy: comfyStart })
+      : asked
+        ? t('{short} by {date} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you 👇', {
+            short,
+            date: fullDate(asked),
+            fun: funLeft,
+            comfy: comfyStart,
+          })
+        : t('{short} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you 👇', { short, fun: funLeft, comfy: comfyStart });
 
   function tick(k: AddOn) {
     Haptics.selectionAsync().catch(() => {});
@@ -111,7 +127,7 @@ export function FindWhatWorks() {
 
   function go() {
     if (mode === 'nodate') {
-      update({ goalType: draft.goalType ?? t.key, goalKind: 'monthly', goalMonthly: Math.max(500, R0.comfortable), goalTarget: null, goalDue: null, goalPerMonth: null, sideIncome: null });
+      update({ goalType: draft.goalType ?? type.key, goalKind: 'monthly', goalMonthly: Math.max(500, R0.comfortable), goalTarget: null, goalDue: null, goalPerMonth: null, sideIncome: null });
     } else {
       update({
         goalDue: keep && draft.goalDue ? draft.goalDue : isoDay(date),
@@ -126,7 +142,9 @@ export function FindWhatWorks() {
   }
 
   // What an add-on does, measured against everything else you've ticked.
-  const effect = (k: AddOn): string => {
+  const effect = (k: AddOn): string => effectInfo(k).text;
+  // text = the line under the add-on; sooner = "2 months sooner" when it brings the goal closer.
+  const effectInfo = (k: AddOn): { text: string; sooner: string | null } => {
     const w = (on: boolean) => withAddOns(base, { ...ticked, [k]: on }, opts);
     const without = w(false);
     const withIt = w(true);
@@ -135,7 +153,13 @@ export function FindWhatWorks() {
     if (keep) {
       const budget = (i: Inputs, on: boolean) => Math.min(base.goal.target, i.goal.saved + room(i).comfortable * keepMonths + extraAt(keepMonths, on));
       const gain = budget(withIt, sideOn(true)) - budget(without, sideOn(false));
-      return gain > 0 ? `+${baht(gain)} to your budget by ${asked ? fullDate(asked) : 'your date'}` : 'Your full budget already fits';
+      const text =
+        gain > 0
+          ? asked
+            ? t('+{amount} to your budget by {date}', { amount: baht(gain), date: fullDate(asked) })
+            : t('+{amount} to your budget by your date', { amount: baht(gain) })
+          : t('Your full budget already fits');
+      return { text, sooner: null };
     }
     const comfyOf = (i: Inputs, on: boolean) => {
       for (let mm = 1; mm <= 240; mm++) if (Math.ceil(Math.max(0, leftOf(i) - extraAt(mm, on)) / mm / 100) * 100 <= room(i).comfortable) return mm;
@@ -144,48 +168,56 @@ export function FindWhatWorks() {
     const sooner = comfyOf(without, sideOn(false)) - comfyOf(withIt, sideOn(true));
     const lead =
       k === 'saved'
-        ? 'Counts toward ' + short + ' from day one'
+        ? t('Counts toward {short} from day one', { short })
         : k === 'extra'
           ? side.kind === 'once'
-            ? `A ${baht(side.amount)} bonus`
-            : `${baht(side.amount)} a month ${side.months ? `for ${side.months} months` : `until ${short}`}`
-          : `${baht(deliveryCut)} a month less delivery`;
-    return sooner > 0 ? `${lead} · ${sooner} month${sooner > 1 ? 's' : ''} sooner` : lead;
+            ? t('A {amount} bonus', { amount: baht(side.amount) })
+            : side.months
+              ? t('{amount} a month for {months} months', { amount: baht(side.amount), months: side.months })
+              : t('{amount} a month until {short}', { amount: baht(side.amount), short })
+          : t('{amount} a month less delivery', { amount: baht(deliveryCut) });
+    const soonerText = sooner > 0 ? (sooner > 1 ? t('{n} months sooner', { n: sooner }) : t('{n} month sooner', { n: sooner })) : null;
+    return { text: soonerText ? `${lead} · ${soonerText}` : lead, sooner: soonerText };
   };
 
   const includes = [
-    ticked.saved && `✓ ${baht(savedExtra)} saved`,
-    ticked.delivery && `✓ Delivery −${baht(deliveryCut)}/mo`,
-    ticked.extra && (side.kind === 'once' ? `✓ ${baht(side.amount)} bonus` : `✓ ${baht(side.amount)}/mo side work${side.months ? ` × ${side.months}` : ''}`),
+    ticked.saved && t('✓ {amount} saved', { amount: baht(savedExtra) }),
+    ticked.delivery && t('✓ Delivery −{amount}/mo', { amount: baht(deliveryCut) }),
+    ticked.extra &&
+      (side.kind === 'once'
+        ? t('✓ {amount} bonus', { amount: baht(side.amount) })
+        : side.months
+          ? t('✓ {amount}/mo side work × {months}', { amount: baht(side.amount), months: side.months })
+          : t('✓ {amount}/mo side work', { amount: baht(side.amount) })),
   ].filter(Boolean) as string[];
 
   const button =
     mode === 'nodate'
-      ? `Save ${baht(Math.max(500, R0.comfortable))} a month`
+      ? t('Save {amount} a month', { amount: baht(Math.max(500, R0.comfortable)) })
       : zone === 'too'
-        ? 'Pick a later month'
+        ? t('Pick a later month')
         : keep && asked
-          ? `Go with ${baht(target)} by ${monthYear(asked)}`
-          : `Go with ${monthYear(date)}`;
+          ? t('Go with {amount} by {when}', { amount: baht(target), when: monthYear(asked) })
+          : t('Go with {when}', { when: monthYear(date) });
   const sideMonthsNow = side.months ? Math.min(side.months, m) : m;
 
   return (
     <SetupScreen step={3} footer={<Button label={button} disabled={mode !== 'nodate' && zone === 'too'} onPress={go} />}>
       <KipSays mood="happy">{say}</KipSays>
       <Text style={styles.h1} accessibilityRole="header">
-        Find what works
+        {t('Find what works')}
       </Text>
 
       {mode !== 'nodate' ? (
         <>
           {askedMonths !== null && (
             <>
-              <Text style={styles.section}>1 · PICK ONE</Text>
+              <Text style={styles.section}>{t('1 · PICK ONE')}</Text>
               <View style={styles.seg} accessibilityRole="radiogroup">
                 {(
                   [
-                    ['move', 'Move the date', `keep ${baht(base.goal.target)}`],
-                    ['keep', 'Keep my date', draft.goalKind === 'trip' ? 'spend less' : 'aim for less'],
+                    ['move', t('Move the date'), t('keep {amount}', { amount: baht(base.goal.target) })],
+                    ['keep', t('Keep my date'), draft.goalKind === 'trip' ? t('spend less') : t('aim for less')],
                   ] as const
                 ).map(([k, title, sub]) => {
                   const sel = mode === k;
@@ -203,84 +235,104 @@ export function FindWhatWorks() {
           {keep && asked ? (
             <View style={[styles.dial, { backgroundColor: fullFits ? ZONE.comfy : colors.peach }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>By {fullDate(asked)} you’ll have</Text>
+                <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{t('By {date} you’ll have', { date: fullDate(asked) })}</Text>
                 <View style={styles.zoneTag}>
-                  <Text style={styles.zoneTagText}>{fullFits ? 'FULL AMOUNT' : draft.goalKind === 'trip' ? 'SMALLER TRIP' : 'SMALLER GOAL'}</Text>
+                  <Text style={styles.zoneTagText}>{fullFits ? t('FULL AMOUNT') : draft.goalKind === 'trip' ? t('SMALLER TRIP') : t('SMALLER GOAL')}</Text>
                 </View>
               </View>
               <Text style={styles.date}>
-                {baht(keepBudget)} <Text style={{ fontFamily: fonts.medium, fontSize: 14, letterSpacing: 0, color: 'rgba(17,17,17,0.6)' }}>of {baht(base.goal.target)}</Text>
+                {rich('{kept} **of {target}**', { kept: baht(keepBudget), target: baht(base.goal.target) }, (x) => (
+                  <Text style={{ fontFamily: fonts.medium, fontSize: 14, letterSpacing: 0, color: 'rgba(17,17,17,0.6)' }}>{x}</Text>
+                ))}
               </Text>
               <View style={styles.sum}>
-                <SumRow k="Already saved" v={baht(inputs.goal.saved)} />
-                <SumRow k={`${baht(R.comfortable)} a month × ${keepMonths} month${keepMonths > 1 ? 's' : ''}`} v={baht(R.comfortable * keepMonths)} />
+                <SumRow k={t('Already saved')} v={baht(inputs.goal.saved)} />
+                <SumRow
+                  k={
+                    keepMonths > 1
+                      ? t('{amount} a month × {n} months', { amount: baht(R.comfortable), n: keepMonths })
+                      : t('{amount} a month × {n} month', { amount: baht(R.comfortable), n: keepMonths })
+                  }
+                  v={baht(R.comfortable * keepMonths)}
+                />
                 {ticked.extra && extraAt(keepMonths) > 0 && (
-                  <SumRow k={side.kind === 'once' ? 'Bonus' : `Side work ${baht(side.amount)} × ${side.months ? Math.min(side.months, keepMonths) : keepMonths}`} v={baht(extraAt(keepMonths))} />
+                  <SumRow
+                    k={side.kind === 'once' ? t('Bonus') : t('Side work {amount} × {n}', { amount: baht(side.amount), n: side.months ? Math.min(side.months, keepMonths) : keepMonths })}
+                    v={baht(extraAt(keepMonths))}
+                  />
                 )}
                 <View style={{ height: 1, backgroundColor: 'rgba(17,17,17,0.08)' }} />
-                <SumRow k={draft.goalKind === 'trip' ? 'Trip budget' : 'Your goal'} v={baht(keepBudget)} bold />
+                <SumRow k={draft.goalKind === 'trip' ? t('Trip budget') : t('Your goal')} v={baht(keepBudget)} bold />
               </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <Stat k="Save a month" v={baht(per)} />
-                <Stat k="Spend a day" v={baht(result.daily)} />
-                <Stat k="Fun a month" v={baht(result.fun)} />
+                <Stat k={t('Save a month')} v={baht(per)} />
+                <Stat k={t('Spend a day')} v={baht(result.daily)} />
+                <Stat k={t('Fun a month')} v={baht(result.fun)} />
               </View>
               {includes.length > 0 && <Includes items={includes} />}
-              <Text style={styles.dialNote}>{fullFits ? `With your add-ons, the full ${baht(base.goal.target)} fits by your date.` : 'Tick an add-on below and the budget grows.'}</Text>
+              <Text style={styles.dialNote}>
+                {fullFits ? t('With your add-ons, the full {amount} fits by your date.', { amount: baht(base.goal.target) }) : t('Tick an add-on below and the budget grows.')}
+              </Text>
             </View>
           ) : (
             <View style={[styles.dial, { backgroundColor: ZONE[zone] }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{short} in</Text>
+                <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{t('{short} in', { short })}</Text>
                 <View style={styles.zoneTag}>
-                  <Text style={styles.zoneTagText}>{zone === 'comfy' ? 'COMFORTABLE' : zone === 'tight' ? 'TIGHT' : 'TOO MUCH'}</Text>
+                  <Text style={styles.zoneTagText}>{zone === 'comfy' ? t('COMFORTABLE') : zone === 'tight' ? t('TIGHT') : t('TOO MUCH')}</Text>
                 </View>
               </View>
               <Text style={styles.date}>
                 {monthYear(date)}
-                {askedMonths === m && <Text style={{ fontFamily: fonts.semibold, fontSize: 15, letterSpacing: 0 }}> ✓ your date</Text>}
+                {askedMonths === m && <Text style={{ fontFamily: fonts.semibold, fontSize: 15, letterSpacing: 0 }}> {t('✓ your date')}</Text>}
               </Text>
               <MonthDial lo={months.lo} hi={months.hi} value={m} fast={months.fast} comfy={months.comfy} locked={false} onChange={setPick} />
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <Stat k="Save a month" v={baht(per)} sub={ticked.extra && side.kind === 'monthly' ? `+ ${baht(side.amount)} side work` : undefined} />
-                <Stat k="Spend a day" v={zone === 'too' ? '—' : baht(result.daily)} />
-                <Stat k="Fun a month" v={zone === 'too' ? '—' : baht(result.fun)} sub={zone === 'tight' ? 'near the minimum' : undefined} />
+                <Stat k={t('Save a month')} v={baht(per)} sub={ticked.extra && side.kind === 'monthly' ? t('+ {amount} side work', { amount: baht(side.amount) }) : undefined} />
+                <Stat k={t('Spend a day')} v={zone === 'too' ? '—' : baht(result.daily)} />
+                <Stat k={t('Fun a month')} v={zone === 'too' ? '—' : baht(result.fun)} sub={zone === 'tight' ? t('near the minimum') : undefined} />
               </View>
               {includes.length > 0 && <Includes items={includes} />}
               <Text style={styles.dialNote}>
                 {zone === 'too'
-                  ? `${baht(per)} a month is ${baht(per - R.most)} more than fits. Slide right, or tick something below.`
+                  ? t('{per} a month is {over} more than fits. Slide right, or tick something below.', { per: baht(per), over: baht(per - R.most) })
                   : nTicked > 0 && askedMonths === m
-                    ? `With your ${nTicked === 1 ? 'add-on' : `${nTicked} add-ons`}, your date fits${zone === 'comfy' ? ' comfortably' : ''}.`
-                    : 'Drag to try any month.'}
+                    ? nTicked === 1
+                      ? zone === 'comfy'
+                        ? t('With your add-on, your date fits comfortably.')
+                        : t('With your add-on, your date fits.')
+                      : zone === 'comfy'
+                        ? t('With your {n} add-ons, your date fits comfortably.', { n: nTicked })
+                        : t('With your {n} add-ons, your date fits.', { n: nTicked })
+                    : t('Drag to try any month.')}
               </Text>
             </View>
           )}
 
           {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4, paddingTop: 4 }}>
-              <Text style={styles.section}>{askedMonths !== null ? '2 · ' : ''}ADD-ONS · TICK ANY</Text>
-              {nTicked > 0 && <Text style={styles.count}>{nTicked} ticked</Text>}
+              <Text style={styles.section}>{askedMonths !== null ? t('2 · ADD-ONS · TICK ANY') : t('ADD-ONS · TICK ANY')}</Text>
+              {nTicked > 0 && <Text style={styles.count}>{t('{n} ticked', { n: nTicked })}</Text>}
             </View>
           }
           <View style={{ gap: 8 }}>
-            <AddOnRow icon="cash" color={colors.sage} title="I’ve saved some already" effect={effect('saved')} on={ticked.saved} onPress={() => tick('saved')}>
-              <AmountInput value={savedExtra} onChange={setSavedExtra} label="Already saved" />
+            <AddOnRow icon="cash" color={colors.sage} title={t('I’ve saved some already')} effect={effect('saved')} on={ticked.saved} onPress={() => tick('saved')}>
+              <AmountInput value={savedExtra} onChange={setSavedExtra} label={t('Already saved')} />
             </AddOnRow>
-            {deliveryCut > 0 && <AddOnRow icon="food" color={colors.sky} title="Cut food delivery" effect={effect('delivery')} on={ticked.delivery} onPress={() => tick('delivery')} />}
+            {deliveryCut > 0 && <AddOnRow icon="food" color={colors.sky} title={t('Cut food delivery')} effect={effect('delivery')} on={ticked.delivery} onPress={() => tick('delivery')} />}
             <AddOnRow
               icon="gift"
               color={colors.lavender}
-              title="Extra money — a bonus or side work"
-              effect={ticked.extra ? 'Once, or every month for a while' : effect('extra')}
+              title={t('Extra money — a bonus or side work')}
+              effect={ticked.extra ? t('Once, or every month for a while') : effect('extra')}
               on={ticked.extra}
               onPress={() => tick('extra')}>
               <View style={{ gap: 10 }}>
                 <View style={styles.miniSeg}>
                   {(
                     [
-                      ['once', 'Once (a bonus)'],
-                      ['monthly', 'Every month'],
+                      ['once', t('Once (a bonus)')],
+                      ['monthly', t('Every month')],
                     ] as const
                   ).map(([k, label]) => (
                     <Pressable
@@ -293,11 +345,11 @@ export function FindWhatWorks() {
                     </Pressable>
                   ))}
                 </View>
-                <Text style={styles.subLabel}>{side.kind === 'once' ? 'HOW MUCH?' : 'HOW MUCH A MONTH?'}</Text>
+                <Text style={styles.subLabel}>{side.kind === 'once' ? t('HOW MUCH?') : t('HOW MUCH A MONTH?')}</Text>
                 <View style={{ gap: 4 }}>
-                  <AmountInput value={side.amount} onChange={(amount) => setSide((x) => ({ ...x, amount }))} label={side.kind === 'once' ? 'Bonus amount' : 'Side work a month'} />
+                  <AmountInput value={side.amount} onChange={(amount) => setSide((x) => ({ ...x, amount }))} label={side.kind === 'once' ? t('Bonus amount') : t('Side work a month')} />
                   <Text style={[styles.addonSub, { color: 'rgba(17,17,17,0.7)' }]}>
-                    {side.kind === 'once' ? 'a bonus, a gift, money you’ll sell something for' : 'e.g. weekend shifts, freelance, selling online'}
+                    {side.kind === 'once' ? t('a bonus, a gift, money you’ll sell something for') : t('e.g. weekend shifts, freelance, selling online')}
                   </Text>
                 </View>
                 {side.kind === 'monthly' && (
@@ -309,7 +361,7 @@ export function FindWhatWorks() {
                         </Pressable>
                       ))}
                     </View>
-                    <Text style={styles.subLabel}>FOR HOW LONG?</Text>
+                    <Text style={styles.subLabel}>{t('FOR HOW LONG?')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
                       {HOW_LONG.map((h) => {
                         const sel = side.months === h;
@@ -320,7 +372,7 @@ export function FindWhatWorks() {
                             style={[styles.chipBtn, sel && styles.chipOn]}
                             accessibilityRole="radio"
                             accessibilityState={{ selected: sel }}>
-                            <Text style={[styles.miniText, { color: colors.ink }, sel && { fontFamily: fonts.bold }]}>{h ? `${h} months` : `Until ${short}`}</Text>
+                            <Text style={[styles.miniText, { color: colors.ink }, sel && { fontFamily: fonts.bold }]}>{h ? t('{n} months', { n: h }) : t('Until {short}', { short })}</Text>
                           </Pressable>
                         );
                       })}
@@ -329,41 +381,50 @@ export function FindWhatWorks() {
                 )}
                 <View style={styles.sum}>
                   <SumRow
-                    k={side.kind === 'once' ? 'Bonus' : `${baht(side.amount)} × ${sideMonthsNow} month${sideMonthsNow > 1 ? 's' : ''}`}
+                    k={
+                      side.kind === 'once'
+                        ? t('Bonus')
+                        : sideMonthsNow > 1
+                          ? t('{amount} × {n} months', { amount: baht(side.amount), n: sideMonthsNow })
+                          : t('{amount} × {n} month', { amount: baht(side.amount), n: sideMonthsNow })
+                    }
                     v={baht(side.kind === 'once' ? side.amount : side.amount * sideMonthsNow)}
                   />
-                  {!keep && <SumRow k={short} v={zone === 'too' ? 'still too soon' : `${monthYear(date)}${effect('extra').includes('sooner') ? ` · ${effect('extra').split('· ').pop()}` : ''}`} />}
+                  {!keep && <SumRow k={short} v={zone === 'too' ? t('still too soon') : `${monthYear(date)}${effectInfo('extra').sooner ? ` · ${effectInfo('extra').sooner}` : ''}`} />}
                 </View>
                 {neededForDate > 0 && asked && (
                   <View style={styles.kipTip}>
                     <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink }}>
-                      <Text style={{ fontFamily: fonts.semibold }}>To keep {fullDate(asked)}</Text>, you’d need about <Text style={{ fontFamily: fonts.semibold }}>{baht(neededForDate)} a month</Text>{' '}
-                      extra until then.
+                      {rich('**To keep {date}**, you’d need about **{amount} a month** extra until then.', { date: fullDate(asked), amount: baht(neededForDate) }, (x) => (
+                        <Text style={{ fontFamily: fonts.semibold }}>{x}</Text>
+                      ))}
                     </Text>
                     <Pressable onPress={() => changeSide({ kind: 'monthly', amount: neededForDate, months: null })} style={styles.useBtn} accessibilityRole="button">
-                      <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' }}>Use {baht(neededForDate)}</Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: 12, color: '#FFFFFF' }}>{t('Use {amount}', { amount: baht(neededForDate) })}</Text>
                     </Pressable>
                   </View>
                 )}
-                <Text style={[styles.addonSub, { fontSize: 11, color: 'rgba(17,17,17,0.65)' }]}>Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.</Text>
+                <Text style={[styles.addonSub, { fontSize: 11, color: 'rgba(17,17,17,0.65)' }]}>
+                  {t('Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.')}
+                </Text>
               </View>
             </AddOnRow>
           </View>
         </>
       ) : (
         <View style={[styles.dial, { backgroundColor: colors.pink }]}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>No date — every month</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{t('No date — every month')}</Text>
           <Text style={styles.date}>
             {baht(Math.max(500, R0.comfortable))}
-            <Text style={{ fontSize: 16 }}>/mo</Text>
+            <Text style={{ fontSize: 16 }}>{t('/mo')}</Text>
           </Text>
           <Text style={styles.dialNote}>
-            Into {short} every payday, comfortably. That’s {baht(Math.max(500, R0.comfortable) * 12)} in a year — I’ll show you how close it gets.
+            {t('Into {short} every payday, comfortably. That’s {amount} in a year — I’ll show you how close it gets.', { short, amount: baht(Math.max(500, R0.comfortable) * 12) })}
           </Text>
         </View>
       )}
 
-      <Text style={[styles.section, { paddingTop: 6 }]}>OR</Text>
+      <Text style={[styles.section, { paddingTop: 6 }]}>{t('OR')}</Text>
       <Pressable
         onPress={() => choose(mode === 'nodate' ? 'move' : 'nodate')}
         style={[styles.addon, mode === 'nodate' && { backgroundColor: colors.pink, borderColor: colors.ink }]}
@@ -371,8 +432,12 @@ export function FindWhatWorks() {
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
           <CatBadge name="sparkle" color={mode === 'nodate' ? '#FFFFFF' : colors.pink} size={32} />
           <View style={{ flex: 1, gap: 1 }}>
-            <Text style={styles.addonTitle}>{mode === 'nodate' ? 'Back to a date' : 'No date — just save every month'}</Text>
-            <Text style={styles.addonSub}>{mode === 'nodate' ? `Plan ${short} for a month instead` : `${baht(Math.max(500, R0.comfortable))} a month into ${short}, see how far it gets you`}</Text>
+            <Text style={styles.addonTitle}>{mode === 'nodate' ? t('Back to a date') : t('No date — just save every month')}</Text>
+            <Text style={styles.addonSub}>
+              {mode === 'nodate'
+                ? t('Plan {short} for a month instead', { short })
+                : t('{amount} a month into {short}, see how far it gets you', { amount: baht(Math.max(500, R0.comfortable)), short })}
+            </Text>
           </View>
         </View>
       </Pressable>
@@ -390,7 +455,7 @@ function withAddOns(i: Inputs, on: Record<AddOn, boolean>, o: { savedExtra: numb
 function Includes({ items }: { items: string[] }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>Includes:</Text>
+      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Includes:')}</Text>
       {items.map((x) => (
         <View key={x} style={styles.chip}>
           <Text style={{ fontFamily: fonts.semibold, fontSize: 11, color: colors.ink }}>{x}</Text>
@@ -442,7 +507,7 @@ function MonthDial({ lo, hi, value, fast, comfy, locked, onChange }: { lo: numbe
           }}
           accessible
           accessibilityRole="adjustable"
-          accessibilityLabel="Goal month"
+          accessibilityLabel={t('Goal month')}
           accessibilityValue={{ min: lo, max: hi, now: value }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={(e) => !locked && onChange(Math.min(hi, Math.max(lo, value + (e.nativeEvent.actionName === 'increment' ? 1 : -1))))}>
@@ -453,7 +518,7 @@ function MonthDial({ lo, hi, value, fast, comfy, locked, onChange }: { lo: numbe
           </View>
           {w > 0 && (
             <View style={[styles.marker, { left: x(comfy) - 30 }]} pointerEvents="none">
-              <Text style={styles.markerText}>KIP’S PICK</Text>
+              <Text style={styles.markerText}>{t('KIP’S PICK')}</Text>
               <View style={{ width: 2, height: 10, backgroundColor: colors.ink }} />
             </View>
           )}
@@ -461,9 +526,9 @@ function MonthDial({ lo, hi, value, fast, comfy, locked, onChange }: { lo: numbe
         </View>
       </GestureDetector>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={styles.zoneLabel}>Sooner · too much</Text>
-        <Text style={styles.zoneLabel}>Tight</Text>
-        <Text style={styles.zoneLabel}>Comfortable · later</Text>
+        <Text style={styles.zoneLabel}>{t('Sooner · too much')}</Text>
+        <Text style={styles.zoneLabel}>{t('Tight')}</Text>
+        <Text style={styles.zoneLabel}>{t('Comfortable · later')}</Text>
       </View>
     </View>
   );

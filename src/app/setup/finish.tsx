@@ -7,6 +7,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Kip } from '@/components/Kip';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 import { useSetup } from '@/lib/setup/draft';
 import { finishSetup } from '@/lib/setup/save';
 import { colors, fonts } from '@/theme';
@@ -26,7 +27,7 @@ export default function SetupFinish() {
       reset();
       await refreshProfile(); // setup_done → the app shows Home
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Try again?');
+      setError(e instanceof Error ? e.message : t('Something went wrong. Try again?'));
     }
   }
 
@@ -41,11 +42,11 @@ export default function SetupFinish() {
     <View style={styles.screen}>
       <GlowBackground />
       <Kip mood="happy" size={120} />
-      <Text style={styles.title}>{error ? 'Hmm, that didn’t save' : 'Setting up your month…'}</Text>
-      <Text style={styles.sub}>{error ?? 'Your plan, your goal and your promise — all yours, free.'}</Text>
+      <Text style={styles.title}>{error ? t('Hmm, that didn’t save') : t('Setting up your month…')}</Text>
+      <Text style={styles.sub}>{error ?? t('Your plan, your goal and your promise — all yours, free.')}</Text>
       {error && (
         <View style={{ alignSelf: 'stretch', marginTop: 12 }}>
-          <Button label="Try again" onPress={run} />
+          <Button label={t('Try again')} onPress={run} />
         </View>
       )}
     </View>

@@ -1,6 +1,7 @@
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import { t } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { pinColors } from '@/theme';
 
@@ -35,7 +36,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
       contentType: ext === 'png' ? 'image/png' : ext === 'heic' ? 'image/heic' : 'image/jpeg',
       upsert: true,
     });
-    if (error) throw new Error(`Couldn’t upload your photo: ${error.message}`);
+    if (error) throw new Error(t('Couldn’t upload your photo: {reason}', { reason: error.message }));
     photoPath = `goal-photos/${path}`;
   }
 
@@ -44,7 +45,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   if (draft.signature) {
     const path = `${userId}/promise-${stamp}.svg`;
     const { error } = await supabase.storage.from('signatures').upload(path, draft.signature, { contentType: 'image/svg+xml', upsert: true });
-    if (error) throw new Error(`Couldn’t save your signature: ${error.message}`);
+    if (error) throw new Error(t('Couldn’t save your signature: {reason}', { reason: error.message }));
     signaturePath = `signatures/${path}`;
   }
 
@@ -65,10 +66,8 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
     ...(photoPath ? { photo_url: photoPath } : {}),
   };
   const { data: existing } = await supabase.from('goals').select('id').eq('user_id', userId).eq('position', 1).eq('status', 'active').maybeSingle();
-  const saved = existing
-    ? await supabase.from('goals').update(goal).eq('id', existing.id).select('id').single()
-    : await supabase.from('goals').insert(goal).select('id').single();
-  if (saved.error) throw new Error(`Couldn’t pin your goal: ${saved.error.message}`);
+  const saved = existing ? await supabase.from('goals').update(goal).eq('id', existing.id).select('id').single() : await supabase.from('goals').insert(goal).select('id').single();
+  if (saved.error) throw new Error(t('Couldn’t pin your goal: {reason}', { reason: saved.error.message }));
 
   // 4. The promise.
   const { error: promiseError } = await supabase.from('promises').insert({
@@ -78,7 +77,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
     signature_url: signaturePath,
     signed_at: draft.signedAt ?? new Date().toISOString(),
   });
-  if (promiseError) throw new Error(`Couldn’t save your promise: ${promiseError.message}`);
+  if (promiseError) throw new Error(t('Couldn’t save your promise: {reason}', { reason: promiseError.message }));
 
   // 5. The basics, the plan, and "set up" — last, so a failure above can simply be retried.
   const { error: profileError } = await supabase
@@ -102,5 +101,5 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
       onboarded: true,
     })
     .eq('id', userId);
-  if (profileError) throw new Error(`Couldn’t finish setup: ${profileError.message}`);
+  if (profileError) throw new Error(t('Couldn’t finish setup: {reason}', { reason: profileError.message }));
 }

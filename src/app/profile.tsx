@@ -21,6 +21,7 @@ import { Pill, SaveButton, Sheet, sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { billsTotal, dailyOf, STYLES, type MonthBudget } from '@/lib/budget';
 import { useHome } from '@/lib/home';
+import { getLang, t, useLang, type Lang } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
@@ -45,11 +46,14 @@ type Row = {
 type Open = null | 'me' | 'pay' | 'rent' | 'checkin' | 'delete' | 'plus';
 
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+/** "25th" in English; Thai just uses the number (วันที่ 25). */
+const ordinal = (n: number) => (getLang() === 'th' ? String(n) : `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`);
 const CHECKIN = ['19:00', '20:00', '21:00', '22:00'];
-const timeLabel = (t: string) => {
-  const h = Number(t.slice(0, 2));
-  return `${h % 12 || 12}:${t.slice(3, 5)} ${h < 12 ? 'am' : 'pm'}`;
+/** "9:00 pm" in English, "21:00 น." in Thai. */
+const timeLabel = (time: string) => {
+  if (getLang() === 'th') return `${time.slice(0, 5)} น.`;
+  const h = Number(time.slice(0, 2));
+  return `${h % 12 || 12}:${time.slice(3, 5)} ${h < 12 ? 'am' : 'pm'}`;
 };
 
 export default function Profile() {
@@ -61,6 +65,7 @@ export default function Profile() {
   const [open, setOpen] = useState<Open>(null);
   const [toast, setToast] = useState<string | null>(null);
   const uid = session?.user.id;
+  const { lang, setLang } = useLang();
 
   const load = useCallback(async () => {
     if (!uid) return;
@@ -75,13 +80,26 @@ export default function Profile() {
     load();
   }, [load]);
 
-  function flash(t: string) {
-    setToast(t);
+  function flash(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(null), 2600);
   }
 
+  /** Switch the app's language and remember it on the account too. */
+  function pickLang(l: Lang) {
+    if (l === lang) return;
+    Haptics.selectionAsync().catch(() => {});
+    if (uid)
+      supabase
+        .from('profiles')
+        .update({ language: l })
+        .eq('id', uid)
+        .then(() => {});
+    setLang(l, '/profile');
+  }
+
   const goal = goals[0];
-  const goalName = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'Your goal';
+  const goalName = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('Your goal');
   const goalNow: GoalNow = goal ? { saved: goal.saved, target: goal.target, due: goal.due ?? null, isMonthly: goal.kind === 'monthly' } : null;
   const basics: Basics | null = row
     ? {
@@ -108,19 +126,19 @@ export default function Profile() {
         daily_budget: dailyOf(next),
       })
       .eq('id', uid);
-    if (error) return flash(`Couldn’t save: ${error.message}`);
+    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     await save(next);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setOpen(null);
-    flash('Saved — your month is re-planned');
+    flash(t('Saved — your month is re-planned'));
     load();
   }
 
-  async function patch(fields: Partial<Row>, done = 'Saved') {
+  async function patch(fields: Partial<Row>, done = t('Saved')) {
     if (!uid) return false;
     const { error } = await supabase.from('profiles').update(fields).eq('id', uid);
     if (error) {
-      flash(`Couldn’t save: ${error.message}`);
+      flash(t('Couldn’t save: {msg}', { msg: error.message }));
       return false;
     }
     setRow((r) => (r ? { ...r, ...fields } : r));
@@ -131,9 +149,13 @@ export default function Profile() {
   // ---- what each row says ----
   const regular = row?.income_type !== 'changes';
   const pay = regular ? num(row?.monthly_income) : num(row?.slow_month_income);
-  const paySub = regular ? (row?.payday ? `Every month on the ${ordinal(row.payday)}` : 'Every month') : `Changes · good month ${row?.good_month_income ? baht(Number(row.good_month_income)) : '—'}`;
+  const paySub = regular
+    ? row?.payday
+      ? t('Every month on the {day}', { day: ordinal(row.payday) })
+      : t('Every month')
+    : t('Changes · good month {amount}', { amount: row?.good_month_income ? baht(Number(row.good_month_income)) : '—' });
   const billCount = month?.bills.items?.length ?? 0;
-  const styleName = STYLES.find((s) => s.key === month?.style)?.name ?? 'Kip’s plan';
+  const styleName = STYLES.find((s) => s.key === month?.style)?.name ?? t('Kip’s plan');
 
   // ---- Plus ----
   const plan = row?.plan ?? 'free';
@@ -143,21 +165,21 @@ export default function Profile() {
     <View style={{ flex: 1 }}>
       <GlowBackground />
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 18, paddingBottom: insets.bottom + 40, gap: 14 }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="You" />
+        <ScreenHeader title={t('You')} />
 
         <RiseIn>
           <Glass radius={26} innerStyle={styles.me}>
             <View style={styles.ava}>{row?.avatar_url ? <Image source={{ uri: row.avatar_url }} style={{ width: 58, height: 58 }} contentFit="cover" /> : <Kip mood="happy" size={46} />}</View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name} numberOfLines={1}>
-                {row?.display_name || 'Add your name'}
+                {row?.display_name || t('Add your name')}
               </Text>
               <Text style={styles.sub} numberOfLines={1}>
                 {session?.user.email}
               </Text>
             </View>
-            <Squish onPress={() => setOpen('me')} style={styles.chip} accessibilityRole="button" accessibilityLabel="Edit name and photo">
-              <Text style={styles.chipText}>Edit</Text>
+            <Squish onPress={() => setOpen('me')} style={styles.chip} accessibilityRole="button" accessibilityLabel={t('Edit name and photo')}>
+              <Text style={styles.chipText}>{t('Edit')}</Text>
             </Squish>
           </Glass>
         </RiseIn>
@@ -174,51 +196,63 @@ export default function Profile() {
             )}
             <View style={{ flex: 1 }}>
               <Text style={styles.plusTitle}>
-                {plan === 'trial' ? (daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} of Plus left` : 'Your Plus trial ended') : plan === 'free' ? 'HeyKip Free' : 'HeyKip Plus'}
+                {plan === 'trial'
+                  ? daysLeft > 0
+                    ? daysLeft === 1
+                      ? t('{n} day of Plus left', { n: daysLeft })
+                      : t('{n} days of Plus left', { n: daysLeft })
+                    : t('Your Plus trial ended')
+                  : plan === 'free'
+                    ? 'HeyKip Free'
+                    : 'HeyKip Plus'}
               </Text>
-              <Text style={styles.plusSub}>{plan === 'free' ? 'Plus: Talk to Kip, your budgets, 3 goals' : 'Talk to Kip, your budgets, 3 goals'}</Text>
+              <Text style={styles.plusSub}>{plan === 'free' ? t('Plus: Talk to Kip, your budgets, 3 goals') : t('Talk to Kip, your budgets, 3 goals')}</Text>
             </View>
             {plan === 'trial' || plan === 'free' ? (
               <Squish
-                onPress={() => (plan === 'free' ? setOpen('plus') : flash('Paying for Plus is coming soon — your trial keeps everything on until then.'))}
+                onPress={() => (plan === 'free' ? setOpen('plus') : flash(t('Paying for Plus is coming soon — your trial keeps everything on until then.')))}
                 style={styles.go}
                 accessibilityRole="button">
-                <Text style={styles.goText}>{plan === 'free' ? 'Try free' : 'Keep Plus'}</Text>
+                <Text style={styles.goText}>{plan === 'free' ? t('Try free') : t('Keep Plus')}</Text>
               </Squish>
             ) : null}
           </View>
         </RiseIn>
 
-        <Text style={styles.cap}>YOUR MONEY</Text>
+        <Text style={styles.cap}>{t('YOUR MONEY')}</Text>
         <RiseIn delay={240}>
           <Glass radius={26} innerStyle={styles.group}>
-            <SetRow icon="income" title="Usual pay" sub={paySub} value={pay ? baht(pay) : 'Add it'} onPress={() => month && basics && setOpen('pay')} />
+            <SetRow icon="income" title={t('Usual pay')} sub={paySub} value={pay ? baht(pay) : t('Add it')} onPress={() => month && basics && setOpen('pay')} />
             <SetRow
               icon="house"
-              title="Rent & bills"
-              sub={`Rent ${baht(num(row?.rent) ?? 0)}${billCount ? ` · ${billCount} bill${billCount === 1 ? '' : 's'}` : ''}`}
+              title={t('Rent & bills')}
+              sub={`${t('Rent {amount}', { amount: baht(num(row?.rent) ?? 0) })}${billCount ? ` · ${billCount === 1 ? t('{n} bill', { n: billCount }) : t('{n} bills', { n: billCount })}` : ''}`}
               value={month ? baht(billsTotal(month)) : '—'}
               onPress={() => month && basics && setOpen('rent')}
             />
-            <SetRow icon="piggy" title="Money style" sub="How your month is split" value={styleName} soft onPress={() => router.push('/month')} />
+            <SetRow icon="piggy" title={t('Money style')} sub={t('How your month is split')} value={styleName} soft onPress={() => router.push('/month')} />
           </Glass>
         </RiseIn>
-        <Text style={styles.note}>Change one and Kip re-plans your month — you’ll see the new numbers first.</Text>
+        <Text style={styles.note}>{t('Change one and Kip re-plans your month — you’ll see the new numbers first.')}</Text>
 
         <Text style={styles.cap}>KIP</Text>
         <RiseIn delay={360}>
           <Glass radius={26} innerStyle={styles.group}>
-            <SetRow title="Evening check-in" sub="Kip asks what you spent" value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
+            <SetRow title={t('Evening check-in')} sub={t('Kip asks what you spent')} value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
             <View style={[styles.row, styles.rowLine]}>
-              <Text style={[styles.rowTitle, { flex: 1 }]}>Language</Text>
+              <Text style={[styles.rowTitle, { flex: 1 }]}>{t('Language')}</Text>
               <View style={styles.seg}>
-                <View style={[styles.segBtn, styles.segOn]}>
-                  <Text style={[styles.segText, { color: '#FFFFFF' }]}>English</Text>
-                </View>
-                <Pressable onPress={() => flash('Thai is coming soon')} style={[styles.segBtn, { flexDirection: 'row', gap: 5 }]} accessibilityRole="button" accessibilityLabel="Thai — coming soon">
-                  <Text style={styles.segText}>ไทย</Text>
-                  <Text style={styles.soon}>SOON</Text>
-                </Pressable>
+                {(['en', 'th'] as const).map((l) => (
+                  <Pressable
+                    key={l}
+                    onPress={() => pickLang(l)}
+                    style={[styles.segBtn, lang === l && styles.segOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: lang === l }}
+                    accessibilityLabel={l === 'en' ? 'English' : 'ไทย'}>
+                    <Text style={[styles.segText, lang === l && { color: '#FFFFFF' }]}>{l === 'en' ? 'English' : 'ไทย'}</Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
           </Glass>
@@ -226,10 +260,10 @@ export default function Profile() {
 
         <View style={styles.foot}>
           <Pressable onPress={signOut} hitSlop={10} accessibilityRole="button">
-            <Text style={styles.footText}>Log out</Text>
+            <Text style={styles.footText}>{t('Log out')}</Text>
           </Pressable>
           <Pressable onPress={() => setOpen('delete')} hitSlop={10} accessibilityRole="button">
-            <Text style={[styles.footText, { color: colors.orangeText }]}>Delete account</Text>
+            <Text style={[styles.footText, { color: colors.orangeText }]}>{t('Delete account')}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -244,7 +278,7 @@ export default function Profile() {
             setRow((r) => (r ? { ...r, ...fields } : r));
             refreshProfile();
             setOpen(null);
-            flash('Saved');
+            flash(t('Saved'));
           }}
         />
       )}
@@ -268,8 +302,8 @@ export default function Profile() {
         <CheckinSheet
           value={row?.checkin_time?.slice(0, 5) ?? '21:00'}
           onClose={() => setOpen(null)}
-          onPick={async (t) => {
-            if (await patch({ checkin_time: t }, `Kip will check in at ${timeLabel(t)}`)) setOpen(null);
+          onPick={async (time) => {
+            if (await patch({ checkin_time: time }, t('Kip will check in at {time}', { time: timeLabel(time) }))) setOpen(null);
           }}
         />
       )}
@@ -282,8 +316,8 @@ export default function Profile() {
             setOpen(null);
             load();
           }}
-          title="Get there sooner with Plus"
-          sub="Talk to Kip, your own budgets and 3 goals — free for 7 days."
+          title={t('Get there sooner with Plus')}
+          sub={t('Talk to Kip, your own budgets and 3 goals — free for 7 days.')}
         />
       )}
 
@@ -354,51 +388,51 @@ function MeSheet({
         .upload(path, await photoBytes(photo), { contentType: ext === 'png' ? 'image/png' : ext === 'heic' ? 'image/heic' : ext === 'webp' ? 'image/webp' : 'image/jpeg', upsert: true });
       if (e) {
         setBusy(false);
-        return setError(`Couldn’t upload your photo: ${e.message}`);
+        return setError(t('Couldn’t upload your photo: {msg}', { msg: e.message }));
       }
       url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
     }
     const fields = { display_name: n.trim(), avatar_url: url };
     const { error: e } = await supabase.from('profiles').update(fields).eq('id', uid);
     setBusy(false);
-    if (e) return setError(`Couldn’t save: ${e.message}`);
+    if (e) return setError(t('Couldn’t save: {msg}', { msg: e.message }));
     onSaved(fields);
   }
 
   return (
-    <Sheet open onClose={onClose} title="You">
-      <Pressable onPress={pick} style={{ alignSelf: 'center', alignItems: 'center', gap: 8 }} accessibilityRole="button" accessibilityLabel="Change photo">
+    <Sheet open onClose={onClose} title={t('You')}>
+      <Pressable onPress={pick} style={{ alignSelf: 'center', alignItems: 'center', gap: 8 }} accessibilityRole="button" accessibilityLabel={t('Change photo')}>
         <View style={[styles.ava, { width: 88, height: 88, borderRadius: 44 }]}>
           {photo ? <Image source={{ uri: photo }} style={{ width: 88, height: 88 }} contentFit="cover" /> : <Kip mood="happy" size={66} />}
         </View>
-        <Text style={[styles.rowTitle, { fontSize: 14, textDecorationLine: 'underline' }]}>{photo ? 'Change photo' : 'Add a photo'}</Text>
+        <Text style={[styles.rowTitle, { fontSize: 14, textDecorationLine: 'underline' }]}>{photo ? t('Change photo') : t('Add a photo')}</Text>
       </Pressable>
       <Glass radius={18}>
         <TextInput
           value={n}
           onChangeText={setN}
-          placeholder="Your name"
+          placeholder={t('Your name')}
           placeholderTextColor={colors.faint}
           style={[sheet.field, { outlineStyle: 'none' } as never]}
           maxLength={40}
-          accessibilityLabel="Your name"
+          accessibilityLabel={t('Your name')}
         />
       </Glass>
       {error && <Text style={styles.err}>{error}</Text>}
-      <SaveButton label={busy ? 'Saving…' : 'Save'} disabled={busy || !n.trim()} onPress={saveMe} />
+      <SaveButton label={busy ? t('Saving…') : t('Save')} disabled={busy || !n.trim()} onPress={saveMe} />
     </Sheet>
   );
 }
 
 function CheckinSheet({ value, onClose, onPick }: { value: string; onClose: () => void; onPick: (t: string) => void }) {
   return (
-    <Sheet open onClose={onClose} title="Evening check-in" sub="When should Kip ask what you spent today?">
+    <Sheet open onClose={onClose} title={t('Evening check-in')} sub={t('When should Kip ask what you spent today?')}>
       <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-        {CHECKIN.map((t) => (
-          <Pill key={t} label={timeLabel(t)} on={value === t} onPress={() => onPick(t)} />
+        {CHECKIN.map((time) => (
+          <Pill key={time} label={timeLabel(time)} on={value === time} onPress={() => onPick(time)} />
         ))}
       </View>
-      <Text style={[sheet.sub, { textAlign: 'center', marginBottom: 6 }]}>Kip’s reminders arrive with notifications, coming soon — your time is saved for then.</Text>
+      <Text style={[sheet.sub, { textAlign: 'center', marginBottom: 6 }]}>{t('Kip’s reminders arrive with notifications, coming soon — your time is saved for then.')}</Text>
     </Sheet>
   );
 }
@@ -411,19 +445,19 @@ function DeleteSheet({ onClose, onError }: { onClose: () => void; onError: (t: s
     if (error) {
       setBusy(false);
       onClose();
-      return onError('Couldn’t delete your account — check your internet and try again.');
+      return onError(t('Couldn’t delete your account — check your internet and try again.'));
     }
     await supabase.auth.signOut({ scope: 'local' });
   }
   return (
-    <Sheet open onClose={onClose} title="Delete your account?" sub="Your goals, spending, photos and promise are deleted for good. This can’t be undone.">
+    <Sheet open onClose={onClose} title={t('Delete your account?')} sub={t('Your goals, spending, photos and promise are deleted for good. This can’t be undone.')}>
       <View style={{ alignItems: 'center', marginVertical: 4 }}>
         <Kip mood="careful" size={90} />
       </View>
-      <SaveButton label={busy ? 'Deleting…' : 'Delete everything'} danger disabled={busy} onPress={del} />
+      <SaveButton label={busy ? t('Deleting…') : t('Delete everything')} danger disabled={busy} onPress={del} />
       <Squish onPress={onClose} accessibilityRole="button">
         <Glass radius={999} innerStyle={{ height: 52, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={styles.rowTitle}>Keep my account</Text>
+          <Text style={styles.rowTitle}>{t('Keep my account')}</Text>
         </Glass>
       </Squish>
     </Sheet>
@@ -455,7 +489,6 @@ const styles = StyleSheet.create({
   segBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, alignItems: 'center' },
   segOn: { backgroundColor: colors.ink },
   segText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-  soon: { fontFamily: fonts.semibold, fontSize: 9, letterSpacing: 0.6, color: colors.orangeText },
   foot: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 6, marginTop: 4 },
   footText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
   err: { fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' },

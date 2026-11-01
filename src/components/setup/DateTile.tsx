@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, type Sty
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui';
+import { monthShort, t } from '@/lib/i18n';
 import { isoDay, parseDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, radius } from '@/theme';
 
@@ -39,16 +40,16 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
     <>
       <SmallTile label={label} style={style} onPress={show}>
         <Text style={[smallValue, !value && !emptyLabel && { color: colors.faint }]} numberOfLines={1}>
-          {value ? shortDate(parseDay(value)) : (emptyLabel ?? '19 Dec')}
+          {value ? shortDate(parseDay(value)) : (emptyLabel ?? `19 ${monthShort(11)}`)}
         </Text>
       </SmallTile>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.scrim} onPress={() => setOpen(false)} accessibilityLabel="Close" />
+        <Pressable style={styles.scrim} onPress={() => setOpen(false)} accessibilityLabel={t('Close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <Text style={styles.sheetTitle}>{label}</Text>
           <DateTimePicker value={picked} minimumDate={tomorrow} mode="date" display="inline" accentColor={colors.ink} themeVariant="light" onChange={(_, d) => d && setPicked(d)} />
           <Button
-            label="Done"
+            label={t('Done')}
             onPress={() => {
               onChange(isoDay(picked));
               setOpen(false);

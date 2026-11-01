@@ -33,11 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     // The profiles row is created by a database trigger on sign-up (see the migration).
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, display_name, avatar_url, onboarded, plan, split_when_paid')
-      .eq('id', s.user.id)
-      .maybeSingle();
+    const { data } = await supabase.from('profiles').select('id, display_name, avatar_url, onboarded, plan, split_when_paid').eq('id', s.user.id).maybeSingle();
     setProfile((data as Profile | null) ?? null);
   }, []);
 

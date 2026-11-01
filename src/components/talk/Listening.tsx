@@ -10,6 +10,7 @@ import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
+import { t } from '@/lib/i18n';
 import type { VoiceLang, VoiceState } from '@/lib/voice';
 import { colors, fonts } from '@/theme';
 
@@ -44,16 +45,16 @@ export function Listening({
       <GlowBackground />
       <View style={[styles.body, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <View style={styles.top}>
-          <Pressable onPress={onCancel} accessibilityRole="button" accessibilityLabel="Stop and close">
+          <Pressable onPress={onCancel} accessibilityRole="button" accessibilityLabel={t('Stop and close')}>
             <Glass radius={22} innerStyle={styles.round}>
               <X size={16} color={colors.ink} weight="bold" />
             </Glass>
           </Pressable>
           <Glass radius={999} innerStyle={styles.status}>
             <Blink on={live} />
-            <Text style={styles.statusText}>{state === 'finishing' ? 'Got it…' : live ? 'Listening' : 'Getting ready…'}</Text>
+            <Text style={styles.statusText}>{state === 'finishing' ? t('Got it…') : live ? t('Listening') : t('Getting ready…')}</Text>
           </Glass>
-          <Pressable onPress={() => onLang(lang === 'th-TH' ? 'en-US' : 'th-TH')} accessibilityRole="button" accessibilityLabel="Switch language">
+          <Pressable onPress={() => onLang(lang === 'th-TH' ? 'en-US' : 'th-TH')} accessibilityRole="button" accessibilityLabel={t('Switch language')}>
             <Glass radius={999} innerStyle={styles.lang}>
               <Text style={[styles.langText, lang === 'th-TH' && styles.langOn]}>ไทย</Text>
               <Text style={styles.langSep}>·</Text>
@@ -63,8 +64,8 @@ export function Listening({
         </View>
 
         <RiseIn style={{ alignItems: 'center', marginTop: 10 }}>
-          <Text style={styles.hey}>Hey {name ?? 'there'}</Text>
-          <Text style={styles.h1}>{lang === 'th-TH' ? 'วันนี้ใช้อะไรไปบ้าง?' : 'What did you spend today?'}</Text>
+          <Text style={styles.hey}>{name != null ? t('Hey {name}', { name }) : t('Hey there')}</Text>
+          <Text style={styles.h1}>{lang === 'th-TH' ? 'วันนี้ใช้อะไรไปบ้าง?' : t('What did you spend today?')}</Text>
         </RiseIn>
 
         <View style={styles.stage}>
@@ -86,12 +87,12 @@ export function Listening({
         </Text>
 
         <View style={{ marginTop: 'auto', alignItems: 'center', gap: 10 }}>
-          <Squish onPress={onDone} disabled={state === 'finishing'} style={styles.mic} accessibilityRole="button" accessibilityLabel="Done talking">
+          <Squish onPress={onDone} disabled={state === 'finishing'} style={styles.mic} accessibilityRole="button" accessibilityLabel={t('Done talking')}>
             {[0.35, 0.7, 1, 0.6, 0.3].map((h, i) => (
               <Bar key={i} i={i} h={h} level={level} live={live} />
             ))}
           </Squish>
-          <Text style={styles.micLabel}>{state === 'finishing' ? 'One moment…' : 'Tap when you’re done'}</Text>
+          <Text style={styles.micLabel}>{state === 'finishing' ? t('One moment…') : t('Tap when you’re done')}</Text>
         </View>
       </View>
     </View>

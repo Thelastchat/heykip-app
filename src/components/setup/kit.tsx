@@ -11,10 +11,15 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { Kip, type KipMood } from '@/components/Kip';
 import type { IconKey } from '@/lib/budget';
+import { getLang, t } from '@/lib/i18n';
+import { ordinal } from '@/lib/setup/plan';
 import { T } from '@/components/ui';
 import { colors, fonts, glow, radius } from '@/theme';
 
 export const STEPS = 4;
+
+/** A day of the month: "25th" in English, "วันที่ 25" in Thai. */
+export const nth = (n: number) => (getLang() === 'th' ? t('day {n}', { n }) : ordinal(n));
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
 export function SetupScreen({ step, footer, children, scrollRef }: { step?: number; footer: ReactNode; children: ReactNode; scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null> }) {
@@ -37,7 +42,7 @@ export function SetupScreen({ step, footer, children, scrollRef }: { step?: numb
 
 export function BackButton({ size = 40 }: { size?: number }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} hitSlop={8} onPress={() => router.back()}>
       <Glass radius={size / 2} innerStyle={[styles.back, { width: Math.max(size, 44), height: Math.max(size, 44) }]}>
         <CaretLeft size={17} color={colors.ink} weight="bold" />
       </Glass>
@@ -49,7 +54,7 @@ export function StepHeader({ step }: { step: number }) {
   return (
     <View style={styles.headerRow}>
       <BackButton />
-      <View style={styles.bars} accessibilityLabel={`Step ${step} of ${STEPS}`}>
+      <View style={styles.bars} accessibilityLabel={t('Step {step} of {total}', { step, total: STEPS })}>
         {Array.from({ length: STEPS }, (_, i) => (
           <View key={i} style={[styles.bar, i < step && { backgroundColor: colors.ink }]} />
         ))}
@@ -233,7 +238,7 @@ export function PrivacyNote() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Lock size={14} color={colors.muted} />
-      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>Kip only uses this to plan for you. Never shared.</Text>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>{t('Kip only uses this to plan for you. Never shared.')}</Text>
     </View>
   );
 }

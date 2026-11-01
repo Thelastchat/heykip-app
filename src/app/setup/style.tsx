@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CatBadge } from '@/components/CatIcon';
 import { Chip, KipSays, RadioCard, SetupScreen, Title } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
+import { rich, t } from '@/lib/i18n';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
 import { inputsFrom, LEAKS } from '@/lib/setup/plan';
 import { LEAK_COLOR, leakRules, PAYDAY } from '@/lib/setup/rules';
@@ -23,11 +24,13 @@ export default function SetupStyle() {
   const rules = leakRules(draft.leaks, inputsFrom(draft));
 
   return (
-    <SetupScreen step={2} footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!draft.moneyStyle} onPress={() => (editing ? router.back() : router.push('/setup/goal'))} />}>
+    <SetupScreen step={2} footer={<Button label={editing ? t('Update my plan') : t('Next')} disabled={!draft.moneyStyle} onPress={() => (editing ? router.back() : router.push('/setup/goal'))} />}>
       <KipSays>
-        No judging — this decides <Text style={{ fontFamily: fonts.semibold }}>when</Text> I move your saving and <Text style={{ fontFamily: fonts.semibold }}>where</Text> I nudge you.
+        {rich('No judging — this decides **when** I move your saving and **where** I nudge you.', undefined, (s) => (
+          <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>
+        ))}
       </KipSays>
-      <Title>Payday hits. What happens first?</Title>
+      <Title>{t('Payday hits. What happens first?')}</Title>
 
       <View style={{ gap: 8 }} accessibilityRole="radiogroup">
         {ANSWERS.map((a) => (
@@ -37,7 +40,9 @@ export default function SetupStyle() {
 
       <View style={{ gap: 10 }}>
         <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>
-          Where does money sneak away? <Text style={{ fontFamily: fonts.regular, color: colors.muted }}>Pick any</Text>
+          {rich('Where does money sneak away? **Pick any**', undefined, (s) => (
+            <Text style={{ fontFamily: fonts.regular, color: colors.muted }}>{s}</Text>
+          ))}
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {LEAKS.map((l, i) => {
@@ -49,8 +54,8 @@ export default function SetupStyle() {
 
       {rules.length > 0 && (
         <View style={styles.rules}>
-          <Text style={styles.rulesHead}>WHAT I’LL DO ABOUT IT</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted, marginTop: -2 }}>Colour = the budget it comes from</Text>
+          <Text style={styles.rulesHead}>{t('WHAT I’LL DO ABOUT IT')}</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted, marginTop: -2 }}>{t('Colour = the budget it comes from')}</Text>
           {rules.map((r) => (
             <View key={r.key} style={styles.rule}>
               <CatBadge name={r.icon} color={r.color} size={30} />

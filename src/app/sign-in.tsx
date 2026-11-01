@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Kip } from '@/components/Kip';
 import { BackButton } from '@/components/setup/kit';
 import { Button, Muted, T } from '@/components/ui';
+import { t } from '@/lib/i18n';
 import { useSetup } from '@/lib/setup/draft';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { colors, fonts, radius } from '@/theme';
@@ -39,7 +40,7 @@ export default function SignIn() {
     setError(null);
     const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
     setBusy(false);
-    if (error) setError('That code didn’t work. Check the newest email and try again.');
+    if (error) setError(t('That code didn’t work. Check the newest email and try again.'));
   }
 
   return (
@@ -50,14 +51,14 @@ export default function SignIn() {
         <View style={styles.top}>
           <Kip mood={saving ? 'happy' : 'idle'} size={150} />
           <T variant="hero" style={{ textAlign: 'center' }}>
-            {saving ? 'Save your plan' : 'Welcome back'}
+            {saving ? t('Save your plan') : t('Welcome back')}
           </T>
           <Muted variant="body" style={{ textAlign: 'center' }}>
             {step === 'code'
-              ? `I sent a code to ${email.trim()}.`
+              ? t('I sent a code to {email}.', { email: email.trim() })
               : saving
-                ? 'So your board and your promise stay safe. I’ll email you a 6-digit code.'
-                : 'Log in with your email. I’ll send you a 6-digit code.'}
+                ? t('So your board and your promise stay safe. I’ll email you a 6-digit code.')
+                : t('Log in with your email. I’ll send you a 6-digit code.')}
           </Muted>
         </View>
 
@@ -74,7 +75,7 @@ export default function SignIn() {
               autoComplete="email"
               keyboardType="email-address"
               style={styles.input}
-              accessibilityLabel="Email"
+              accessibilityLabel={t('Email')}
             />
           ) : (
             <TextInput
@@ -87,16 +88,16 @@ export default function SignIn() {
               textContentType="oneTimeCode"
               maxLength={10}
               style={[styles.input, { letterSpacing: 6, textAlign: 'center' }]}
-              accessibilityLabel="6-digit code"
+              accessibilityLabel={t('6-digit code')}
             />
           )}
           {error && <Muted style={{ color: colors.orange }}>{error}</Muted>}
           {step === 'email' ? (
-            <Button label="Send my code" onPress={sendCode} loading={busy} disabled={!email.includes('@')} />
+            <Button label={t('Send my code')} onPress={sendCode} loading={busy} disabled={!email.includes('@')} />
           ) : (
             <>
-              <Button label="Sign in" onPress={verify} loading={busy} disabled={code.trim().length < 6} />
-              <Button label="Use a different email" kind="secondary" onPress={() => setStep('email')} />
+              <Button label={t('Sign in')} onPress={verify} loading={busy} disabled={code.trim().length < 6} />
+              <Button label={t('Use a different email')} kind="secondary" onPress={() => setStep('email')} />
             </>
           )}
         </View>

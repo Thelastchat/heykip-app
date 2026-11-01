@@ -8,6 +8,7 @@ import { SetupScreen, Title } from '@/components/setup/kit';
 import { SignaturePad } from '@/components/setup/SignaturePad';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
 import { useSetup } from '@/lib/setup/draft';
 import { fullDate, makePlan } from '@/lib/setup/plan';
 import { colors, fonts } from '@/theme';
@@ -34,22 +35,22 @@ export default function SetupSign() {
       step={4}
       footer={
         <>
-          <Button label="Sign and commit" disabled={!draft.signature || !main.trim()} onPress={commit} />
-          <Text style={styles.note}>Kip will remind you of this on the days you’re about to give in.</Text>
+          <Button label={t('Sign and commit')} disabled={!draft.signature || !main.trim()} onPress={commit} />
+          <Text style={styles.note}>{t('Kip will remind you of this on the days you’re about to give in.')}</Text>
         </>
       }>
       <View style={{ gap: 6 }}>
-        <Title>Your promise to yourself</Title>
-        <Text style={styles.sub}>Kip wrote it from your own words. Change anything, then sign.</Text>
+        <Title>{t('Your promise to yourself')}</Title>
+        <Text style={styles.sub}>{t('Kip wrote it from your own words. Change anything, then sign.')}</Text>
       </View>
 
       <View style={styles.note2}>
         <View style={styles.tape} />
-        <Text style={styles.kicker}>MY PROMISE</Text>
+        <Text style={styles.kicker}>{t('MY PROMISE')}</Text>
         {editing ? (
           <>
-            <TextInput value={main} onChangeText={(t) => update({ promiseMain: t })} multiline style={[styles.main, styles.input]} autoFocus accessibilityLabel="Your promise" />
-            <TextInput value={backup} onChangeText={(t) => update({ promiseBackup: t })} multiline style={[styles.backup, styles.input]} accessibilityLabel="If money gets tight" />
+            <TextInput value={main} onChangeText={(text) => update({ promiseMain: text })} multiline style={[styles.main, styles.input]} autoFocus accessibilityLabel={t('Your promise')} />
+            <TextInput value={backup} onChangeText={(text) => update({ promiseBackup: text })} multiline style={[styles.backup, styles.input]} accessibilityLabel={t('If money gets tight')} />
           </>
         ) : (
           <>
@@ -64,7 +65,7 @@ export default function SetupSign() {
           </Svg>
           <SignaturePad key={pad} value={draft.signature} onChange={(signature) => update({ signature })} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={styles.signedWith}>Signed with your finger · {fullDate(new Date())}</Text>
+            <Text style={styles.signedWith}>{t('Signed with your finger · {date}', { date: fullDate(new Date()) })}</Text>
             {draft.signature && (
               <Pressable
                 hitSlop={10}
@@ -72,7 +73,7 @@ export default function SetupSign() {
                   update({ signature: null });
                   setPad((n) => n + 1);
                 }}>
-                <Text style={styles.redo}>Redo</Text>
+                <Text style={styles.redo}>{t('Redo')}</Text>
               </Pressable>
             )}
           </View>
@@ -81,7 +82,7 @@ export default function SetupSign() {
 
       <View style={{ alignItems: 'flex-end', paddingHorizontal: 4 }}>
         <Pressable hitSlop={10} onPress={() => setEditing((e) => !e)}>
-          <Text style={styles.edit}>{editing ? 'Done editing' : 'Edit the words'}</Text>
+          <Text style={styles.edit}>{editing ? t('Done editing') : t('Edit the words')}</Text>
         </Pressable>
       </View>
     </SetupScreen>

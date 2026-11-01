@@ -5,10 +5,12 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimension
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
+import { nth } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
+import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup } from '@/lib/setup/draft';
-import { makePlan, monthYear, ordinal } from '@/lib/setup/plan';
+import { makePlan, monthYear } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -23,7 +25,7 @@ export default function SetupCongrats() {
   const plan = makePlan(draft);
   const monthly = draft.goalKind === 'monthly';
   // What Kip will actually do with their answers: the payday habit, then their money leaks.
-  const day = draft.incomeType === 'regular' && draft.payday ? `on the ${ordinal(draft.payday)}` : 'on payday';
+  const day = draft.incomeType === 'regular' && draft.payday ? t('on the {day}', { day: nth(draft.payday) }) : t('on payday');
   // Each rule gets the 3D icon of the money it's about.
   const LEAK_ICON: Record<string, Icon3D> = {
     delivery: 'bowl',
@@ -41,8 +43,17 @@ export default function SetupCongrats() {
   };
   const rules = leakRules(draft.leaks, plan.inputs).slice(0, 2);
   const howIcons: Icon3D[] = ['income', ...rules.map((r) => LEAK_ICON[r.key] ?? 'piggy')];
+  const moveVars = { amount: baht(plan.monthlySave + plan.safetyMonthly), goal: plan.short, day };
+  const withNet = Boolean(plan.safetyMonthly && draft.goalKind !== 'safety_net');
+  const early = draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save';
   const how = [
-    `${baht(plan.monthlySave + plan.safetyMonthly)} moves to ${plan.short}${plan.safetyMonthly && draft.goalKind !== 'safety_net' ? ' and your safety net' : ''} ${day}${draft.moneyStyle === 'disappears' || draft.moneyStyle === 'save' ? ', first thing in the morning' : ''}`,
+    withNet
+      ? early
+        ? t('{amount} moves to {goal} and your safety net {day}, first thing in the morning', moveVars)
+        : t('{amount} moves to {goal} and your safety net {day}', moveVars)
+      : early
+        ? t('{amount} moves to {goal} {day}, first thing in the morning', moveVars)
+        : t('{amount} moves to {goal} {day}', moveVars),
     ...rules.map((r) => r.rule.split('. ')[0].replace(/\.$/, '')),
   ];
 
@@ -54,20 +65,23 @@ export default function SetupCongrats() {
         <Kip mood="celebrate" size={140} />
       </View>
       <View style={{ alignItems: 'center', gap: 8 }}>
-        <Text style={styles.h1}>Yay! Your plan is ready</Text>
-        <Text style={styles.sub}>Worked out from your numbers.</Text>
+        <Text style={styles.h1}>{t('Yay! Your plan is ready')}</Text>
+        <Text style={styles.sub}>{t('Worked out from your numbers.')}</Text>
       </View>
       <View style={styles.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Image source={ICON3D[goalTypeIcon3D(draft.goalType)]} style={{ width: 44, height: 44 }} contentFit="contain" />
-          <Text style={[styles.cardTitle, { flex: 1 }]}>{monthly ? `${baht(plan.monthlySave)} every month for ${plan.short}` : `${plan.short} in ${monthYear(plan.due)}`}</Text>
+          <Text style={[styles.cardTitle, { flex: 1 }]}>
+            {monthly ? t('{amount} every month for {goal}', { amount: baht(plan.monthlySave), goal: plan.short }) : t('{goal} in {date}', { goal: plan.short, date: monthYear(plan.due) })}
+          </Text>
         </View>
         <Text style={styles.cardText}>
-          {baht(plan.monthlySave)} a month · {baht(plan.dailySpend)} a day to spend
-          {draft.goalKind === 'safety_net' ? '' : ' · a safety net growing from day one'}
+          {draft.goalKind === 'safety_net'
+            ? t('{amount} a month · {daily} a day to spend', { amount: baht(plan.monthlySave), daily: baht(plan.dailySpend) })
+            : t('{amount} a month · {daily} a day to spend · a safety net growing from day one', { amount: baht(plan.monthlySave), daily: baht(plan.dailySpend) })}
         </Text>
         <View style={styles.rule} />
-        <Text style={styles.howHead}>HOW I’LL RUN IT</Text>
+        <Text style={styles.howHead}>{t('HOW I’LL RUN IT')}</Text>
         {how.map((line, i) => (
           <View key={line} style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 4 }}>
             <Image source={ICON3D[howIcons[i] ?? 'piggy']} style={{ width: 34, height: 34 }} contentFit="contain" />
@@ -77,12 +91,12 @@ export default function SetupCongrats() {
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
         <Pressable onPress={() => router.push('/setup/everything')} hitSlop={10} accessibilityRole="link">
-          <Text style={styles.link}>See what I used</Text>
+          <Text style={styles.link}>{t('See what I used')}</Text>
         </Pressable>
       </View>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -8 }}>optional · you can change it any time in the app</Text>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: -8 }}>{t('optional · you can change it any time in the app')}</Text>
       <View style={{ marginTop: 'auto' }}>
-        <Button label="Make my promise" onPress={() => router.push('/setup/sign')} />
+        <Button label={t('Make my promise')} onPress={() => router.push('/setup/sign')} />
       </View>
     </View>
   );

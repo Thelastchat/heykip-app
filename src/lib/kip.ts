@@ -2,6 +2,7 @@
 // does itself — the AI only understands words; every baht figure comes from here.
 import { CATEGORY, spendingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
 import { budgetKey, monthNumbers, type Spent } from '@/lib/home';
+import { getLang, t } from '@/lib/i18n';
 import type { Icon3D } from '@/lib/icons3d';
 import { CAT_ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -16,26 +17,64 @@ export type InItem = { name: string; amount: number; category: InCat; money: 'in
 export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
 export type KipReply = { kind: 'log' | 'buy' | 'answer'; reply: string; items?: (LogItem | InItem)[]; buy?: LogItem };
 
+/** Category names, translated each time they're read. */
 export const DB_CAT_NAME: Record<DbCat, string> = {
-  food: 'Food',
-  transport: 'Transport',
-  shopping: 'Shopping',
-  fun: 'Fun',
-  health_beauty: 'Health & beauty',
-  home_bills: 'Home & bills',
-  travel: 'Travel',
-  family_pets: 'Family & pets',
-  giving: 'Giving',
-  learning: 'Learning',
-  installments: 'Installments',
-  other: 'Other',
+  get food() {
+    return t('Food');
+  },
+  get transport() {
+    return t('Transport');
+  },
+  get shopping() {
+    return t('Shopping');
+  },
+  get fun() {
+    return t('Fun');
+  },
+  get health_beauty() {
+    return t('Health & beauty');
+  },
+  get home_bills() {
+    return t('Home & bills');
+  },
+  get travel() {
+    return t('Travel');
+  },
+  get family_pets() {
+    return t('Family & pets');
+  },
+  get giving() {
+    return t('Giving');
+  },
+  get learning() {
+    return t('Learning');
+  },
+  get installments() {
+    return t('Installments');
+  },
+  get other() {
+    return t('Other');
+  },
 };
 export function dbCatIcon(c: DbCat): Icon3D {
   const extra: Partial<Record<DbCat, Icon3D>> = { home_bills: 'house', travel: 'plane', family_pets: 'piggy', installments: 'bill' };
   return extra[c] ?? (c in CAT_ICON3D ? CAT_ICON3D[c as CatKey] : 'bill');
 }
 
-export const IN_CAT_NAME: Record<InCat, string> = { pay: 'Pay', side_gigs: 'Side gig', gifts: 'Gift', other: 'Other money in' };
+export const IN_CAT_NAME: Record<InCat, string> = {
+  get pay() {
+    return t('Pay');
+  },
+  get side_gigs() {
+    return t('Side gig');
+  },
+  get gifts() {
+    return t('Gift');
+  },
+  get other() {
+    return t('Other money in');
+  },
+};
 const IN_ICON: Record<InCat, Icon3D> = { pay: 'income', side_gigs: 'phone', gifts: 'piggy', other: 'income' };
 export const inCatIcon = (c: InCat): Icon3D => IN_ICON[c] ?? 'income';
 
@@ -48,11 +87,11 @@ export function incomeNotes(items: InItem[], month: MonthBudget | null) {
   const pay = items.filter((i) => i.category === 'pay').reduce((a, i) => a + i.amount, 0);
   const payExtra = usual > 0 ? Math.max(0, pay - usual) : 0;
   const notes = items.map((i) => {
-    if (i.category !== 'pay') return { text: 'extra, not in your plan', extra: true };
-    if (usual <= 0) return { text: 'pay', extra: false };
-    if (pay < usual) return { text: `part of this month’s pay — ${baht(usual - pay)} still to come`, extra: false };
-    if (payExtra > 0) return { text: `${baht(payExtra)} more than usual — that part is extra`, extra: true };
-    return { text: 'this month’s pay is in', extra: false };
+    if (i.category !== 'pay') return { text: t('extra, not in your plan'), extra: true };
+    if (usual <= 0) return { text: t('pay'), extra: false };
+    if (pay < usual) return { text: t('part of this month’s pay — {amount} still to come', { amount: baht(usual - pay) }), extra: false };
+    if (payExtra > 0) return { text: t('{amount} more than usual — that part is extra', { amount: baht(payExtra) }), extra: true };
+    return { text: t('this month’s pay is in'), extra: false };
   });
   const others = items.filter((i) => i.category !== 'pay');
   const extra = payExtra + others.reduce((a, i) => a + i.amount, 0);
@@ -69,9 +108,10 @@ export function incomeNotes(items: InItem[], month: MonthBudget | null) {
 
 /** The month as numbers Kip may quote. */
 export function kipContext(month: MonthBudget | null, spent: Spent, goal: { name: string; arrives: string | null } | null, name?: string | null) {
-  if (!month) return {};
+  if (!month) return { language: getLang() };
   const n = monthNumbers(month, spent);
   return {
+    language: getLang(),
     name: name ?? undefined,
     usualPayPerMonth: month.income,
     leftToday: n.leftToday,

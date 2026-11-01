@@ -15,6 +15,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { savingTotal } from '@/lib/budget';
+import { monthShort, t } from '@/lib/i18n';
 import { useHome, type HomeGoal } from '@/lib/home';
 import { goalIcon3D, goalTypeIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -24,17 +25,32 @@ import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
 type Move = { id: string; amount: number; source: 'payday' | 'extra'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const FROM_LABEL: Record<string, string> = { bonus: 'bonus', leftover: 'leftover money', side: 'side gig', gift: 'a gift', other: 'other' };
+const FROM_LABEL: Record<string, string> = {
+  get bonus() {
+    return t('bonus');
+  },
+  get leftover() {
+    return t('leftover money');
+  },
+  get side() {
+    return t('side gig');
+  },
+  get gift() {
+    return t('a gift');
+  },
+  get other() {
+    return t('other');
+  },
+};
 const dayLabel = (iso: string) => {
   const d = new Date(iso);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return t('{month} {day}', { month: monthShort(d.getMonth()), day: d.getDate() });
 };
 
 /** Months until the goal is reached at this pace, as a date. */
 function arrives(left: number, perMonth: number, payday: number | null, now = new Date()) {
-  if (left <= 0) return 'Done 🎉';
-  if (perMonth <= 0) return 'When there’s room';
+  if (left <= 0) return t('Done 🎉');
+  if (perMonth <= 0) return t('When there’s room');
   const months = Math.ceil(left / perMonth);
   const d = new Date(now.getFullYear(), now.getMonth() + months, payday ?? 1);
   return monthYear(d);
@@ -69,7 +85,7 @@ export default function Goals() {
     }, [loadMoves]),
   );
 
-  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : 'your goal';
+  const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
   const perMonth = month ? month.goal.amount + month.goalExtra : 0;
   const everyPayday = month ? savingTotal(month) : 0;
   const savedAll = goals.reduce((a, g) => a + g.saved, 0);
@@ -81,8 +97,8 @@ export default function Goals() {
   const movedTotal = moves.reduce((a, m) => a + m.amount, 0);
   const startedWith = goal ? Math.max(0, goal.saved - movedTotal) : 0;
 
-  function flash(t: string) {
-    setToast(t);
+  function flash(msg: string) {
+    setToast(msg);
     setTimeout(() => setToast(null), 2600);
   }
 
@@ -91,8 +107,8 @@ export default function Goals() {
       <View style={{ flex: 1 }}>
         <GlowBackground />
         <View style={{ paddingTop: insets.top + 58, paddingHorizontal: 22 }}>
-          <Text style={styles.h1}>Your goals</Text>
-          <Text style={[styles.sub, { marginTop: 10 }]}>Finish setup to pin your first goal.</Text>
+          <Text style={styles.h1}>{t('Your goals')}</Text>
+          <Text style={[styles.sub, { marginTop: 10 }]}>{t('Finish setup to pin your first goal.')}</Text>
         </View>
       </View>
     );
@@ -104,23 +120,24 @@ export default function Goals() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
         <RiseIn style={styles.head}>
           <Text style={styles.h1}>
-            Your goals{'\n'}
-            <Text style={{ color: '#B9B8B0' }}>and why you save</Text>
+            {t('Your goals')}
+            {'\n'}
+            <Text style={{ color: '#B9B8B0' }}>{t('and why you save')}</Text>
           </Text>
           <Glass radius={999} style={{ position: 'absolute', right: 22, top: 0 }} innerStyle={styles.pinned}>
-            <Text style={styles.pinnedText}>{goals.length} of 3 pinned</Text>
+            <Text style={styles.pinnedText}>{t('{n} of 3 pinned', { n: goals.length })}</Text>
           </Glass>
         </RiseIn>
 
         <RiseIn delay={60} style={styles.totals}>
           <View>
             <CountUp value={savedAll} format={big} style={styles.n1} />
-            <Text style={styles.lbl}>Saved so far</Text>
+            <Text style={styles.lbl}>{t('Saved so far')}</Text>
           </View>
           <View style={styles.vbar} />
           <View style={{ flexShrink: 1 }}>
             <CountUp value={everyPayday} format={big} style={styles.n2} />
-            <Text style={styles.lbl}>Going in every payday</Text>
+            <Text style={styles.lbl}>{t('Going in every payday')}</Text>
           </View>
         </RiseIn>
 
@@ -142,19 +159,19 @@ export default function Goals() {
         {/* safety net */}
         {month && !month.goal.isSafetyNet && month.safety.amount > 0 && (
           <RiseIn delay={180}>
-            <Section title="Safety net" right="always on" />
+            <Section title={t('Safety net')} right={t('always on')} />
             <View style={{ paddingHorizontal: 18 }}>
               <Glass radius={26} innerStyle={styles.pot}>
                 <Float>
                   <Image source={ICON3D.shield} style={{ width: 52, height: 52 }} contentFit="contain" />
                 </Float>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.potName}>For emergencies</Text>
-                  <Text style={styles.sub}>Grows to {baht(month.safety.target)} — 3 months of basics</Text>
+                  <Text style={styles.potName}>{t('For emergencies')}</Text>
+                  <Text style={styles.sub}>{t('Grows to {amount} — 3 months of basics', { amount: baht(month.safety.target) })}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.potAmt}>{baht(month.safety.amount)}</Text>
-                  <Text style={styles.sub}>a month</Text>
+                  <Text style={styles.sub}>{t('a month')}</Text>
                 </View>
               </Glass>
             </View>
@@ -163,18 +180,18 @@ export default function Goals() {
 
         {/* more goals */}
         <RiseIn delay={220}>
-          <Section title="More goals" tag={isPlus ? undefined : '✦ PLUS'} />
+          <Section title={t('More goals')} tag={isPlus ? undefined : '✦ PLUS'} />
           <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18 }}>
             {[
-              { icon: 'phone' as Icon3D, top: 'A new phone?', bottom: 'Pin a 2nd goal' },
-              { icon: 'house' as Icon3D, top: 'Moving out?', bottom: 'Pin a 3rd goal' },
+              { icon: 'phone' as Icon3D, top: t('A new phone?'), bottom: t('Pin a 2nd goal') },
+              { icon: 'house' as Icon3D, top: t('Moving out?'), bottom: t('Pin a 3rd goal') },
             ].map((s, i) => (
               <Squish
                 key={s.bottom}
-                onPress={() => (isPlus ? flash('Adding more goals is coming next') : setPlus(true))}
+                onPress={() => (isPlus ? flash(t('Adding more goals is coming next')) : setPlus(true))}
                 style={styles.slot}
                 accessibilityRole="button"
-                accessibilityLabel={`${s.bottom}${isPlus ? '' : ' — Plus'}`}>
+                accessibilityLabel={isPlus ? s.bottom : t('{title} — Plus', { title: s.bottom })}>
                 {!isPlus && (
                   <View style={styles.lk}>
                     <LockIcon />
@@ -195,11 +212,11 @@ export default function Goals() {
 
         {/* what went in */}
         <RiseIn delay={260}>
-          <Section title="What went in" right={short} />
+          <Section title={t('What went in')} right={short} />
           <View style={{ paddingHorizontal: 18 }}>
             <Glass radius={26} innerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
               {moves.length === 0 && startedWith === 0 ? (
-                <Text style={[styles.sub, { paddingVertical: 14 }]}>Nothing yet. Your first payday or “Put money in” shows up here.</Text>
+                <Text style={[styles.sub, { paddingVertical: 14 }]}>{t('Nothing yet. Your first payday or “Put money in” shows up here.')}</Text>
               ) : (
                 <>
                   {moves.map((m, i) => (
@@ -208,12 +225,14 @@ export default function Goals() {
                       first={i === 0}
                       icon={m.source === 'payday' ? 'income' : 'piggy'}
                       lime={m.source === 'extra'}
-                      title={m.source === 'payday' ? 'Payday' : 'You put in'}
+                      title={m.source === 'payday' ? t('Payday') : t('You put in')}
                       sub={`${dayLabel(m.moved_at)}${m.from_kind ? ` · ${FROM_LABEL[m.from_kind]}` : ''}`}
                       amount={m.amount}
                     />
                   ))}
-                  {startedWith > 0 && <HistRow first={moves.length === 0} icon={icon} title="Started with" sub={`${dayLabel(goal.createdAt)} · what you’d already saved`} amount={startedWith} />}
+                  {startedWith > 0 && (
+                    <HistRow first={moves.length === 0} icon={icon} title={t('Started with')} sub={t('{date} · what you’d already saved', { date: dayLabel(goal.createdAt) })} amount={startedWith} />
+                  )}
                 </>
               )}
             </Glass>
@@ -236,7 +255,7 @@ export default function Goals() {
             setPutOpen(false);
             reload();
             loadMoves();
-            flash(`${baht(total)} saved for ${short} ✓`);
+            flash(t('{amount} saved for {goal} ✓', { amount: baht(total), goal: short }));
           }}
         />
       )}
@@ -298,14 +317,13 @@ function Hero({
         <View style={styles.chip}>
           <Image source={ICON3D[icon]} style={{ width: 26, height: 26 }} contentFit="contain" />
           <Text style={styles.chipText} numberOfLines={1}>
-            {short}
-            {days !== null ? ` · ${days} days` : ''}
+            {days !== null ? t('{goal} · {n} days', { goal: short, n: days }) : short}
           </Text>
         </View>
         {line ? (
           <View style={styles.note}>
             <View style={styles.tape} />
-            <Text style={styles.noteHead}>MY PROMISE</Text>
+            <Text style={styles.noteHead}>{t('MY PROMISE')}</Text>
             <Text style={styles.noteText} numberOfLines={3}>
               {line}
             </Text>
@@ -325,29 +343,35 @@ function Hero({
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroBig}>{baht(goal.saved)} saved</Text>
-            <Text style={styles.sub}>{target > 0 ? (monthly ? `this year · goal ${baht(target)}` : `of ${baht(target)} · ${baht(left)} to go`) : 'every baht counts'}</Text>
+            <Text style={styles.heroBig}>{t('{amount} saved', { amount: baht(goal.saved) })}</Text>
+            <Text style={styles.sub}>
+              {target > 0 ? (monthly ? t('this year · goal {amount}', { amount: baht(target) }) : t('of {target} · {left} to go', { target: baht(target), left: baht(left) })) : t('every baht counts')}
+            </Text>
           </View>
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-          <Fact k={monthly ? 'Every month' : 'Arrives'} v={monthly ? baht(goal.monthly ?? perMonth) : arrives(left, perMonth, payday)} />
-          {!monthly && <Fact k="Each month" v={baht(perMonth)} />}
-          <Fact k="Payday" v={payday ? ordinal(payday) : '—'} />
+          <Fact k={monthly ? t('Every month') : t('Arrives')} v={monthly ? baht(goal.monthly ?? perMonth) : arrives(left, perMonth, payday)} />
+          {!monthly && <Fact k={t('Each month')} v={baht(perMonth)} />}
+          <Fact k={t('Payday')} v={payday ? t('{nth}', { nth: ordinal(payday), n: payday }) : '—'} />
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-          <Squish onPress={onPut} style={[styles.btn, { flex: 1.4, backgroundColor: colors.ink }]} accessibilityRole="button" accessibilityLabel="Put money in">
-            <Text style={[styles.btnText, { color: '#FFFFFF' }]}>+ Put money in</Text>
+          <Squish onPress={onPut} style={[styles.btn, { flex: 1.4, backgroundColor: colors.ink }]} accessibilityRole="button" accessibilityLabel={t('Put money in')}>
+            <Text style={[styles.btnText, { color: '#FFFFFF' }]}>{t('+ Put money in')}</Text>
           </Squish>
-          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: 'rgba(17,17,17,0.07)' }]} accessibilityRole="button" accessibilityLabel="Edit the plan">
-            <Text style={styles.btnText}>Edit</Text>
+          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: 'rgba(17,17,17,0.07)' }]} accessibilityRole="button" accessibilityLabel={t('Edit the plan')}>
+            <Text style={styles.btnText}>{t('Edit')}</Text>
           </Squish>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
           <Image source={ICON3D.income} style={{ width: 30, height: 30 }} contentFit="contain" />
           <Text style={[styles.sub, { flex: 1 }]}>
             {isPlus && autoOn
-              ? `${baht(perMonth)} moves in by itself ${payday ? `on the ${ordinal(payday)}` : 'on payday'}.`
-              : `${baht(perMonth)} goes in ${payday ? `on the ${ordinal(payday)}` : 'on payday'} — Kip reminds you that morning.`}
+              ? payday
+                ? t('{amount} moves in by itself on the {day}.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
+                : t('{amount} moves in by itself on payday.', { amount: baht(perMonth) })
+              : payday
+                ? t('{amount} goes in on the {day} — Kip reminds you that morning.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
+                : t('{amount} goes in on payday — Kip reminds you that morning.', { amount: baht(perMonth) })}
           </Text>
         </View>
       </View>

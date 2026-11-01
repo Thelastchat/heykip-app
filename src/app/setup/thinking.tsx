@@ -5,11 +5,13 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
+import { nth } from '@/components/setup/kit';
 import { livingFor, livingTotal, plan as splitMonth, type Style } from '@/lib/brain';
 import { STYLES } from '@/lib/budget';
+import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
-import { makePlan, monthYear, monthsFromNow, ordinal } from '@/lib/setup/plan';
+import { makePlan, monthYear, monthsFromNow } from '@/lib/setup/plan';
 import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts } from '@/theme';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -17,10 +19,10 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 type Step = { doing: string; found: string; ms: number };
 
 const HABIT: Record<MoneyStyle, (day: string) => string> = {
-  disappears: (day) => `Your saving moves first thing ${day} — before you can spend it`,
-  treat: () => 'Your payday treat is planned in fun money — no guilt',
-  bills: (day) => `Saving moves ${day}, together with rent and bills`,
-  save: (day) => `I’ll move your saving for you ${day}, every month`,
+  disappears: (day) => t('Your saving moves first thing {day} — before you can spend it', { day }),
+  treat: () => t('Your payday treat is planned in fun money — no guilt'),
+  bills: (day) => t('Saving moves {day}, together with rent and bills', { day }),
+  save: (day) => t('I’ll move your saving for you {day}, every month', { day }),
 };
 
 // Kip works out the plan from what the person said. Each line says what Kip is doing, then turns into what it
@@ -39,44 +41,53 @@ export default function SetupThinking() {
     const share = i.income ? Math.round((fixed / i.income) * 100) : 0;
     const monthly = draft.goalKind === 'monthly';
     const emergency = draft.goalKind === 'safety_net';
-    const day = draft.incomeType === 'regular' && draft.payday ? `on the ${ordinal(draft.payday)}` : 'on payday';
+    const day = draft.incomeType === 'regular' && draft.payday ? t('on the {day}', { day: nth(draft.payday) }) : t('on payday');
     const out: Step[] = [
       {
-        doing: 'Reading your pay',
-        found: `${baht(i.income)} ${day} · rent & bills take ${share}% — ${share <= 30 ? 'healthy' : share <= 45 ? 'a big share, but workable' : 'a lot, so I plan carefully'}`,
+        doing: t('Reading your pay'),
+        found: t('{income} {day} · rent & bills take {share}% — {note}', {
+          income: baht(i.income),
+          day,
+          share,
+          note: share <= 30 ? t('healthy') : share <= 45 ? t('a big share, but workable') : t('a lot, so I plan carefully'),
+        }),
         ms: 1100,
       },
       {
-        doing: 'Pricing real life in Thailand',
-        found: `Food ${baht(Math.round(L.food / 30))} a day, transport ${baht(L.transport)} — ${baht(livingTotal(L))} a month to live`,
+        doing: t('Pricing real life in Thailand'),
+        found: t('Food {perDay} a day, transport {transport} — {total} a month to live', { perDay: baht(Math.round(L.food / 30)), transport: baht(L.transport), total: baht(livingTotal(L)) }),
         ms: 1300,
       },
       emergency
-        ? { doing: 'Planning your emergency fund', found: `It is your safety net — I won’t double-save`, ms: 900 }
-        : { doing: 'Building your safety net', found: `${baht(r.net)} a month · full by ${monthYear(monthsFromNow(Math.min(r.netMonths, 240), draft))}`, ms: 1000 },
+        ? { doing: t('Planning your emergency fund'), found: t('It is your safety net — I won’t double-save'), ms: 900 }
+        : { doing: t('Building your safety net'), found: t('{amount} a month · full by {date}', { amount: baht(r.net), date: monthYear(monthsFromNow(Math.min(r.netMonths, 240), draft)) }), ms: 1000 },
       monthly
-        ? { doing: `Fitting ${plan.short} into your month…`, found: `${baht(r.goal)} a month → ${baht(r.goal * 12)} in a year`, ms: 1600 }
+        ? { doing: t('Fitting {goal} into your month…', { goal: plan.short }), found: t('{amount} a month → {year} in a year', { amount: baht(r.goal), year: baht(r.goal * 12) }), ms: 1600 }
         : {
-            doing: `Fitting ${plan.short} into your month…`,
+            doing: t('Fitting {goal} into your month…', { goal: plan.short }),
             found:
               r.goalMonths && r.goal > 0
-                ? `${baht(Math.max(0, i.goal.target - i.goal.saved))} ÷ ${baht(r.goal)} a month${draft.sideIncome ? ' + side money' : ''} → ${monthYear(plan.due)}`
-                : `Nothing spare yet — every day under budget goes to ${plan.short}`,
+                ? draft.sideIncome
+                  ? t('{need} ÷ {amount} a month + side money → {date}', { need: baht(Math.max(0, i.goal.target - i.goal.saved)), amount: baht(r.goal), date: monthYear(plan.due) })
+                  : t('{need} ÷ {amount} a month → {date}', { need: baht(Math.max(0, i.goal.target - i.goal.saved)), amount: baht(r.goal), date: monthYear(plan.due) })
+                : t('Nothing spare yet — every day under budget goes to {goal}', { goal: plan.short }),
             ms: 1600,
           },
-      { doing: 'Testing 4 money styles', found: compareStyles(), ms: 1500 },
+      { doing: t('Testing 4 money styles'), found: compareStyles(), ms: 1500 },
     ];
-    if (draft.moneyStyle) out.push({ doing: 'Your payday habit', found: HABIT[draft.moneyStyle](day), ms: 900 });
+    if (draft.moneyStyle) out.push({ doing: t('Your payday habit'), found: HABIT[draft.moneyStyle](day), ms: 900 });
     const rules = leakRules(draft.leaks, i);
     if (rules.length) {
       out.push({
-        doing: `Watching ${rules
-          .slice(0, 2)
-          .map((x) => x.title.toLowerCase())
-          .join(' & ')}`,
+        doing: t('Watching {things}', {
+          things: rules
+            .slice(0, 2)
+            .map((x) => x.title.toLowerCase())
+            .join(' & '),
+        }),
         found: rules
           .slice(0, 2)
-          .map((x) => (x.key === 'delivery' ? x.rule.split(',')[0].replace('A delivery budget of ', 'Delivery ') : x.key === 'shopping' ? 'Shopping over ฿500 waits 24 h' : x.rule.split('.')[0]))
+          .map((x) => (x.key === 'delivery' ? x.rule.split(',')[0].replace('A delivery budget of ', 'Delivery ') : x.key === 'shopping' ? t('Shopping over ฿500 waits 24 h') : x.rule.split('.')[0]))
           .join(' · '),
         ms: 1100,
       });
@@ -89,14 +100,16 @@ export default function SetupThinking() {
       if (monthly) {
         const most = res.reduce((a, b) => (b.r.savedIn12 > a.r.savedIn12 ? b : a));
         return most.s.key === 'kip'
-          ? `Kip’s plan fits you best — fun stays ${baht(kip.fun)}`
-          : `${most.s.name} saves ${baht(most.r.savedIn12 - kip.savedIn12)} more a year; Kip’s plan keeps fun at ${baht(kip.fun)}`;
+          ? t('Kip’s plan fits you best — fun stays {fun}', { fun: baht(kip.fun) })
+          : t('{style} saves {more} more a year; Kip’s plan keeps fun at {fun}', { style: most.s.name, more: baht(most.r.savedIn12 - kip.savedIn12), fun: baht(kip.fun) });
       }
       const fastest = res.filter((x) => x.r.goalMonths).reduce((a, b) => ((b.r.goalMonths ?? 999) < (a.r.goalMonths ?? 999) ? b : a), res[0]);
       const diff = (kip.goalMonths ?? 0) - (fastest.r.goalMonths ?? 0);
       return fastest.s.key !== 'kip' && diff > 0
-        ? `${fastest.s.name} gets you there ${diff} month${diff > 1 ? 's' : ''} sooner — Kip’s plan keeps ${baht(kip.daily)} a day`
-        : `Kip’s plan is already the fastest that still feels comfortable`;
+        ? diff > 1
+          ? t('{style} gets you there {n} months sooner — Kip’s plan keeps {daily} a day', { style: fastest.s.name, n: diff, daily: baht(kip.daily) })
+          : t('{style} gets you there {n} month sooner — Kip’s plan keeps {daily} a day', { style: fastest.s.name, n: diff, daily: baht(kip.daily) })
+        : t('Kip’s plan is already the fastest that still feels comfortable');
     }
   }
 
@@ -108,17 +121,17 @@ export default function SetupThinking() {
   useEffect(() => {
     Animated.loop(Animated.timing(spin, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true })).start();
     Animated.timing(progress, { toValue: 1, duration: total + 400, easing: Easing.inOut(Easing.quad), useNativeDriver: false }).start();
-    let t: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout>;
     let n = 0;
     const next = () => {
       if (n >= steps.length) {
-        t = setTimeout(() => {
+        timer = setTimeout(() => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           router.replace('/setup/congrats');
         }, 500);
         return;
       }
-      t = setTimeout(() => {
+      timer = setTimeout(() => {
         n += 1;
         setDone(n);
         Haptics.selectionAsync().catch(() => {});
@@ -126,7 +139,7 @@ export default function SetupThinking() {
       }, steps[n].ms);
     };
     next();
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
@@ -138,8 +151,8 @@ export default function SetupThinking() {
         <Kip mood="think" size={120} />
       </View>
       <View style={{ alignItems: 'center', gap: 6 }}>
-        <Text style={styles.h1}>Making your plan…</Text>
-        <Text style={styles.sub}>Every number below comes from what you told me.</Text>
+        <Text style={styles.h1}>{t('Making your plan…')}</Text>
+        <Text style={styles.sub}>{t('Every number below comes from what you told me.')}</Text>
       </View>
       <View style={styles.list}>
         {steps.map((s, n) => {

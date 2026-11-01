@@ -6,6 +6,7 @@ import { KipSays, SetupScreen } from '@/components/setup/kit';
 import { FindWhatWorks } from '@/components/setup/FindWhatWorks';
 import { Button } from '@/components/ui';
 import { livingFor, plan as splitMonth, room, verdict } from '@/lib/brain';
+import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { funMinimum } from '@/lib/brain';
@@ -31,7 +32,7 @@ function Choices() {
   const v = verdict(inputs);
   const R = room(inputs);
   const L = livingFor(inputs);
-  const short = draft.goalKind === 'monthly' ? draft.goalTitle.trim() || 'Savings' : shortName(draft.goalTitle, draft.goalKind);
+  const short = draft.goalKind === 'monthly' ? draft.goalTitle.trim() || t('Savings') : shortName(draft.goalTitle, draft.goalKind);
   const at = (per: number) => splitMonth(inputs, 'kip', per);
   const fixed = inputs.rent + inputs.bills;
   const livingSum = L.food + L.transport + L.health + L.household;
@@ -39,41 +40,51 @@ function Choices() {
   const choices: Choice[] = [];
   let say = '';
   if (v.kind === 'noRoom') {
-    say = `Let’s start small. Right now rent, bills and real living costs use ${baht(fixed + livingSum)} of your ${baht(inputs.income)}, so there’s nothing spare yet — but every day under budget can go to ${short}. Here’s how we begin:`;
+    say = t(
+      'Let’s start small. Right now rent, bills and real living costs use {used} of your {income}, so there’s nothing spare yet — but every day under budget can go to {goal}. Here’s how we begin:',
+      {
+        used: baht(fixed + livingSum),
+        income: baht(inputs.income),
+        goal: short,
+      },
+    );
     choices.push(
       {
         key: 'anyway',
-        title: `Pin ${short} anyway`,
-        tag: 'KIP’S PICK',
-        lines: ['Start with small wins: every day under budget goes to it', 'I’ll look for room as you log'],
+        title: t('Pin {goal} anyway', { goal: short }),
+        tag: t('KIP’S PICK'),
+        lines: [t('Start with small wins: every day under budget goes to it'), t('I’ll look for room as you log')],
         apply: { goalPerMonth: 0 },
-        button: `Pin ${short} anyway`,
+        button: t('Pin {goal} anyway', { goal: short }),
       },
-      { key: 'numbers', title: 'Check my numbers', lines: ['Maybe rent or bills were too high, or income too low?'], apply: {}, button: 'Check my numbers' },
+      { key: 'numbers', title: t('Check my numbers'), lines: [t('Maybe rent or bills were too high, or income too low?')], apply: {}, button: t('Check my numbers') },
     );
   } else if (draft.goalKind === 'monthly') {
     const comfy = at(R.comfortable),
       most = at(R.most);
-    say = `You can save ${baht(R.comfortable)} a month comfortably — ${baht(R.comfortable * 12)} in a year. ${baht(draft.goalMonthly ?? 0)} is a stretch: after rent, bills, living, a safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most is ${baht(R.most)}. Pick what suits you:`;
+    say = t(
+      'You can save {comfy} a month comfortably — {year} in a year. {asked} is a stretch: after rent, bills, living, a safety net and the smallest fun budget ({fun}), the most is {most}. Pick what suits you:',
+      { comfy: baht(R.comfortable), year: baht(R.comfortable * 12), asked: baht(draft.goalMonthly ?? 0), fun: baht(funMinimum(inputs.income)), most: baht(R.most) },
+    );
     choices.push(
       {
         key: 'comfy',
         per: R.comfortable,
-        title: `Save ${baht(R.comfortable)} a month`,
-        tag: 'KIP’S PICK',
-        lines: [`${baht(R.comfortable * 12)} in a year · ${baht(comfy.daily)} a day to spend`, `Comfortable — fun money stays ${baht(comfy.fun)}`],
+        title: t('Save {amount} a month', { amount: baht(R.comfortable) }),
+        tag: t('KIP’S PICK'),
+        lines: [t('{year} in a year · {daily} a day to spend', { year: baht(R.comfortable * 12), daily: baht(comfy.daily) }), t('Comfortable — fun money stays {fun}', { fun: baht(comfy.fun) })],
         apply: { goalMonthly: R.comfortable, goalPerMonth: null },
-        button: `Go with ${baht(R.comfortable)}`,
+        button: t('Go with {choice}', { choice: baht(R.comfortable) }),
       },
       {
         key: 'most',
         per: R.most,
-        title: `Save ${baht(R.most)} a month`,
-        tag: 'TIGHT',
+        title: t('Save {amount} a month', { amount: baht(R.most) }),
+        tag: t('TIGHT'),
         tagColor: colors.roseBeige,
-        lines: [`${baht(R.most * 12)} in a year · ${baht(most.daily)} a day`, `Fun money drops to ${baht(most.fun)}`],
+        lines: [t('{year} in a year · {daily} a day', { year: baht(R.most * 12), daily: baht(most.daily) }), t('Fun money drops to {fun}', { fun: baht(most.fun) })],
         apply: { goalMonthly: R.most, goalPerMonth: null },
-        button: `Go with ${baht(R.most)}`,
+        button: t('Go with {choice}', { choice: baht(R.most) }),
       },
     );
   } else if (v.kind === 'notByThen' || v.kind === 'tight') {
@@ -86,54 +97,71 @@ function Choices() {
     const comfy = at(R.comfortable),
       most = at(R.most);
     if (v.kind === 'notByThen') {
-      say = `Honest answer: ${short}${asked ? ` by ${fullDate(asked)}` : ''} doesn’t fit. It needs ${baht(v.need)} a month. After rent, bills, living, a small safety net and the smallest fun budget (${baht(funMinimum(inputs.income))}), the most you can save is ${baht(R.most)}. Here’s what does work:`;
+      const vars = { goal: short, date: asked ? fullDate(asked) : '', need: baht(v.need), fun: baht(funMinimum(inputs.income)), most: baht(R.most) };
+      say = asked
+        ? t(
+            'Honest answer: {goal} by {date} doesn’t fit. It needs {need} a month. After rent, bills, living, a small safety net and the smallest fun budget ({fun}), the most you can save is {most}. Here’s what does work:',
+            vars,
+          )
+        : t(
+            'Honest answer: {goal} doesn’t fit. It needs {need} a month. After rent, bills, living, a small safety net and the smallest fun budget ({fun}), the most you can save is {most}. Here’s what does work:',
+            vars,
+          );
     } else {
-      say = `${short}${asked ? ` by ${fullDate(asked)}` : ''} is possible — but tight. Fun money would drop to ${baht(v.funLeft)} a month. A little later is a lot easier:`;
+      const vars = { goal: short, date: asked ? fullDate(asked) : '', fun: baht(v.funLeft) };
+      say = asked
+        ? t('{goal} by {date} is possible — but tight. Fun money would drop to {fun} a month. A little later is a lot easier:', vars)
+        : t('{goal} is possible — but tight. Fun money would drop to {fun} a month. A little later is a lot easier:', vars);
     }
     choices.push({
       key: 'comfy',
       per: R.comfortable,
-      title: `${short} in ${monthYear(comfyDate)}`,
-      tag: 'KIP’S PICK',
-      lines: [`Save ${baht(R.comfortable)} a month · ${baht(comfy.daily)} a day to spend`, `Comfortable — fun money stays ${baht(comfy.fun)}`],
+      title: t('{goal} in {date}', { goal: short, date: monthYear(comfyDate) }),
+      tag: t('KIP’S PICK'),
+      lines: [t('Save {amount} a month · {daily} a day to spend', { amount: baht(R.comfortable), daily: baht(comfy.daily) }), t('Comfortable — fun money stays {fun}', { fun: baht(comfy.fun) })],
       apply: { goalDue: isoDay(comfyDate), goalPerMonth: null },
-      button: `Go with ${monthYear(comfyDate)}`,
+      button: t('Go with {choice}', { choice: monthYear(comfyDate) }),
     });
     if (v.kind === 'notByThen' && tightMonths < comfyMonths) {
       choices.push({
         key: 'tight',
         per: R.most,
-        title: asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000 ? `Just after your date: ${fullDate(tightDate)}` : `Faster: ${monthYear(tightDate)}`,
-        tag: 'TIGHT',
+        title:
+          asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000
+            ? t('Just after your date: {date}', { date: fullDate(tightDate) })
+            : t('Faster: {date}', { date: monthYear(tightDate) }),
+        tag: t('TIGHT'),
         tagColor: colors.roseBeige,
-        lines: [`Save ${baht(R.most)} a month · ${baht(most.daily)} a day`, `Fun money drops to ${baht(most.fun)}`],
+        lines: [t('Save {amount} a month · {daily} a day', { amount: baht(R.most), daily: baht(most.daily) }), t('Fun money drops to {fun}', { fun: baht(most.fun) })],
         apply: { goalDue: isoDay(tightDate), goalPerMonth: null },
-        button: `Go with ${asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000 ? fullDate(tightDate) : monthYear(tightDate)}`,
+        button: t('Go with {choice}', { choice: asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000 ? fullDate(tightDate) : monthYear(tightDate) }),
       });
     }
     if (v.kind === 'tight' && asked) {
       choices.push({
         key: 'keep',
         per: v.perMonth,
-        title: `Keep ${fullDate(asked)}`,
-        tag: 'TIGHT',
+        title: t('Keep {date}', { date: fullDate(asked) }),
+        tag: t('TIGHT'),
         tagColor: colors.roseBeige,
-        lines: [`Save ${baht(v.perMonth)} a month`, `Fun money drops to ${baht(v.funLeft)}`],
+        lines: [t('Save {amount} a month', { amount: baht(v.perMonth) }), t('Fun money drops to {fun}', { fun: baht(v.funLeft) })],
         apply: { goalPerMonth: null },
-        button: `Keep ${fullDate(asked)}`,
+        button: t('Keep {date}', { date: fullDate(asked) }),
       });
     }
     if (v.kind === 'notByThen' && asked && v.byThen > 0) {
       choices.push({
         key: 'smaller',
         per: R.comfortable,
-        title: `Keep ${fullDate(asked)}, ${draft.goalKind === 'trip' ? 'spend less on the trip' : 'aim for less'}`,
+        title: draft.goalKind === 'trip' ? t('Keep {date}, spend less on the trip', { date: fullDate(asked) }) : t('Keep {date}, aim for less', { date: fullDate(asked) }),
         lines: [
-          `Save ${baht(R.comfortable)} a month instead of ${baht(v.need)} — fits comfortably`,
-          `${draft.goalKind === 'trip' ? 'Trip budget' : 'Total'} ${baht(inputs.goal.saved + v.byThen)} instead of ${baht(inputs.goal.target)}${draft.goalKind === 'trip' ? ' — a shorter trip, or somewhere closer' : ''}`,
+          t('Save {amount} a month instead of {need} — fits comfortably', { amount: baht(R.comfortable), need: baht(v.need) }),
+          draft.goalKind === 'trip'
+            ? t('Trip budget {amount} instead of {target} — a shorter trip, or somewhere closer', { amount: baht(inputs.goal.saved + v.byThen), target: baht(inputs.goal.target) })
+            : t('Total {amount} instead of {target}', { amount: baht(inputs.goal.saved + v.byThen), target: baht(inputs.goal.target) }),
         ],
         apply: { goalTarget: inputs.goal.saved + v.byThen, goalPerMonth: null },
-        button: `Make it ${baht(inputs.goal.saved + v.byThen)} in total`,
+        button: t('Make it {amount} in total', { amount: baht(inputs.goal.saved + v.byThen) }),
       });
     }
   }
@@ -143,11 +171,11 @@ function Choices() {
 
   const comfyPlan = splitMonth(inputs, 'kip', choice?.per ?? R.comfortable); // the bar shows the option you picked
   const parts: [number, string, string][] = [
-    [fixed, money.fixed, `Rent & bills ${baht(fixed)}`],
-    [livingSum, money.living, `Living ${baht(livingSum)}`],
-    [comfyPlan.net, money.safetyNet, `Safety net ${baht(comfyPlan.net)}`],
+    [fixed, money.fixed, t('Rent & bills {amount}', { amount: baht(fixed) })],
+    [livingSum, money.living, t('Living {amount}', { amount: baht(livingSum) })],
+    [comfyPlan.net, money.safetyNet, t('Safety net {amount}', { amount: baht(comfyPlan.net) })],
     [comfyPlan.goal, money.goal, `${short} ${baht(comfyPlan.goal)}`],
-    [comfyPlan.fun + comfyPlan.learn + comfyPlan.give, money.fun, `Fun ${baht(comfyPlan.fun + comfyPlan.learn + comfyPlan.give)}`],
+    [comfyPlan.fun + comfyPlan.learn + comfyPlan.give, money.fun, t('Fun {amount}', { amount: baht(comfyPlan.fun + comfyPlan.learn + comfyPlan.give) })],
   ].filter(([n]) => (n as number) > 0) as [number, string, string][];
 
   function go() {
@@ -158,13 +186,13 @@ function Choices() {
   }
 
   return (
-    <SetupScreen step={3} footer={<Button label={choice?.button ?? 'Next'} onPress={go} />}>
+    <SetupScreen step={3} footer={<Button label={choice?.button ?? t('Next')} onPress={go} />}>
       <KipSays mood={v.kind === 'noRoom' ? 'careful' : 'happy'}>{say}</KipSays>
 
       <View style={styles.where}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Where your {baht(inputs.income)} goes</Text>
-          <Text style={styles.small}>every month</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>{t('Where your {income} goes', { income: baht(inputs.income) })}</Text>
+          <Text style={styles.small}>{t('every month')}</Text>
         </View>
         <View style={styles.bar}>
           {parts.map(([n, c], i) => (
@@ -180,8 +208,13 @@ function Choices() {
           ))}
         </View>
         <Text style={styles.small}>
-          Living = food {baht(L.food)} ({baht(Math.round(L.food / 30))}/day) · transport {baht(L.transport)} · health {baht(L.health)} · household {baht(L.household)}. Based on what one person in
-          Thailand really spends.
+          {t('Living = food {food} ({perDay}/day) · transport {transport} · health {health} · household {household}. Based on what one person in Thailand really spends.', {
+            food: baht(L.food),
+            perDay: baht(Math.round(L.food / 30)),
+            transport: baht(L.transport),
+            health: baht(L.health),
+            household: baht(L.household),
+          })}
         </Text>
       </View>
 
@@ -215,7 +248,7 @@ function Choices() {
           );
         })}
       </View>
-      <Text style={[styles.small, { paddingHorizontal: 4 }]}>Bonus, raise or a good month? Put it in and the date moves closer — I’ll show you.</Text>
+      <Text style={[styles.small, { paddingHorizontal: 4 }]}>{t('Bonus, raise or a good month? Put it in and the date moves closer — I’ll show you.')}</Text>
     </SetupScreen>
   );
 }

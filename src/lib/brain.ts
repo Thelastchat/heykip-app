@@ -1,4 +1,19 @@
 import { baht } from '@/lib/money';
+
+// Kip's notes are translated, but i18n is loaded lazily so this money engine still runs in plain Node
+// (scripts/check-plans.ts), where the app's language code can't load — there the notes stay English.
+let tr: ((en: string, vars?: Record<string, string | number>) => string) | null | undefined;
+function t(en: string, vars?: Record<string, string | number>): string {
+  if (tr === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      tr = require('./i18n').t;
+    } catch {
+      tr = null;
+    }
+  }
+  return tr ? tr(en, vars) : en.replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
+}
 // Kip's money brain — v2. Realistic first, goal-first second.
 //
 // The order money is planned in, every month:
@@ -133,7 +148,11 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   const isEmergency = i.goal.type === 'emergency';
   const need = i.goal.type === 'monthly' ? Infinity : goalNeed(i);
   const notes: string[] = [];
-  let goal = 0, net = isEmergency ? 0 : S.monthly, invest = 0, learn = 0, give = 0;
+  let goal = 0,
+    net = isEmergency ? 0 : S.monthly,
+    invest = 0,
+    learn = 0,
+    give = 0;
 
   const v = verdict(i);
   const kipGoal = goalPerMonth ?? (v.kind === 'doable' || v.kind === 'tight' ? v.perMonth : v.kind === 'notByThen' ? v.perMonth : 0);
@@ -153,7 +172,7 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
         goal = Math.min(most, need);
         net += Math.max(0, most - goal); // anything the goal doesn't need still gets saved
       }
-      notes.push('No categories — one pot for everything else.');
+      notes.push(t('No categories — one pot for everything else.'));
       break;
     }
     case '503020': {
@@ -164,8 +183,8 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
         net += goal - kipGoal;
         goal = kipGoal;
       }
-      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(`20% for saving leaves ${baht(goal)} a month for your goal, not ${baht(kipGoal)}.`);
-      if (fixed + L > i.income * 0.5) notes.push(`Your needs are ${Math.round(((fixed + L) / i.income) * 100)}% of income, not 50% — so the fun part is smaller than “30”.`);
+      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(t('20% for saving leaves {goal} a month for your goal, not {want}.', { goal: baht(goal), want: baht(kipGoal) }));
+      if (fixed + L > i.income * 0.5) notes.push(t('Your needs are {pct}% of income, not 50% — so the fun part is smaller than “30”.', { pct: Math.round(((fixed + L) / i.income) * 100) }));
       break;
     }
     case 'jars': {
@@ -178,10 +197,10 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
         net += goal - kipGoal; // keep the promised monthly amount; the rest of the jar is extra safety
         goal = kipGoal;
       }
-      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(`The saving jar holds ${baht(goal)} a month for your goal, not ${baht(kipGoal)}.`);
+      if (i.goal.type === 'monthly' && goal < kipGoal) notes.push(t('The saving jar holds {goal} a month for your goal, not {want}.', { goal: baht(goal), want: baht(kipGoal) }));
       if (isEmergency) goal = Math.min(r100(i.income * 0.2), Math.max(0, R.most));
       const necessities = i.income * 0.55;
-      if (fixed + L > necessities) notes.push(`Rent, bills and living need ${Math.round(((fixed + L) / i.income) * 100)}%, not 55% — taken from play first.`);
+      if (fixed + L > necessities) notes.push(t('Rent, bills and living need {pct}%, not 55% — taken from play first.', { pct: Math.round(((fixed + L) / i.income) * 100) }));
       break;
     }
   }
@@ -205,7 +224,10 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
     goal -= take;
     fun += take;
   }
-  if (fun < 0) { goal = Math.max(0, goal + fun); fun = 0; }
+  if (fun < 0) {
+    goal = Math.max(0, goal + fun);
+    fun = 0;
+  }
   fun = r10(fun);
 
   const goalMonths = i.goal.type === 'monthly' ? null : goal > 0 ? Math.ceil(need / goal) : null;
@@ -216,9 +238,22 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
   const netIn12 = net * 12 + invest * 12 + Math.max(0, goal * 12 - goalIn12);
   const savedIn12 = goalIn12 + netIn12;
   return {
-    style, goal, net, invest, fixed, living: L, fun, learn, give,
+    style,
+    goal,
+    net,
+    invest,
+    fixed,
+    living: L,
+    fun,
+    learn,
+    give,
     daily: Math.floor((L + fun + learn + give) / 30 / 10) * 10,
-    goalMonths, netMonths, savedIn12, goalIn12, netIn12, notes,
+    goalMonths,
+    netMonths,
+    savedIn12,
+    goalIn12,
+    netIn12,
+    notes,
   };
 }
 
@@ -329,7 +364,6 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit, loc
     out.toFun = -d - out.toGoal;
     out.goal = goalNow + out.toGoal;
   }
-  out.inputs =
-    e.key === 'rent' ? { ...i, rent: to } : e.key === 'bills' ? { ...i, bills: to } : { ...i, living: { ...i.living, [e.key]: to } };
+  out.inputs = e.key === 'rent' ? { ...i, rent: to } : e.key === 'bills' ? { ...i, bills: to } : { ...i, living: { ...i.living, [e.key]: to } };
   return out;
 }

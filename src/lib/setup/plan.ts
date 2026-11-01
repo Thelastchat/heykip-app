@@ -1,6 +1,6 @@
 import { billsGuess, living, livingFor, livingTotal, plan as splitMonth, room, safetyNet, verdict, type GoalType, type Inputs, type Result, type Verdict } from '@/lib/brain';
 import type { SideIncome } from './draft';
-import { monthLong, monthShort, shownYear } from '@/lib/i18n';
+import { getLang, monthLong, monthShort, shownYear, t } from '@/lib/i18n';
 
 import { baht } from '@/lib/money';
 
@@ -58,6 +58,7 @@ export { shownYear };
 export const fullDate = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())} ${shownYear(d)}`;
 
 export function ordinal(n: number) {
+  if (getLang() === 'th') return String(n); // Thai says "วันที่ 25", no suffix
   const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : (({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th');
   return `${n}${s}`;
 }
@@ -77,76 +78,136 @@ export function shortName(title: string, kind: GoalKind) {
   return place || t;
 }
 
-const CHANGE: Record<Leak, string> = {
-  delivery: 'Delivery under ฿200 a day',
-  grab: 'Fewer late-night Grabs',
-  shopping: 'A 24-hour wait before checkout',
-  coffee: 'Café coffee 3 times a week',
-  goingOut: 'One big night out a week',
-  beauty: 'Beauty buys from fun money',
-  snacks: 'A weekly 7-Eleven budget',
-  bubbleTea: 'Bubble tea twice a week',
-  subscriptions: 'Only subscriptions I use',
-  games: 'A monthly top-up limit',
-  treating: 'A set budget for treating friends',
-  sales: 'A budget before each sale day',
-};
+const CHANGE = (): Record<Leak, string> => ({
+  delivery: t('Delivery under ฿200 a day'),
+  grab: t('Fewer late-night Grabs'),
+  shopping: t('A 24-hour wait before checkout'),
+  coffee: t('Café coffee 3 times a week'),
+  goingOut: t('One big night out a week'),
+  beauty: t('Beauty buys from fun money'),
+  snacks: t('A weekly 7-Eleven budget'),
+  bubbleTea: t('Bubble tea twice a week'),
+  subscriptions: t('Only subscriptions I use'),
+  games: t('A monthly top-up limit'),
+  treating: t('A set budget for treating friends'),
+  sales: t('A budget before each sale day'),
+});
 
-const STAY: Record<Leak, string> = {
-  coffee: 'Your morning coffee',
-  goingOut: 'Weekends out',
-  beauty: 'Your skincare',
-  delivery: 'Your favourite takeaway',
-  shopping: 'Treats you plan for',
-  grab: 'Getting home safe',
-  snacks: 'Your favourite snacks',
-  bubbleTea: 'Your bubble tea',
-  subscriptions: 'The apps you love',
-  games: 'Your games',
-  treating: 'Treating the people you love',
-  sales: 'The deals you really want',
-};
+const STAY = (): Record<Leak, string> => ({
+  coffee: t('Your morning coffee'),
+  goingOut: t('Weekends out'),
+  beauty: t('Your skincare'),
+  delivery: t('Your favourite takeaway'),
+  shopping: t('Treats you plan for'),
+  grab: t('Getting home safe'),
+  snacks: t('Your favourite snacks'),
+  bubbleTea: t('Your bubble tea'),
+  subscriptions: t('The apps you love'),
+  games: t('Your games'),
+  treating: t('Treating the people you love'),
+  sales: t('The deals you really want'),
+});
 
-const CUT_FIRST: Record<Leak, string> = {
-  delivery: 'delivery',
-  grab: 'late-night Grabs',
-  shopping: 'online shopping',
-  coffee: 'café coffee',
-  goingOut: 'nights out',
-  beauty: 'beauty buys',
-  snacks: '7-Eleven runs',
-  bubbleTea: 'bubble tea',
-  subscriptions: 'subscriptions I don’t use',
-  games: 'game top-ups',
-  treating: 'treating friends',
-  sales: 'sale-day shopping',
-};
+const CUT_FIRST = (): Record<Leak, string> => ({
+  delivery: t('delivery'),
+  grab: t('late-night Grabs'),
+  shopping: t('online shopping'),
+  coffee: t('café coffee'),
+  goingOut: t('nights out'),
+  beauty: t('beauty buys'),
+  snacks: t('7-Eleven runs'),
+  bubbleTea: t('bubble tea'),
+  subscriptions: t('subscriptions I don’t use'),
+  games: t('game top-ups'),
+  treating: t('treating friends'),
+  sales: t('sale-day shopping'),
+});
 
 export const LEAKS: { key: Leak; label: string }[] = [
-  { key: 'delivery', label: 'Food delivery' },
-  { key: 'grab', label: 'Grab late at night' },
-  { key: 'shopping', label: 'Online shopping' },
-  { key: 'coffee', label: 'Coffee' },
-  { key: 'goingOut', label: 'Going out' },
-  { key: 'beauty', label: 'Beauty' },
-  { key: 'snacks', label: '7-Eleven snacks' },
-  { key: 'bubbleTea', label: 'Bubble tea' },
-  { key: 'subscriptions', label: 'Subscriptions' },
-  { key: 'games', label: 'Games & top-ups' },
-  { key: 'treating', label: 'Treating friends' },
-  { key: 'sales', label: 'Sale days (11.11)' },
+  {
+    key: 'delivery',
+    get label() {
+      return t('Food delivery');
+    },
+  },
+  {
+    key: 'grab',
+    get label() {
+      return t('Grab late at night');
+    },
+  },
+  {
+    key: 'shopping',
+    get label() {
+      return t('Online shopping');
+    },
+  },
+  {
+    key: 'coffee',
+    get label() {
+      return t('Coffee');
+    },
+  },
+  {
+    key: 'goingOut',
+    get label() {
+      return t('Going out');
+    },
+  },
+  {
+    key: 'beauty',
+    get label() {
+      return t('Beauty');
+    },
+  },
+  {
+    key: 'snacks',
+    get label() {
+      return t('7-Eleven snacks');
+    },
+  },
+  {
+    key: 'bubbleTea',
+    get label() {
+      return t('Bubble tea');
+    },
+  },
+  {
+    key: 'subscriptions',
+    get label() {
+      return t('Subscriptions');
+    },
+  },
+  {
+    key: 'games',
+    get label() {
+      return t('Games & top-ups');
+    },
+  },
+  {
+    key: 'treating',
+    get label() {
+      return t('Treating friends');
+    },
+  },
+  {
+    key: 'sales',
+    get label() {
+      return t('Sale days (11.11)');
+    },
+  },
 ];
 
 function moment(kind: GoalKind, title: string, short: string) {
   switch (kind) {
     case 'monthly':
-      return { title: 'A year of saving', sub: 'The habit is the win.' };
+      return { title: t('A year of saving'), sub: t('The habit is the win.') };
     case 'trip':
-      return { title: `Hello, ${short}!`, sub: 'Paid in full. No credit card.' };
+      return { title: t('Hello, {short}!', { short }), sub: t('Paid in full. No credit card.') };
     case 'safety_net':
-      return { title: 'Your emergency fund is full', sub: 'Ready for a rainy day.' };
+      return { title: t('Your emergency fund is full'), sub: t('Ready for a rainy day.') };
     default:
-      return { title: `${title} is yours`, sub: 'Paid in full. No credit card.' };
+      return { title: t('{title} is yours', { title }), sub: t('Paid in full. No credit card.') };
   }
 }
 
@@ -154,13 +215,13 @@ function promise(kind: GoalKind, title: string, short: string, due: Date, target
   const when = longDate(due);
   switch (kind) {
     case 'monthly':
-      return `Every payday, ${baht(monthly)} goes to ${short} first — before anything else.`;
+      return t('Every payday, {amount} goes to {short} first — before anything else.', { amount: baht(monthly), short });
     case 'trip':
-      return `By ${when}, I’ll be in ${short} — all paid for, no credit card.`;
+      return t('By {when}, I’ll be in {short} — all paid for, no credit card.', { when, short });
     case 'safety_net':
-      return `By ${when}, I’ll have ${baht(target)} set aside for a rainy day.`;
+      return t('By {when}, I’ll have {amount} set aside for a rainy day.', { when, amount: baht(target) });
     default:
-      return `By ${when}, ${title} will be mine — all paid for, no credit card.`;
+      return t('By {when}, {title} will be mine — all paid for, no credit card.', { when, title });
   }
 }
 
@@ -238,7 +299,7 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
   const inputs = inputsFrom(d, now);
   const v = verdict(inputs);
   const result = splitMonth(inputs, d.budgetStyle, d.goalPerMonth);
-  const short = d.goalKind === 'monthly' ? d.goalTitle.trim() || 'Savings' : shortName(d.goalTitle, d.goalKind);
+  const short = d.goalKind === 'monthly' ? d.goalTitle.trim() || t('Savings') : shortName(d.goalTitle, d.goalKind);
   const due = result.goalMonths !== null ? monthsFromNow(result.goalMonths, d, now) : d.goalDue ? parseDay(d.goalDue) : monthsFromNow(12, d, now);
   const mode: Plan['mode'] = v.kind === 'noRoom' ? 'noRoom' : v.kind === 'notByThen' && !d.goalPerMonth ? 'stretch' : 'ok';
 
@@ -246,11 +307,13 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
   const notPicked = (['coffee', 'goingOut', 'beauty', 'bubbleTea', 'snacks', 'delivery', 'shopping', 'grab', 'games', 'treating', 'subscriptions', 'sales'] as Leak[]).filter(
     (k) => !d.leaks.includes(k),
   );
-  const changes = picked.slice(0, 2).map((k) => CHANGE[k]);
-  if (changes.length === 0) changes.push('Spending stays under your daily number');
-  const stays = notPicked.slice(0, 2).map((k) => STAY[k]);
-  if (stays.length < 2) stays.push('One treat a week');
-  else stays[1] = `${stays[1]}, one treat a week`;
+  const change = CHANGE();
+  const stay = STAY();
+  const changes = picked.slice(0, 2).map((k) => change[k]);
+  if (changes.length === 0) changes.push(t('Spending stays under your daily number'));
+  const stays = notPicked.slice(0, 2).map((k) => stay[k]);
+  if (stays.length < 2) stays.push(t('One treat a week'));
+  else stays[1] = t('{thing}, one treat a week', { thing: stays[1] });
 
   const target = d.goalKind === 'monthly' ? (d.goalMonthly ?? 0) * 12 : (d.goalTarget ?? 0);
   return {
@@ -270,6 +333,8 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
     stays,
     moment: moment(d.goalKind, d.goalTitle.trim(), short),
     promiseMain: promise(d.goalKind, d.goalTitle.trim(), short, due, target, d.goalMonthly ?? 0),
-    promiseBackup: `If money gets tight, I’ll cut ${picked.length ? CUT_FIRST[picked[0]] : 'the extras'} first. I won’t touch my savings.`,
+    promiseBackup: picked.length
+      ? t('If money gets tight, I’ll cut {thing} first. I won’t touch my savings.', { thing: CUT_FIRST()[picked[0]] })
+      : t('If money gets tight, I’ll cut the extras first. I won’t touch my savings.'),
   };
 }

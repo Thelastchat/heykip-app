@@ -11,21 +11,22 @@ import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
 import { LIVING_FLOOR, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
 import { CATEGORY, type IconKey } from '@/lib/budget';
+import { getLang, rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { makePlan, monthYear, type Plan } from '@/lib/setup/plan';
 import { colors, fonts, money, shadow } from '@/theme';
 
-const NAMES: Record<string, string> = {
-  rent: 'Rent',
-  bills: 'Other bills',
-  food: 'Food',
-  transport: 'Transport',
-  health: 'Health & personal',
-  household: 'Household',
-  fun: 'Fun money',
+const names = (): Record<string, string> => ({
+  rent: t('Rent'),
+  bills: t('Other bills'),
+  food: t('Food'),
+  transport: t('Transport'),
+  health: t('Health & personal'),
+  household: t('Household'),
+  fun: t('Fun money'),
   goal: '',
-};
+});
 
 // Setup 5/6 · Make it yours. Change any number and Kip re-balances the rest — with money rules, not freely
 // (see applyEdit in brain.ts). Kip says what moved where, and stops anything that wouldn't work in real life.
@@ -44,6 +45,7 @@ export default function SetupYours() {
   const [note, setNote] = useState<NoteState | null>(null);
   const goalPatch = (g: number): Partial<SetupDraft> => (monthly ? { goalMonthly: g, goalPerMonth: null } : { goalPerMonth: g });
   const locks: Locks = draft.locks ?? { goal: false, fun: false };
+  const NAMES = names();
 
   function toggle(k: keyof Locks) {
     Haptics.selectionAsync().catch(() => {});
@@ -54,11 +56,20 @@ export default function SetupYours() {
   function edit(e: Edit, at: string, withLocks: Locks = locks) {
     const res = applyEdit(inputs, draft.budgetStyle, r.goal, e, withLocks);
     if (res.blocked > 0) {
-      const what = withLocks.goal && withLocks.fun ? `${short} and fun money are both locked` : withLocks.goal ? `${short} is locked` : 'Fun money is locked';
-      const funNote = !withLocks.fun && r.fun <= funMin ? ', and fun is already at its minimum' : '';
+      const amount = baht(res.blocked);
+      const atMin = !withLocks.fun && r.fun <= funMin;
       setNote({
         at,
-        text: `${what}${funNote} — I can’t find ${baht(res.blocked)} without touching ${withLocks.goal && withLocks.fun ? 'one of them' : 'it'}. Nothing changed yet.`,
+        text:
+          withLocks.goal && withLocks.fun
+            ? t('{short} and fun money are both locked — I can’t find {amount} without touching one of them. Nothing changed yet.', { short, amount })
+            : withLocks.goal
+              ? atMin
+                ? t('{short} is locked, and fun is already at its minimum — I can’t find {amount} without touching it. Nothing changed yet.', { short, amount })
+                : t('{short} is locked — I can’t find {amount} without touching it. Nothing changed yet.', { short, amount })
+              : atMin
+                ? t('Fun money is locked, and fun is already at its minimum — I can’t find {amount} without touching it. Nothing changed yet.', { amount })
+                : t('Fun money is locked — I can’t find {amount} without touching it. Nothing changed yet.', { amount }),
         warn: true,
         blocked: { edit: e, locks: withLocks },
       });
@@ -81,10 +92,16 @@ export default function SetupYours() {
     }
     const after = makePlan({ ...draft, ...patch });
     update(patch);
-    const lockedSay = withLocks.goal && (res.fromFun > 0 || res.toFun > 0) ? `${short} is locked — ` : withLocks.fun && (res.fromGoal > 0 || res.toGoal > 0) ? 'Fun money is locked — ' : '';
+    const lockedSay = withLocks.goal && (res.fromFun > 0 || res.toFun > 0) ? 'goal' : withLocks.fun && (res.fromGoal > 0 || res.toGoal > 0) ? 'fun' : null;
     const said = explain(res, plan, after, at);
-    let text = lockedSay && said ? lockedSay + said.charAt(0).toLowerCase() + said.slice(1) : said;
-    if (parked) text = `Fun money is locked, so the ${baht(parked)} goes to ${at === 'food' ? 'transport' : 'food'} for now — move it below.`;
+    // English continues the sentence in lower case ("Japan is locked — ฿500 came from…"); Thai has no case.
+    const rest = lockedSay && said && getLang() === 'en' ? said.charAt(0).toLowerCase() + said.slice(1) : said;
+    let text = lockedSay && said ? (lockedSay === 'goal' ? t('{short} is locked — {rest}', { short, rest }) : t('Fun money is locked — {rest}', { rest })) : said;
+    if (parked)
+      text =
+        at === 'food'
+          ? t('Fun money is locked, so the {amount} goes to transport for now — move it below.', { amount: baht(parked) })
+          : t('Fun money is locked, so the {amount} goes to food for now — move it below.', { amount: baht(parked) });
     // Money freed by lowering a cost (or fun): Kip puts it somewhere sensible, and the person can choose where instead.
     const freed = res.toGoal + res.toFun;
     const route =
@@ -111,15 +128,20 @@ export default function SetupYours() {
       const add = Math.min(rt.amount, Math.max(0, need - rt.goalBefore));
       patch = { ...base, ...goalPatch(rt.goalBefore + add) };
       const after = makePlan({ ...draft, ...patch });
-      text = `${baht(rt.amount)} goes to ${short} — now ${baht(after.result.goal)} a month${monthly ? '' : `, arriving ${after.result.goalMonths ? monthYear(after.due) : 'later'}`}.`;
+      const vars = { amount: baht(rt.amount), short, monthly: baht(after.result.goal) };
+      text = monthly
+        ? t('{amount} goes to {short} — now {monthly} a month.', vars)
+        : after.result.goalMonths
+          ? t('{amount} goes to {short} — now {monthly} a month, arriving {when}.', { ...vars, when: monthYear(after.due) })
+          : t('{amount} goes to {short} — now {monthly} a month, arriving later.', vars);
     } else if (dest === 'fun') {
       const after = makePlan({ ...draft, ...patch });
-      text = `${baht(rt.amount)} goes to fun money — now ${baht(after.result.fun)} a month.`;
+      text = t('{amount} goes to fun money — now {fun} a month.', { amount: baht(rt.amount), fun: baht(after.result.fun) });
     } else {
       const liv = { ...(base.living ?? {}) };
       liv[dest] = (liv[dest] ?? L[dest]) + rt.amount;
       patch = { ...base, living: liv };
-      text = `${baht(rt.amount)} goes to ${NAMES[dest].toLowerCase()} — now ${baht(liv[dest] ?? 0)} a month.`;
+      text = t('{amount} goes to {dest} — now {now} a month.', { amount: baht(rt.amount), dest: NAMES[dest].toLowerCase(), now: baht(liv[dest] ?? 0) });
     }
     update(patch);
     setNote({ ...note, text, warn: false, route: { ...rt, picked: dest } });
@@ -128,28 +150,61 @@ export default function SetupYours() {
   function explain(res: EditResult, before: Plan, after: Plan, at: string): string {
     const out: string[] = [];
     const lim = res.limit;
-    const when = (p: Plan) => (p.result.goalMonths ? monthYear(p.due) : 'not yet');
+    const when = (p: Plan) => (p.result.goalMonths ? monthYear(p.due) : t('not yet'));
     const moved = !monthly && before.due.getTime() !== after.due.getTime();
     if (lim?.why === 'floor')
-      out.push(`${NAMES[at]} can’t go below ${baht(lim.value)}${at === 'food' ? ' — that’s ฿150 a day, the least two simple meals cost' : ' — that’s what it realistically costs'}. I set it there.`);
-    if (lim?.why === 'goalMax') out.push(`${baht(lim.value)} is the most for ${short}. Any more and fun money drops under ${baht(funMin)} — plans that tight usually break in the first month.`);
-    if (lim?.why === 'funMin') out.push(`Fun money stays at least ${baht(funMin)} — a plan with no fun gets dropped.`);
-    if (lim?.why === 'nothingLeft') out.push(`That’s as high as it can go — fun money is at its minimum and ${short} has nothing left to give.`);
-    if (res.fromFun > 0) out.push(`${baht(res.fromFun)} came from fun money (${baht(before.result.fun)} → ${baht(after.result.fun)}).`);
-    if (res.fromGoal > 0) out.push(`${baht(res.fromGoal)} came from ${short}${moved ? `, so it moves from ${when(before)} to ${when(after)}` : ''}.`);
-    if (res.toGoal > 0) out.push(`${short} gets the ${baht(res.toGoal)} — now ${baht(after.result.goal)} a month${moved ? `, arriving ${when(after)} instead of ${when(before)}` : ''}.`);
-    if (res.toFun > 0) out.push(`${baht(res.toFun)} goes back to fun money (now ${baht(after.result.fun)}).${moved ? ` ${short} moves to ${when(after)}.` : ''}`);
-    if (at === 'goal' && res.fromFun > 0 && moved) out.push(`${short} now arrives ${when(after)}.`);
-    if (res.short > 0) out.push(`Rent and bills are now ${baht(res.short)} more than your income can carry after living costs. I’ll plan around it, but something has to change.`);
+      out.push(
+        at === 'food'
+          ? t('{name} can’t go below {amount} — that’s ฿150 a day, the least two simple meals cost. I set it there.', { name: NAMES[at], amount: baht(lim.value) })
+          : t('{name} can’t go below {amount} — that’s what it realistically costs. I set it there.', { name: NAMES[at], amount: baht(lim.value) }),
+      );
+    if (lim?.why === 'goalMax')
+      out.push(
+        t('{amount} is the most for {short}. Any more and fun money drops under {funMin} — plans that tight usually break in the first month.', {
+          amount: baht(lim.value),
+          short,
+          funMin: baht(funMin),
+        }),
+      );
+    if (lim?.why === 'funMin') out.push(t('Fun money stays at least {funMin} — a plan with no fun gets dropped.', { funMin: baht(funMin) }));
+    if (lim?.why === 'nothingLeft') out.push(t('That’s as high as it can go — fun money is at its minimum and {short} has nothing left to give.', { short }));
+    if (res.fromFun > 0) out.push(t('{amount} came from fun money ({before} → {after}).', { amount: baht(res.fromFun), before: baht(before.result.fun), after: baht(after.result.fun) }));
+    if (res.fromGoal > 0)
+      out.push(
+        moved
+          ? t('{amount} came from {short}, so it moves from {before} to {after}.', { amount: baht(res.fromGoal), short, before: when(before), after: when(after) })
+          : t('{amount} came from {short}.', { amount: baht(res.fromGoal), short }),
+      );
+    if (res.toGoal > 0)
+      out.push(
+        moved
+          ? t('{short} gets the {amount} — now {monthly} a month, arriving {after} instead of {before}.', {
+              short,
+              amount: baht(res.toGoal),
+              monthly: baht(after.result.goal),
+              after: when(after),
+              before: when(before),
+            })
+          : t('{short} gets the {amount} — now {monthly} a month.', { short, amount: baht(res.toGoal), monthly: baht(after.result.goal) }),
+      );
+    if (res.toFun > 0)
+      out.push(
+        moved
+          ? t('{amount} goes back to fun money (now {fun}). {short} moves to {when}.', { amount: baht(res.toFun), fun: baht(after.result.fun), short, when: when(after) })
+          : t('{amount} goes back to fun money (now {fun}).', { amount: baht(res.toFun), fun: baht(after.result.fun) }),
+      );
+    if (at === 'goal' && res.fromFun > 0 && moved) out.push(t('{short} now arrives {when}.', { short, when: when(after) }));
+    if (res.short > 0)
+      out.push(t('Rent and bills are now {amount} more than your income can carry after living costs. I’ll plan around it, but something has to change.', { amount: baht(res.short) }));
     return out.join(' ');
   }
 
   const when = monthly ? null : r.goalMonths ? monthYear(plan.due) : null;
   const headline = monthly
-    ? `→ ${baht(r.goal * 12)} saved in a year · ${baht(r.daily)} a day to spend`
+    ? t('→ {year} saved in a year · {daily} a day to spend', { year: baht(r.goal * 12), daily: baht(r.daily) })
     : when
-      ? `→ ${short} in ${when} · ${baht(r.daily)} a day to spend`
-      : `→ Nothing goes to ${short} yet · ${baht(r.daily)} a day to spend`;
+      ? t('→ {short} in {when} · {daily} a day to spend', { short, when, daily: baht(r.daily) })
+      : t('→ Nothing goes to {short} yet · {daily} a day to spend', { short, daily: baht(r.daily) });
   const kipFood = livingFor({ ...inputs, living: {} }).food;
   const noteFor = (at: string) =>
     note?.at === at ? (
@@ -183,10 +238,10 @@ export default function SetupYours() {
   const sliderLocked = locks.goal || locks.fun;
 
   return (
-    <SetupScreen step={undefined} footer={<Button label={editing ? 'Update my plan' : 'Done'} disabled={r.goal <= 0} onPress={() => router.back()} />}>
+    <SetupScreen step={undefined} footer={<Button label={editing ? t('Update my plan') : t('Done')} disabled={r.goal <= 0} onPress={() => router.back()} />}>
       <BackButton />
-      <Title>Make it yours</Title>
-      <Text style={styles.sub}>Change any number — Kip re-balances the rest and tells you what moved.</Text>
+      <Title>{t('Make it yours')}</Title>
+      <Text style={styles.sub}>{t('Change any number — Kip re-balances the rest and tells you what moved.')}</Text>
 
       <View style={[styles.goalBox, locks.goal && { borderColor: colors.ink }]}>
         <View
@@ -201,9 +256,9 @@ export default function SetupYours() {
               fontSize: 14,
               color: colors.ink,
             }}>
-            For {short} each month
+            {t('For {short} each month', { short })}
           </Text>
-          <LockPill on={locks.goal} onPress={() => toggle('goal')} label={`${locks.goal ? 'Unlock' : 'Lock'} ${short}`} />
+          <LockPill on={locks.goal} onPress={() => toggle('goal')} label={locks.goal ? t('Unlock {short}', { short }) : t('Lock {short}', { short })} />
         </View>
         <Text
           style={{
@@ -220,12 +275,16 @@ export default function SetupYours() {
           max={sliderLocked ? Math.max(r.goal, sliderMax) : sliderMax}
           locked={sliderLocked}
           onChange={(to) => edit({ kind: 'goal', to }, 'goal')}
-          label={`For ${short} each month`}
+          label={t('For {short} each month', { short })}
         />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Text style={styles.tiny}>฿0</Text>
           <Text style={styles.tiny}>
-            {locks.goal ? 'locked — tap Unlock to change it' : locks.fun ? 'fun money is locked, so this stays' : `most ${baht(sliderMax)} · keeps ${baht(funMin)} for fun`}
+            {locks.goal
+              ? t('locked — tap Unlock to change it')
+              : locks.fun
+                ? t('fun money is locked, so this stays')
+                : t('most {max} · keeps {funMin} for fun', { max: baht(sliderMax), funMin: baht(funMin) })}
           </Text>
         </View>
         <Text
@@ -236,7 +295,7 @@ export default function SetupYours() {
             color: colors.ink,
           }}>
           {headline}
-          {locks.goal ? ' · stays put while locked' : ''}
+          {locks.goal ? ` · ${t('stays put while locked')}` : ''}
         </Text>
         {noteFor('goal')}
       </View>
@@ -248,28 +307,36 @@ export default function SetupYours() {
           alignItems: 'baseline',
           paddingHorizontal: 4,
         }}>
-        <Text style={styles.section}>YOUR MONTH</Text>
-        <Text style={styles.tiny}>{baht(inputs.income)} in · every baht has a job</Text>
+        <Text style={styles.section}>{t('YOUR MONTH')}</Text>
+        <Text style={styles.tiny}>{t('{income} in · every baht has a job', { income: baht(inputs.income) })}</Text>
       </View>
       <View style={styles.card}>
-        {row('rent', 'rent', money.fixed, 'You told me', inputs.rent, (to) => ({
+        {row('rent', 'rent', money.fixed, t('You told me'), inputs.rent, (to) => ({
           kind: 'cost',
           key: 'rent',
           to,
         }))}
-        {row('bills', 'bill', money.fixed, 'Phone, internet, electricity, Netflix, YouTube…', inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
-        {row('food', 'food', colors.lime, `${baht(Math.round(L.food / 30))} a day · lowest ฿150`, L.food, (to) => ({ kind: 'cost', key: 'food', to }), L.food <= LIVING_FLOOR.food)}
-        {row('transport', 'travel', colors.sky, 'BTS/MRT, bus or bike fuel', L.transport, (to) => ({ kind: 'cost', key: 'transport', to }))}
-        {row('health', 'health', CATEGORY.health_beauty.color, 'Pharmacy, haircut, toiletries', L.health, (to) => ({ kind: 'cost', key: 'health', to }))}
-        {row('household', 'more', colors.grey, 'Laundry, small things', L.household, (to) => ({ kind: 'cost', key: 'household', to }))}
-        {!emergency && <Row icon="shield" color={colors.sage} name="Safety net" hint={`Always first · full at ${baht(S.target)}`} value={r.net} note={null} />}
-        {r.learn > 0 && <Row icon="book" color={CATEGORY.learning.color} name="Learning" hint="6 Jars: courses, books" value={r.learn} note={null} />}
-        {r.give > 0 && <Row icon="gift" color={CATEGORY.giving.color} name="Giving" hint="6 Jars: family, merit, gifts" value={r.give} note={null} />}
+        {row('bills', 'bill', money.fixed, t('Phone, internet, electricity, Netflix, YouTube…'), inputs.bills, (to) => ({ kind: 'cost', key: 'bills', to }))}
+        {row(
+          'food',
+          'food',
+          colors.lime,
+          t('{perDay} a day · lowest ฿150', { perDay: baht(Math.round(L.food / 30)) }),
+          L.food,
+          (to) => ({ kind: 'cost', key: 'food', to }),
+          L.food <= LIVING_FLOOR.food,
+        )}
+        {row('transport', 'travel', colors.sky, t('BTS/MRT, bus or bike fuel'), L.transport, (to) => ({ kind: 'cost', key: 'transport', to }))}
+        {row('health', 'health', CATEGORY.health_beauty.color, t('Pharmacy, haircut, toiletries'), L.health, (to) => ({ kind: 'cost', key: 'health', to }))}
+        {row('household', 'more', colors.grey, t('Laundry, small things'), L.household, (to) => ({ kind: 'cost', key: 'household', to }))}
+        {!emergency && <Row icon="shield" color={colors.sage} name={t('Safety net')} hint={t('Always first · full at {amount}', { amount: baht(S.target) })} value={r.net} note={null} />}
+        {r.learn > 0 && <Row icon="book" color={CATEGORY.learning.color} name={t('Learning')} hint={t('6 Jars: courses, books')} value={r.learn} note={null} />}
+        {r.give > 0 && <Row icon="gift" color={CATEGORY.giving.color} name={t('Giving')} hint={t('6 Jars: family, merit, gifts')} value={r.give} note={null} />}
         {row(
           'fun',
           'fun',
           money.fun,
-          locks.fun ? 'Locked — I won’t move it' : `Nights out, treats, shopping · at least ${baht(funMin)}`,
+          locks.fun ? t('Locked — I won’t move it') : t('Nights out, treats, shopping · at least {amount}', { amount: baht(funMin) }),
           r.fun,
           (to) => ({ kind: 'fun', to }),
           false,
@@ -279,25 +346,26 @@ export default function SetupYours() {
       </View>
 
       <View style={styles.result}>
-        <Text style={styles.section}>IF YOU STICK TO THIS</Text>
+        <Text style={styles.section}>{t('IF YOU STICK TO THIS')}</Text>
         <Text style={styles.resultLine}>
           {monthly
-            ? `💰 ${baht(r.goal * 12)} saved for ${short} in a year`
+            ? t('💰 {amount} saved for {short} in a year', { amount: baht(r.goal * 12), short })
             : when
               ? emergency
-                ? `🛟 Emergency fund full in ${when}`
-                : `✈︎ ${short} in ${when} — fully paid, no credit card`
-              : `📌 ${short} is pinned — every day under budget goes to it`}
+                ? t('🛟 Emergency fund full in {when}', { when })
+                : t('✈︎ {short} in {when} — fully paid, no credit card', { short, when })
+              : t('📌 {short} is pinned — every day under budget goes to it', { short })}
         </Text>
-        {!emergency && r.net > 0 && <Text style={styles.resultLine}>🛟 Safety net: {baht(r.net * 12)} by this time next year</Text>}
+        {!emergency && r.net > 0 && <Text style={styles.resultLine}>{t('🛟 Safety net: {amount} by this time next year', { amount: baht(r.net * 12) })}</Text>}
         <Text style={styles.resultLine}>
-          💰 <Text style={{ fontFamily: fonts.semibold }}>{baht(r.savedIn12)}</Text> saved in 12 months
-          {r.netIn12 > 0 && !monthly ? ` (${short} ${baht(r.goalIn12)} + safety net ${baht(r.netIn12)})` : ''}
+          {r.netIn12 > 0 && !monthly
+            ? rich('💰 **{saved}** saved in 12 months ({short} {goal} + safety net {net})', { saved: baht(r.savedIn12), short, goal: baht(r.goalIn12), net: baht(r.netIn12) }, semi)
+            : rich('💰 **{saved}** saved in 12 months', { saved: baht(r.savedIn12) }, semi)}
         </Text>
       </View>
-      {L.food !== kipFood && <Text style={styles.foot}>Kip’s number for food is {baht(kipFood)}.</Text>}
+      {L.food !== kipFood && <Text style={styles.foot}>{t('Kip’s number for food is {amount}.', { amount: baht(kipFood) })}</Text>}
       <View style={styles.howLocks}>
-        <Text style={styles.section}>HOW LOCKS WORK</Text>
+        <Text style={styles.section}>{t('HOW LOCKS WORK')}</Text>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
           <View style={[styles.lockBtn, { backgroundColor: colors.ink, borderColor: colors.ink }]}>
             <Lock size={14} color="#FFFFFF" weight="fill" />
@@ -310,9 +378,11 @@ export default function SetupYours() {
               lineHeight: 18,
               color: colors.ink,
             }}>
-            <Text style={{ fontFamily: fonts.semibold }}>{short} locked</Text> — changes come from fun money only.{'\n'}
-            <Text style={{ fontFamily: fonts.semibold }}>Fun locked</Text> — changes come from {short}, and I show the new date.{'\n'}
-            <Text style={{ fontFamily: fonts.semibold }}>Both locked</Text> — I ask you what to lower. I never move money quietly.
+            {rich('**{short} locked** — changes come from fun money only.', { short }, semi)}
+            {'\n'}
+            {rich('**Fun locked** — changes come from {short}, and I show the new date.', { short }, semi)}
+            {'\n'}
+            {rich('**Both locked** — I ask you what to lower. I never move money quietly.', undefined, semi)}
           </Text>
         </View>
       </View>
@@ -323,7 +393,7 @@ export default function SetupYours() {
             fontSize: 13,
             color: colors.ink,
           }}>
-          This is your starting plan — it will change
+          {t('This is your starting plan — it will change')}
         </Text>
         <Text
           style={{
@@ -332,13 +402,17 @@ export default function SetupYours() {
             lineHeight: 17,
             color: colors.ink,
           }}>
-          Once you log for a few weeks, I’ll swap my guesses for your real numbers. Subscriptions (Netflix, YouTube, Spotify, apps) are the ones almost everyone underestimates — when a new one shows
-          up, I’ll show you exactly what it does to {short}.
+          {t(
+            'Once you log for a few weeks, I’ll swap my guesses for your real numbers. Subscriptions (Netflix, YouTube, Spotify, apps) are the ones almost everyone underestimates — when a new one shows up, I’ll show you exactly what it does to {short}.',
+            { short },
+          )}
         </Text>
       </View>
     </SetupScreen>
   );
 }
+
+const semi = (s: string) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>;
 
 type Dest = 'goal' | 'food' | 'transport' | 'fun';
 type NoteState = {
@@ -378,6 +452,7 @@ function Note({
   onDismiss: () => void;
 }) {
   const rt = note.route;
+  const NAMES = names();
   const dests = (['goal', 'food', 'transport', 'fun'] as Dest[]).filter((d) => d !== rt?.from && !(d === 'goal' && locks.goal) && !(d === 'fun' && locks.fun));
   return (
     <View style={[styles.note, note.warn && !rt && { backgroundColor: '#FBE3DA' }, !note.warn && !rt && { backgroundColor: colors.lime }]}>
@@ -405,17 +480,17 @@ function Note({
           {note.blocked.locks.goal && (
             <Pressable onPress={() => onUnlock('goal')} style={[styles.unlock, { backgroundColor: colors.ink }]} accessibilityRole="button">
               <LockOpen size={13} color="#FFFFFF" weight="bold" />
-              <Text style={[styles.unlockText, { color: '#FFFFFF' }]}>Unlock {short}</Text>
+              <Text style={[styles.unlockText, { color: '#FFFFFF' }]}>{t('Unlock {short}', { short })}</Text>
             </Pressable>
           )}
           {note.blocked.locks.fun && (
             <Pressable onPress={() => onUnlock('fun')} style={styles.unlock} accessibilityRole="button">
               <LockOpen size={13} color={colors.ink} weight="bold" />
-              <Text style={styles.unlockText}>Unlock fun</Text>
+              <Text style={styles.unlockText}>{t('Unlock fun')}</Text>
             </Pressable>
           )}
           <Pressable onPress={onDismiss} style={styles.unlock} accessibilityRole="button">
-            <Text style={styles.unlockText}>Keep it as it was</Text>
+            <Text style={styles.unlockText}>{t('Keep it as it was')}</Text>
           </Pressable>
         </View>
       )}
@@ -427,7 +502,7 @@ function Note({
               fontSize: 12,
               color: colors.ink,
             }}>
-            Where should the {baht(rt.amount)} go?
+            {t('Where should the {amount} go?', { amount: baht(rt.amount) })}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
             {dests.map((d) => {
@@ -527,7 +602,7 @@ function LockPill({ on, onPress, label }: { on: boolean; onPress: () => void; la
       accessibilityLabel={label}
       style={[styles.lockPill, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
       {on ? <Lock size={13} color="#FFFFFF" weight="fill" /> : <LockOpen size={13} color={colors.ink} weight="bold" />}
-      <Text style={[styles.unlockText, on && { color: '#FFFFFF' }]}>{on ? 'Locked' : 'Lock'}</Text>
+      <Text style={[styles.unlockText, on && { color: '#FFFFFF' }]}>{on ? t('Locked') : t('Lock')}</Text>
     </Pressable>
   );
 }
@@ -539,7 +614,7 @@ function LockButton({ on, onPress }: { on: boolean; onPress: () => void }) {
       hitSlop={8}
       accessibilityRole="switch"
       accessibilityState={{ checked: on }}
-      accessibilityLabel={on ? 'Unlock fun money' : 'Lock fun money'}
+      accessibilityLabel={on ? t('Unlock fun money') : t('Lock fun money')}
       style={[styles.lockBtn, on && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
       {on ? <Lock size={14} color="#FFFFFF" weight="fill" /> : <LockOpen size={14} color={colors.ink} weight="bold" />}
     </Pressable>

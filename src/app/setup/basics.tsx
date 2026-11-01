@@ -2,9 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, type ComponentRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { KipSays, MoneyTile, PrivacyNote, Segmented, SetupScreen, Title, ToggleRow } from '@/components/setup/kit';
+import { KipSays, MoneyTile, nth, PrivacyNote, Segmented, SetupScreen, Title, ToggleRow } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { billsGuess, living, livingTotal } from '@/lib/brain';
+import { getLang, rich, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { basicsDone, plannedIncome, useSetup, type IncomeType, type SetupDraft } from '@/lib/setup/draft';
 import { ordinal } from '@/lib/setup/plan';
@@ -19,17 +20,19 @@ export default function SetupBasics() {
   const income = plannedIncome(draft);
   const L = living(income);
   const guess = billsGuess(income);
-  const cycle = payday ? `${ordinal(payday)} to ${ordinal(payday === 1 ? 31 : payday - 1)}` : 'Payday to the day before';
+  const cycle = payday ? t('{from} to {to}', { from: nth(payday), to: nth(payday === 1 ? 31 : payday - 1) }) : t('Payday to the day before');
 
   return (
-    <SetupScreen step={1} footer={<Button label={editing ? 'Update my plan' : 'Next'} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
-      <KipSays>{regular ? 'A few rough numbers so I can plan your days. Guesses are fine!' : 'Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.'}</KipSays>
-      <Title>How does money come in?</Title>
+    <SetupScreen step={1} footer={<Button label={editing ? t('Update my plan') : t('Next')} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
+      <KipSays>
+        {regular ? t('A few rough numbers so I can plan your days. Guesses are fine!') : t('Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.')}
+      </KipSays>
+      <Title>{t('How does money come in?')}</Title>
 
       <Segmented<IncomeType>
         options={[
-          { key: 'regular', label: 'Same every month', color: colors.lime },
-          { key: 'changes', label: 'It changes', color: colors.sky },
+          { key: 'regular', label: t('Same every month'), color: colors.lime },
+          { key: 'changes', label: t('It changes'), color: colors.sky },
         ]}
         value={draft.incomeType}
         onChange={(incomeType) => update({ incomeType })}
@@ -37,49 +40,53 @@ export default function SetupBasics() {
 
       {regular ? (
         <View style={styles.row}>
-          <MoneyTile label="Income a month" value={draft.monthlyIncome} onChange={(monthlyIncome) => update({ monthlyIncome })} placeholder="25,000" style={{ flex: 1.35 }} />
+          <MoneyTile label={t('Income a month')} value={draft.monthlyIncome} onChange={(monthlyIncome) => update({ monthlyIncome })} placeholder="25,000" style={{ flex: 1.35 }} />
           <PaydayTile value={payday} onChange={(p) => update({ payday: p })} />
         </View>
       ) : (
         <View style={styles.row}>
-          <MoneyTile label="In a slow month" value={draft.slowMonth} onChange={(slowMonth) => update({ slowMonth })} placeholder="15,000" style={{ flex: 1 }} />
-          <MoneyTile label="In a good month" value={draft.goodMonth} onChange={(goodMonth) => update({ goodMonth })} placeholder="40,000" style={{ flex: 1 }} />
+          <MoneyTile label={t('In a slow month')} value={draft.slowMonth} onChange={(slowMonth) => update({ slowMonth })} placeholder="15,000" style={{ flex: 1 }} />
+          <MoneyTile label={t('In a good month')} value={draft.goodMonth} onChange={(goodMonth) => update({ goodMonth })} placeholder="40,000" style={{ flex: 1 }} />
         </View>
       )}
 
       {regular ? (
         <ToggleRow
-          title="Start my month on payday"
-          sub={`${cycle}, so your budget matches your salary`}
+          title={t('Start my month on payday')}
+          sub={t('{cycle}, so your budget matches your salary', { cycle })}
           on={draft.monthStartsOnPayday}
           onToggle={() => update({ monthStartsOnPayday: !draft.monthStartsOnPayday })}
         />
       ) : (
         <ToggleRow
-          title="Split it when money lands"
-          sub="Bills first, 20% to your safety net, the rest spread until the next job"
+          title={t('Split it when money lands')}
+          sub={t('Bills first, 20% to your safety net, the rest spread until the next job')}
           on={draft.splitWhenPaid}
           onToggle={() => update({ splitWhenPaid: !draft.splitWhenPaid })}
         />
       )}
 
       <View style={styles.row}>
-        <MoneyTile label="Rent or home loan" value={draft.rent} onChange={(rent) => update({ rent })} placeholder="8,500" size={22} style={{ flex: 1 }} />
-        <MoneyTile label="Other bills" value={draft.bills} onChange={(bills) => update({ bills })} placeholder={income ? guess.toLocaleString('en-US') : '1,500'} size={22} style={{ flex: 1 }} />
+        <MoneyTile label={t('Rent or home loan')} value={draft.rent} onChange={(rent) => update({ rent })} placeholder="8,500" size={22} style={{ flex: 1 }} />
+        <MoneyTile label={t('Other bills')} value={draft.bills} onChange={(bills) => update({ bills })} placeholder={income ? guess.toLocaleString('en-US') : '1,500'} size={22} style={{ flex: 1 }} />
       </View>
       {rentWarning(draft) && <Text style={[styles.hint, { color: colors.orange }]}>{rentWarning(draft)}</Text>}
       <Text style={styles.hint}>
-        Other bills = phone, internet, electricity, water, subscriptions (Netflix, YouTube, Spotify…) and instalments.
-        {draft.bills === null && income ? ` Not sure? I’ll use ${baht(guess)} and learn the real number from your slips.` : ''}
+        {t('Other bills = phone, internet, electricity, water, subscriptions (Netflix, YouTube, Spotify…) and instalments.')}
+        {draft.bills === null && income ? ' ' + t('Not sure? I’ll use {amount} and learn the real number from your slips.', { amount: baht(guess) }) : ''}
       </Text>
 
       {income > 0 && (
         <View style={styles.living}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>Kip adds real living costs too</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }}>{t('Kip adds real living costs too')}</Text>
           <Text style={{ fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: '#2E2E2A' }}>
-            Food {baht(L.food)} ({baht(Math.round(L.food / 30))}/day) · transport {baht(L.transport)} · health {baht(L.health)} · household {baht(L.household)} ={' '}
-            <Text style={{ fontFamily: fonts.semibold }}>{baht(livingTotal(L))}</Text>. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll
-            swap them for your real ones.
+            {rich(
+              'Food {food} ({perDay}/day) · transport {transport} · health {health} · household {household} = **{total}**. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll swap them for your real ones.',
+              { food: baht(L.food), perDay: baht(Math.round(L.food / 30)), transport: baht(L.transport), health: baht(L.health), household: baht(L.household), total: baht(livingTotal(L)) },
+              (s) => (
+                <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>
+              ),
+            )}
           </Text>
         </View>
       )}
@@ -90,9 +97,9 @@ export default function SetupBasics() {
 
 function rentWarning(d: SetupDraft): string | null {
   if (!d.rent) return null;
-  if (d.incomeType === 'regular') return d.monthlyIncome && d.rent >= d.monthlyIncome ? 'That’s more than your monthly income — double-check the numbers?' : null;
+  if (d.incomeType === 'regular') return d.monthlyIncome && d.rent >= d.monthlyIncome ? t('That’s more than your monthly income — double-check the numbers?') : null;
   if (d.slowMonth && d.rent >= d.slowMonth)
-    return d.goodMonth ? 'That’s more than a slow month, so I’ll plan on an average month instead.' : 'That’s more than a slow month — add a good month too, so I can plan on an average.';
+    return d.goodMonth ? t('That’s more than a slow month, so I’ll plan on an average month instead.') : t('That’s more than a slow month — add a good month too, so I can plan on an average.');
   return null;
 }
 
@@ -100,7 +107,7 @@ function PaydayTile({ value, onChange }: { value: number | null; onChange: (n: n
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   return (
     <Pressable onPress={() => input.current?.focus()} style={[styles.payday]}>
-      <Text style={styles.label}>Payday</Text>
+      <Text style={styles.label}>{t('Payday')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
         <TextInput
           ref={input}
@@ -114,9 +121,9 @@ function PaydayTile({ value, onChange }: { value: number | null; onChange: (n: n
           keyboardType="number-pad"
           maxLength={2}
           style={[styles.big, { padding: 0, textAlign: 'right', width: (value ? String(value).length : 2) * 16 }]}
-          accessibilityLabel="Payday, day of the month"
+          accessibilityLabel={t('Payday, day of the month')}
         />
-        <Text style={[styles.big, !value && { color: colors.faint }]}>{value ? ordinal(value).replace(String(value), '') : 'th'}</Text>
+        <Text style={[styles.big, !value && { color: colors.faint }]}>{getLang() === 'th' ? '' : value ? ordinal(value).replace(String(value), '') : 'th'}</Text>
       </View>
     </Pressable>
   );

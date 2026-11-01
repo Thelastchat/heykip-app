@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { Backspace, CalendarBlank, Lock, PencilSimple, Receipt } from 'phosphor-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { Squish } from '@/components/glow/motion';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { dayShort, monthShort, rich, t } from '@/lib/i18n';
 import { CATEGORY, type IconKey } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
@@ -30,41 +31,168 @@ type Kind = 'spend' | 'income';
 type Cat = { key: string; name: string; icon: IconKey; color: string; i3?: Icon3D };
 
 // Spending: the five you use most, then More. Colours follow the budget each one counts against.
+// Names are getters so they're translated when shown, not when this file loads.
 const SPEND_MAIN: Cat[] = [
-  { key: 'food', name: 'Food', icon: 'food', color: CATEGORY.food.color, i3: 'bowl' },
-  { key: 'transport', name: 'Transport', icon: 'travel', color: CATEGORY.transport.color, i3: 'car' },
-  { key: 'shopping', name: 'Shopping', icon: 'shop', color: CATEGORY.shopping.color, i3: 'shop' },
-  { key: 'fun', name: 'Fun', icon: 'fun', color: CATEGORY.fun.color, i3: 'fun' },
-  { key: 'home_bills', name: 'Home & bills', icon: 'rent', color: money.fixed, i3: 'house' },
+  {
+    key: 'food',
+    get name() {
+      return t('Food');
+    },
+    icon: 'food',
+    color: CATEGORY.food.color,
+    i3: 'bowl',
+  },
+  {
+    key: 'transport',
+    get name() {
+      return t('Transport');
+    },
+    icon: 'travel',
+    color: CATEGORY.transport.color,
+    i3: 'car',
+  },
+  {
+    key: 'shopping',
+    get name() {
+      return t('Shopping');
+    },
+    icon: 'shop',
+    color: CATEGORY.shopping.color,
+    i3: 'shop',
+  },
+  {
+    key: 'fun',
+    get name() {
+      return t('Fun');
+    },
+    icon: 'fun',
+    color: CATEGORY.fun.color,
+    i3: 'fun',
+  },
+  {
+    key: 'home_bills',
+    get name() {
+      return t('Home & bills');
+    },
+    icon: 'rent',
+    color: money.fixed,
+    i3: 'house',
+  },
 ];
 const SPEND_MORE: Cat[] = [
-  { key: 'health_beauty', name: 'Health & beauty', icon: 'health', color: CATEGORY.health_beauty.color, i3: 'heart' },
-  { key: 'giving', name: 'Giving', icon: 'gift', color: CATEGORY.giving.color, i3: 'piggy' },
-  { key: 'learning', name: 'Learning', icon: 'book', color: CATEGORY.learning.color },
-  { key: 'travel', name: 'Travel', icon: 'plane', color: CATEGORY.other.color, i3: 'plane' },
-  { key: 'family_pets', name: 'Family & pets', icon: 'family', color: CATEGORY.other.color },
-  { key: 'installments', name: 'Installments', icon: 'note', color: CATEGORY.other.color, i3: 'bill' },
-  { key: 'other', name: 'Other', icon: 'more', color: CATEGORY.other.color },
+  {
+    key: 'health_beauty',
+    get name() {
+      return t('Health & beauty');
+    },
+    icon: 'health',
+    color: CATEGORY.health_beauty.color,
+    i3: 'heart',
+  },
+  {
+    key: 'giving',
+    get name() {
+      return t('Giving');
+    },
+    icon: 'gift',
+    color: CATEGORY.giving.color,
+    i3: 'piggy',
+  },
+  {
+    key: 'learning',
+    get name() {
+      return t('Learning');
+    },
+    icon: 'book',
+    color: CATEGORY.learning.color,
+  },
+  {
+    key: 'travel',
+    get name() {
+      return t('Travel');
+    },
+    icon: 'plane',
+    color: CATEGORY.other.color,
+    i3: 'plane',
+  },
+  {
+    key: 'family_pets',
+    get name() {
+      return t('Family & pets');
+    },
+    icon: 'family',
+    color: CATEGORY.other.color,
+  },
+  {
+    key: 'installments',
+    get name() {
+      return t('Installments');
+    },
+    icon: 'note',
+    color: CATEGORY.other.color,
+    i3: 'bill',
+  },
+  {
+    key: 'other',
+    get name() {
+      return t('Other');
+    },
+    icon: 'more',
+    color: CATEGORY.other.color,
+  },
 ];
 // Money in is one kind of thing, so one colour (the Income colour on Home).
 const INCOME: Cat[] = [
-  { key: 'pay', name: 'Pay', icon: 'cash', color: colors.lavender, i3: 'income' },
-  { key: 'side_gigs', name: 'Side gigs', icon: 'phone', color: colors.lavender, i3: 'phone' },
-  { key: 'gifts', name: 'Gifts', icon: 'gift', color: colors.lavender, i3: 'piggy' },
-  { key: 'other', name: 'Other', icon: 'more', color: colors.lavender },
+  {
+    key: 'pay',
+    get name() {
+      return t('Pay');
+    },
+    icon: 'cash',
+    color: colors.lavender,
+    i3: 'income',
+  },
+  {
+    key: 'side_gigs',
+    get name() {
+      return t('Side gigs');
+    },
+    icon: 'phone',
+    color: colors.lavender,
+    i3: 'phone',
+  },
+  {
+    key: 'gifts',
+    get name() {
+      return t('Gifts');
+    },
+    icon: 'gift',
+    color: colors.lavender,
+    i3: 'piggy',
+  },
+  {
+    key: 'other',
+    get name() {
+      return t('Other');
+    },
+    icon: 'more',
+    color: colors.lavender,
+  },
 ];
 
 const DAY_MS = 86_400_000;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const dayName = (d: Date) => `${dayShort(d.getDay())} ${d.getDate()} ${monthShort(d.getMonth())}`;
 
 function whenLabel(d: Date) {
   const today = new Date();
   const diff = Math.round((new Date(today.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / DAY_MS);
-  const day = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  return `${day}, ${hhmm(d)}`;
+  const day = diff === 0 ? t('Today') : diff === 1 ? t('Yesterday') : dayName(d);
+  return t('{day}, {time}', { day, time: hhmm(d) });
 }
+
+/** The bold part of Kip's hint: orange when it's a warning. */
+const hintBold = (warn: boolean) => (s: string) => <Text style={{ fontFamily: fonts.semibold, color: warn ? colors.orangeText : colors.ink }}>{s}</Text>;
 
 export default function Add() {
   const insets = useSafeAreaInsets();
@@ -95,33 +223,52 @@ export default function Add() {
   }, []);
 
   const amount = Number(digits || '0');
-  const short = goals[0]?.title ?? 'your goal';
+  const short = goals[0]?.title ?? t('your goal');
 
   // ---- what Kip says before you save ----
-  const hint = useMemo(() => {
+  const hint = useMemo((): { line: ReactNode; warn: boolean } | null => {
     if (!month) return null;
     if (kind === 'spend') {
       const bucket = budgetKey(cat.key, month);
-      if (bucket === 'bills') return { text: 'Bills are already in your plan — this won’t touch today’s money', bold: null, warn: false };
+      if (bucket === 'bills') return { line: t('Bills are already in your plan — this won’t touch today’s money'), warn: false };
       const isToday = when.toDateString() === new Date().toDateString();
       // Pretend it's saved, then ask the same question Home asks.
       const after = monthNumbers(month, { ...spent, total: spent.total + amount, today: spent.today + (isToday ? amount : 0) });
       const before = monthNumbers(month, spent);
-      if (!isToday) return { text: 'Left for today after this: ', bold: baht(after.leftToday), warn: after.leftToday < before.leftToday };
+      if (!isToday) {
+        const warn = after.leftToday < before.leftToday;
+        return { line: rich('Left for today after this: **{amt}**', { amt: baht(after.leftToday) }, hintBold(warn)), warn };
+      }
       const over = amount - before.leftToday;
-      if (over > 0) return { text: `That’s ${baht(over)} over today — fine, I’ll spread it over the next ${before.P.daysLeft - 1 || 1} days`, bold: null, warn: true };
-      return { text: amount ? 'Left for today after this: ' : 'Left for today: ', bold: baht(after.leftToday), warn: false };
+      if (over > 0) return { line: t('That’s {over} over today — fine, I’ll spread it over the next {n} days', { over: baht(over), n: before.P.daysLeft - 1 || 1 }), warn: true };
+      return {
+        line: amount
+          ? rich('Left for today after this: **{amt}**', { amt: baht(after.leftToday) }, hintBold(false))
+          : rich('Left for today: **{amt}**', { amt: baht(after.leftToday) }, hintBold(false)),
+        warn: false,
+      };
     }
     // Money in. Pay is what the plan already runs on; anything extra gets a job.
     const extra = cat.key === 'pay' ? Math.max(0, amount - month.income) : amount;
-    if (cat.key === 'pay' && amount > 0 && amount < month.income) return { text: 'Part of this month’s pay — ', bold: baht(month.income - amount), rest: ' still to come', warn: false };
-    if (cat.key === 'pay' && extra === 0) return { text: `Your plan runs on ${baht(month.income)} a month — this is it`, bold: null, warn: false };
+    if (cat.key === 'pay' && amount > 0 && amount < month.income)
+      return { line: rich('Part of this month’s pay — **{amt}** still to come', { amt: baht(month.income - amount) }, hintBold(false)), warn: false };
+    if (cat.key === 'pay' && extra === 0) return { line: t('Your plan runs on {amt} a month — this is it', { amt: baht(month.income) }), warn: false };
     if (extra === 0) return null;
     const building = month.safety.amount > 0;
     const part = Math.round((extra * 0.2) / 10) * 10;
     if (building && part > 0)
-      return isPlus ? { text: 'Kip puts ', bold: baht(part), rest: ' in your safety net first', warn: false } : { text: 'Tip: put ', bold: baht(part), rest: ' in your safety net first', warn: false };
-    return { text: isPlus ? 'Kip moves it to ' : 'Tip: move it to ', bold: short, rest: ' — you’ll get there sooner', warn: false };
+      return {
+        line: isPlus
+          ? rich('Kip puts **{amt}** in your safety net first', { amt: baht(part) }, hintBold(false))
+          : rich('Tip: put **{amt}** in your safety net first', { amt: baht(part) }, hintBold(false)),
+        warn: false,
+      };
+    return {
+      line: isPlus
+        ? rich('Kip moves it to **{goal}** — you’ll get there sooner', { goal: short }, hintBold(false))
+        : rich('Tip: move it to **{goal}** — you’ll get there sooner', { goal: short }, hintBold(false)),
+      warn: false,
+    };
   }, [month, kind, cat, amount, when, spent, isPlus, short]);
 
   function press(k: string) {
@@ -158,7 +305,7 @@ export default function Add() {
       source: 'manual',
     });
     setBusy(false);
-    if (e) return setError(`Couldn’t save: ${e.message}`);
+    if (e) return setError(t('Couldn’t save: {msg}', { msg: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.canGoBack() ? router.back() : router.replace('/');
   }
@@ -171,12 +318,12 @@ export default function Add() {
       <GlowBackground />
       <View style={{ paddingHorizontal: 18 }}>
         <ScreenHeader
-          title="Add it yourself"
+          title={t('Add it yourself')}
           right={
-            <Squish onPress={() => setSlip(true)} accessibilityRole="button" accessibilityLabel={isPlus ? 'Add from a slip' : 'Add from a slip — Plus'}>
+            <Squish onPress={() => setSlip(true)} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
               <Glass radius={23} innerStyle={styles.slip}>
                 <Receipt size={17} color={colors.ink} weight="fill" />
-                <Text style={styles.slipText}>Slip</Text>
+                <Text style={styles.slipText}>{t('Slip')}</Text>
                 {!isPlus && (
                   <View style={styles.lk}>
                     <Lock size={9} color="#FFFFFF" weight="fill" />
@@ -189,7 +336,7 @@ export default function Add() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {slip && isPlus && <Text style={[styles.hint, styles.soon]}>Slip reading is almost here — for now, type it in. It takes 3 seconds.</Text>}
+        {slip && isPlus && <Text style={[styles.hint, styles.soon]}>{t('Slip reading is almost here — for now, type it in. It takes 3 seconds.')}</Text>}
         <View style={{ paddingHorizontal: 18 }}>
           <Switch kind={kind} onChange={switchKind} />
         </View>
@@ -205,11 +352,7 @@ export default function Add() {
           {hint && (
             <View style={styles.kipLine}>
               <Kip mood={hint.warn ? 'careful' : 'happy'} size={30} />
-              <Text style={[styles.hint, hint.warn && { color: colors.orangeText }]}>
-                {hint.text}
-                {hint.bold && <Text style={{ fontFamily: fonts.semibold, color: hint.warn ? colors.orangeText : colors.ink }}>{hint.bold}</Text>}
-                {'rest' in hint ? hint.rest : ''}
-              </Text>
+              <Text style={[styles.hint, hint.warn && { color: colors.orangeText }]}>{hint.line}</Text>
             </View>
           )}
         </View>
@@ -232,10 +375,10 @@ export default function Add() {
             );
           })}
           {kind === 'spend' && !more && (
-            <Squish onPress={() => setMore(true)} accessibilityRole="button" accessibilityLabel="More categories">
+            <Squish onPress={() => setMore(true)} accessibilityRole="button" accessibilityLabel={t('More categories')}>
               <Glass radius={23} innerStyle={styles.chip}>
                 <Text style={[styles.chipText, { width: 30, textAlign: 'center', letterSpacing: 1 }]}>•••</Text>
-                <Text style={styles.chipText}>More</Text>
+                <Text style={styles.chipText}>{t('More')}</Text>
               </Glass>
             </Squish>
           )}
@@ -245,22 +388,22 @@ export default function Add() {
           <Glass radius={18} style={{ flex: 1 }} innerStyle={styles.field}>
             <PencilSimple size={16} color={colors.muted} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.fieldK}>Note</Text>
+              <Text style={styles.fieldK}>{t('Note')}</Text>
               <TextInput
                 value={note}
                 onChangeText={setNote}
-                placeholder={kind === 'spend' ? 'Grab to work' : 'Logo for a café'}
+                placeholder={kind === 'spend' ? t('Grab to work') : t('Logo for a café')}
                 placeholderTextColor={colors.faint}
                 style={styles.fieldV}
                 maxLength={60}
               />
             </View>
           </Glass>
-          <Pressable style={{ flex: 1 }} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={`When: ${whenLabel(when)}`}>
+          <Pressable style={{ flex: 1 }} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={t('When: {when}', { when: whenLabel(when) })}>
             <Glass radius={18} innerStyle={styles.field}>
               <CalendarBlank size={16} color={colors.muted} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.fieldK}>When</Text>
+                <Text style={styles.fieldK}>{t('When')}</Text>
                 <Text style={styles.fieldV} numberOfLines={1}>
                   {whenLabel(when)}
                 </Text>
@@ -280,7 +423,7 @@ export default function Add() {
           ].map((row) => (
             <View key={row.join('')} style={{ flexDirection: 'row', gap: 7 }}>
               {row.map((k) => (
-                <Squish key={k} haptic={false} onPress={() => press(k)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={k === 'del' ? 'Delete' : k}>
+                <Squish key={k} haptic={false} onPress={() => press(k)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={k === 'del' ? t('Delete') : k}>
                   <Glass radius={18} innerStyle={styles.key}>
                     {k === 'del' ? <Backspace size={24} color={colors.ink} /> : <Text style={styles.keyText}>{k}</Text>}
                   </Glass>
@@ -290,13 +433,13 @@ export default function Add() {
           ))}
         </View>
         {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
-        <Button label={amount > 0 ? `Save ${baht(amount)}` : 'Save'} disabled={amount <= 0 || busy} loading={busy} onPress={save} />
+        <Button label={amount > 0 ? t('Save {amt}', { amt: baht(amount) }) : t('Save')} disabled={amount <= 0 || busy} loading={busy} onPress={save} />
       </View>
 
       <Modal visible={pickWhen} transparent animationType="fade" onRequestClose={() => setPickWhen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setPickWhen(false)} />
         <View style={[styles.whenSheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-          <Text style={styles.whenTitle}>When was it?</Text>
+          <Text style={styles.whenTitle}>{t('When was it?')}</Text>
           {Array.from({ length: 7 }, (_, i) => {
             const now = new Date();
             const d = i === 0 ? now : new Date(new Date(now.getTime() - i * DAY_MS).setHours(12, 0, 0, 0));
@@ -311,7 +454,7 @@ export default function Add() {
                 style={[styles.whenRow, on && { backgroundColor: colors.lime, borderColor: colors.ink }]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}>
-                <Text style={styles.chipText}>{i === 0 ? 'Today' : i === 1 ? 'Yesterday' : `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`}</Text>
+                <Text style={styles.chipText}>{i === 0 ? t('Today') : i === 1 ? t('Yesterday') : dayName(d)}</Text>
               </Pressable>
             );
           })}
@@ -323,9 +466,9 @@ export default function Add() {
           open
           onClose={() => setSlip(false)}
           onUnlocked={() => setSlip(false)}
-          title="Snap a slip, I’ll log it"
-          sub="Take a photo of a bank slip and I fill in the amount, category and time for you.">
-          <ChatPeek ask="📷  KBank slip · 13:05" answer="Got it — ฿80, Transport, today 13:05. Saved ✓" />
+          title={t('Snap a slip, I’ll log it')}
+          sub={t('Take a photo of a bank slip and I fill in the amount, category and time for you.')}>
+          <ChatPeek ask={t('📷  KBank slip · 13:05')} answer={t('Got it — ฿80, Transport, today 13:05. Saved ✓')} />
         </PlusSheet>
       )}
     </View>
@@ -346,7 +489,7 @@ function Switch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void })
       <Animated.View style={[styles.segKnob, { width: w / 2 - 4 }, knob]} />
       {(['spend', 'income'] as Kind[]).map((k) => (
         <Pressable key={k} onPress={() => onChange(k)} style={styles.segBtn} accessibilityRole="tab" accessibilityState={{ selected: kind === k }}>
-          <Text style={[styles.segText, kind === k && { color: '#FFFFFF' }]}>{k === 'spend' ? 'Spent' : 'Got paid'}</Text>
+          <Text style={[styles.segText, kind === k && { color: '#FFFFFF' }]}>{k === 'spend' ? t('Spent') : t('Got paid')}</Text>
         </Pressable>
       ))}
     </Glass>

@@ -2,9 +2,9 @@
 // Tap a day to see what you spent that day; tap today to go back.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { dayShort, t } from '@/lib/i18n';
 import { colors, fonts } from '@/theme';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_MS = 86_400_000;
 
 export function WeekStrip({
@@ -38,6 +38,7 @@ export function WeekStrip({
         const spent = byDay[key] ?? 0;
         const on = selected === key;
         const isPayday = key === start.toDateString();
+        const name = dayShort(d.getDay());
         const dot = isToday || later ? 'none' : spent > daily ? 'over' : spent > 0 ? 'under' : 'empty';
         return (
           <Pressable
@@ -45,10 +46,16 @@ export function WeekStrip({
             disabled={later}
             onPress={() => onSelect(d)}
             accessibilityRole="button"
-            accessibilityLabel={`${DAYS[d.getDay()]} ${d.getDate()}${isToday ? ', today' : ''}${!later && !isToday ? `, spent ${spent}` : ''}`}
+            accessibilityLabel={
+              isToday
+                ? t('{day} {date}, today', { day: name, date: d.getDate() })
+                : !later
+                  ? t('{day} {date}, spent {amount}', { day: name, date: d.getDate(), amount: spent })
+                  : `${name} ${d.getDate()}`
+            }
             accessibilityState={{ selected: on }}
             style={[styles.day, on && styles.on, later && { opacity: 0.45 }]}>
-            <Text style={[styles.dn, on && { color: 'rgba(255,255,255,0.6)' }]}>{DAYS[d.getDay()]}</Text>
+            <Text style={[styles.dn, on && { color: 'rgba(255,255,255,0.6)' }]}>{name}</Text>
             <Text style={[styles.dd, on && { color: '#FFFFFF' }]}>
               {d.getDate()}
               {isPayday ? <Text style={styles.pay}>฿</Text> : null}

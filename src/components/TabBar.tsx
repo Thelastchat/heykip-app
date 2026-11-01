@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
+import { t } from '@/lib/i18n';
 import { colors } from '@/theme';
 
 // Floating 3-item bar: Home · Kip (centre, opens Talk) · Goals.
@@ -24,13 +25,13 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={styles.bar}>
         <Glass radius={999} style={StyleSheet.absoluteFill} innerStyle={{ flex: 1 }} />
-        <TabIcon label="Home" active={current === 'index'} onPress={() => go('index')}>
+        <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? '#FFFFFF' : colors.ink} />
         </TabIcon>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Tell Kip"
+          accessibilityLabel={t('Tell Kip')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push('/talk');
@@ -39,7 +40,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
           <Kip size={63} />
         </Pressable>
 
-        <TabIcon label="Goals" active={current === 'goals'} onPress={() => go('goals')}>
+        <TabIcon label={t('Goals')} active={current === 'goals'} onPress={() => go('goals')}>
           <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? '#FFFFFF' : colors.ink} />
         </TabIcon>
       </View>

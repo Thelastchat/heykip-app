@@ -4,12 +4,13 @@ import { IBMPlexSansThai_400Regular, IBMPlexSansThai_500Medium, IBMPlexSansThai_
 import { MrsSaintDelafield_400Regular } from '@expo-google-fonts/mrs-saint-delafield';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { LangProvider } from '@/lib/i18n';
+import { LangProvider, takeReturnTo } from '@/lib/i18n';
 import { SetupProvider, useSetup } from '@/lib/setup/draft';
 import { colors } from '@/theme';
 
@@ -24,6 +25,11 @@ function RootStack() {
 
   useEffect(() => {
     if (!waiting) SplashScreen.hideAsync();
+    // After a language change, go back to the screen it was changed on (Profile).
+    if (!waiting) {
+      const back = takeReturnTo();
+      if (back) setTimeout(() => router.push(back as never), 0);
+    }
   }, [waiting]);
 
   if (waiting) return null;

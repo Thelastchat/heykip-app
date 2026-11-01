@@ -5,13 +5,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { T } from '@/components/ui';
 import { Glass } from '@/components/glow/Glass';
+import { t } from '@/lib/i18n';
 import { colors, fonts } from '@/theme';
 
 // Round white back/close button + centred title + optional right slot, as on the canvas.
 export function ScreenHeader({ title, close, right }: { title?: string; close?: boolean; right?: ReactNode }) {
   return (
     <View style={styles.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel={close ? 'Close' : 'Back'} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+      <Pressable accessibilityRole="button" accessibilityLabel={close ? t('Close') : t('Back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
         <Glass radius={23} innerStyle={styles.round}>
           {close ? <X size={18} color={colors.ink} weight="bold" /> : <CaretLeft size={20} color={colors.ink} weight="bold" />}
         </Glass>
