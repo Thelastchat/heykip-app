@@ -25,6 +25,7 @@ import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { pickSlips } from '@/lib/slips';
+import { useAiConsent } from '@/components/AiConsent';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money } from '@/theme';
 
@@ -201,6 +202,7 @@ export default function Add() {
   const { month } = useMonth();
   const { spent, goals } = useHome(month);
   const isPlus = profile ? profile.plan !== 'free' : false;
+  const ai = useAiConsent(() => router.push('/privacy-policy'));
 
   const [kind, setKind] = useState<Kind>('spend');
   const [digits, setDigits] = useState('');
@@ -322,7 +324,7 @@ export default function Add() {
           title={t('Add it yourself')}
           right={
             <Squish
-              onPress={async () => (isPlus ? (await pickSlips()) && router.push('/slips') : setSlip(true))}
+              onPress={async () => (isPlus ? (await ai.ensure()) && (await pickSlips()) && router.push('/slips') : setSlip(true))}
               accessibilityRole="button"
               accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
               <Glass radius={23} innerStyle={styles.slip}>
@@ -464,6 +466,7 @@ export default function Add() {
         </View>
       </Modal>
 
+      {ai.sheet}
       {slip && !isPlus && (
         <PlusSheet
           open

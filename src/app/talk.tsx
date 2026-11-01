@@ -9,6 +9,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
+import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
 import { Listening } from '@/components/talk/Listening';
 import { plusPitch } from '@/components/plusPitch';
@@ -117,6 +118,7 @@ export default function Talk() {
   useEffect(() => {
     savedVoiceLang().then((l) => l && setLang(l));
   }, []);
+  const ai = useAiConsent(() => router.push('/privacy-policy'));
   const voice = useVoice((heard) => {
     // The phone stopped by itself (long silence, or a hiccup): use what it heard.
     setListening(false);
@@ -126,6 +128,7 @@ export default function Talk() {
 
   async function listen(l = lang) {
     if (!isPlus) return setLocked(true);
+    if (!(await ai.ensure())) return;
     if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap 🎤 on your keyboard.'));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setListening(true);
@@ -162,6 +165,7 @@ export default function Talk() {
     const msg = said.trim();
     if (!msg) return;
     if (!isPlus) return setLocked(true);
+    if (!(await ai.ensure())) return;
     Haptics.selectionAsync().catch(() => {});
     const id = nextId.current++;
     setText('');
@@ -175,13 +179,15 @@ export default function Talk() {
       update(id, {
         state: 'error',
         error:
-          res.reason === 'nokey'
-            ? t('I’m not switched on yet — my AI key still needs to be added in Supabase.')
-            : res.reason === 'plus'
-              ? t('Talking to me is a Plus feature.')
-              : res.reason === 'offline'
-                ? t('I can’t reach the internet right now. Try again in a moment?')
-                : t('I got a bit muddled. Try saying it another way?'),
+          res.reason === 'consent'
+            ? t('Kip’s reading is turned off — turn it on in Profile → Privacy & data.')
+            : res.reason === 'nokey'
+              ? t('I’m not switched on yet — my AI key still needs to be added in Supabase.')
+              : res.reason === 'plus'
+                ? t('Talking to me is a Plus feature.')
+                : res.reason === 'offline'
+                  ? t('I can’t reach the internet right now. Try again in a moment?')
+                  : t('I got a bit muddled. Try saying it another way?'),
       });
     if (!res.ok && res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
@@ -335,6 +341,7 @@ export default function Talk() {
 
       {listening && <Listening name={first} state={voice.state} text={voice.text} level={voice.level} lang={lang} onLang={switchLang} onDone={doneTalking} onCancel={stopTalking} />}
 
+      {ai.sheet}
       {locked && !isPlus && (
         <PlusSheet open onClose={() => setLocked(false)} onUnlocked={() => setLocked(false)} title={pitch.talk.title} sub={pitch.talk.sub}>
           {pitch.talk.body}

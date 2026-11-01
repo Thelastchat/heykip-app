@@ -40,7 +40,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "HeyKip uses your photos so you can pin a picture of your goal.",
+          "photosPermission": "HeyKip uses the photos you pick to pin a picture of your goal and to read bank slips you choose. Slip pictures are never stored.",
           "cameraPermission": false,
           "microphonePermission": "HeyKip listens when you tap the mic, so you can tell Kip what you spent."
         }

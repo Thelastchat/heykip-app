@@ -45,8 +45,10 @@ Deno.serve(async (req) => {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } });
     const { data: u } = await sb.auth.getUser();
     if (!u?.user) return json({ error: 'not signed in' }, 401);
-    const { data: p } = await sb.from('profiles').select('plan, display_name').eq('id', u.user.id).single();
+    const { data: p } = await sb.from('profiles').select('plan, display_name, ai_consent_at, ai_off').eq('id', u.user.id).single();
     if (!p || p.plan === 'free') return json({ error: 'plus' }, 402);
+    // Nothing goes to the AI without the person's Allow (PDPA, App Store 5.1.2(i)) or after they turn it off.
+    if (!p.ai_consent_at || p.ai_off) return json({ error: 'consent' }, 403);
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);
 

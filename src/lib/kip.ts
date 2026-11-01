@@ -124,11 +124,12 @@ export function kipContext(month: MonthBudget | null, spent: Spent, goal: { name
   };
 }
 
-export async function askKip(text: string, context: object): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'nokey' | 'busy' | 'offline' }> {
+export async function askKip(text: string, context: object): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
   const { data, error } = await supabase.functions.invoke('kip', { body: { text, context } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
+    if (status === 403) return { ok: false, reason: 'consent' };
     if (status === 503) return { ok: false, reason: 'nokey' };
     if (status === undefined) return { ok: false, reason: 'offline' };
     return { ok: false, reason: 'busy' };

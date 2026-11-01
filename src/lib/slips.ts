@@ -76,12 +76,13 @@ export async function savedKeys(userId: string, keys: string[]): Promise<Set<str
   return new Set((data ?? []).map((r) => r.slip_ref as string));
 }
 
-export async function readSlip(image: string, mediaType: string): Promise<{ ok: true; read: SlipRead } | { ok: false; reason: 'plus' | 'nokey' | 'busy' | 'offline' }> {
+export async function readSlip(image: string, mediaType: string): Promise<{ ok: true; read: SlipRead } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10); // Thai date
   const { data, error } = await supabase.functions.invoke('read-slip', { body: { image, mediaType, today } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
+    if (status === 403) return { ok: false, reason: 'consent' };
     if (status === 503) return { ok: false, reason: 'nokey' };
     if (status === undefined) return { ok: false, reason: 'offline' };
     return { ok: false, reason: 'busy' };

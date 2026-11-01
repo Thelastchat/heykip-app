@@ -258,6 +258,12 @@ export default function Profile() {
           </Glass>
         </RiseIn>
 
+        <RiseIn delay={420}>
+          <Glass radius={26} innerStyle={styles.group}>
+            <SetRow icon="shield" title={t('Privacy & data')} sub={t('Kip’s AI, what’s saved, delete')} value="" onPress={() => router.push('/privacy')} />
+          </Glass>
+        </RiseIn>
+
         <View style={styles.foot}>
           <Pressable onPress={signOut} hitSlop={10} accessibilityRole="button">
             <Text style={styles.footText}>{t('Log out')}</Text>
