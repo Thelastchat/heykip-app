@@ -69,9 +69,11 @@ export const fonts = {
   medium: 'Geist_500Medium',
   semibold: 'Geist_600SemiBold',
   bold: 'Geist_700Bold',
-  thai: 'IBMPlexSansThai_400Regular',
-  thaiMedium: 'IBMPlexSansThai_500Medium',
-  thaiSemibold: 'IBMPlexSansThai_600SemiBold',
+  // Thai words switch to these automatically (src/lib/thaiText.tsx).
+  thai: 'IBMPlexSansThai-Regular',
+  thaiMedium: 'IBMPlexSansThai-Medium',
+  thaiSemibold: 'IBMPlexSansThai-SemiBold',
+  thaiBold: 'IBMPlexSansThai-Bold',
   hand: 'Caveat_600SemiBold',
   signature: 'MrsSaintDelafield_400Regular',
 } as const;

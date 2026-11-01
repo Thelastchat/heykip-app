@@ -1,6 +1,5 @@
 import { Caveat_600SemiBold } from '@expo-google-fonts/caveat';
 import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold, useFonts } from '@expo-google-fonts/geist';
-import { IBMPlexSansThai_400Regular, IBMPlexSansThai_500Medium, IBMPlexSansThai_600SemiBold } from '@expo-google-fonts/ibm-plex-sans-thai';
 import { MrsSaintDelafield_400Regular } from '@expo-google-fonts/mrs-saint-delafield';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -70,9 +69,10 @@ export default function RootLayout() {
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
-    IBMPlexSansThai_400Regular,
-    IBMPlexSansThai_500Medium,
-    IBMPlexSansThai_600SemiBold,
+    'IBMPlexSansThai-Regular': require('../../assets/fonts/IBMPlexSansThai-Regular.ttf'),
+    'IBMPlexSansThai-Medium': require('../../assets/fonts/IBMPlexSansThai-Medium.ttf'),
+    'IBMPlexSansThai-SemiBold': require('../../assets/fonts/IBMPlexSansThai-SemiBold.ttf'),
+    'IBMPlexSansThai-Bold': require('../../assets/fonts/IBMPlexSansThai-Bold.ttf'),
     Caveat_600SemiBold,
     MrsSaintDelafield_400Regular,
   });
