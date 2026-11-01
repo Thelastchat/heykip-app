@@ -95,7 +95,14 @@ export async function readSlip(image: string, mediaType: string): Promise<{ ok: 
 // Photos opens from the + screen (never while a screen is still sliding in — on iPhone that can close
 // the new screen together with Photos), then the picked slips are handed to the Slips screen.
 export const MAX_SLIPS = 10;
-let pending: ImagePicker.ImagePickerAsset[] | null = null;
+/** A slip picture ready for Kip: where it is (for the thumbnail) and its data. */
+export type PickedSlip = { uri: string; base64?: string | null; mimeType?: string };
+let pending: PickedSlip[] | null = null;
+
+/** Hand slips to the Slips screen (used by Kip finding slips). */
+export function setPickedSlips(p: PickedSlip[]) {
+  pending = p.slice(0, MAX_SLIPS);
+}
 
 /** Open Photos for slips. Returns false if nothing was picked. */
 export async function pickSlips(): Promise<boolean> {

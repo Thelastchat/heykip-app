@@ -16,6 +16,7 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillStack, type Bill } from '@/components/home/BillStack';
+import { SlipFinder } from '@/components/home/SlipFinder';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
@@ -225,6 +226,9 @@ export default function Home() {
         <RiseIn delay={180} style={{ paddingHorizontal: 18, marginTop: 22 }}>
           <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setSelectedDay(d.toDateString())} now={now} />
         </RiseIn>
+
+        {/* Kip finding slips: only when there's something to set up or something new */}
+        <SlipFinder isPlus={isPlus} />
 
         {/* Kip */}
         <RiseIn delay={240} style={{ paddingHorizontal: 18, marginTop: 22 }}>

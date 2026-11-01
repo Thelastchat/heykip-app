@@ -2,7 +2,6 @@
 // → check what Kip found (tap a category to change it; repeats are left out) → save.
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { CaretDown, Check, Minus } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -23,7 +22,7 @@ import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, takePickedSlips, type Slip } from '@/lib/slips';
+import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, takePickedSlips, type PickedSlip, type Slip } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
@@ -40,7 +39,7 @@ function whenText(d: Date) {
 }
 
 /** The picked image as base64 for the server (web gives a data: link instead). */
-function payload(a: ImagePicker.ImagePickerAsset): { image: string; type: string } | null {
+function payload(a: PickedSlip): { image: string; type: string } | null {
   if (a.base64) return { image: a.base64, type: a.mimeType?.startsWith('image/') ? a.mimeType : 'image/jpeg' };
   const m = /^data:(image\/[a-z]+);base64,(.+)$/.exec(a.uri);
   return m ? { image: m[2], type: m[1] } : null;
@@ -85,7 +84,7 @@ export default function Slips() {
     });
   }, []);
 
-  async function readAll(assets: ImagePicker.ImagePickerAsset[]) {
+  async function readAll(assets: PickedSlip[]) {
     const results: Slip[] = assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' }));
     let next = 0;
     let stop: string | null = null;

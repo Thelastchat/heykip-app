@@ -17,6 +17,7 @@ import { RiseIn, Squish } from '@/components/glow/motion';
 import { SaveButton, Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import { autoSlipsAvailable, loadAuto, saveAuto, type AutoSlips } from '@/lib/autoslips';
 import { ICON3D } from '@/lib/icons3d';
 import { PRIVACY_EMAIL } from '@/lib/privacy';
 import { supabase } from '@/lib/supabase';
@@ -27,6 +28,7 @@ export default function Privacy() {
   const { session, profile, refreshProfile } = useAuth();
   const ai = useAiConsent(() => router.push('/privacy-policy'));
   const [count, setCount] = useState<number | null>(null);
+  const [auto, setAuto] = useState<AutoSlips | null>(null);
   const [confirm, setConfirm] = useState<null | 'spending' | 'account'>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -41,8 +43,17 @@ export default function Privacy() {
   useFocusEffect(
     useCallback(() => {
       loadCount();
+      if (autoSlipsAvailable) loadAuto().then(setAuto);
     }, [loadCount]),
   );
+
+  async function stopFinding() {
+    if (!auto) return;
+    const next = { ...auto, on: false, dismissed: true };
+    await saveAuto(next);
+    setAuto(next);
+    flash(t('Kip stopped looking in your albums.'));
+  }
 
   function flash(s: string) {
     setToast(s);
@@ -118,6 +129,24 @@ export default function Privacy() {
               accessibilityLabel={t('Let Kip read for me')}
             />
           </View>
+          {auto?.on && (
+            <View style={[styles.row, styles.line]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{t('Kip finds slips')}</Text>
+                <Text style={styles.small}>{t('Looks only in: {albums}', { albums: auto.albums.map((a) => a.title).join(', ') })}</Text>
+              </View>
+              <Switch
+                value
+                onValueChange={(v) => {
+                  if (!v) stopFinding();
+                }}
+                trackColor={{ true: colors.ink, false: 'rgba(17,17,17,0.15)' }}
+                thumbColor="#FFFFFF"
+                {...({ activeThumbColor: '#FFFFFF', activeTrackColor: colors.ink } as object)}
+                accessibilityLabel={t('Kip finds slips')}
+              />
+            </View>
+          )}
         </Glass>
 
         <Text style={styles.cap}>{t('Your data')}</Text>

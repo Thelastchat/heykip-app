@@ -51,6 +51,17 @@
           "microphonePermission": "HeyKip listens when you tap the mic, so you can tell Kip what you spent.",
           "speechRecognitionPermission": "HeyKip turns what you say into words so Kip can log your spending."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "HeyKip uses the photos you pick to pin a picture of your goal and to read bank slips you choose. Slip pictures are never stored.",
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
       ]
     ],
     "experiments": {
