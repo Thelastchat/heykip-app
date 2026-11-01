@@ -25,6 +25,8 @@ import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { pickSlips } from '@/lib/slips';
+import { MoneyInSheet } from '@/components/MoneyInSheet';
+import type { MoneyIn } from '@/lib/moneyin';
 import { useAiConsent } from '@/components/AiConsent';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money } from '@/theme';
@@ -212,6 +214,7 @@ export default function Add() {
   const [when, setWhen] = useState(() => new Date());
   const [pickWhen, setPickWhen] = useState(false);
   const [slip, setSlip] = useState(false);
+  const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,21 +260,8 @@ export default function Add() {
       return { line: rich('Part of this month’s pay — **{amt}** still to come', { amt: baht(month.income - amount) }, hintBold(false)), warn: false };
     if (cat.key === 'pay' && extra === 0) return { line: t('Your plan runs on {amt} a month — this is it', { amt: baht(month.income) }), warn: false };
     if (extra === 0) return null;
-    const building = month.safety.amount > 0;
-    const part = Math.round((extra * 0.2) / 10) * 10;
-    if (building && part > 0)
-      return {
-        line: isPlus
-          ? rich('Kip puts **{amt}** in your safety net first', { amt: baht(part) }, hintBold(false))
-          : rich('Tip: put **{amt}** in your safety net first', { amt: baht(part) }, hintBold(false)),
-        warn: false,
-      };
-    return {
-      line: isPlus
-        ? rich('Kip moves it to **{goal}** — you’ll get there sooner', { goal: short }, hintBold(false))
-        : rich('Tip: move it to **{goal}** — you’ll get there sooner', { goal: short }, hintBold(false)),
-      warn: false,
-    };
+    // What happens next is the "give it a job" sheet — so the hint only says that, and promises nothing else.
+    return { line: rich('**{amt}** extra — next, give it a job: {goal}, safety net or spending', { amt: baht(extra), goal: short }, hintBold(false)), warn: false };
   }, [month, kind, cat, amount, when, spent, isPlus, short]);
 
   function press(k: string) {
@@ -298,18 +288,24 @@ export default function Add() {
     if (!session || amount <= 0) return;
     setBusy(true);
     setError(null);
-    const { error: e } = await supabase.from('transactions').insert({
-      user_id: session.user.id,
-      kind,
-      amount,
-      category_id: ids[`${kind}:${cat.key}`] ?? null,
-      note: note.trim() || null,
-      occurred_at: when.toISOString(),
-      source: 'manual',
-    });
+    const { data: row, error: e } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: session.user.id,
+        kind,
+        amount,
+        category_id: ids[`${kind}:${cat.key}`] ?? null,
+        note: note.trim() || null,
+        occurred_at: when.toISOString(),
+        source: 'manual',
+      })
+      .select('id')
+      .single();
     setBusy(false);
     if (e) return setError(t('Couldn’t save: {msg}', { msg: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // Money in: give it a job first (usual pay moves the saving; extra picks goal, safety net or spending).
+    if (kind === 'income' && row) return setMoneyIn([{ id: row.id as string, amount, category: cat.key, note: note.trim() || null }]);
     router.canGoBack() ? router.back() : router.replace('/');
   }
 
@@ -467,6 +463,15 @@ export default function Add() {
       </Modal>
 
       {ai.sheet}
+      {moneyIn && (
+        <MoneyInSheet
+          items={moneyIn}
+          onClose={() => {
+            setMoneyIn(null);
+            router.canGoBack() ? router.back() : router.replace('/');
+          }}
+        />
+      )}
       {slip && !isPlus && (
         <PlusSheet
           open

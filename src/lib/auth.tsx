@@ -10,6 +10,7 @@ export type Profile = {
   onboarded: boolean;
   plan: 'free' | 'trial' | 'yearly' | 'monthly' | 'student';
   split_when_paid: boolean; // Plus: Kip moves the saving on payday
+  safety_saved: number; // what's in the safety net pot
   ai_consent_at: string | null; // when they tapped Allow on "Before Kip reads for you"
   ai_off: boolean; // Privacy & data → Kip's AI turned off
 };
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     // The profiles row is created by a database trigger on sign-up (see the migration).
-    const { data } = await supabase.from('profiles').select('id, display_name, avatar_url, onboarded, plan, split_when_paid, ai_consent_at, ai_off').eq('id', s.user.id).maybeSingle();
+    const { data } = await supabase.from('profiles').select('id, display_name, avatar_url, onboarded, plan, split_when_paid, ai_consent_at, ai_off, safety_saved').eq('id', s.user.id).maybeSingle();
     setProfile((data as Profile | null) ?? null);
   }, []);
 

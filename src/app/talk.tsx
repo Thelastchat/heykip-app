@@ -21,7 +21,8 @@ import { t } from '@/lib/i18n';
 import { CATEGORY } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
-import { soonerText } from '@/components/goals/PutMoneySheet';
+import { MoneyInSheet } from '@/components/MoneyInSheet';
+import type { MoneyIn } from '@/lib/moneyin';
 import {
   applyBuy,
   askKip,
@@ -57,8 +58,6 @@ type Turn = {
   saved?: boolean;
   bought?: boolean;
   dismissed?: boolean;
-  extra?: { amount: number; from: 'bonus' | 'side' | 'gift' | 'other'; note: string } | null; // extra money in, once saved
-  extraDone?: { put: true; total: number } | { put: false };
 };
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
@@ -90,6 +89,7 @@ export default function Talk() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [ids, setIds] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const nextId = useRef(1);
 
@@ -199,23 +199,15 @@ export default function Talk() {
       const kind = isIn(it) ? 'income' : 'spend';
       return { user_id: session.user.id, kind, amount: it.amount, category_id: ids[`${kind}:${it.category}`] ?? ids[`${kind}:other`] ?? null, note: it.name, source: 'typed' };
     });
-    const { error } = await supabase.from('transactions').insert(rows);
+    const { data: saved, error } = await supabase.from('transactions').insert(rows).select('id, kind, amount, note');
     if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    const ins = items.filter(isIn);
-    const { extra, from } = incomeNotes(ins, month);
-    update(turn.id, { saved: true, extra: extra > 0 ? { amount: extra, from, note: ins.map((i) => i.name).join(', ') } : null });
+    update(turn.id, { saved: true });
     reload();
+    // Money in: the same "give it a job" sheet as everywhere else.
+    const inn = (saved ?? []).map((r, i) => ({ r, it: items[i] })).filter(({ r }) => r.kind === 'income');
+    if (inn.length) setMoneyIn(inn.map(({ r, it }) => ({ id: r.id as string, amount: Number(r.amount), category: it.category, note: (r.note as string | null) ?? null })));
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
-  }
-
-  async function putExtra(turn: Turn) {
-    if (!goalInfo || !turn.extra) return;
-    const { data, error } = await supabase.rpc('put_in_goal', { p_goal: goalInfo.id, p_amount: turn.extra.amount, p_source: 'extra', p_from: turn.extra.from, p_note: turn.extra.note.slice(0, 120) });
-    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(turn.id, { extraDone: { put: true, total: Number(data ?? goalInfo.saved + turn.extra.amount) } });
-    reload();
   }
 
   async function buyIt(turn: Turn, item: LogItem, plan: BuyPlan) {
@@ -281,8 +273,6 @@ export default function Talk() {
                 goalInfo={goalInfo}
                 spent={spent}
                 onSave={(items) => saveItems(turn, items)}
-                onPutExtra={() => putExtra(turn)}
-                onKeepExtra={() => update(turn.id, { extraDone: { put: false } })}
                 onBuy={(item, plan) => buyIt(turn, item, plan)}
                 onNotNow={() => update(turn.id, { dismissed: true })}
               />
@@ -333,6 +323,16 @@ export default function Talk() {
         </Squish>
       </View>
 
+      {moneyIn && (
+        <MoneyInSheet
+          items={moneyIn}
+          onClose={(msg) => {
+            setMoneyIn(null);
+            reload();
+            if (msg) flash(msg);
+          }}
+        />
+      )}
       {toast && (
         <View style={[styles.toast, { bottom: 90 + Math.max(insets.bottom, 12) }]} pointerEvents="none">
           <Text style={styles.toastText}>{toast}</Text>
@@ -371,8 +371,6 @@ function Answer({
   goalInfo,
   spent,
   onSave,
-  onPutExtra,
-  onKeepExtra,
   onBuy,
   onNotNow,
 }: {
@@ -384,8 +382,6 @@ function Answer({
   goalInfo: GoalInfo;
   spent: ReturnType<typeof useHome>['spent'];
   onSave: (items: Item[]) => void;
-  onPutExtra: () => void;
-  onKeepExtra: () => void;
   onBuy: (item: LogItem, plan: BuyPlan) => void;
   onNotNow: () => void;
 }) {
@@ -419,7 +415,6 @@ function Answer({
         )}
       </View>
     );
-    const extra = turn.extra;
     return (
       <>
         <KipLine text={reply.reply} />
@@ -458,10 +453,6 @@ function Answer({
             </Squish>
           )}
         </Glass>
-
-        {turn.saved && extra && goalInfo && (
-          <ExtraOffer extra={extra.amount} goal={goalInfo} done={turn.extraDone} hasPay={ins.some((i) => i.category === 'pay')} onPut={onPutExtra} onKeep={onKeepExtra} />
-        )}
       </>
     );
   }
@@ -545,65 +536,6 @@ function Answer({
   }
 
   return <KipLine text={reply.reply} />;
-}
-
-/** After saving: extra money (not the usual pay) can go to the goal. Today's money is the same either way. */
-function ExtraOffer({ extra, goal, done, hasPay, onPut, onKeep }: { extra: number; goal: NonNullable<GoalInfo>; done: Turn['extraDone']; hasPay: boolean; onPut: () => void; onKeep: () => void }) {
-  const sooner = soonerText(extra, goal.perMonth);
-  const target = goal.target > 0 ? goal.target : 0;
-  const was = target ? Math.min(1, goal.saved / target) : 0;
-  const after = target ? Math.min(1, (goal.saved + extra) / target) : 0;
-  return (
-    <>
-      <KipLine
-        text={
-          hasPay
-            ? t('Your pay is what your plan already runs on. The {amount} is extra — want it to get you to {goal} sooner?', { amount: baht(extra), goal: goal.name })
-            : t('The {amount} is extra — want it to get you to {goal} sooner?', { amount: baht(extra), goal: goal.name })
-        }
-      />
-      <Glass radius={26} innerStyle={{ padding: 16, gap: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Image source={ICON3D[goal.icon]} style={{ width: 48, height: 48 }} contentFit="contain" />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.itemName, { fontSize: 17 }]}>{goal.name}</Text>
-            <Text style={styles.sub}>{target ? t('{saved} of {target}', { saved: baht(goal.saved), target: baht(target) }) : t('{saved} saved', { saved: baht(goal.saved) })}</Text>
-          </View>
-          <Text style={styles.price}>+{baht(extra)}</Text>
-        </View>
-        {target > 0 && (
-          <View style={styles.goalBar}>
-            <View style={[styles.goalBarFill, { width: `${after * 100}%`, backgroundColor: colors.lavender }]} />
-            <View style={[styles.goalBarFill, { width: `${was * 100}%`, backgroundColor: colors.limeDeep }]} />
-          </View>
-        )}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={styles.sub}>
-            {goal.arrives ? `${goal.arrives} → ` : ''}
-            <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{sooner ?? t('sooner')}</Text>
-          </Text>
-          <Text style={styles.sub}>{baht(goal.saved + extra)}</Text>
-        </View>
-      </Glass>
-      {done ? (
-        <Text style={[styles.sub, { textAlign: 'center' }]}>
-          {done.put ? t('Put in ✓ — {goal} is at {total} now.', { goal: goal.name, total: baht(done.total) }) : t('Okay — it’s yours to spend. Today’s money stays the same.')}
-        </Text>
-      ) : (
-        <View style={{ gap: 8 }}>
-          <Squish onPress={onPut} style={styles.dark} accessibilityRole="button">
-            <Text style={styles.darkText}>{t('Put {amount} in {goal}', { amount: baht(extra), goal: goal.name })}</Text>
-          </Squish>
-          <Squish onPress={onKeep} accessibilityRole="button">
-            <Glass radius={999} innerStyle={styles.light}>
-              <Text style={styles.lightText}>{t('Keep it to spend')}</Text>
-            </Glass>
-          </Squish>
-          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Today’s money stays the same either way')}</Text>
-        </View>
-      )}
-    </>
-  );
 }
 
 const styles = StyleSheet.create({

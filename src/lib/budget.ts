@@ -168,6 +168,10 @@ export type MonthBudget = {
   spend: { key: CatKey; amount: number }[];
   /** Bills marked paid this month (cleared when a new month starts). */
   paid?: { period: string; keys: string[] };
+  /** The pay cycle whose saving has already moved to the goal and safety net (once per cycle). */
+  payMoved?: string;
+  /** Taken back from this cycle's goal saving / the safety net to cover going over — added to spending money. */
+  covers?: { period: string; goal: number; safety: number; today?: { day: string; amount: number } };
 };
 
 /** Living costs + fun (+ learning and giving) as categories. */

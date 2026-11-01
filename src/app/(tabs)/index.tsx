@@ -24,6 +24,7 @@ import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/
 import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, periodKey, useHome, type HomeGoal } from '@/lib/home';
+import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
@@ -65,7 +66,7 @@ export default function Home() {
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
 
   // ---- the month in numbers (the same numbers as the + screen) ----
-  const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter } = monthNumbers(month, spent, now);
+  const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter, extraIn } = monthNumbers(month, spent, now);
   const saving = month ? savingTotal(month) : 0;
   const goalDate = goal?.due ? parseDay(goal.due) : null;
   const fast = spent.total > 0 && pace > 0;
@@ -74,8 +75,15 @@ export default function Home() {
   const showOverToday = isTodaySelected && overToday > 0;
 
   // Going over: what it changes (the sheet behind the minus numbers).
-  const goalPerMonth = month ? month.goal.amount + month.goalExtra : 0;
-  const cover = overCover(overMonth, goal && goal.kind !== 'monthly' ? goalPerMonth : 0, month?.safety.amount ?? 0, goal ? Math.max(0, goal.target - goal.saved) : 0);
+  const goalPerMonth = month && !month.goal.isSafetyNet ? savingThisCycle(month).goal : 0;
+  const goalLeft = goal ? Math.max(0, goal.target - goal.saved) : 0;
+  const safetySaved = Number(profile?.safety_saved ?? 0);
+  const cover = overCover(overMonth, goal && goal.kind !== 'monthly' ? goalPerMonth : 0, safetySaved, goalLeft);
+  const laterBy = (amount: number) => {
+    if (!goalDate || goalPerMonth <= 0) return null;
+    const later = Math.ceil((goalLeft + amount) / goalPerMonth) - Math.ceil(goalLeft / goalPerMonth);
+    return later > 0 ? monthYear(new Date(goalDate.getFullYear(), goalDate.getMonth() + later, 1)) : null;
+  };
   const overInfo: OverInfo = {
     spentToday: spent.today,
     dailyToday,
@@ -92,12 +100,22 @@ export default function Home() {
             perMonth: goalPerMonth,
             date: goalDate ? monthYear(goalDate) : null,
             laterDate: goalDate && cover.later > 0 ? monthYear(new Date(goalDate.getFullYear(), goalDate.getMonth() + cover.later, 1)) : null,
+            laterBy,
           }
         : null,
     fromGoal: cover.fromGoal,
     fromSafety: cover.fromSafety,
-    safetyPerMonth: month?.safety.amount ?? 0,
+    safetySaved,
   };
+  async function coverIt(take: { goal: number; safety: number }, forToday: boolean) {
+    if (!month) return t('Your plan isn’t loaded yet — try again in a moment.');
+    const r = await coverMonth(month, goal?.id ?? null, take, forToday);
+    if ('error' in r) return t('Couldn’t save: {msg}', { msg: r.error });
+    save(r.month);
+    refreshProfile();
+    reload();
+    return null;
+  }
 
   // Kip celebrates when something new was logged today, then settles.
   const lastToday = useRef(spent.today);
@@ -212,8 +230,9 @@ export default function Home() {
   const spendTiles = (month?.spend ?? [])
     .map((s) => {
       const used = spent.byCat[s.key] ?? 0;
-      const share = s.amount ? used / s.amount : 0;
-      return { s, used, left: Math.max(0, s.amount - used), going: used > 0 && share > Math.max(gone + 0.15, gone * 1.5) };
+      const budget = s.amount + (spent.extraCats?.[s.key] ?? 0); // + extra money kept for this category
+      const share = budget ? used / budget : 0;
+      return { s: { ...s, amount: budget }, used, left: Math.max(0, budget - used), going: used > 0 && share > Math.max(gone + 0.15, gone * 1.5) };
     })
     .sort((a, b) => Number(b.going) - Number(a.going));
 
@@ -286,6 +305,7 @@ export default function Home() {
               style={[styles.n2, overMonth > 0 && { color: colors.orangeText, fontSize: 26 }]}
             />
             <Text style={[styles.lbl, overMonth > 0 && styles.overText]}>{overMonth > 0 ? t('Over this month') : t('Left this month')}</Text>
+            {overMonth <= 0 && extraIn > 0 && <Text style={styles.extraIn}>{t('incl. +{amount} extra', { amount: baht(extraIn) })}</Text>}
           </Pressable>
           <Glass radius={25} style={{ marginLeft: 'auto' }} innerStyle={styles.cal}>
             <Text style={styles.calN}>{P.daysLeft}</Text>
@@ -414,7 +434,17 @@ export default function Home() {
         )}
       </ScrollView>
 
-      {overOpen && (overToday > 0 || overMonth > 0) && <OverSheet info={overInfo} onClose={() => setOverOpen(false)} />}
+      {overOpen && (overToday > 0 || overMonth > 0) && (
+        <OverSheet
+          info={overInfo}
+          isPlus={isPlus}
+          onCover={coverIt}
+          onClose={(msg) => {
+            setOverOpen(false);
+            if (msg) flash(msg);
+          }}
+        />
+      )}
       {toast && (
         <View style={[styles.toast, { bottom: 176 + Math.max(insets.bottom, 12) }]} pointerEvents="none">
           <Text style={styles.toastText}>{toast}</Text>
@@ -563,6 +593,7 @@ const styles = StyleSheet.create({
   lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
   overLbl: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   overText: { color: colors.orangeText, fontFamily: fonts.medium },
+  extraIn: { fontFamily: fonts.medium, fontSize: 11, color: colors.lavenderText, marginTop: 2 },
   vbar: { width: 1, height: 54, backgroundColor: 'rgba(17,17,17,0.12)' },
   cal: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
   calN: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 16, color: colors.ink },

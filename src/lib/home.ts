@@ -23,7 +23,34 @@ export type HomeGoal = {
 };
 
 /** What was spent this month, counted against the plan. `bills` = logged under Home & bills — already planned, so not taken from spending again. */
-export type Spent = { total: number; today: number; bills: number; byCat: Partial<Record<CatKey, number>>; byDay: Record<string, number> };
+export type Spent = {
+  total: number;
+  today: number;
+  bills: number;
+  byCat: Partial<Record<CatKey, number>>;
+  byDay: Record<string, number>;
+  /** Extra money in this pay cycle that was kept for spending — in general, and for one category. */
+  extraSpend?: number;
+  extraCats?: Partial<Record<CatKey, number>>;
+  /** Pay logged this cycle (the usual pay the plan runs on). */
+  payIn?: number;
+};
+
+/** Taken back from this cycle's goal saving / the safety net to cover going over (see moneyin.ts). */
+export function coverOf(month: MonthBudget | null, now = new Date()) {
+  const pk = month ? periodKey(month.payday, now) : '';
+  return month?.covers?.period === pk ? { goal: month.covers.goal, safety: month.covers.safety } : { goal: 0, safety: 0 };
+}
+
+/** Extra money that came in and was kept for spending, plus anything taken back to cover going over. */
+export function addedThisCycle(month: MonthBudget | null, spent: Spent, now = new Date()) {
+  const cats = Object.values(spent.extraCats ?? {}).reduce((a: number, n) => a + (n ?? 0), 0);
+  const c = coverOf(month, now);
+  // A cover made today pays for today itself, not for the days ahead.
+  const t = month?.covers?.today;
+  const today = t && t.day === now.toDateString() && month?.covers?.period === periodKey(month.payday, now) ? t.amount : 0;
+  return { extra: (spent.extraSpend ?? 0) + cats, cover: c.goal + c.safety, coverToday: today };
+}
 
 /** Which budget a logged category counts against. Categories without their own budget (travel, pets…) count as Household & other. */
 export function budgetKey(dbKey: string, month: MonthBudget | null): CatKey | 'bills' {
@@ -36,11 +63,12 @@ export function budgetKey(dbKey: string, month: MonthBudget | null): CatKey | 'b
 /** The month in numbers — the same on Home and in "Add it yourself". */
 export function monthNumbers(month: MonthBudget | null, spent: Spent, now = new Date()) {
   const P = period(month?.payday ?? null, now);
-  const spendBudget = month ? spendingTotal(month) : 0;
+  const added = addedThisCycle(month, spent, now);
+  const spendBudget = month ? spendingTotal(month) + added.extra + added.cover : 0;
   const leftMonth = Math.max(0, spendBudget - spent.total);
   // Today's share of what was left when today started (today's spending counted back in).
   const leftAtStart = Math.max(0, spendBudget - (spent.total - spent.today));
-  const dailyToday = Math.max(0, Math.round(leftAtStart / P.daysLeft / 10) * 10);
+  const dailyToday = Math.max(0, Math.round(Math.max(0, leftAtStart - added.coverToday) / P.daysLeft / 10) * 10) + added.coverToday;
   const leftToday = Math.max(0, dailyToday - spent.today);
   const pace = Math.round(spent.total - spendBudget * (P.dayIndex / P.total));
   // Going over: past today's money, and past the whole month's spending money.
@@ -49,7 +77,7 @@ export function monthNumbers(month: MonthBudget | null, spent: Spent, now = new 
   // What each day after today gets now (the days ahead carry today's extra).
   const daysAfter = P.daysLeft - 1;
   const dailyAfter = daysAfter > 0 ? Math.max(0, Math.round(leftMonth / daysAfter / 10) * 10) : 0;
-  return { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter };
+  return { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter, extraIn: added.extra };
 }
 
 /**
@@ -120,7 +148,7 @@ export function useHome(month: MonthBudget | null) {
         .eq('status', 'active')
         .order('position'),
       supabase.from('promises').select('goal_id, text, signature_url, signed_at').eq('user_id', userId).order('signed_at', { ascending: false }),
-      supabase.from('transactions').select('amount, kind, occurred_at, categories(key)').eq('user_id', userId).eq('kind', 'spend').gte('occurred_at', p.start.toISOString()),
+      supabase.from('transactions').select('amount, kind, occurred_at, job, categories(key)').eq('user_id', userId).in('kind', ['spend', 'income']).gte('occurred_at', p.start.toISOString()),
     ]);
     // Days logged in a row (today, or up to yesterday if nothing yet today) — from the last 60 days of logs.
     const { data: recent } = await supabase
@@ -151,9 +179,17 @@ export function useHome(month: MonthBudget | null) {
     );
     setGoals(list);
     const todayKey = new Date().toDateString();
-    const s: Spent = { total: 0, today: 0, bills: 0, byCat: {}, byDay: {} };
+    const s: Spent = { total: 0, today: 0, bills: 0, byCat: {}, byDay: {}, extraSpend: 0, extraCats: {}, payIn: 0 };
     for (const t of tx ?? []) {
       const amt = Number(t.amount);
+      if (t.kind === 'income') {
+        // Money in changes spending only through the part someone kept for spending.
+        const job = (t.job ?? null) as { spend?: number; cats?: Partial<Record<CatKey, number>> } | null;
+        if ((t.categories as unknown as { key: string } | null)?.key === 'pay') s.payIn = (s.payIn ?? 0) + amt;
+        s.extraSpend = (s.extraSpend ?? 0) + Number(job?.spend ?? 0);
+        for (const [k, v] of Object.entries(job?.cats ?? {})) s.extraCats![k as CatKey] = (s.extraCats![k as CatKey] ?? 0) + Number(v ?? 0);
+        continue;
+      }
       const key = budgetKey((t.categories as unknown as { key: string } | null)?.key ?? 'other', month);
       if (key === 'bills') {
         s.bills += amt;

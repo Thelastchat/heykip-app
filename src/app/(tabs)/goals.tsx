@@ -24,7 +24,7 @@ import { monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/theme';
 
-type Move = { id: string; amount: number; source: 'payday' | 'extra'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
+type Move = { id: string; amount: number; source: 'payday' | 'extra' | 'cover'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
 const FROM_LABEL: Record<string, string> = {
   get bonus() {
     return t('bonus');
@@ -170,8 +170,8 @@ export default function Goals() {
                   <Text style={styles.sub}>{t('Grows to {amount} — 3 months of basics', { amount: baht(month.safety.target) })}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.potAmt}>{baht(month.safety.amount)}</Text>
-                  <Text style={styles.sub}>{t('a month')}</Text>
+                  <Text style={styles.potAmt}>{baht(Number(profile?.safety_saved ?? 0))}</Text>
+                  <Text style={styles.sub}>{t('saved · {amount} a month', { amount: baht(month.safety.amount) })}</Text>
                 </View>
               </Glass>
             </View>
@@ -223,9 +223,9 @@ export default function Goals() {
                     <HistRow
                       key={m.id}
                       first={i === 0}
-                      icon={m.source === 'payday' ? 'income' : 'piggy'}
+                      icon={m.source === 'payday' ? 'income' : m.source === 'cover' ? 'expense' : 'piggy'}
                       lime={m.source === 'extra'}
-                      title={m.source === 'payday' ? t('Payday') : t('You put in')}
+                      title={m.source === 'payday' ? t('Payday') : m.source === 'cover' ? t('Covered a month that ran over') : t('You put in')}
                       sub={`${dayLabel(m.moved_at)}${m.from_kind ? ` · ${FROM_LABEL[m.from_kind]}` : ''}`}
                       amount={m.amount}
                     />
@@ -400,7 +400,10 @@ function HistRow({ icon, title, sub, amount, first, lime }: { icon: Icon3D; titl
         <Text style={styles.histTitle}>{title}</Text>
         <Text style={styles.sub}>{sub}</Text>
       </View>
-      <Text style={styles.histAmt}>+{baht(amount)}</Text>
+      <Text style={styles.histAmt}>
+        {amount < 0 ? '−' : '+'}
+        {baht(Math.abs(amount))}
+      </Text>
     </View>
   );
 }

@@ -1,3 +1,4 @@
+import { MonthTellKip } from '@/components/MonthTellKip';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -257,6 +258,7 @@ export function MonthScreen({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        {isPlus && <MonthTellKip month={month} save={save} />}
         <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       </View>
       <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>

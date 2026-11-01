@@ -15,6 +15,8 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { useAiConsent } from '@/components/AiConsent';
+import { MoneyInSheet } from '@/components/MoneyInSheet';
+import type { MoneyIn } from '@/lib/moneyin';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
@@ -57,6 +59,7 @@ export default function Slips() {
   const [ids, setIds] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
   const started = useRef(false);
   const ai = useAiConsent(() => router.push('/privacy-policy'));
 
@@ -158,15 +161,23 @@ export default function Slips() {
         slip_ref: slipKey(s),
       };
     });
-    let { error } = await supabase.from('transactions').insert(rows);
+    const cols = 'id, kind, amount, note, slip_ref';
+    let { data: saved, error } = await supabase.from('transactions').insert(rows).select(cols);
     // One already there (saved on another phone in the meantime): save the rest one by one.
     if (error) {
-      const results = await Promise.all(rows.map((r) => supabase.from('transactions').insert(r)));
+      const results = await Promise.all(rows.map((r) => supabase.from('transactions').insert(r).select(cols).single()));
       error = results.find((x) => x.error && x.error.code !== '23505')?.error ?? null;
+      saved = results.flatMap((x) => (x.data ? [x.data] : []));
     }
     setBusy(false);
     if (error) return setProblem(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // Money in from a slip gets a job too, the same as everywhere else.
+    const inn = (saved ?? []).filter((r) => r.kind === 'income');
+    if (inn.length)
+      return setMoneyIn(
+        inn.map((r) => ({ id: r.id as string, amount: Number(r.amount), category: toSave.find((x) => slipKey(x) === r.slip_ref)?.category ?? 'other', note: (r.note as string | null) ?? null })),
+      );
     router.dismissTo('/');
   }
 
@@ -264,6 +275,15 @@ export default function Slips() {
       )}
 
       {ai.sheet}
+      {moneyIn && (
+        <MoneyInSheet
+          items={moneyIn}
+          onClose={() => {
+            setMoneyIn(null);
+            router.dismissTo('/');
+          }}
+        />
+      )}
       {editingSlip && (
         <Sheet open onClose={() => setEditing(null)} title={editingSlip.money === 'in' ? t('What was it?') : t('What was it for?')} sub={editingSlip.name || undefined}>
           <View style={styles.cats}>
