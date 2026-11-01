@@ -56,7 +56,12 @@ export function CountUp({ value, format, style, ms = 1000 }: { value: number; fo
       from.current = value;
     };
   }, [value, ms]);
-  return <Text style={style}>{format(Math.round(shown))}</Text>;
+  // Numbers never wrap: on a phone they shrink to fit instead.
+  return (
+    <Text style={style} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+      {format(Math.round(shown))}
+    </Text>
+  );
 }
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);

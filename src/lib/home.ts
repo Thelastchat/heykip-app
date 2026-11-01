@@ -38,11 +38,44 @@ export function monthNumbers(month: MonthBudget | null, spent: Spent, now = new 
   const P = period(month?.payday ?? null, now);
   const spendBudget = month ? spendingTotal(month) : 0;
   const leftMonth = Math.max(0, spendBudget - spent.total);
-  // Today's share of what's left, counting what was already spent today back in.
-  const dailyToday = Math.max(0, Math.round((leftMonth + spent.today) / P.daysLeft / 10) * 10);
+  // Today's share of what was left when today started (today's spending counted back in).
+  const leftAtStart = Math.max(0, spendBudget - (spent.total - spent.today));
+  const dailyToday = Math.max(0, Math.round(leftAtStart / P.daysLeft / 10) * 10);
   const leftToday = Math.max(0, dailyToday - spent.today);
   const pace = Math.round(spent.total - spendBudget * (P.dayIndex / P.total));
-  return { P, spendBudget, leftMonth, dailyToday, leftToday, pace };
+  // Going over: past today's money, and past the whole month's spending money.
+  const overToday = Math.max(0, spent.today - dailyToday);
+  const overMonth = Math.max(0, spent.total - spendBudget);
+  // What each day after today gets now (the days ahead carry today's extra).
+  const daysAfter = P.daysLeft - 1;
+  const dailyAfter = daysAfter > 0 ? Math.max(0, Math.round(leftMonth / daysAfter / 10) * 10) : 0;
+  return { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter };
+}
+
+/**
+ * The month's spending money ran out: the extra comes out of this month's goal saving first, then the safety net —
+ * never rent or bills. Returns how much each gives, and how many months later the goal arrives.
+ */
+export function overCover(over: number, goalPerMonth: number, safetyPerMonth: number, goalLeft: number) {
+  const fromGoal = Math.min(over, Math.max(0, goalPerMonth));
+  const fromSafety = Math.min(over - fromGoal, Math.max(0, safetyPerMonth));
+  const later = goalPerMonth > 0 && goalLeft > 0 ? Math.ceil((goalLeft + fromGoal) / goalPerMonth) - Math.ceil(goalLeft / goalPerMonth) : 0;
+  return { fromGoal, fromSafety, uncovered: over - fromGoal - fromSafety, later };
+}
+
+/** The pay period `offset` months from the current one (0 = now, -1 = the one before). */
+export function periodAt(payday: number | null, offset: number, now = new Date()) {
+  const cur = period(payday, now);
+  const day = payday ?? 1;
+  const y = cur.start.getFullYear();
+  const m = cur.start.getMonth() + offset;
+  const start = new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+  return period(payday, start);
+}
+
+/** Which month a pay period is called by: the month most of its days fall in. */
+export function periodMonth(p: { start: Date; total: number }) {
+  return new Date(p.start.getFullYear(), p.start.getMonth(), p.start.getDate() + Math.floor(p.total / 2));
 }
 
 /** The month runs payday → payday (or 1st → 1st when pay changes). */

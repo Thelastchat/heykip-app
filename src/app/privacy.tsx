@@ -151,7 +151,7 @@ export default function Privacy() {
 
         <Text style={styles.cap}>{t('Your data')}</Text>
         <Glass radius={24} innerStyle={styles.group}>
-          <Row title={t('Everything Kip saved')} sub={t('See every entry · swipe to delete one')} value={count === null ? '' : String(count)} onPress={() => router.push('/saved')} />
+          <Row title={t('Everything Kip saved')} sub={t('See every entry · swipe to delete one')} value={count === null ? '' : String(count)} onPress={() => router.push('/history')} />
           <Row title={t('Privacy policy')} sub={t('The full version, in plain words')} line onPress={() => router.push('/privacy-policy')} />
           <Row title={t('Questions')} sub={PRIVACY_EMAIL} line onPress={() => Linking.openURL(`mailto:${PRIVACY_EMAIL}?subject=HeyKip%20privacy`)} />
         </Glass>

@@ -3,7 +3,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { Plus, UserCircle } from 'phosphor-react-native';
+import { CaretRight, Plus, UserCircle } from 'phosphor-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,13 +16,14 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillStack, type Bill } from '@/components/home/BillStack';
+import { OverSheet, type OverInfo } from '@/components/home/OverSheet';
 import { SlipFinder } from '@/components/home/SlipFinder';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
-import { monthNumbers, periodKey, useHome, type HomeGoal } from '@/lib/home';
+import { monthNumbers, overCover, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
@@ -49,6 +50,7 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
   const [kipMood, setKipMood] = useState<KipMood>('happy');
+  const [overOpen, setOverOpen] = useState(false);
   const isPlus = profile ? profile.plan !== 'free' : false;
 
   useFocusEffect(
@@ -63,12 +65,39 @@ export default function Home() {
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
 
   // ---- the month in numbers (the same numbers as the + screen) ----
-  const { P, spendBudget, leftMonth, dailyToday, leftToday, pace } = monthNumbers(month, spent, now);
+  const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter } = monthNumbers(month, spent, now);
   const saving = month ? savingTotal(month) : 0;
   const goalDate = goal?.due ? parseDay(goal.due) : null;
   const fast = spent.total > 0 && pace > 0;
   const isTodaySelected = selectedDay === now.toDateString();
   const dailyPlan = P.total ? spendBudget / P.total : 0;
+  const showOverToday = isTodaySelected && overToday > 0;
+
+  // Going over: what it changes (the sheet behind the minus numbers).
+  const goalPerMonth = month ? month.goal.amount + month.goalExtra : 0;
+  const cover = overCover(overMonth, goal && goal.kind !== 'monthly' ? goalPerMonth : 0, month?.safety.amount ?? 0, goal ? Math.max(0, goal.target - goal.saved) : 0);
+  const overInfo: OverInfo = {
+    spentToday: spent.today,
+    dailyToday,
+    overToday,
+    overMonth,
+    daysAfter,
+    dailyAfter,
+    leftAtStart,
+    leftMonth,
+    goal:
+      goal && goal.kind !== 'monthly'
+        ? {
+            name: short,
+            perMonth: goalPerMonth,
+            date: goalDate ? monthYear(goalDate) : null,
+            laterDate: goalDate && cover.later > 0 ? monthYear(new Date(goalDate.getFullYear(), goalDate.getMonth() + cover.later, 1)) : null,
+          }
+        : null,
+    fromGoal: cover.fromGoal,
+    fromSafety: cover.fromSafety,
+    safetyPerMonth: month?.safety.amount ?? 0,
+  };
 
   // Kip celebrates when something new was logged today, then settles.
   const lastToday = useRef(spent.today);
@@ -85,15 +114,26 @@ export default function Home() {
 
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
-    spent.total === 0
-      ? t('Your plan is running. Tell me what you spend and I’ll keep {goal} on track.', { goal: short })
-      : pace <= 0
+    overMonth > 0
+      ? t('This month’s spending money is used up — {amount} over. It comes out of your saving, so rent and bills are safe. Must-haves only until payday.', { amount: baht(overMonth) })
+      : overToday > 0 && daysAfter > 0
         ? goalDate
-          ? t('You’re doing great — {amount} under pace. {goal} is on track for {date}.', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
-          : t('You’re doing great — {amount} under pace. {goal} is on track.', { amount: baht(-pace), goal: short })
-        : goalDate
-          ? t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on {date}.', { amount: baht(pace), daily: baht(dailyToday), goal: short, date: monthYear(goalDate) })
-          : t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on track.', { amount: baht(pace), daily: baht(dailyToday), goal: short });
+          ? t('A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on {date}.', { amount: baht(overToday), n: daysAfter, goal: short, date: monthYear(goalDate) })
+          : t('A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on track.', { amount: baht(overToday), n: daysAfter, goal: short })
+        : spent.total === 0
+          ? t('Your plan is running. Tell me what you spend and I’ll keep {goal} on track.', { goal: short })
+          : pace <= 0
+            ? goalDate
+              ? t('You’re doing great — {amount} under pace. {goal} is on track for {date}.', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
+              : t('You’re doing great — {amount} under pace. {goal} is on track.', { amount: baht(-pace), goal: short })
+            : goalDate
+              ? t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on {date}.', {
+                  amount: baht(pace),
+                  daily: baht(dailyToday),
+                  goal: short,
+                  date: monthYear(goalDate),
+                })
+              : t('A bit fast this month — {amount} over pace. Keep to {daily} a day and {goal} stays on track.', { amount: baht(pace), daily: baht(dailyToday), goal: short });
 
   // ---- Plus ----
   function openFeature(f: PlusFeature) {
@@ -208,15 +248,45 @@ export default function Home() {
 
         {/* the two numbers */}
         <RiseIn delay={120} style={styles.nums}>
-          <View>
-            <CountUp value={isTodaySelected ? leftToday : shownSpent} format={Big} style={styles.n1} />
-            <Text style={styles.lbl}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
-          </View>
+          <Pressable
+            disabled={!showOverToday}
+            onPress={() => setOverOpen(true)}
+            accessibilityRole={showOverToday ? 'button' : undefined}
+            accessibilityLabel={showOverToday ? t('{amount} over today — see what it changes', { amount: baht(overToday) }) : undefined}>
+            <CountUp
+              value={isTodaySelected ? (showOverToday ? overToday : leftToday) : shownSpent}
+              format={showOverToday ? (n) => <>−{Big(n)}</> : Big}
+              style={[styles.n1, showOverToday && { color: colors.orangeText }, overMonth > 0 && { fontSize: 38, lineHeight: 44 }]}
+            />
+            {showOverToday ? (
+              <View style={styles.overLbl}>
+                <Text style={[styles.lbl, styles.overText]}>{t('Over today')}</Text>
+                <CaretRight size={11} color={colors.orangeText} weight="bold" style={{ marginTop: 6 }} />
+              </View>
+            ) : (
+              <Text style={styles.lbl}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
+            )}
+          </Pressable>
           <View style={styles.vbar} />
-          <View style={{ flexShrink: 1 }}>
-            <CountUp value={leftMonth} format={(n) => <>{Big(n)}</>} style={styles.n2} />
-            <Text style={styles.lbl}>{t('Left this month')}</Text>
-          </View>
+          <Pressable
+            style={{ flexShrink: 1 }}
+            onPress={() => (overMonth > 0 ? setOverOpen(true) : router.push('/history'))}
+            accessibilityRole="button"
+            accessibilityLabel={
+              overMonth > 0 ? t('{amount} over this month — see what it changes', { amount: baht(overMonth) }) : t('{amount} left this month — see history', { amount: baht(leftMonth) })
+            }>
+            <CountUp
+              value={overMonth > 0 ? overMonth : leftMonth}
+              format={(n) => (
+                <>
+                  {overMonth > 0 ? '−' : ''}
+                  {Big(n)}
+                </>
+              )}
+              style={[styles.n2, overMonth > 0 && { color: colors.orangeText, fontSize: 26 }]}
+            />
+            <Text style={[styles.lbl, overMonth > 0 && styles.overText]}>{overMonth > 0 ? t('Over this month') : t('Left this month')}</Text>
+          </Pressable>
           <Glass radius={25} style={{ marginLeft: 'auto' }} innerStyle={styles.cal}>
             <Text style={styles.calN}>{P.daysLeft}</Text>
             <Text style={styles.calS}>{t('days')}</Text>
@@ -243,7 +313,7 @@ export default function Home() {
               <View style={styles.two}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.twoK}>{t('Spent today')}</Text>
-                  <Text style={styles.twoV}>{t('{spent} of {total}', { spent: baht(spent.today), total: baht(dailyToday) })}</Text>
+                  <Text style={[styles.twoV, overToday > 0 && { color: colors.orangeText }]}>{t('{spent} of {total}', { spent: baht(spent.today), total: baht(dailyToday) })}</Text>
                 </View>
                 <View style={[styles.twoR]}>
                   <Text style={styles.twoK}>{short}</Text>
@@ -344,6 +414,7 @@ export default function Home() {
         )}
       </ScrollView>
 
+      {overOpen && (overToday > 0 || overMonth > 0) && <OverSheet info={overInfo} onClose={() => setOverOpen(false)} />}
       {toast && (
         <View style={[styles.toast, { bottom: 176 + Math.max(insets.bottom, 12) }]} pointerEvents="none">
           <Text style={styles.toastText}>{toast}</Text>
@@ -490,6 +561,8 @@ const styles = StyleSheet.create({
   n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 50, color: colors.ink, fontVariant: ['tabular-nums'] },
   n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 34, color: '#B9B8B0', fontVariant: ['tabular-nums'] },
   lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
+  overLbl: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  overText: { color: colors.orangeText, fontFamily: fonts.medium },
   vbar: { width: 1, height: 54, backgroundColor: 'rgba(17,17,17,0.12)' },
   cal: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
   calN: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 16, color: colors.ink },
