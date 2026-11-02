@@ -189,7 +189,7 @@ export function MoneyInSheet({ items, onClose }: { items: MoneyIn[]; onClose: (m
   const nothing = s.extra <= 0 && s.pay <= 0;
   if (nothing) return null;
 
-  const title = s.extra > 0 ? t('Nice — extra money!') : s.payComplete ? t('This month’s pay is in ✓') : t('Part of this month’s pay');
+  const title = s.extra > 0 ? t('Nice — extra money') : s.payComplete ? t('This month’s pay is in ✓') : t('Part of this month’s pay');
   const fromLabel =
     s.payExtra > 0 && s.extra === s.payExtra
       ? t('More than your usual pay · not in your plan')

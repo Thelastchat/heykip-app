@@ -405,7 +405,7 @@ const styles = themed(() =>
     note: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
     paper: { backgroundColor: colors.lime, paddingTop: 16, paddingHorizontal: 16, paddingBottom: 12, transform: [{ rotate: '-1deg' }], boxShadow: '0 10px 18px rgba(0,0,0,0.14)', marginTop: 8 },
     tape: { position: 'absolute', top: -8, alignSelf: 'center', width: 48, height: 16, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
-    paperHead: { fontFamily: fonts.regular, fontSize: 11, color: blackA(0.55) },
+    paperHead: { fontFamily: fonts.regular, fontSize: 12, color: blackA(0.55) },
     paperText: { fontFamily: fonts.hand, fontSize: 20, lineHeight: 24, color: colors.onAccent, marginTop: 4, padding: 0, minHeight: 48 },
     foot: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12 },
     scrim: { flex: 1, backgroundColor: inkA(0.25) },

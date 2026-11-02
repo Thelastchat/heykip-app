@@ -106,7 +106,7 @@ const th: Record<string, string> = {
   '{amt} left': 'เหลือ {amt}',
   Edit: 'แก้',
   'Changing a number? Kip rebalances the rest so your month still adds up.': 'เปลี่ยนตัวเลขไหน Kip เกลี่ยที่เหลือให้ เดือนนี้ยังลงตัวเหมือนเดิม',
-  ' Changing amounts and money styles is ✦ Plus.': ' ปรับยอดและเปลี่ยนสไตล์การเก็บเงินได้ใน ✦ Plus',
+  ' Changing amounts and money styles is Plus.': ' ปรับยอดและเปลี่ยนสไตล์การเก็บเงินได้ใน Plus',
   'Leftovers go to your safety net': 'เงินเหลือเข้าเงินสำรอง',
   'Daily money you didn’t spend, and any of my bill guess you didn’t need — moved on payday.': 'เงินรายวันที่ไม่ได้ใช้ กับเงินที่ Kip กันไว้จ่ายบิลแต่ไม่ได้ใช้ — ย้ายให้ตอนเงินเดือนออก',
   'Starting split based on what Thai households spend (Ministry of Commerce, 2025), adjusted for one person. After your first month, I’ll match it to how you really spend.':

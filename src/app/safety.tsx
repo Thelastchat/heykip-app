@@ -115,7 +115,7 @@ export default function Safety() {
                 <Image source={ICON3D.shield} style={styles.shield} contentFit="contain" />
               </View>
               <View style={{ flex: 1 }}>
-                {full && <Text style={styles.fullTitle}>{t('Your safety net is full!')}</Text>}
+                {full && <Text style={styles.fullTitle}>{t('Your safety net is full')}</Text>}
                 <Text style={styles.big}>
                   <Text style={{ fontSize: 20 }}>฿</Text>
                   {Math.round(saved).toLocaleString('en-US')}
@@ -335,7 +335,7 @@ function FullSheet({
 }) {
   const sooner = goal ? soonerTextMonths(goal.left, goal.perMonth, perPayday) : null;
   return (
-    <Sheet open onClose={onClose} title={t('Your safety net is full!')} sub={t('{amount} · 3 months of basics, ready if anything happens', { amount: baht(saved) })}>
+    <Sheet open onClose={onClose} title={t('Your safety net is full')} sub={t('{amount} · 3 months of basics, ready if anything happens', { amount: baht(saved) })}>
       <View style={{ alignItems: 'center' }}>
         <Kip mood="celebrate" size={96} />
       </View>

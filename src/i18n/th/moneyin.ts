@@ -4,7 +4,7 @@ const th: Record<string, string> = {
   '**{amt}** extra — next, give it a job: {goal}, safety net or spending': 'เกินมา **{amt}** — เดี๋ยวเลือกได้เลยว่าจะเอาไป {goal} เงินสำรอง หรือไว้ใช้',
 
   // Money-in sheet
-  'Nice — extra money!': 'เย้ ได้เงินพิเศษ!',
+  'Nice — extra money': 'เย้ ได้เงินพิเศษ!',
   'This month’s pay is in ✓': 'เงินเดือนเดือนนี้เข้าแล้ว ✓',
   'Part of this month’s pay': 'เงินเดือนเข้ามาบางส่วน',
   'Your plan runs on this — nothing to change': 'แผนใช้ยอดนี้อยู่แล้ว ไม่ต้องเปลี่ยนอะไร',

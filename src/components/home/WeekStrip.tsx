@@ -82,7 +82,7 @@ const styles = themed(() =>
     on: { backgroundColor: colors.ink, boxShadow: '0 10px 20px rgba(17,17,17,0.18)' },
     dn: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    pay: { fontFamily: fonts.regular, fontSize: 9, color: colors.muted },
+    pay: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
     dot: { width: 6, height: 6, borderRadius: 3 },
   }),
 );

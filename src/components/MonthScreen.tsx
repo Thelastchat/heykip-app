@@ -238,7 +238,7 @@ export function MonthScreen({
 
         <Text style={styles.note}>
           {t('Changing a number? Kip rebalances the rest so your month still adds up.')}
-          {!isPlus ? t(' Changing amounts and money styles is ✦ Plus.') : ''}
+          {!isPlus ? t(' Changing amounts and money styles is Plus.') : ''}
         </Text>
         <RiseIn delay={260} style={styles.cardWrap}>
           <Glass radius={22} innerStyle={styles.leftovers}>
@@ -354,10 +354,10 @@ function FlowPart({ flex, color, label, amount, delay, kind }: { flex: number; c
     <Animated.View
       entering={FadeInLeft.delay(300 + delay).duration(700)}
       style={{ flex, backgroundColor: color, justifyContent: 'flex-end', paddingHorizontal: 8, paddingVertical: 7, overflow: 'hidden' }}>
-      <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: kind === 'solid' ? colors.onSolid : kind === 'accent' ? colors.onAccent : colors.ink }} numberOfLines={1}>
+      <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: kind === 'solid' ? colors.onSolid : kind === 'accent' ? colors.onAccent : colors.ink }} numberOfLines={1}>
         {label}
       </Text>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 10, color: kind === 'solid' ? whiteA(0.7) : kind === 'accent' ? blackA(0.6) : inkA(0.6) }} numberOfLines={1}>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: kind === 'solid' ? whiteA(0.7) : kind === 'accent' ? blackA(0.6) : inkA(0.6) }} numberOfLines={1}>
         {baht(amount)}
       </Text>
     </Animated.View>
@@ -420,7 +420,7 @@ function Section({ n, title, right }: { n: number; title: string; right: string 
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 28, paddingBottom: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={styles.nDot}>
-          <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.paper }}>{n}</Text>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.paper }}>{n}</Text>
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -666,7 +666,7 @@ function Option({ title, sub, on, tag, onPress, color = colors.lime }: { title: 
           <Text style={{ fontFamily: fonts.semibold, fontSize: 15, color: colors.ink }}>{title}</Text>
           {tag ? (
             <View style={[styles.tag, on && { backgroundColor: colors.paper }]}>
-              <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{tag}</Text>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>{tag}</Text>
             </View>
           ) : null}
         </View>

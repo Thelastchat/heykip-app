@@ -7,7 +7,7 @@ const th: Record<string, string> = {
   '3 months of basics, ready if anything happens': 'ค่าใช้จ่ายจำเป็น 3 เดือน พร้อมใช้ถ้ามีอะไรเกิดขึ้น',
   'Every payday': 'ทุกวันเงินเดือนออก',
   'Full around': 'เต็มประมาณ',
-  'Your safety net is full!': 'เงินสำรองเต็มแล้ว!',
+  'Your safety net is full': 'เงินสำรองเต็มแล้ว!',
   'Your {amount} a month now goes to **{goal}** instead.': 'ตอนนี้เดือนละ {amount} ย้ายไปเข้า **{goal}** แทนแล้ว',
   'I need it': 'ต้องใช้แล้ว',
   'What went in and out': 'เงินเข้าออก',

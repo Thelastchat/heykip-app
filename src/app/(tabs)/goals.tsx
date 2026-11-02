@@ -565,7 +565,7 @@ const styles = themed(() =>
       boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
     },
     tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 16, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
-    noteHead: { fontFamily: fonts.regular, fontSize: 11, color: blackA(0.55) },
+    noteHead: { fontFamily: fonts.regular, fontSize: 12, color: blackA(0.55) },
     noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
     heroBig: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
     fact: { flex: 1, borderRadius: 16, backgroundColor: inkA(0.04), paddingVertical: 8, paddingHorizontal: 12 },

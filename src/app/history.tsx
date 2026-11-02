@@ -374,7 +374,7 @@ const styles = themed(() =>
     amt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
     small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
     tag: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, backgroundColor: inkA(0.06) },
-    tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
+    tagText: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
     del: { width: 88, backgroundColor: colors.orangeText, alignItems: 'center', justifyContent: 'center' },
     delText: { fontFamily: fonts.medium, fontSize: 14, color: colors.paper },
     cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },

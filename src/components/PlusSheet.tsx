@@ -123,7 +123,7 @@ export function PaySplit({ parts, note }: { parts: { label: string; amount: numb
           .filter((p) => p.amount > 0)
           .map((p) => (
             <View key={p.label} style={{ flex: p.amount, backgroundColor: p.color, justifyContent: 'flex-end', padding: 7 }}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: p.light ? colors.onAccent : colors.onSolid }} numberOfLines={1}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: p.light ? colors.onAccent : colors.onSolid }} numberOfLines={1}>
                 {p.label}
               </Text>
             </View>
