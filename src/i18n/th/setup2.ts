@@ -416,6 +416,24 @@ const th: Record<string, string> = {
   'Couldn’t pin your goal: {reason}': 'ปักหมุดเป้าหมายไม่สำเร็จ: {reason}',
   'Couldn’t save your promise: {reason}': 'บันทึกคำสัญญาไม่สำเร็จ: {reason}',
   'Couldn’t finish setup: {reason}': 'ตั้งค่าไม่สำเร็จ: {reason}',
+  // Pick your plan (redesign)
+  '{m} months sooner': 'เร็วขึ้น {m} เดือน',
+  '{m} month sooner': 'เร็วขึ้น {m} เดือน',
+  '{m} months later': 'ช้าลง {m} เดือน',
+  '{m} month later': 'ช้าลง {m} เดือน',
+  'Same as Kip’s plan for you': 'เท่ากับแผนของ Kip สำหรับคุณ',
+  'Same {pay} pay, four ways to run it': 'เงินเดือน {pay} เท่าเดิม จัดได้ 4 แบบ',
+  'Saved in a year with {name}': 'เก็บได้ใน 1 ปีด้วย{name}',
+  '{goal} with {name}': '{goal} ด้วย{name}',
+  'to spend a day': 'ใช้ได้ต่อวัน',
+  'to {goal}': 'เข้า {goal}',
+  'saved in a year': 'เก็บได้ใน 1 ปี',
+  'Four ways': '4 แบบ',
+  'Saves first, keeps real life covered': 'เก็บก่อน และยังพอใช้ชีวิตจริง',
+  '{amount} a day': 'วันละ {amount}',
+  'How it runs': 'ทำงานยังไง',
+  'A normal day': 'วันปกติ',
+  'See all {n} rules Kip follows': 'ดูกฎทั้ง {n} ข้อที่ Kip ใช้',
 };
 
 export default th;
