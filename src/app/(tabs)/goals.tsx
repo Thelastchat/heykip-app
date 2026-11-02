@@ -5,7 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import { CaretRight, LockSimple, Plus } from 'phosphor-react-native';
 
 import { PlusSheet } from '@/components/PlusSheet';
 import { plusPitch } from '@/components/plusPitch';
@@ -15,6 +15,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { savingTotal } from '@/lib/budget';
+import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthShort, t } from '@/lib/i18n';
 import { useHome, type HomeGoal } from '@/lib/home';
 import { goalIcon3D, goalTypeIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
@@ -49,7 +50,7 @@ const dayLabel = (iso: string) => {
 
 /** Months until the goal is reached at this pace, as a date. */
 function arrives(left: number, perMonth: number, payday: number | null, now = new Date()) {
-  if (left <= 0) return t('Done 🎉');
+  if (left <= 0) return t('Goal reached');
   if (perMonth <= 0) return t('When there’s room');
   const months = Math.ceil(left / perMonth);
   const d = new Date(now.getFullYear(), now.getMonth() + months, payday ?? 1);
@@ -106,7 +107,7 @@ export default function Goals() {
     return (
       <View style={{ flex: 1 }}>
         <GlowBackground />
-        <View style={{ paddingTop: insets.top + 58, paddingHorizontal: 22 }}>
+        <View style={{ paddingTop: insets.top + 76, paddingHorizontal: 20 }}>
           <Text style={styles.h1}>{t('Your goals')}</Text>
           <Text style={[styles.sub, { marginTop: 10 }]}>{t('Finish setup to pin your first goal.')}</Text>
         </View>
@@ -124,25 +125,22 @@ export default function Goals() {
             {'\n'}
             <Text style={{ color: colors.soft }}>{t('and why you save')}</Text>
           </Text>
-          <Glass radius={999} style={{ position: 'absolute', right: 22, top: 0 }} innerStyle={styles.pinned}>
-            <Text style={styles.pinnedText}>{t('{n} of 3 pinned', { n: goals.length })}</Text>
-          </Glass>
         </RiseIn>
 
         <RiseIn delay={60} style={styles.totals}>
           <View>
-            <CountUp value={savedAll} format={big} style={styles.n1} />
+            <CountUp value={savedAll} format={big} style={styles.n1} fit />
             <Text style={styles.lbl}>{t('Saved so far')}</Text>
           </View>
           <View style={styles.vbar} />
           <View style={{ flexShrink: 1 }}>
-            <CountUp value={everyPayday} format={big} style={styles.n2} />
+            <CountUp value={everyPayday} format={big} style={styles.n2} fit />
             <Text style={styles.lbl}>{t('Going in every payday')}</Text>
           </View>
         </RiseIn>
 
         {/* the goal */}
-        <RiseIn delay={120} style={{ paddingHorizontal: 18, marginTop: 22 }}>
+        <RiseIn delay={120} style={{ paddingHorizontal: 20, marginTop: 24 }}>
           <Hero
             goal={goal}
             short={short}
@@ -159,9 +157,9 @@ export default function Goals() {
         {/* safety net */}
         {month && !month.goal.isSafetyNet && month.safety.amount > 0 && (
           <RiseIn delay={180}>
-            <Section title={t('Safety net')} right={t('always on')} />
-            <Squish onPress={() => router.push('/safety')} style={{ paddingHorizontal: 18 }} accessibilityRole="button" accessibilityLabel={t('Safety net')}>
-              <Glass radius={26} innerStyle={styles.pot}>
+            <Section title={t('Safety net')} right={t('Always on')} />
+            <Squish onPress={() => router.push('/safety')} style={{ paddingHorizontal: 20 }} accessibilityRole="button" accessibilityLabel={t('Safety net')}>
+              <Glass radius={24} innerStyle={styles.pot}>
                 <Float>
                   <Image source={ICON3D.shield} style={{ width: 52, height: 52 }} contentFit="contain" />
                 </Float>
@@ -169,14 +167,12 @@ export default function Goals() {
                   <Text style={styles.potName}>{t('For emergencies')}</Text>
                   <Text style={styles.sub}>
                     {Number(profile?.safety_saved ?? 0) >= month.safety.target && month.safety.target > 0
-                      ? t('Full ✓ — 3 months of basics')
-                      : t('{saved} of {amount} — 3 months of basics', { saved: baht(Number(profile?.safety_saved ?? 0)), amount: baht(month.safety.target) })}
+                      ? t('Full · 3 months of basics')
+                      : t('{saved} of {amount}', { saved: baht(Number(profile?.safety_saved ?? 0)), amount: baht(month.safety.target) })}
                   </Text>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.potAmt}>{t('{amount}/mo', { amount: baht(month.safety.amount) })}</Text>
-                  <Text style={styles.sub}>{t('See all')} ›</Text>
-                </View>
+                <Text style={styles.potAmt}>{t('{amount}/mo', { amount: baht(month.safety.amount) })}</Text>
+                <CaretRight size={16} color={colors.muted} />
               </Glass>
             </Squish>
           </RiseIn>
@@ -184,8 +180,8 @@ export default function Goals() {
 
         {/* more goals */}
         <RiseIn delay={220}>
-          <Section title={t('More goals')} tag={isPlus ? undefined : '✦ PLUS'} />
-          <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18 }}>
+          <Section title={t('More goals')} right={isPlus ? undefined : 'Plus'} />
+          <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
             {[
               { icon: 'phone' as Icon3D, top: t('A new phone?'), bottom: t('Pin a 2nd goal') },
               { icon: 'house' as Icon3D, top: t('Moving out?'), bottom: t('Pin a 3rd goal') },
@@ -196,11 +192,7 @@ export default function Goals() {
                 style={styles.slot}
                 accessibilityRole="button"
                 accessibilityLabel={isPlus ? s.bottom : t('{title} — Plus', { title: s.bottom })}>
-                {!isPlus && (
-                  <View style={styles.lk}>
-                    <LockIcon />
-                  </View>
-                )}
+                {!isPlus && <LockSimple size={16} color={colors.muted} style={styles.lk} />}
                 <Float delay={i * 900}>
                   <Image source={ICON3D[s.icon]} style={{ width: 54, height: 54 }} contentFit="contain" />
                 </Float>
@@ -217,8 +209,8 @@ export default function Goals() {
         {/* what went in */}
         <RiseIn delay={260}>
           <Section title={t('What went in')} right={short} />
-          <View style={{ paddingHorizontal: 18 }}>
-            <Glass radius={26} innerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+          <View style={{ paddingHorizontal: 20 }}>
+            <Glass radius={24} innerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
               {moves.length === 0 && startedWith === 0 ? (
                 <Text style={[styles.sub, { paddingVertical: 14 }]}>{t('Nothing yet. Your first payday or “Put money in” shows up here.')}</Text>
               ) : (
@@ -259,7 +251,7 @@ export default function Goals() {
             setPutOpen(false);
             reload();
             loadMoves();
-            flash(t('{amount} saved for {goal} ✓', { amount: baht(total), goal: short }));
+            flash(t('{amount} saved for {goal}', { amount: baht(total), goal: short }));
           }}
         />
       )}
@@ -274,7 +266,7 @@ export default function Goals() {
 
 const big = (n: number) => (
   <>
-    <Text style={{ fontSize: 24 }}>฿</Text>
+    <Text style={{ fontSize: 26 }}>฿</Text>
     {n.toLocaleString('en-US')}
   </>
 );
@@ -306,13 +298,14 @@ function Hero({
   const left = Math.max(0, target - goal.saved);
   const days = goal.due ? Math.max(0, Math.round((parseDay(goal.due).getTime() - Date.now()) / 86_400_000)) : null;
   const line = (goal.promise ?? '').split('\n')[0];
+  const type = typeInfo(goal.goalType, goal.kind as never);
   return (
-    <Glass radius={30}>
+    <Glass radius={28}>
       <View style={styles.photo}>
         {goal.photo ? (
           <Image source={{ uri: goal.photo, cacheKey: goal.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
-          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,252,154,0.5)' }]}>
+          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: type.color }]}>
             <Float amount={6}>
               <Image source={ICON3D[icon]} style={{ width: 120, height: 120 }} contentFit="contain" />
             </Float>
@@ -327,7 +320,7 @@ function Hero({
         {line ? (
           <View style={styles.note}>
             <View style={styles.tape} />
-            <Text style={styles.noteHead}>{t('MY PROMISE')}</Text>
+            <Text style={styles.noteHead}>{t('My promise')}</Text>
             <Text style={styles.noteText} numberOfLines={3}>
               {line}
             </Text>
@@ -339,10 +332,10 @@ function Hero({
       </View>
 
       <View style={{ padding: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           {target > 0 && (
-            <View style={{ width: 74, height: 74 }}>
-              <Ring pct={pct / 100} size={74} stroke={7} color={colors.limeDeep} />
+            <View style={{ width: 72, height: 72 }}>
+              <Ring pct={pct / 100} size={72} stroke={6} color={colors.limeDeep} />
               <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
                 <Text style={{ fontFamily: fonts.medium, fontSize: 16, color: colors.ink }}>{pct}%</Text>
               </View>
@@ -355,21 +348,21 @@ function Hero({
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
           <Fact k={monthly ? t('Every month') : t('Arrives')} v={monthly ? baht(goal.monthly ?? perMonth) : arrives(left, perMonth, payday)} />
           {!monthly && <Fact k={t('Each month')} v={baht(perMonth)} />}
-          <Fact k={t('Payday')} v={payday ? t('{nth}', { nth: ordinal(payday), n: payday }) : '—'} />
         </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
           <Squish onPress={onPut} style={[styles.btn, { flex: 1.4, backgroundColor: colors.ink }]} accessibilityRole="button" accessibilityLabel={t('Put money in')}>
-            <Text style={[styles.btnText, { color: colors.paper }]}>{t('+ Put money in')}</Text>
+            <Plus size={16} color={colors.paper} weight="bold" />
+            <Text style={[styles.btnText, { color: colors.paper }]}>{t('Put money in')}</Text>
           </Squish>
           <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: inkA(0.07) }]} accessibilityRole="button" accessibilityLabel={t('Edit the plan')}>
             <Text style={styles.btnText}>{t('Edit')}</Text>
           </Squish>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
-          <Image source={ICON3D.income} style={{ width: 30, height: 30 }} contentFit="contain" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+          <Image source={ICON3D.income} style={{ width: 28, height: 28 }} contentFit="contain" />
           <Text style={[styles.sub, { flex: 1 }]}>
             {isPlus && autoOn
               ? payday
@@ -388,7 +381,7 @@ function Hero({
 function Fact({ k, v }: { k: string; v: string }) {
   return (
     <View style={styles.fact}>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted }}>{k}</Text>
+      <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted }}>{k}</Text>
       <Text style={{ fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
         {v}
       </Text>
@@ -414,90 +407,72 @@ function HistRow({ icon, title, sub, amount, first, lime }: { icon: Icon3D; titl
   );
 }
 
-function Section({ title, right, tag }: { title: string; right?: string; tag?: string }) {
+function Section({ title, right }: { title: string; right?: string }) {
   return (
     <View style={styles.sec}>
       <Text style={styles.secTitle}>{title}</Text>
-      {tag ? (
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{tag}</Text>
-        </View>
-      ) : right ? (
-        <Text style={styles.sub}>{right}</Text>
-      ) : null}
+      {right ? <Text style={styles.sub}>{right}</Text> : null}
     </View>
-  );
-}
-
-function LockIcon() {
-  return (
-    <Svg width={10} height={10} viewBox="0 0 24 24">
-      <Path fill={colors.paper} d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" />
-    </Svg>
   );
 }
 
 const styles = themed(() =>
   StyleSheet.create({
-    head: { paddingHorizontal: 22, paddingTop: 34 },
+    head: { paddingHorizontal: 20, paddingTop: 64 }, // lines up with "Today's money" on Home
     h1: { fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
-    pinned: { height: 30, paddingHorizontal: 12, justifyContent: 'center' },
-    pinnedText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-    totals: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 18 },
-    n1: { fontFamily: fonts.medium, fontSize: 44, letterSpacing: -2, lineHeight: 48, color: colors.ink, fontVariant: ['tabular-nums'] },
-    n2: { fontFamily: fonts.regular, fontSize: 28, letterSpacing: -1, lineHeight: 32, color: colors.soft, fontVariant: ['tabular-nums'] },
-    lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
-    vbar: { width: 1, height: 50, backgroundColor: inkA(0.12) },
+    totals: { flexDirection: 'row', alignItems: 'flex-end', gap: 16, paddingHorizontal: 20, paddingTop: 20 },
+    n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 58, marginTop: -8, color: colors.ink, fontVariant: ['tabular-nums'] },
+    n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 38, marginTop: -4, color: colors.soft, fontVariant: ['tabular-nums'] },
+    lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 4 },
+    vbar: { width: 1, height: 56, marginBottom: 4, backgroundColor: inkA(0.08) },
     sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-    photo: { height: 210, overflow: 'hidden' },
+    photo: { height: 208, overflow: 'hidden' },
     chip: {
       position: 'absolute',
       left: 12,
       top: 12,
-      height: 34,
+      height: 32,
       paddingLeft: 4,
       paddingRight: 12,
       borderRadius: 999,
-      backgroundColor: glassA(0.9),
+      backgroundColor: whiteA(0.9),
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
       maxWidth: '62%',
     },
-    chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, flexShrink: 1 },
+    chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent, flexShrink: 1 },
     note: {
       position: 'absolute',
-      right: 14,
+      right: 16,
       top: 52,
-      width: 150,
+      width: 148,
       backgroundColor: colors.lime,
-      paddingTop: 13,
-      paddingHorizontal: 11,
-      paddingBottom: 7,
+      paddingTop: 14,
+      paddingHorizontal: 12,
+      paddingBottom: 8,
       transform: [{ rotate: '3deg' }],
       boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
     },
-    tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
-    noteHead: { fontFamily: fonts.regular, fontSize: 8, letterSpacing: 1, color: blackA(0.55) },
+    tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 16, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
+    noteHead: { fontFamily: fonts.regular, fontSize: 11, color: blackA(0.55) },
     noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
     heroBig: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
-    fact: { flex: 1, borderRadius: 16, backgroundColor: glassA(0.5), paddingVertical: 9, paddingHorizontal: 12 },
-    btn: { height: 50, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    fact: { flex: 1, borderRadius: 16, backgroundColor: inkA(0.04), paddingVertical: 8, paddingHorizontal: 12 },
+    btn: { height: 48, borderRadius: 24, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
     btnText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 22, paddingTop: 30, paddingBottom: 12 },
-    secTitle: { fontFamily: fonts.medium, fontSize: 19, color: colors.ink },
-    tag: { height: 24, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.ink, justifyContent: 'center', alignSelf: 'center' },
-    tagText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.paper },
-    pot: { paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 32, paddingBottom: 12 },
+    secTitle: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+    pot: { paddingVertical: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
     potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-    slot: { flex: 1, height: 150, borderRadius: 26, borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.16), alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10 },
+    slot: { flex: 1, height: 148, borderRadius: 24, borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.16), alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 },
     slotText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
-    lk: { position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    lk: { position: 'absolute', top: 12, right: 12 },
     hist: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     histIc: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     histTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    histAmt: { fontFamily: fonts.medium, fontSize: 15, color: '#5D7D4E', fontVariant: ['tabular-nums'] },
+    histAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.lavenderText, fontVariant: ['tabular-nums'] }, // money in
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
     toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper },
   }),

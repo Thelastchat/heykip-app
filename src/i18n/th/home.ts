@@ -207,6 +207,11 @@ const th: Record<string, string> = {
   Paid: 'จ่ายแล้ว',
   Estimate: 'ประมาณการ',
   'about {amount}': 'ประมาณ {amount}',
+  'Goal reached': 'ถึงเป้าแล้ว',
+  'Always on': 'เปิดตลอด',
+  'Full · 3 months of basics': 'เต็มแล้ว · พอใช้ 3 เดือน',
+  '{saved} of {amount}': '{saved} จาก {amount}',
+  '{amount} saved for {goal}': 'เก็บ {amount} ให้ {goal} แล้ว',
 };
 
 export default th;
