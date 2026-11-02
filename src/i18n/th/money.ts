@@ -72,8 +72,8 @@ const th: Record<string, string> = {
   'When was it?': 'ใช้ไปเมื่อไหร่?',
   'Snap a slip, I’ll log it': 'ถ่ายสลิปมา เดี๋ยว Kip จดให้',
   'Take a photo of a bank slip and I fill in the amount, category and time for you.': 'ถ่ายรูปสลิปโอนเงิน แล้ว Kip กรอกยอด หมวด และเวลาให้เลย',
-  '📷  KBank slip · 13:05': '📷  สลิป KBank · 13:05',
-  'Got it — ฿80, Transport, today 13:05. Saved ✓': 'ได้เลย — ฿80 หมวดเดินทาง วันนี้ 13:05 จดให้แล้ว ✓',
+  'KBank slip · 13:05': 'สลิป KBank · 13:05',
+  'Got it — ฿80, Transport, today 13:05. Saved': 'ได้เลย — ฿80 หมวดเดินทาง วันนี้ 13:05 จดให้แล้ว',
   Spent: 'จ่ายไป',
   'Got paid': 'ได้เงิน',
 

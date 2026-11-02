@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
 
-import { colors, radius, shadow, type, themed } from '@/theme';
+import { colors, inkA, radius, shadow, type, themed } from '@/theme';
 
 type Variant = keyof typeof type;
 
@@ -28,11 +28,11 @@ export function Button({ label, kind = 'primary', loading, style, disabled, ...r
       accessibilityRole="button"
       disabled={disabled || loading}
       {...rest}
-      style={({ pressed }) => [styles.button, primary ? styles.primary : styles.secondary, (pressed || disabled) && { opacity: 0.7 }, style]}>
+      style={({ pressed }) => [styles.button, primary ? styles.primary : styles.secondary, pressed && { opacity: 0.7 }, disabled && !loading && styles.off, style]}>
       {loading ? (
         <ActivityIndicator color={primary ? colors.paper : colors.ink} />
       ) : (
-        <T variant="button" style={{ color: primary ? colors.paper : colors.ink }}>
+        <T variant="button" style={{ color: disabled ? colors.muted : primary ? colors.paper : colors.ink }}>
           {label}
         </T>
       )}
@@ -49,6 +49,7 @@ const styles = themed(() =>
     button: { height: 58, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
     primary: { backgroundColor: colors.ink },
     secondary: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border },
+    off: { backgroundColor: inkA(0.08), borderWidth: 0 }, // can't press yet: clearly quiet in both looks
     card: { backgroundColor: colors.paper, borderRadius: radius.card, padding: 16, ...shadow.card },
   }),
 );

@@ -3,7 +3,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { Backspace, CalendarBlank, Lock, PencilSimple, Receipt } from 'phosphor-react-native';
+import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
@@ -316,7 +316,7 @@ export default function Add() {
   return (
     <View style={{ flex: 1, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) }}>
       <GlowBackground />
-      <View style={{ paddingHorizontal: 18 }}>
+      <View style={{ paddingHorizontal: 20 }}>
         <ScreenHeader
           title={t('Add it yourself')}
           right={
@@ -327,23 +327,19 @@ export default function Add() {
               <Glass radius={23} innerStyle={styles.slip}>
                 <Receipt size={17} color={colors.ink} weight="fill" />
                 <Text style={styles.slipText}>{t('Slip')}</Text>
-                {!isPlus && (
-                  <View style={styles.lk}>
-                    <Lock size={9} color={colors.paper} weight="fill" />
-                  </View>
-                )}
+                {!isPlus && <LockSimple size={16} color={colors.muted} />}
               </Glass>
             </Squish>
           }
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={{ paddingHorizontal: 18 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={{ paddingHorizontal: 20 }}>
           <Switch kind={kind} onChange={switchKind} />
         </View>
 
-        <View style={{ alignItems: 'center', gap: 10, paddingTop: 8 }}>
+        <View style={{ alignItems: 'center', gap: 12, paddingTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={[styles.amount, !digits && { color: colors.faint }]} numberOfLines={1} adjustsFontSizeToFit>
               <Text style={{ fontSize: 34 }}>฿</Text>
@@ -359,12 +355,8 @@ export default function Add() {
           )}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={{ marginVertical: -14 }}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingVertical: 14, gap: 8 }}>
+        {/* every choice in view, no hidden ones off the edge */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 8 }}>
           {chips.map((c) => {
             const on = c.key === cat.key;
             return (
@@ -379,15 +371,17 @@ export default function Add() {
           {kind === 'spend' && !more && (
             <Squish onPress={() => setMore(true)} accessibilityRole="button" accessibilityLabel={t('More categories')}>
               <Glass radius={23} innerStyle={styles.chip}>
-                <Text style={[styles.chipText, { width: 30, textAlign: 'center', letterSpacing: 1 }]}>•••</Text>
+                <View style={{ width: 36, alignItems: 'center' }}>
+                  <DotsThree size={20} color={colors.muted} weight="bold" />
+                </View>
                 <Text style={styles.chipText}>{t('More')}</Text>
               </Glass>
             </Squish>
           )}
-        </ScrollView>
+        </View>
 
-        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 18 }}>
-          <Glass radius={18} style={{ flex: 1 }} innerStyle={styles.field}>
+        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
+          <Glass radius={16} style={{ flex: 1 }} innerStyle={styles.field}>
             <PencilSimple size={16} color={colors.muted} />
             <View style={{ flex: 1 }}>
               <Text style={styles.fieldK}>{t('Note')}</Text>
@@ -402,7 +396,7 @@ export default function Add() {
             </View>
           </Glass>
           <Pressable style={{ flex: 1 }} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={t('When: {when}', { when: whenLabel(when) })}>
-            <Glass radius={18} innerStyle={styles.field}>
+            <Glass radius={16} innerStyle={styles.field}>
               <CalendarBlank size={16} color={colors.muted} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldK}>{t('When')}</Text>
@@ -415,18 +409,18 @@ export default function Add() {
         </View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 18, gap: 10 }}>
-        <View style={{ gap: 7 }}>
+      <View style={{ paddingHorizontal: 20, gap: 12 }}>
+        <View style={{ gap: 8 }}>
           {[
             ['1', '2', '3'],
             ['4', '5', '6'],
             ['7', '8', '9'],
             ['.', '0', 'del'],
           ].map((row) => (
-            <View key={row.join('')} style={{ flexDirection: 'row', gap: 7 }}>
+            <View key={row.join('')} style={{ flexDirection: 'row', gap: 8 }}>
               {row.map((k) => (
                 <Squish key={k} haptic={false} onPress={() => press(k)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={k === 'del' ? t('Delete') : k}>
-                  <Glass radius={18} innerStyle={styles.key}>
+                  <Glass radius={16} innerStyle={styles.key}>
                     {k === 'del' ? <Backspace size={24} color={colors.ink} /> : <Text style={styles.keyText}>{k}</Text>}
                   </Glass>
                 </Squish>
@@ -434,7 +428,7 @@ export default function Add() {
             </View>
           ))}
         </View>
-        {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
+        {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' }}>{error}</Text>}
         <Button label={amount > 0 ? t('Save {amt}', { amt: baht(amount) }) : t('Save')} disabled={amount <= 0 || busy} loading={busy} onPress={save} />
       </View>
 
@@ -482,7 +476,7 @@ export default function Add() {
           onUnlocked={() => setSlip(false)}
           title={t('Snap a slip, I’ll log it')}
           sub={t('Take a photo of a bank slip and I fill in the amount, category and time for you.')}>
-          <ChatPeek ask={t('📷  KBank slip · 13:05')} answer={t('Got it — ฿80, Transport, today 13:05. Saved ✓')} />
+          <ChatPeek ask={t('KBank slip · 13:05')} answer={t('Got it — ฿80, Transport, today 13:05. Saved')} />
         </PlusSheet>
       )}
     </View>
@@ -522,9 +516,8 @@ function Caret() {
 
 const styles = themed(() =>
   StyleSheet.create({
-    slip: { height: 46, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    slip: { height: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
     slipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-    lk: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     seg: { flexDirection: 'row', height: 48, padding: 4 },
     segKnob: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 999, backgroundColor: colors.ink },
     segBtn: { flex: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
@@ -533,17 +526,17 @@ const styles = themed(() =>
     caret: { width: 3, height: 54, backgroundColor: colors.ink, marginLeft: 4, borderRadius: 2 },
     kipLine: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24 },
     hint: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted, textAlign: 'center', flexShrink: 1 },
-    chip: { height: 46, paddingLeft: 5, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    chipOn: { borderWidth: 1.5, borderColor: colors.ink },
+    chip: { height: 44, paddingLeft: 4, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    chipOn: { borderWidth: 1.5, borderColor: colors.onAccent }, // picked: lime + black outline, in both looks
     chipText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
-    field: { minHeight: 56, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    field: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
     fieldK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     fieldV: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
-    key: { height: 50, alignItems: 'center', justifyContent: 'center' },
+    key: { height: 52, alignItems: 'center', justifyContent: 'center' },
     keyText: { fontFamily: fonts.regular, fontSize: 24, color: colors.ink },
     backdrop: { flex: 1, backgroundColor: inkA(0.45) },
     whenSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 8 },
-    whenTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginBottom: 4 },
-    whenRow: { height: 48, borderRadius: 14, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: 16, justifyContent: 'center' },
+    whenTitle: { fontFamily: fonts.medium, fontSize: 19, color: colors.ink, marginBottom: 4 },
+    whenRow: { height: 48, borderRadius: 16, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: 16, justifyContent: 'center' },
   }),
 );
