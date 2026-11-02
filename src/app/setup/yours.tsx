@@ -307,7 +307,7 @@ export default function SetupYours() {
           alignItems: 'baseline',
           paddingHorizontal: 4,
         }}>
-        <Text style={styles.section}>{t('YOUR MONTH')}</Text>
+        <Text style={styles.section}>{t('Your month')}</Text>
         <Text style={styles.tiny}>{t('{income} in · every baht has a job', { income: baht(inputs.income) })}</Text>
       </View>
       <View style={styles.card}>
@@ -346,26 +346,26 @@ export default function SetupYours() {
       </View>
 
       <View style={styles.result}>
-        <Text style={styles.section}>{t('IF YOU STICK TO THIS')}</Text>
+        <Text style={styles.section}>{t('If you stick to this')}</Text>
         <Text style={styles.resultLine}>
           {monthly
-            ? t('💰 {amount} saved for {short} in a year', { amount: baht(r.goal * 12), short })
+            ? t('{amount} saved for {short} in a year', { amount: baht(r.goal * 12), short })
             : when
               ? emergency
-                ? t('🛟 Emergency fund full in {when}', { when })
-                : t('✈︎ {short} in {when} — fully paid, no credit card', { short, when })
-              : t('📌 {short} is pinned — every day under budget goes to it', { short })}
+                ? t('Emergency fund full in {when}', { when })
+                : t('{short} in {when} — fully paid, no credit card', { short, when })
+              : t('{short} is pinned — every day under budget goes to it', { short })}
         </Text>
-        {!emergency && r.net > 0 && <Text style={styles.resultLine}>{t('🛟 Safety net: {amount} by this time next year', { amount: baht(r.net * 12) })}</Text>}
+        {!emergency && r.net > 0 && <Text style={styles.resultLine}>{t('Safety net: {amount} by this time next year', { amount: baht(r.net * 12) })}</Text>}
         <Text style={styles.resultLine}>
           {r.netIn12 > 0 && !monthly
-            ? rich('💰 **{saved}** saved in 12 months ({short} {goal} + safety net {net})', { saved: baht(r.savedIn12), short, goal: baht(r.goalIn12), net: baht(r.netIn12) }, semi)
-            : rich('💰 **{saved}** saved in 12 months', { saved: baht(r.savedIn12) }, semi)}
+            ? rich('**{saved}** saved in 12 months ({short} {goal} + safety net {net})', { saved: baht(r.savedIn12), short, goal: baht(r.goalIn12), net: baht(r.netIn12) }, semi)
+            : rich('**{saved}** saved in 12 months', { saved: baht(r.savedIn12) }, semi)}
         </Text>
       </View>
       {L.food !== kipFood && <Text style={styles.foot}>{t('Kip’s number for food is {amount}.', { amount: baht(kipFood) })}</Text>}
       <View style={styles.howLocks}>
-        <Text style={styles.section}>{t('HOW LOCKS WORK')}</Text>
+        <Text style={styles.section}>{t('How locks work')}</Text>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
           <View style={[styles.lockBtn, { backgroundColor: colors.ink, borderColor: colors.ink }]}>
             <Lock size={14} color={colors.paper} weight="fill" />
@@ -681,14 +681,13 @@ const styles = themed(() =>
     },
     tiny: {
       fontFamily: fonts.regular,
-      fontSize: 11,
+      fontSize: 12,
       lineHeight: 15,
       color: colors.muted,
     },
     section: {
-      fontFamily: fonts.bold,
-      fontSize: 11,
-      letterSpacing: 0.5,
+      fontFamily: fonts.medium,
+      fontSize: 13,
       color: colors.muted,
     },
     card: {

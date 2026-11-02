@@ -152,7 +152,7 @@ export default function SetupEverything() {
       ) : null}
 
       <View style={[styles.card, { opacity: updating ? 0.4 : 1 }]}>
-        <Text style={styles.head}>{t('WHAT I FOUND')}</Text>
+        <Text style={styles.head}>{t('What I found')}</Text>
         {findings.map((f) => (
           <View key={f.title} style={styles.finding}>
             <CatBadge name={f.icon} color={f.color} size={30} />
@@ -164,28 +164,28 @@ export default function SetupEverything() {
         ))}
       </View>
 
-      <Section title={t('MONEY IN')} onEdit={() => edit('/setup/basics')}>
+      <Section title={t('Money in')} onEdit={() => edit('/setup/basics')}>
         <Row k={draft.incomeType === 'regular' ? t('Take-home pay') : t('A slow month')} v={baht(i.income)} />
         <Row
           k={t('Payday')}
           v={draft.incomeType === 'regular' && draft.payday ? (draft.monthStartsOnPayday ? t('{day} · month starts on payday', { day: nth(draft.payday) }) : nth(draft.payday)) : t('Changes')}
         />
       </Section>
-      <Section title={t('FIXED COSTS')} onEdit={() => edit('/setup/basics')}>
+      <Section title={t('Fixed costs')} onEdit={() => edit('/setup/basics')}>
         <Row k={t('Rent')} v={baht(i.rent)} />
         <Row k={t('Other bills')} v={draft.bills === null ? t('{amount} · Kip’s guess', { amount: baht(i.bills) }) : baht(i.bills)} />
       </Section>
-      <Section title={t('LIVING (KIP’S REALISTIC NUMBERS)')} onEdit={() => edit('/setup/yours')}>
+      <Section title={t('Living (Kip’s real-life numbers)')} onEdit={() => edit('/setup/yours')}>
         <Row k={t('Food')} v={t('{amount} · {perDay}/day', { amount: baht(L.food), perDay: baht(Math.round(L.food / 30)) })} />
         <Row k={t('Transport')} v={baht(L.transport)} />
         <Row k={t('Health & personal')} v={baht(L.health)} />
         <Row k={t('Household')} v={baht(L.household)} />
       </Section>
-      <Section title={t('YOUR HABITS')} onEdit={() => edit('/setup/style')}>
+      <Section title={t('Your habits')} onEdit={() => edit('/setup/style')}>
         <Row k={t('On payday')} v={draft.moneyStyle ? PAYDAY[draft.moneyStyle].label.replace('Honestly? ', '') : '—'} />
         <Row k={t('Money leaks')} v={leaks.length ? leaks.join(', ') : t('None picked')} />
       </Section>
-      <Section title={t('YOUR GOAL')} onEdit={() => edit('/setup/goal')}>
+      <Section title={t('Your goal')} onEdit={() => edit('/setup/goal')}>
         <Row k={plan.short} v={monthly ? t('{amount} a month', { amount: baht(draft.goalMonthly ?? 0) }) : baht(i.goal.target)} />
         {!monthly && <Row k={t('Saved so far')} v={baht(i.goal.saved)} />}
         {!monthly && draft.sideIncome && (
@@ -245,7 +245,7 @@ const styles = themed(() =>
     banner: { borderRadius: 18, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
     bannerText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
     card: { borderRadius: 18, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 10, gap: 2 },
-    head: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingVertical: 4 },
+    head: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, paddingVertical: 4 },
     edit: { height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
     editText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
     finding: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 7 },

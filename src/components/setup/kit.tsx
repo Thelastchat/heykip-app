@@ -265,7 +265,7 @@ const styles = themed(() =>
     tileInput: { flex: 1, padding: 0, margin: 0, outlineStyle: 'none' } as never,
 
     small: { paddingVertical: 10, paddingHorizontal: 14 },
-    smallLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    smallLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
 
     segment: { padding: 4, height: 48 },
     segmentItem: { flex: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },

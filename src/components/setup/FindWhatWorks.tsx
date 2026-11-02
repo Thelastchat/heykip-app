@@ -96,21 +96,21 @@ export function FindWhatWorks() {
   const say =
     v0.kind === 'notByThen'
       ? asked
-        ? t('{short} is doable — comfortably by {comfy}. Want it sooner? {date} is {amount} a month away. Let’s find the way that suits you 👇', {
+        ? t('{short} is doable — comfortably by {comfy}. Want it sooner? {date} is {amount} a month away. Let’s find the way that suits you', {
             short,
             comfy: comfyStart,
             date: fullDate(asked),
             amount: baht(v0.need - R0.most),
           })
-        : t('{short} is doable — comfortably by {comfy}. Want it sooner? Let’s look. Let’s find the way that suits you 👇', { short, comfy: comfyStart })
+        : t('{short} is doable — comfortably by {comfy}. Want it sooner? Let’s look. Let’s find the way that suits you', { short, comfy: comfyStart })
       : asked
-        ? t('{short} by {date} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you 👇', {
+        ? t('{short} by {date} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you', {
             short,
             date: fullDate(asked),
             fun: funLeft,
             comfy: comfyStart,
           })
-        : t('{short} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you 👇', { short, fun: funLeft, comfy: comfyStart });
+        : t('{short} works — it’s just tight (fun money drops to {fun}). {comfy} is comfortable. Let’s find the way that suits you', { short, fun: funLeft, comfy: comfyStart });
 
   function tick(k: AddOn) {
     Haptics.selectionAsync().catch(() => {});
@@ -212,7 +212,7 @@ export function FindWhatWorks() {
         <>
           {askedMonths !== null && (
             <>
-              <Text style={styles.section}>{t('1 · PICK ONE')}</Text>
+              <Text style={styles.section}>{t('1 · Pick one')}</Text>
               <View style={styles.seg} accessibilityRole="radiogroup">
                 {(
                   [
@@ -237,7 +237,7 @@ export function FindWhatWorks() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{t('By {date} you’ll have', { date: fullDate(asked) })}</Text>
                 <View style={styles.zoneTag}>
-                  <Text style={styles.zoneTagText}>{fullFits ? t('FULL AMOUNT') : draft.goalKind === 'trip' ? t('SMALLER TRIP') : t('SMALLER GOAL')}</Text>
+                  <Text style={styles.zoneTagText}>{fullFits ? t('Full amount') : draft.goalKind === 'trip' ? t('Smaller trip') : t('Smaller goal')}</Text>
                 </View>
               </View>
               <Text style={styles.date}>
@@ -279,7 +279,7 @@ export function FindWhatWorks() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink }}>{t('{short} in', { short })}</Text>
                 <View style={styles.zoneTag}>
-                  <Text style={styles.zoneTagText}>{zone === 'comfy' ? t('COMFORTABLE') : zone === 'tight' ? t('TIGHT') : t('TOO MUCH')}</Text>
+                  <Text style={styles.zoneTagText}>{zone === 'comfy' ? t('Comfortable') : zone === 'tight' ? t('Tight') : t('Too much')}</Text>
                 </View>
               </View>
               <Text style={styles.date}>
@@ -311,7 +311,7 @@ export function FindWhatWorks() {
 
           {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4, paddingTop: 4 }}>
-              <Text style={styles.section}>{askedMonths !== null ? t('2 · ADD-ONS · TICK ANY') : t('ADD-ONS · TICK ANY')}</Text>
+              <Text style={styles.section}>{askedMonths !== null ? t('2 · Add-ons · tick any') : t('Add-ons · tick any')}</Text>
               {nTicked > 0 && <Text style={styles.count}>{t('{n} ticked', { n: nTicked })}</Text>}
             </View>
           }
@@ -345,7 +345,7 @@ export function FindWhatWorks() {
                     </Pressable>
                   ))}
                 </View>
-                <Text style={styles.subLabel}>{side.kind === 'once' ? t('HOW MUCH?') : t('HOW MUCH A MONTH?')}</Text>
+                <Text style={styles.subLabel}>{side.kind === 'once' ? t('How much?') : t('How much a month?')}</Text>
                 <View style={{ gap: 4 }}>
                   <AmountInput value={side.amount} onChange={(amount) => setSide((x) => ({ ...x, amount }))} label={side.kind === 'once' ? t('Bonus amount') : t('Side work a month')} />
                   <Text style={[styles.addonSub, { color: inkA(0.7) }]}>
@@ -361,7 +361,7 @@ export function FindWhatWorks() {
                         </Pressable>
                       ))}
                     </View>
-                    <Text style={styles.subLabel}>{t('FOR HOW LONG?')}</Text>
+                    <Text style={styles.subLabel}>{t('For how long?')}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} accessibilityRole="radiogroup">
                       {HOW_LONG.map((h) => {
                         const sel = side.months === h;
@@ -404,7 +404,7 @@ export function FindWhatWorks() {
                     </Pressable>
                   </View>
                 )}
-                <Text style={[styles.addonSub, { fontSize: 11, color: inkA(0.65) }]}>{t('Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.')}</Text>
+                <Text style={[styles.addonSub, { fontSize: 12, color: inkA(0.65) }]}>{t('Side money comes and goes — I only count it when it arrives, and remind you on the 1st to log it.')}</Text>
               </View>
             </AddOnRow>
           </View>
@@ -456,7 +456,7 @@ function Includes({ items }: { items: string[] }) {
       <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Includes:')}</Text>
       {items.map((x) => (
         <View key={x} style={styles.chip}>
-          <Text style={{ fontFamily: fonts.semibold, fontSize: 11, color: colors.ink }}>{x}</Text>
+          <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{x}</Text>
         </View>
       ))}
     </View>
@@ -516,7 +516,7 @@ function MonthDial({ lo, hi, value, fast, comfy, locked, onChange }: { lo: numbe
           </View>
           {w > 0 && (
             <View style={[styles.marker, { left: x(comfy) - 30 }]} pointerEvents="none">
-              <Text style={styles.markerText}>{t('KIP’S PICK')}</Text>
+              <Text style={styles.markerText}>{t('Kip’s pick')}</Text>
               <View style={{ width: 2, height: 10, backgroundColor: colors.ink }} />
             </View>
           )}
@@ -586,7 +586,7 @@ const styles = themed(() =>
     miniItem: { flex: 1, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
     miniOn: { backgroundColor: colors.paper, borderColor: colors.ink },
     miniText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-    subLabel: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: inkA(0.6) },
+    subLabel: { fontFamily: fonts.medium, fontSize: 13, color: inkA(0.6) },
     chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
     chipOn: { borderColor: colors.ink },
     kipTip: { borderRadius: 14, backgroundColor: colors.lime, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -595,7 +595,7 @@ const styles = themed(() =>
     segItem: { flex: 1, borderRadius: radius.pill, paddingVertical: 8, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
     segOn: { backgroundColor: colors.paper, borderColor: colors.ink },
     segTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted },
-    segSub: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    segSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     sum: { borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 10, paddingHorizontal: 12, gap: 6 },
     chip: { height: 24, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
     count: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
@@ -605,15 +605,15 @@ const styles = themed(() =>
     box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.faint, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
     boxOn: { backgroundColor: colors.ink, borderColor: colors.ink },
     h1: { fontFamily: fonts.semibold, fontSize: 27, letterSpacing: -0.5, color: colors.ink },
-    section: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 4, paddingTop: 4 },
+    section: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingTop: 4 },
     dial: { borderRadius: 22, borderWidth: 1.5, borderColor: colors.ink, padding: 14, gap: 10 },
     zoneTag: { height: 22, paddingHorizontal: 9, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), justifyContent: 'center' },
-    zoneTagText: { fontFamily: fonts.bold, fontSize: 11, color: colors.ink },
+    zoneTagText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     date: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink },
     dialBox: { borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8, gap: 2 },
     track: { height: 10, borderRadius: radius.pill, overflow: 'hidden', flexDirection: 'row', marginBottom: 3 },
     marker: { position: 'absolute', top: 0, width: 60, alignItems: 'center' },
-    markerText: { fontFamily: fonts.bold, fontSize: 9, color: colors.paper, backgroundColor: colors.ink, borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' },
+    markerText: { fontFamily: fonts.medium, fontSize: 12, color: colors.paper, backgroundColor: colors.ink, borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2, overflow: 'hidden' },
     thumb: {
       position: 'absolute',
       bottom: 0,
@@ -625,9 +625,9 @@ const styles = themed(() =>
       borderColor: colors.ink,
       boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
     },
-    zoneLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    zoneLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     stat: { flex: 1, minWidth: 0, borderRadius: 14, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 9, paddingHorizontal: 11 },
-    statK: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    statK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     statV: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
     dialNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.ink },
     lever: {

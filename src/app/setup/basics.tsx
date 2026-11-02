@@ -25,7 +25,7 @@ export default function SetupBasics() {
   return (
     <SetupScreen step={1} footer={<Button label={editing ? t('Update my plan') : t('Next')} disabled={!basicsDone(draft)} onPress={() => (editing ? router.back() : router.push('/setup/style'))} />}>
       <KipSays>
-        {regular ? t('A few rough numbers so I can plan your days. Guesses are fine!') : t('Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.')}
+        {regular ? t('A few rough numbers so I can plan your days. Guesses are fine.') : t('Freelance money comes in waves. I’ll plan around a slow month, so good months become a bonus.')}
       </KipSays>
       <Title>{t('How does money come in?')}</Title>
 

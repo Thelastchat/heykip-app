@@ -93,7 +93,7 @@ export default function SetupPlan() {
         amount: baht(Math.min(i.goal.target, i.goal.saved + r.goal * m + sideTotal(draft.sideIncome, m))),
       });
     }
-    road.push({ when: monthYear(due), amount: `${short}!` });
+    road.push({ when: monthYear(due), amount: short });
   }
 
   // Where the payday money goes: "฿X to Japan, ฿Y to your safety net, ฿Z to your freedom jar".
@@ -225,7 +225,7 @@ export default function SetupPlan() {
 
           {style !== 'kip' && (
             <View style={{ gap: 6, paddingHorizontal: 2 }}>
-              <Text style={[styles.head, { color: inkA(0.6) }]}>{t('VS KIP’S PLAN')}</Text>
+              <Text style={[styles.head, { color: inkA(0.6) }]}>{t('vs Kip’s plan')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {vsKip.length ? (
                   vsKip.map((d) => (
@@ -233,7 +233,7 @@ export default function SetupPlan() {
                       <Text
                         style={{
                           fontFamily: fonts.bold,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: d.good ? '#3E7B3A' : '#B4532F',
                         }}>
                         {d.good ? '▲' : '▼'}
@@ -258,7 +258,7 @@ export default function SetupPlan() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.head}>{t('YOUR MONTH')}</Text>
+            <Text style={styles.head}>{t('Your month')}</Text>
             <View style={styles.bar}>
               {bar.map(([n, c], k) => (
                 <View
@@ -296,7 +296,7 @@ export default function SetupPlan() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.head}>{t('A NORMAL DAY · {amount}', { amount: baht(r.daily) })}</Text>
+            <Text style={styles.head}>{t('A normal day · {amount}', { amount: baht(r.daily) })}</Text>
             <View style={{ flexDirection: 'row' }}>
               {day.map((d) => (
                 <View key={d.k} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
@@ -310,7 +310,7 @@ export default function SetupPlan() {
 
           {road.length > 1 && (
             <View style={styles.card}>
-              <Text style={styles.head}>{t('ROAD TO {short}', { short: short.toUpperCase() })}</Text>
+              <Text style={styles.head}>{t('Road to {short}', { short })}</Text>
               <View style={styles.roadLine}>
                 <View style={styles.roadTrack} />
                 {road.map((_, k) => (
@@ -350,7 +350,7 @@ export default function SetupPlan() {
           )}
 
           <View style={styles.card}>
-            <Text style={styles.head}>{t('HOW KIP RUNS IT')}</Text>
+            <Text style={styles.head}>{t('How Kip runs it')}</Text>
             {rules.map((line, k) => (
               <Fragment key={k}>
                 <View style={styles.rule}>
@@ -472,7 +472,7 @@ const styles = themed(() =>
       letterSpacing: -0.2,
       color: colors.ink,
     },
-    tabDay: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    tabDay: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     body: {
       borderWidth: 1.5,
       borderColor: colors.ink,
@@ -507,7 +507,7 @@ const styles = themed(() =>
       backgroundColor: colors.paper,
       justifyContent: 'center',
     },
-    tagText: { fontFamily: fonts.bold, fontSize: 11, color: colors.ink },
+    tagText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     heroText: {
       fontFamily: fonts.regular,
       fontSize: 14,
@@ -532,7 +532,7 @@ const styles = themed(() =>
     },
     statSub: {
       fontFamily: fonts.regular,
-      fontSize: 11,
+      fontSize: 12,
       lineHeight: 14,
       color: colors.muted,
     },
@@ -544,9 +544,8 @@ const styles = themed(() =>
       gap: 10,
     },
     head: {
-      fontFamily: fonts.bold,
-      fontSize: 11,
-      letterSpacing: 0.5,
+      fontFamily: fonts.medium,
+      fontSize: 13,
       color: colors.muted,
     },
     bar: {

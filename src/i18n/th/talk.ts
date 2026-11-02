@@ -61,7 +61,7 @@ const th: Record<string, string> = {
   Send: 'ส่ง',
   'Remove {name}': 'ลบ {name}',
   'SAVED ✓': 'บันทึกแล้ว ✓',
-  'MONEY IN': 'เงินเข้า',
+  'Money in': 'เงินเข้า',
   SPENT: 'จ่ายไป',
   'KIP HEARD · TAP × TO REMOVE': 'KIP ได้ยินแบบนี้ · แตะ × เพื่อลบ',
   '{amount} left today': 'ใช้ได้อีกวันนี้ {amount}',

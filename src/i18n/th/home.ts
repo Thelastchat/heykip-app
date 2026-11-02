@@ -2,7 +2,7 @@
 const th: Record<string, string> = {
   // ---------- shared bits (Home + Goals) ----------
   'your goal': 'เป้าหมาย',
-  'MY PROMISE': 'สัญญากับตัวเอง',
+  'My promise': 'สัญญากับตัวเอง',
   '{goal} · {n} days': '{goal} · อีก {n} วัน',
   '{amount} saved': 'เก็บแล้ว {amount}',
   '{amount} a month': 'เดือนละ {amount}',
@@ -196,7 +196,6 @@ const th: Record<string, string> = {
   'Payday is tomorrow': 'พรุ่งนี้เงินเดือนออก',
   '{n} days left this month': 'เดือนนี้เหลืออีก {n} วัน',
   'Last day of the month': 'วันสุดท้ายของเดือน',
-  'My promise': 'สัญญากับตัวเอง',
   'Try free': 'ลองฟรี',
   '{n} of {total} paid': 'จ่ายแล้ว {n} จาก {total}',
   'Auto-move on: {amount} moves to {goal} on the {day}': 'เปิดย้ายอัตโนมัติแล้ว: {amount} จะย้ายไป {goal} ทุกวันที่ {n}',

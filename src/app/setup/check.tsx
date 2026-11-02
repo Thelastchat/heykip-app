@@ -52,7 +52,7 @@ function Choices() {
       {
         key: 'anyway',
         title: t('Pin {goal} anyway', { goal: short }),
-        tag: t('KIP’S PICK'),
+        tag: t('Kip’s pick'),
         lines: [t('Start with small wins: every day under budget goes to it'), t('I’ll look for room as you log')],
         apply: { goalPerMonth: 0 },
         button: t('Pin {goal} anyway', { goal: short }),
@@ -71,7 +71,7 @@ function Choices() {
         key: 'comfy',
         per: R.comfortable,
         title: t('Save {amount} a month', { amount: baht(R.comfortable) }),
-        tag: t('KIP’S PICK'),
+        tag: t('Kip’s pick'),
         lines: [t('{year} in a year · {daily} a day to spend', { year: baht(R.comfortable * 12), daily: baht(comfy.daily) }), t('Comfortable — fun money stays {fun}', { fun: baht(comfy.fun) })],
         apply: { goalMonthly: R.comfortable, goalPerMonth: null },
         button: t('Go with {choice}', { choice: baht(R.comfortable) }),
@@ -80,7 +80,7 @@ function Choices() {
         key: 'most',
         per: R.most,
         title: t('Save {amount} a month', { amount: baht(R.most) }),
-        tag: t('TIGHT'),
+        tag: t('Tight'),
         tagColor: colors.roseBeige,
         lines: [t('{year} in a year · {daily} a day', { year: baht(R.most * 12), daily: baht(most.daily) }), t('Fun money drops to {fun}', { fun: baht(most.fun) })],
         apply: { goalMonthly: R.most, goalPerMonth: null },
@@ -117,7 +117,7 @@ function Choices() {
       key: 'comfy',
       per: R.comfortable,
       title: t('{goal} in {date}', { goal: short, date: monthYear(comfyDate) }),
-      tag: t('KIP’S PICK'),
+      tag: t('Kip’s pick'),
       lines: [t('Save {amount} a month · {daily} a day to spend', { amount: baht(R.comfortable), daily: baht(comfy.daily) }), t('Comfortable — fun money stays {fun}', { fun: baht(comfy.fun) })],
       apply: { goalDue: isoDay(comfyDate), goalPerMonth: null },
       button: t('Go with {choice}', { choice: monthYear(comfyDate) }),
@@ -130,7 +130,7 @@ function Choices() {
           asked && Math.abs(tightDate.getTime() - asked.getTime()) < 45 * 86_400_000
             ? t('Just after your date: {date}', { date: fullDate(tightDate) })
             : t('Faster: {date}', { date: monthYear(tightDate) }),
-        tag: t('TIGHT'),
+        tag: t('Tight'),
         tagColor: colors.roseBeige,
         lines: [t('Save {amount} a month · {daily} a day', { amount: baht(R.most), daily: baht(most.daily) }), t('Fun money drops to {fun}', { fun: baht(most.fun) })],
         apply: { goalDue: isoDay(tightDate), goalPerMonth: null },
@@ -142,7 +142,7 @@ function Choices() {
         key: 'keep',
         per: v.perMonth,
         title: t('Keep {date}', { date: fullDate(asked) }),
-        tag: t('TIGHT'),
+        tag: t('Tight'),
         tagColor: colors.roseBeige,
         lines: [t('Save {amount} a month', { amount: baht(v.perMonth) }), t('Fun money drops to {fun}', { fun: baht(v.funLeft) })],
         apply: { goalPerMonth: null },
@@ -234,7 +234,7 @@ function Choices() {
                   <Text style={{ fontFamily: fonts.semibold, fontSize: 16, color: colors.ink }}>{c.title}</Text>
                   {c.tag ? (
                     <View style={[styles.tag, { backgroundColor: on ? colors.paper : (c.tagColor ?? colors.lime) }]}>
-                      <Text style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.ink }}>{c.tag}</Text>
+                      <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>{c.tag}</Text>
                     </View>
                   ) : null}
                 </View>

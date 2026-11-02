@@ -46,7 +46,7 @@ export default function SetupSign() {
 
       <View style={styles.note2}>
         <View style={styles.tape} />
-        <Text style={styles.kicker}>{t('MY PROMISE')}</Text>
+        <Text style={styles.kicker}>{t('My promise')}</Text>
         {editing ? (
           <>
             <TextInput value={main} onChangeText={(text) => update({ promiseMain: text })} multiline style={[styles.main, styles.input]} autoFocus accessibilityLabel={t('Your promise')} />
@@ -104,12 +104,12 @@ const styles = themed(() =>
       gap: 10,
     },
     tape: { position: 'absolute', top: -9, left: '50%', marginLeft: -32, width: 64, height: 18, backgroundColor: glassA(0.65), transform: [{ rotate: '-3deg' }] },
-    kicker: { fontFamily: fonts.regular, fontSize: 10, letterSpacing: 1.2, color: inkA(0.55) },
+    kicker: { fontFamily: fonts.medium, fontSize: 13, color: inkA(0.55) },
     main: { fontFamily: fonts.hand, fontSize: 27, lineHeight: 31, color: colors.ink },
     backup: { fontFamily: fonts.hand, fontSize: 22, lineHeight: 25, color: inkA(0.75) },
     input: { padding: 0, backgroundColor: glassA(0.45), borderRadius: 6 },
     signArea: { marginTop: 6 },
-    signedWith: { fontFamily: fonts.regular, fontSize: 11, color: inkA(0.55) },
+    signedWith: { fontFamily: fonts.regular, fontSize: 12, color: inkA(0.55) },
     redo: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink, textDecorationLine: 'underline' },
     edit: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'underline' },
     note: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },

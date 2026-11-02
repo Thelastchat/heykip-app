@@ -115,8 +115,7 @@ export default function SetupGoal() {
           <View style={styles.suggestedHead}>
             <View style={{ flex: 1, gap: 6 }}>
               <View style={styles.kipTag}>
-                <CatIcon name="sparkle" size={13} />
-                <Text style={styles.kipTagText}>{t('SUGGESTED BY KIP')}</Text>
+                <Text style={styles.kipTagText}>{t('Suggested by Kip')}</Text>
               </View>
               <Text style={styles.suggestedSub}>
                 {rich('Ideas sized to **your {income}**. They’re only ideas — nothing is set until you pick one.', { income: baht(inputs.income) }, (s) => (
@@ -151,7 +150,7 @@ export default function SetupGoal() {
                 <View key={d.id} style={[styles.dot, i === Math.min(page, deck.length - 1) && styles.dotOn]} />
               ))}
             </View>
-            <Text style={styles.hand}>{t('swipe for more →')}</Text>
+            <Text style={styles.hint}>{t('swipe for more →')}</Text>
           </View>
         </View>
       )}
@@ -168,8 +167,8 @@ export default function SetupGoal() {
 
       <View style={styles.own}>
         <View style={styles.labelRow}>
-          <Text style={styles.label}>{t('1 · WHAT KIND OF GOAL?')}</Text>
-          <Text style={[styles.hand, { fontSize: 18 }]}>{t('swipe →')}</Text>
+          <Text style={styles.label}>{t('1 · What kind of goal?')}</Text>
+          <Text style={styles.hint}>{t('swipe →')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -14 }} contentContainerStyle={{ paddingHorizontal: 14, gap: 6 }} accessibilityRole="radiogroup">
           {GOAL_TYPES.map((g) => {
@@ -187,7 +186,7 @@ export default function SetupGoal() {
           })}
         </ScrollView>
 
-        <Text style={styles.label}>{t('2 · MAKE IT YOURS')}</Text>
+        <Text style={styles.label}>{t('2 · Make it yours')}</Text>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 6 }}>
           <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? t('Change photo') : t('Add a photo')}>
             <Polaroid
@@ -248,7 +247,7 @@ export default function SetupGoal() {
         ) : (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <BahtField label={t('How much?')} value={draft.goalTarget} onChange={(goalTarget) => update({ goalTarget })} placeholder="0" flex={1.2} />
-            <BahtField label={t('Saved so far')} value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" />
+            <BahtField label={t('Saved so far')} value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" flex={1.2} />
             <DateTile label={t('By when?')} value={draft.goalDue} onChange={(goalDue) => update({ goalDue })} style={[styles.white, { flex: 1 }]} emptyLabel={emergency ? t('No rush') : t('Pick')} />
           </View>
         )}
@@ -269,18 +268,18 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
   const bg = CARD[i % CARD.length];
   const amount = idea.monthly !== null ? baht(idea.monthly) : baht(idea.target ?? 0);
   const date = draftMonths(idea.months ?? 1);
-  const chip = idea.monthly !== null ? t('♡ every month') : idea.months === 1 ? t('⏱ {n} month · {date}', { n: idea.months, date }) : t('⏱ {n} months · {date}', { n: String(idea.months), date });
+  const chip = idea.monthly !== null ? t('Every month') : idea.months === 1 ? t('{n} month · {date}', { n: idea.months, date }) : t('{n} months · {date}', { n: String(idea.months), date });
   return (
     <View style={{ width: CARD_W, paddingTop: 34 }}>
       <View style={[styles.card, { backgroundColor: soft(bg) }]}>
         <View style={styles.cardTop}>
           {idea.kipsPick ? (
             <View style={[styles.tag, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.tagText, { color: colors.paper }]}>{t('KIP’S PICK')}</Text>
+              <Text style={[styles.tagText, { color: colors.paper }]}>{t('Kip’s pick')}</Text>
             </View>
           ) : (
             <View style={styles.tag}>
-              <Text style={styles.tagText}>{t('✦ SUGGESTED')}</Text>
+              <Text style={styles.tagText}>{t('Suggested')}</Text>
             </View>
           )}
         </View>
@@ -302,7 +301,7 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
         </Pressable>
       </View>
       <Float delay={i * 500} amount={5} style={styles.big3d}>
-        <Image source={ICON3D[goalTypeIcon3D(idea.type)]} style={{ width: 112, height: 112 }} contentFit="contain" />
+        <Image source={ICON3D[goalTypeIcon3D(idea.type)]} style={{ width: 96, height: 96 }} contentFit="contain" />
       </Float>
     </View>
   );
@@ -411,11 +410,13 @@ const styles = themed(() =>
     h2: { fontFamily: fonts.semibold, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
     muted12: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
     hand: { fontFamily: fonts.hand, fontSize: 20, color: '#4A4A44' },
+    // the handwriting belongs to the dream photo and the promise; hints are plain
+    hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
 
     suggested: { marginHorizontal: -6, paddingTop: 8, paddingBottom: 8 },
     suggestedHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 16 },
     kipTag: { alignSelf: 'flex-start', height: 26, paddingLeft: 9, paddingRight: 11, borderRadius: radius.pill, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    kipTagText: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.6, color: colors.ink },
+    kipTagText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
     suggestedSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
     shuffle: {
       height: 38,
@@ -435,7 +436,7 @@ const styles = themed(() =>
     dotOn: { width: 18, backgroundColor: colors.ink },
 
     card: {
-      height: 300,
+      height: 316,
       borderRadius: 28,
       paddingTop: 16,
       paddingHorizontal: 16,
@@ -449,8 +450,8 @@ const styles = themed(() =>
     cardTop: { height: 50, flexDirection: 'row', alignItems: 'flex-start' },
     cardIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: glassA(0.75), alignItems: 'center', justifyContent: 'center' },
     tag: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: glassA(0.8), flexDirection: 'row', alignItems: 'center', gap: 4 },
-    tagText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.4, color: colors.ink },
-    cardTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginTop: 2 },
+    tagText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
+    cardTitle: { fontFamily: fonts.semibold, fontSize: 19, color: colors.ink, marginTop: 2, flexShrink: 0 },
     cardAmount: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.ink, fontVariant: ['tabular-nums'] },
     chip: { alignSelf: 'flex-start', height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: glassA(0.8), justifyContent: 'center' },
     chipText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
@@ -461,14 +462,14 @@ const styles = themed(() =>
     sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, paddingHorizontal: 2 },
     own: { borderRadius: 26, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
     labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
-    label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted, paddingHorizontal: 2 },
+    label: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, paddingHorizontal: 2 },
     sticker: { width: 70, alignItems: 'center', gap: 6 },
     stickerDot: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
     stickerOther: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.3), backgroundColor: 'transparent' },
-    stickerText: { fontFamily: fonts.medium, fontSize: 11.5, color: colors.ink },
+    stickerText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     polaroidNote: { fontSize: 17, textAlign: 'center', color: '#8E8E86', position: 'absolute', left: 0, right: 0, bottom: 2 },
     field: { borderRadius: 16, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingVertical: 10, paddingHorizontal: 14, gap: 2 },
-    fieldLabel: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
+    fieldLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     white: { backgroundColor: colors.paper },
     quick: { flex: 1, height: 36, borderRadius: radius.pill, backgroundColor: glassA(0.55), borderWidth: 1.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
     quickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },

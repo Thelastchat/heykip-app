@@ -54,8 +54,8 @@ export default function SetupStyle() {
 
       {rules.length > 0 && (
         <View style={styles.rules}>
-          <Text style={styles.rulesHead}>{t('WHAT I’LL DO ABOUT IT')}</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: 11, color: colors.muted, marginTop: -2 }}>{t('Colour = the budget it comes from')}</Text>
+          <Text style={styles.rulesHead}>{t('What I’ll do about it')}</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: -2 }}>{t('Colour = the budget it comes from')}</Text>
           {rules.map((r) => (
             <View key={r.key} style={styles.rule}>
               <CatBadge name={r.icon} color={r.color} size={30} />
@@ -74,7 +74,7 @@ export default function SetupStyle() {
 const styles = themed(() =>
   StyleSheet.create({
     rules: { borderRadius: 18, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 4 },
-    rulesHead: { paddingTop: 10, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
+    rulesHead: { paddingTop: 10, fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
     rule: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 8 },
   }),
 );

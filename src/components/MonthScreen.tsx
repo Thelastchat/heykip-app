@@ -466,7 +466,7 @@ function StylePicker({ current, onPick }: { current: MonthBudget['style']; onPic
       <SheetTitle mood="idle" title={t('Money style')} sub={t('Your goal, safety net and bills stay the same. This only changes how spending is split.')} />
       <View style={{ gap: 8 }}>
         {STYLES.map((s) => (
-          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? t('RECOMMENDED') : undefined} onPress={() => onPick(s.key)} />
+          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? t('Recommended') : undefined} onPress={() => onPick(s.key)} />
         ))}
       </View>
     </>
@@ -534,7 +534,7 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
       key: 'goal',
       title: goalName,
       sub: t('{from} → {to} a month · get there sooner', { from: baht(month.goal.amount + month.goalExtra), to: baht(month.goal.amount + month.goalExtra + freed) }),
-      tag: t('KIP’S PICK'),
+      tag: t('Kip’s pick'),
       color: money.goalChoice,
     },
     ...(cat !== 'food' && month.spend.some((s) => s.key === 'food')

@@ -105,7 +105,7 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
       return t('Kip’s plan');
     },
     get tag() {
-      return t('RECOMMENDED');
+      return t('Recommended');
     },
     tagColor: colors.lime,
     get desc() {
@@ -118,7 +118,7 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
       return t('Save first');
     },
     get tag() {
-      return t('FASTEST');
+      return t('Fastest');
     },
     tagColor: colors.sage,
     get desc() {
@@ -129,7 +129,7 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
     key: '503020',
     name: '50 / 30 / 20',
     get tag() {
-      return t('THE CLASSIC');
+      return t('The classic');
     },
     tagColor: colors.roseBeige,
     get desc() {
@@ -142,7 +142,7 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
       return t('6 Jars');
     },
     get tag() {
-      return t('GROW YOURSELF');
+      return t('Grow yourself');
     },
     tagColor: colors.lilac,
     get desc() {

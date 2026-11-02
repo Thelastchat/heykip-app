@@ -65,7 +65,7 @@ export default function SetupCongrats() {
         <Kip mood="celebrate" size={140} />
       </View>
       <View style={{ alignItems: 'center', gap: 8 }}>
-        <Text style={styles.h1}>{t('Yay! Your plan is ready')}</Text>
+        <Text style={styles.h1}>{t('Your plan is ready')}</Text>
         <Text style={styles.sub}>{t('Worked out from your numbers.')}</Text>
       </View>
       <View style={styles.card}>
@@ -81,7 +81,7 @@ export default function SetupCongrats() {
             : t('{amount} a month · {daily} a day to spend · a safety net growing from day one', { amount: baht(plan.monthlySave), daily: baht(plan.dailySpend) })}
         </Text>
         <View style={styles.rule} />
-        <Text style={styles.howHead}>{t('HOW I’LL RUN IT')}</Text>
+        <Text style={styles.howHead}>{t('How I’ll run it')}</Text>
         {how.map((line, i) => (
           <View key={line} style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 4 }}>
             <Image source={ICON3D[howIcons[i] ?? 'piggy']} style={{ width: 34, height: 34 }} contentFit="contain" />
@@ -151,7 +151,7 @@ function Confetti() {
 const styles = themed(() =>
   StyleSheet.create({
     rule: { height: 1, backgroundColor: inkA(0.1), marginVertical: 4 },
-    howHead: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 0.5, color: colors.muted },
+    howHead: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
     link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
     screen: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 20, gap: 16 },
     h1: { fontFamily: fonts.semibold, fontSize: 32, letterSpacing: -0.6, color: colors.ink, textAlign: 'center' },
