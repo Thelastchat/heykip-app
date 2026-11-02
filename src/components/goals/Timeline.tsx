@@ -1,5 +1,5 @@
 // "Which goal first?" (approved mockup): one lane per goal, from today to the month it arrives. The goal's 3D object
-// sits at the end of its line; when a choice moves a goal later, a small mark stays where it used to land.
+// sits at the end of its line, filled in its pin colour (orange, lavender, sky: never two alike); when a choice moves a goal later, a small mark stays where it used to land.
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -9,7 +9,7 @@ import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { monthYear } from '@/lib/setup/plan';
 import { colors, fonts, inkA, themed } from '@/theme';
 
-export type Lane = { id: string; name: string; pin: string; color: string; icon: Icon3D; arrives: Date | null; was?: Date | null; monthly?: boolean; later?: boolean };
+export type Lane = { id: string; name: string; pin: string; icon: Icon3D; arrives: Date | null; was?: Date | null; monthly?: boolean; later?: boolean };
 
 const monthsBetween = (a: Date, b: Date) => (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
 
@@ -38,7 +38,7 @@ export function Timeline({ lanes, until, now = new Date() }: { lanes: Lane[]; un
               </Text>
             </View>
             <View style={styles.track}>
-              <View style={[styles.fill, { width: `${Math.max(2, x * 100)}%`, backgroundColor: l.color }]} />
+              <View style={[styles.fill, { width: `${Math.max(2, x * 100)}%`, backgroundColor: l.pin }]} />
               {l.was && l.arrives && l.was.getTime() !== l.arrives.getTime() && <View style={[styles.ghost, { left: `${at(l.was) * 100}%` }]} />}
               {!l.monthly && (
                 <View style={[styles.end, { left: `${x * 100}%` }]}>

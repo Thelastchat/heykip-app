@@ -169,14 +169,13 @@ export default function GoalNew() {
           id: g.id,
           name: nameOf(g),
           pin: pinColors[isCard ? i + 1 : i] ?? pinColors[2],
-          color: typeInfo(g.goalType, g.kind as never).color,
           icon: iconOf(g),
           arrives: plan.arrive.get(g.id) ?? null,
           was: before.get(g.id) ?? null,
           monthly: g.kind === 'monthly',
           later: !sameMonth(plan.arrive.get(g.id), before.get(g.id)) && (plan.arrive.get(g.id)?.getTime() ?? Infinity) > (before.get(g.id)?.getTime() ?? 0),
         })),
-        { id: plan.newId, name, pin: isCard ? pinColors[0] : (pinColors[goals.length] ?? pinColors[2]), color: info.color, icon: goalTypeIcon3D(type), arrives: newArrives, monthly },
+        { id: plan.newId, name, pin: isCard ? pinColors[0] : (pinColors[goals.length] ?? pinColors[2]), icon: goalTypeIcon3D(type), arrives: newArrives, monthly },
       ]
     : [];
 

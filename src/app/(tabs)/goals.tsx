@@ -311,7 +311,6 @@ export default function Goals() {
             icon: iconOf(g),
             photo: g.photo,
             photoKey: g.photoKey,
-            color: typeInfo(g.goalType, g.kind as never).color,
             pin: pinColors[i],
           }))}
           onDone={(total) => {
