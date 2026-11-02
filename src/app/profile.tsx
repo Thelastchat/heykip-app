@@ -166,12 +166,12 @@ export default function Profile() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 18, paddingBottom: insets.bottom + 40, gap: 14 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 16 }} showsVerticalScrollIndicator={false}>
         <ScreenHeader title={t('You')} />
 
         <RiseIn>
-          <Glass radius={26} innerStyle={styles.me}>
-            <View style={styles.ava}>{row?.avatar_url ? <Image source={{ uri: row.avatar_url }} style={{ width: 58, height: 58 }} contentFit="cover" /> : <Kip mood="happy" size={46} />}</View>
+          <Glass radius={24} innerStyle={styles.me}>
+            <View style={styles.ava}>{row?.avatar_url ? <Image source={{ uri: row.avatar_url }} style={{ width: 56, height: 56 }} contentFit="cover" /> : <Kip mood="happy" size={46} />}</View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name} numberOfLines={1}>
                 {row?.display_name || t('Add your name')}
@@ -221,10 +221,10 @@ export default function Profile() {
           </View>
         </RiseIn>
 
-        <Text style={styles.cap}>{t('YOUR MONEY')}</Text>
+        <Text style={styles.cap}>{t('Your money')}</Text>
         <RiseIn delay={240}>
-          <Glass radius={26} innerStyle={styles.group}>
-            <SetRow icon="income" title={t('Usual pay')} sub={paySub} value={pay ? baht(pay) : t('Add it')} onPress={() => month && basics && setOpen('pay')} />
+          <Glass radius={24} innerStyle={styles.group}>
+            <SetRow first icon="income" title={t('Usual pay')} sub={paySub} value={pay ? baht(pay) : t('Add it')} onPress={() => month && basics && setOpen('pay')} />
             <SetRow
               icon="house"
               title={t('Rent & bills')}
@@ -237,10 +237,10 @@ export default function Profile() {
         </RiseIn>
         <Text style={styles.note}>{t('Change one and Kip re-plans your month — you’ll see the new numbers first.')}</Text>
 
-        <Text style={styles.cap}>KIP</Text>
+        <Text style={styles.cap}>Kip</Text>
         <RiseIn delay={360}>
-          <Glass radius={26} innerStyle={styles.group}>
-            <SetRow title={t('Evening check-in')} sub={t('Kip asks what you spent')} value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
+          <Glass radius={24} innerStyle={styles.group}>
+            <SetRow first title={t('Evening check-in')} sub={t('Kip asks what you spent')} value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
             <View style={[styles.row, styles.rowLine]}>
               <Text style={[styles.rowTitle, { flex: 1 }]}>{t('Language')}</Text>
               <View style={styles.seg}>
@@ -277,8 +277,8 @@ export default function Profile() {
         </RiseIn>
 
         <RiseIn delay={420}>
-          <Glass radius={26} innerStyle={styles.group}>
-            <SetRow icon="shield" title={t('Privacy & data')} sub={t('Kip’s AI, what’s saved, delete')} value="" onPress={() => router.push('/privacy')} />
+          <Glass radius={24} innerStyle={styles.group}>
+            <SetRow first icon="shield" title={t('Privacy & data')} sub={t('Kip’s AI, what’s saved, delete')} value="" onPress={() => router.push('/privacy')} />
           </Glass>
         </RiseIn>
 
@@ -354,9 +354,9 @@ export default function Profile() {
   );
 }
 
-function SetRow({ icon, title, sub, value, soft, onPress }: { icon?: keyof typeof ICON3D; title: string; sub?: string; value: string; soft?: boolean; onPress: () => void }) {
+function SetRow({ icon, title, sub, value, soft, first, onPress }: { icon?: keyof typeof ICON3D; title: string; sub?: string; value: string; soft?: boolean; first?: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, styles.rowLine, pressed && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel={`${title}: ${value}`}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, !first && styles.rowLine, pressed && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel={`${title}: ${value}`}>
       {icon && <Image source={ICON3D[icon]} style={{ width: 38, height: 38 }} contentFit="contain" />}
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -483,31 +483,39 @@ function DeleteSheet({ onClose, onError }: { onClose: () => void; onError: (t: s
 
 const styles = themed(() =>
   StyleSheet.create({
-    me: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
-    ava: { width: 58, height: 58, borderRadius: 29, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF6CF', borderWidth: 1, borderColor: colors.paper },
+    me: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    ava: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF6CF', borderWidth: 1, borderColor: colors.paper },
     name: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
     sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-    chip: { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: inkA(0.07), alignItems: 'center', justifyContent: 'center' },
+    chip: { height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: inkA(0.07), alignItems: 'center', justifyContent: 'center' },
     chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-    plus: { borderRadius: 26, padding: 16, backgroundColor: colors.solid, flexDirection: 'row', alignItems: 'center', gap: 14, boxShadow: '0 14px 30px rgba(17,17,17,0.22)' } as never,
-    ringNum: { position: 'absolute', fontFamily: fonts.semibold, fontSize: 14, color: colors.onSolid },
+    plus: {
+      borderRadius: 24,
+      padding: 16,
+      backgroundColor: colors.solid,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 28px rgba(17,17,17,0.12)',
+    } as never,
+    ringNum: { position: 'absolute', fontFamily: fonts.medium, fontSize: 14, color: colors.onSolid },
     plusTitle: { fontFamily: fonts.medium, fontSize: 16, color: colors.onSolid },
     plusSub: { fontFamily: fonts.regular, fontSize: 13, color: whiteA(0.6), marginTop: 2 },
     go: { height: 36, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
     goText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
-    cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 1, color: colors.muted, marginLeft: 4, marginBottom: -6 },
+    cap: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginLeft: 4, marginTop: 8, marginBottom: -8 }, // closer to its own group than to the one above
     group: { paddingHorizontal: 16, paddingVertical: 4 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     rowLine: { borderTopWidth: 1, borderTopColor: inkA(0.06) },
     rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     rowVal: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'], maxWidth: 130 },
-    small: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-    note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginHorizontal: 4, marginTop: -6 },
-    seg: { flexDirection: 'row', backgroundColor: inkA(0.07), borderRadius: 999, padding: 3 },
-    segBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, alignItems: 'center' },
+    small: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2 },
+    note: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginHorizontal: 4, marginTop: -8 },
+    seg: { flexDirection: 'row', backgroundColor: inkA(0.07), borderRadius: 999, padding: 4 },
+    segBtn: { paddingHorizontal: 12, paddingVertical: 6, minWidth: 64, borderRadius: 999, alignItems: 'center' },
     segOn: { backgroundColor: colors.ink },
     segText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-    foot: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 6, marginTop: 4 },
+    foot: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 8 },
     footText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
     err: { fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' },
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },

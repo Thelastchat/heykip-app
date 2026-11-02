@@ -205,6 +205,7 @@ const th: Record<string, string> = {
   '{amount} left today after': 'หลังจากนี้วันนี้เหลือ {amount}',
   'Bought — I’ve logged it and moved the money.': 'ซื้อแล้ว — Kip จดให้และย้ายเงินให้แล้ว',
   'Bought — I’ve logged it.': 'ซื้อแล้ว — Kip จดให้แล้ว',
+  'Your money': 'เรื่องเงิน',
 };
 
 export default th;
