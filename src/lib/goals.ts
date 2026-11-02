@@ -7,7 +7,7 @@
 // · The timeline simulates payday by payday, so "Phone first" shows the real dates for both goals.
 import { funMinimum, livingFor, livingTotal, safetyNet } from '@/lib/brain';
 import { addBill, keepOnReplan, monthFrom, type MonthBudget } from '@/lib/budget';
-import { isoDay, monthsUntil } from '@/lib/setup/plan';
+import { isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
 
 export type GoalLite = { id: string; kind: string; target: number; saved: number; due: string | null; monthly: number | null };
 export const MAX_GOALS = 3;
@@ -189,3 +189,48 @@ export function withoutGoal(m: MonthBudget, goals: GoalLite[], id: string): Mont
 
 /** The first goal's planned date after it moved to pin 1 or a split changed — for the goal row. */
 export const dueFrom = (d: Date | null | undefined) => (d ? isoDay(d) : null);
+
+// ---------- The rules for several goals (research-backed, approved Nov 2026) ----------
+//
+// · Kip suggests the order that finishes a goal soonest — small wins keep people going (Gal & McShane, Kellogg).
+// · A goal that can't fit (over 5 years, or more than twice as long as wished) gets honest options: later, smaller,
+//   or "save it for later" with no money yet — too-ambitious goals are a top reason goals fail (Gargano & Rossi).
+// · Card debt goes first: its interest grows faster than any saving.
+// · Over 30% of pay into saving is flagged: people tend to keep up about half of what they plan.
+
+const monthsFromNow = (d: Date, now: Date) => (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
+
+/** The first moment any goal is finished in this plan (ms), or Infinity. */
+const firstFinish = (arrive: Map<string, Date | null>) => Math.min(...[...arrive.values()].map((d) => (d ? d.getTime() : Infinity)));
+
+export type Fix = 'later' | 'smaller' | 'someday';
+
+export function assess(m: MonthBudget, goals: GoalLite[], ng: NewGoal, opts: { card?: boolean } = {}, now = new Date()) {
+  const old = planNew(m, goals, ng, 'old', now);
+  const neu = planNew(m, goals, ng, 'new', now);
+  const others = goals.some((g) => g.kind !== 'monthly');
+  const needsChoice = !opts.card && others && old.need !== null && old.found < old.need;
+  // Kip's pick: whichever order finishes a goal first; a tie keeps the goals you already have first.
+  const pick: First = opts.card ? 'new' : needsChoice && firstFinish(neu.arrive) < firstFinish(old.arrive) ? 'new' : 'old';
+  // Does it fit at all? Judge with the new goal getting everything it can (first in line).
+  const best = neu.arrive.get(neu.newId) ?? null;
+  const months = ng.due && !ng.monthly ? Math.max(1, monthsFromNow(parseDay(ng.due), now)) : null;
+  const tooLong = !best || monthsFromNow(best, now) > 60 || (months !== null && monthsFromNow(best, now) > months * 2);
+  const fits = ng.monthly !== null || !ng.due || !tooLong;
+  // If not: "later" keeps your goals as they are (new one gets what's found now, more as others finish);
+  // "smaller" is what that saves by the wished date.
+  const later = old.arrive.get(old.newId) ?? null;
+  const smallerRaw = months !== null ? Math.floor((old.amount * months) / 1000) * 1000 : 0;
+  const smaller = !fits && smallerRaw >= 1000 ? smallerRaw : null;
+  const share = (p: ReturnType<typeof planNew>) => (goalTotal(p.month) + p.month.safety.amount) / Math.max(1, p.month.income);
+  return { old, neu, needsChoice, pick, fits, later, smaller, share };
+}
+
+/** Card debt (or anything made first): the new goal moves to the front of the split. */
+export function newFirst(m: MonthBudget, newId: string): MonthBudget {
+  const order = m.goals ?? [];
+  const n = order.find((x) => x.id === newId);
+  return n ? { ...m, goals: [n, ...order.filter((x) => x.id !== newId)] } : m;
+}
+
+export const monthsBetween = (a: Date, b: Date) => monthsFromNow(b, a);

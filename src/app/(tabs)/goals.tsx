@@ -15,7 +15,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { savingTotal } from '@/lib/budget';
-import { arrivals, splitOf } from '@/lib/goals';
+import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
 import { iconOf, liteOf, nameOf } from '@/components/goals/bits';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthShort, t } from '@/lib/i18n';
@@ -65,6 +65,7 @@ export default function Goals() {
   const { month } = useMonth();
   const { goals, spent, reload } = useHome(month);
   const [moves, setMoves] = useState<Move[]>([]);
+  const [later, setLater] = useState<{ id: string; title: string; kind: string; goal_type: string | null; target_amount: number; monthly_amount: number | null }[]>([]);
   const [putOpen, setPutOpen] = useState(false);
   const [plus, setPlus] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -87,6 +88,20 @@ export default function Goals() {
     useCallback(() => {
       loadMoves();
     }, [loadMoves]),
+  );
+  // "For later": goals saved with no money yet (status someday). One small query, only on this tab.
+  const uid = profile?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (!uid) return;
+      supabase
+        .from('goals')
+        .select('id, title, kind, goal_type, target_amount, monthly_amount')
+        .eq('user_id', uid)
+        .eq('status', 'someday')
+        .order('created_at')
+        .then(({ data }) => setLater((data ?? []).map((g) => ({ ...g, target_amount: Number(g.target_amount), monthly_amount: g.monthly_amount ? Number(g.monthly_amount) : null })) as never));
+    }, [uid]),
   );
 
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
@@ -181,6 +196,40 @@ export default function Goals() {
             ) : null,
           )}
         </RiseIn>
+
+        {/* for later: on the wish list, no money yet */}
+        {later.length > 0 && (
+          <RiseIn delay={170}>
+            <Section title={t('For later')} right={t('No money yet')} />
+            <View style={{ paddingHorizontal: 20 }}>
+              <Glass radius={24} innerStyle={{ paddingHorizontal: 16 }}>
+                {later.map((g, i) => (
+                  <Squish
+                    key={g.id}
+                    onPress={() =>
+                      goals.length < MAX_GOALS
+                        ? router.push({ pathname: '/goal-new', params: { from: g.id } })
+                        : flash(t('You have 3 goals pinned — that’s the most. Finish or remove one to pin another.'))
+                    }
+                    style={[styles.laterRow, i > 0 && { borderTopWidth: 1, borderTopColor: inkA(0.08) }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Pin {goal}', { goal: g.title })}>
+                    <Image source={ICON3D[iconOf({ goalType: g.goal_type, kind: g.kind })]} style={{ width: 40, height: 40 }} contentFit="contain" />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.potName} numberOfLines={1}>
+                        {g.title}
+                      </Text>
+                      <Text style={styles.sub} numberOfLines={1}>
+                        {g.monthly_amount ? t('{amount}/mo', { amount: baht(g.monthly_amount) }) : baht(g.target_amount)} · {t('Tap to pin when there’s room')}
+                      </Text>
+                    </View>
+                    <CaretRight size={16} color={colors.muted} />
+                  </Squish>
+                ))}
+              </Glass>
+            </View>
+          </RiseIn>
+        )}
 
         {/* safety net */}
         {month && !month.goal.isSafetyNet && month.safety.amount > 0 && (
@@ -528,6 +577,7 @@ const styles = themed(() =>
     pot: { paddingVertical: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
     potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
+    laterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
     pair: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 20 },
     pin: {
       position: 'absolute',

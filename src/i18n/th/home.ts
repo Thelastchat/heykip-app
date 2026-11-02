@@ -252,6 +252,32 @@ const th: Record<string, string> = {
   'Its monthly share goes to your other goals.': 'ส่วนที่เคยเก็บแต่ละเดือนจะไปเข้าเป้าอื่น',
   'Keep it': 'เก็บไว้',
   Remove: 'เอาออก',
+  // ---------- Goal rules (Nov 2026) ----------
+  'A first step toward {goal}': 'ก้าวแรกสู่ {goal}',
+  'Card debt costs interest every month, so I put it first — paid off by {date}.': 'หนี้บัตรเสียดอกเบี้ยทุกเดือน Kip เลยให้ไปก่อน — ปิดหนี้ได้ {date}',
+  'Card debt costs interest every month, so I put it first — paid off by {date}. {first} waits until then.': 'หนี้บัตรเสียดอกเบี้ยทุกเดือน Kip เลยให้ไปก่อน — ปิดหนี้ได้ {date} {first} รอไปก่อนนะ',
+  'For later': 'เก็บไว้ทีหลัง',
+  'I’d do {goal} first: a finished goal by {date}, and {first} moves {n} months.': 'Kip ว่าเอา {goal} ก่อน: ได้ถึงเป้าแรกภายใน {date} ส่วน {first} เลื่อนไป {n} เดือน',
+  'I’d do {goal} first: a finished goal by {date}, and {first} still lands {when}.': 'Kip ว่าเอา {goal} ก่อน: ได้ถึงเป้าแรกภายใน {date} และ {first} ยังถึง {when} เหมือนเดิม',
+  'I’d keep {first} first: it’s finished by {date}, then {goal} speeds up.': 'Kip ว่าให้ {first} ไปก่อน: ถึงเป้าภายใน {date} แล้ว {goal} จะเก็บได้เร็วขึ้น',
+  'Kip’s pick: {goal} first · a finished goal sooner': 'Kip แนะนำ: {goal} ก่อน · ถึงเป้าได้เร็วกว่า',
+  'Later: around {date}': 'ช้าลงหน่อย: ประมาณ {date}',
+  'Later: when your other goals are done': 'ช้าลงหน่อย: หลังเป้าอื่นถึงแล้ว',
+  'No money yet': 'ยังไม่ใส่เงิน',
+  'On your wish list, no money yet. Pin it when there’s room': 'อยู่ในลิสต์ที่อยากได้ ยังไม่ใส่เงิน ปักได้เมื่อมีที่ว่าง',
+  'Pin {goal} · {amount}': 'ปัก {goal} · {amount}',
+  'Pin {goal} · {date}': 'ปัก {goal} · {date}',
+  'Save for later': 'เก็บไว้ทีหลัง',
+  'Save it for later': 'เก็บไว้ทีหลัง',
+  'Smaller: {amount} by {date}': 'เล็กลง: {amount} ภายใน {date}',
+  'Tap to pin when there’s room': 'แตะเพื่อปักเมื่อมีที่ว่าง',
+  'That’s {pct}% of your pay going to saving. People often keep up only about half of what they plan, so under 30% is easier to stick to.':
+    'นี่คือ {pct}% ของเงินเดือนที่ไปเป็นเงินเก็บ คนส่วนใหญ่ทำได้จริงแค่ราวครึ่งของที่ตั้งใจ ไม่เกิน 30% จะทำต่อเนื่องได้ง่ายกว่า',
+  '{amount} every {day}': '{amount} ทุกวันที่ {n}',
+  '{amount} now, more once {first} is done': 'ตอนนี้ {amount} แล้วเพิ่มขึ้นเมื่อ {first} ถึงเป้า',
+  '{goal} by {date} needs {amount} a month. Your pay can’t fit that next to {first}. Here’s what can work:':
+    '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหวถ้าเก็บ {first} ด้วย ลองแบบนี้ดู:',
+  '{goal} by {date} needs {amount} a month. Your pay can’t fit that right now. Here’s what can work:': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหว ลองแบบนี้ดู:',
 };
 
 export default th;
