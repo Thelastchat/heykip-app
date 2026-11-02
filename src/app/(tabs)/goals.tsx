@@ -15,6 +15,8 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { savingTotal } from '@/lib/budget';
+import { arrivals, splitOf } from '@/lib/goals';
+import { iconOf, liteOf, nameOf } from '@/components/goals/bits';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthShort, t } from '@/lib/i18n';
 import { useHome, type HomeGoal } from '@/lib/home';
@@ -23,9 +25,9 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts, glassA, inkA, themed, whiteA, blackA } from '@/theme';
+import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
 
-type Move = { id: string; amount: number; source: 'payday' | 'extra' | 'cover'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
+type Move = { id: string; goal_id: string; amount: number; source: 'payday' | 'extra' | 'cover'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
 const FROM_LABEL: Record<string, string> = {
   get bonus() {
     return t('bonus');
@@ -69,11 +71,12 @@ export default function Goals() {
   const isPlus = profile ? profile.plan !== 'free' : false;
   const goal = goals[0];
 
+  const ids = goals.map((g) => g.id).join(',');
   const loadMoves = useCallback(async () => {
-    if (!goal) return;
-    const { data } = await supabase.from('goal_moves').select('id, amount, source, from_kind, moved_at').eq('goal_id', goal.id).order('moved_at', { ascending: false }).limit(20);
+    if (!ids) return;
+    const { data } = await supabase.from('goal_moves').select('id, goal_id, amount, source, from_kind, moved_at').in('goal_id', ids.split(',')).order('moved_at', { ascending: false }).limit(20);
     setMoves((data ?? []).map((m) => ({ ...m, amount: Number(m.amount) })) as Move[]);
-  }, [goal]);
+  }, [ids]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,16 +90,20 @@ export default function Goals() {
   );
 
   const short = goal ? (goal.kind === 'monthly' ? goal.title : shortName(goal.title, goal.kind as never)) : t('your goal');
-  const perMonth = month ? month.goal.amount + month.goalExtra : 0;
+  const lites = goals.map(liteOf);
+  const split = month ? splitOf(month, lites) : new Map<string, number>();
+  const arrive = month ? arrivals(lites, split, month.payday) : new Map<string, Date | null>();
+  const perMonth = goal ? (split.get(goal.id) ?? 0) : 0;
+  const several = goals.length > 1;
   const everyPayday = month ? savingTotal(month) : 0;
   const savedAll = goals.reduce((a, g) => a + g.saved, 0);
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = plusPitch(month, short, funLeft);
   const icon: Icon3D = goal ? (goal.goalType ? goalTypeIcon3D(goal.goalType) : goalIcon3D(goal.kind)) : 'piggy';
 
-  // "Started with": whatever was already saved before any moves were recorded.
-  const movedTotal = moves.reduce((a, m) => a + m.amount, 0);
-  const startedWith = goal ? Math.max(0, goal.saved - movedTotal) : 0;
+  // "Started with": whatever was already saved before any moves were recorded (per goal).
+  const startedWith = goals.map((g) => ({ g, amount: Math.max(0, g.saved - moves.filter((m) => m.goal_id === g.id).reduce((a, m) => a + m.amount, 0)) })).filter((x) => x.amount > 0);
+  const goalName = (id: string) => nameOf(goals.find((g) => g.id === id) ?? { title: '', kind: '' });
 
   function flash(msg: string) {
     setToast(msg);
@@ -141,6 +148,7 @@ export default function Goals() {
 
         {/* the goal */}
         <RiseIn delay={120} style={{ paddingHorizontal: 20, marginTop: 24 }}>
+          <Pin color={pinColors[0]} />
           <Hero
             goal={goal}
             short={short}
@@ -148,10 +156,30 @@ export default function Goals() {
             payday={month?.payday ?? null}
             icon={icon}
             onPut={() => setPutOpen(true)}
-            onEdit={() => router.push('/goal-edit')}
+            onEdit={() => router.push({ pathname: '/goal-edit', params: { id: goal.id } })}
             isPlus={isPlus}
             autoOn={!!profile?.split_when_paid}
           />
+        </RiseIn>
+
+        {/* the fridge door: goals 2 and 3 (Plus), or a spot to pin one */}
+        <RiseIn delay={160} style={styles.pair}>
+          {[goals[1], goals[2]].map((g, i) =>
+            g ? (
+              <GoalTile key={g.id} g={g} pin={pinColors[i + 1]} perMonth={split.get(g.id) ?? 0} arrives={arrive.get(g.id) ?? null} />
+            ) : goals.length === i + 1 ? (
+              <Squish
+                key="slot"
+                onPress={() => (isPlus ? router.push('/goal-new') : setPlus(true))}
+                style={[styles.slot, goals.length === 1 && { flex: 2 }]}
+                accessibilityRole="button"
+                accessibilityLabel={isPlus ? (i === 0 ? t('Pin a 2nd goal') : t('Pin a 3rd goal')) : t('{title} — Plus', { title: t('Pin 2 more goals') })}>
+                <View style={styles.plusDot}>{isPlus ? <Plus size={16} color={colors.muted} /> : <LockSimple size={16} color={colors.muted} />}</View>
+                <Text style={styles.slotText}>{isPlus ? (i === 0 ? t('Pin a 2nd goal') : t('Pin a 3rd goal')) : t('Pin 2 more goals')}</Text>
+                {!isPlus && <Text style={styles.slotSub}>Plus</Text>}
+              </Squish>
+            ) : null,
+          )}
         </RiseIn>
 
         {/* safety net */}
@@ -178,40 +206,12 @@ export default function Goals() {
           </RiseIn>
         )}
 
-        {/* more goals */}
-        <RiseIn delay={220}>
-          <Section title={t('More goals')} right={isPlus ? undefined : 'Plus'} />
-          <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
-            {[
-              { icon: 'phone' as Icon3D, top: t('A new phone?'), bottom: t('Pin a 2nd goal') },
-              { icon: 'house' as Icon3D, top: t('Moving out?'), bottom: t('Pin a 3rd goal') },
-            ].map((s, i) => (
-              <Squish
-                key={s.bottom}
-                onPress={() => (isPlus ? flash(t('Adding more goals is coming next')) : setPlus(true))}
-                style={styles.slot}
-                accessibilityRole="button"
-                accessibilityLabel={isPlus ? s.bottom : t('{title} — Plus', { title: s.bottom })}>
-                {!isPlus && <LockSimple size={16} color={colors.muted} style={styles.lk} />}
-                <Float delay={i * 900}>
-                  <Image source={ICON3D[s.icon]} style={{ width: 54, height: 54 }} contentFit="contain" />
-                </Float>
-                <Text style={styles.slotText}>
-                  {s.top}
-                  {'\n'}
-                  {s.bottom}
-                </Text>
-              </Squish>
-            ))}
-          </View>
-        </RiseIn>
-
         {/* what went in */}
         <RiseIn delay={260}>
-          <Section title={t('What went in')} right={short} />
+          <Section title={t('What went in')} right={several ? undefined : short} />
           <View style={{ paddingHorizontal: 20 }}>
             <Glass radius={24} innerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-              {moves.length === 0 && startedWith === 0 ? (
+              {moves.length === 0 && startedWith.length === 0 ? (
                 <Text style={[styles.sub, { paddingVertical: 14 }]}>{t('Nothing yet. Your first payday or “Put money in” shows up here.')}</Text>
               ) : (
                 <>
@@ -222,13 +222,20 @@ export default function Goals() {
                       icon={m.source === 'payday' ? 'income' : m.source === 'cover' ? 'expense' : 'piggy'}
                       lime={m.source === 'extra'}
                       title={m.source === 'payday' ? t('Payday') : m.source === 'cover' ? t('Covered a month that ran over') : t('You put in')}
-                      sub={`${dayLabel(m.moved_at)}${m.from_kind ? ` · ${FROM_LABEL[m.from_kind]}` : ''}`}
+                      sub={`${dayLabel(m.moved_at)}${several ? ` · ${goalName(m.goal_id)}` : m.from_kind ? ` · ${FROM_LABEL[m.from_kind]}` : ''}`}
                       amount={m.amount}
                     />
                   ))}
-                  {startedWith > 0 && (
-                    <HistRow first={moves.length === 0} icon={icon} title={t('Started with')} sub={t('{date} · what you’d already saved', { date: dayLabel(goal.createdAt) })} amount={startedWith} />
-                  )}
+                  {startedWith.map(({ g, amount }, i) => (
+                    <HistRow
+                      key={g.id}
+                      first={moves.length === 0 && i === 0}
+                      icon={iconOf(g)}
+                      title={t('Started with')}
+                      sub={several ? `${dayLabel(g.createdAt)} · ${nameOf(g)}` : t('{date} · what you’d already saved', { date: dayLabel(g.createdAt) })}
+                      amount={amount}
+                    />
+                  ))}
                 </>
               )}
             </Glass>
@@ -246,12 +253,23 @@ export default function Goals() {
         <PutMoneySheet
           open
           onClose={() => setPutOpen(false)}
-          goal={{ id: goal.id, name: short, saved: goal.saved, target: goal.target, perMonth, icon }}
+          goals={goals.map((g, i) => ({
+            id: g.id,
+            name: nameOf(g),
+            saved: g.saved,
+            target: g.target,
+            perMonth: split.get(g.id) ?? 0,
+            icon: iconOf(g),
+            photo: g.photo,
+            photoKey: g.photoKey,
+            color: typeInfo(g.goalType, g.kind as never).color,
+            pin: pinColors[i],
+          }))}
           onDone={(total) => {
             setPutOpen(false);
             reload();
             loadMoves();
-            flash(t('{amount} saved for {goal}', { amount: baht(total), goal: short }));
+            flash(t('{amount} saved', { amount: baht(total) }));
           }}
         />
       )}
@@ -270,6 +288,49 @@ const big = (n: number) => (
     {n.toLocaleString('en-US')}
   </>
 );
+
+/** The coloured pin that holds a goal on the fridge door (orange, lavender, sky by position). */
+function Pin({ color }: { color: string }) {
+  return <View style={[styles.pin, { backgroundColor: color }]} />;
+}
+
+/** Goal 2 or 3: its photo (or 3D object), name, monthly amount, arrival and a thin progress line. Tap to edit. */
+function GoalTile({ g, pin, perMonth, arrives }: { g: HomeGoal; pin: string; perMonth: number; arrives: Date | null }) {
+  const monthly = g.kind === 'monthly';
+  const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
+  const color = typeInfo(g.goalType, g.kind as never).color;
+  return (
+    <Squish
+      onPress={() => router.push({ pathname: '/goal-edit', params: { id: g.id } })}
+      style={{ flex: 1 }}
+      accessibilityRole="button"
+      accessibilityLabel={t('{goal}, {pct}% saved', { goal: g.title, pct })}>
+      <Pin color={pin} />
+      <View style={[styles.tile, { backgroundColor: color }]}>
+        {g.photo ? (
+          <Image source={{ uri: g.photo, cacheKey: g.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
+        ) : (
+          <View style={styles.tileObj}>
+            <Image source={ICON3D[iconOf(g)]} style={{ width: 88, height: 88 }} contentFit="contain" />
+          </View>
+        )}
+        <View style={styles.tileStrip}>
+          <Text style={styles.tileName} numberOfLines={1}>
+            {nameOf(g)}
+          </Text>
+          <Text style={styles.tileSub} numberOfLines={1}>
+            {monthly ? t('{amount}/mo', { amount: baht(perMonth) }) : `${t('{amount}/mo', { amount: baht(perMonth) })} · ${arrives ? monthYear(arrives) : t('Not yet')}`}
+          </Text>
+          {!monthly && (
+            <View style={styles.tileTrack}>
+              <View style={[styles.tileFill, { width: `${Math.max(pct, 2)}%` }]} />
+            </View>
+          )}
+        </View>
+      </View>
+    </Squish>
+  );
+}
 
 function Hero({
   goal,
@@ -467,9 +528,29 @@ const styles = themed(() =>
     pot: { paddingVertical: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
     potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
-    slot: { flex: 1, height: 148, borderRadius: 24, borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.16), alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 },
-    slotText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
-    lk: { position: 'absolute', top: 12, right: 12 },
+    pair: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 20 },
+    pin: {
+      position: 'absolute',
+      top: -7,
+      left: '50%',
+      marginLeft: -9,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      zIndex: 3,
+      boxShadow: 'inset -3px -3px 5px rgba(0,0,0,0.18), inset 2px 2px 4px rgba(255,255,255,0.55), 0 3px 5px rgba(0,0,0,0.25)',
+    } as never,
+    tile: { height: 196, borderRadius: 24, overflow: 'hidden', boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 30px rgba(17,17,17,0.10)' } as never,
+    tileObj: { position: 'absolute', left: 0, right: 0, top: 16, alignItems: 'center' },
+    tileStrip: { position: 'absolute', left: 8, right: 8, bottom: 8, borderRadius: 16, backgroundColor: whiteA(0.82), paddingVertical: 10, paddingHorizontal: 12 },
+    tileName: { fontFamily: fonts.medium, fontSize: 15, color: colors.onAccent },
+    tileSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.onAccentMuted, marginTop: 2, fontVariant: ['tabular-nums'] },
+    tileTrack: { height: 6, borderRadius: 3, backgroundColor: blackA(0.08), marginTop: 6, overflow: 'hidden' },
+    tileFill: { height: 6, borderRadius: 3, backgroundColor: blackA(0.85) },
+    slot: { flex: 1, height: 196, borderRadius: 24, borderWidth: 1.5, borderStyle: 'dashed', borderColor: inkA(0.12), alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12 },
+    plusDot: { width: 40, height: 40, borderRadius: 20, backgroundColor: inkA(0.05), alignItems: 'center', justifyContent: 'center' },
+    slotText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center' },
+    slotSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     hist: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     histIc: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     histTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },

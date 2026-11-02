@@ -172,6 +172,8 @@ export type MonthBudget = {
   payMoved?: string;
   /** Taken back from this cycle's goal saving / the safety net to cover going over — added to spending money. */
   covers?: { period: string; goal: number; safety: number; today?: { day: string; amount: number } };
+  /** More goals (Plus): how the goal saving is split, in pin order. Missing = all to the first goal. */
+  goals?: { id: string; amount: number }[];
 };
 
 /** Living costs + fun (+ learning and giving) as categories. */
@@ -212,7 +214,16 @@ export function monthFrom(inputs: Inputs, style: BudgetStyle, goalPerMonth: numb
 /** Switch money style: re-plan from the same numbers. */
 export const withStyle = (m: MonthBudget, style: BudgetStyle): MonthBudget => ({
   ...monthFrom(m.inputs, style, m.goalPerMonth, m.payday, m.safety.target),
+  ...keepOnReplan(m),
+});
+
+/** What any re-plan keeps: the "always" choice, bills marked paid, this cycle's payday move, covers, the goal split. */
+export const keepOnReplan = (m: MonthBudget) => ({
   alwaysFreedTo: m.alwaysFreedTo,
+  ...(m.paid ? { paid: m.paid } : {}),
+  ...(m.payMoved ? { payMoved: m.payMoved } : {}),
+  ...(m.covers ? { covers: m.covers } : {}),
+  ...(m.goals ? { goals: m.goals } : {}),
 });
 
 const round10 = (n: number) => Math.round(n / 10) * 10;

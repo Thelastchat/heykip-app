@@ -2,7 +2,7 @@
 // much or by when re-plans the month the way Setup does — keeping the date (save more each month) or keeping the
 // monthly amount (it arrives later) — and puts back what the person already set up this month.
 import { safetyNet } from '@/lib/brain';
-import { addBill, monthFrom, type MonthBudget } from '@/lib/budget';
+import { addBill, keepOnReplan, monthFrom, type MonthBudget } from '@/lib/budget';
 import { monthNumbers, type HomeGoal, type Spent } from '@/lib/home';
 import { arrivesWith } from '@/lib/replan';
 import { isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
@@ -57,13 +57,7 @@ export function replanGoal(m: MonthBudget, g: HomeGoal, d: GoalDraft, keep: Keep
   const inputs = { ...m.inputs, goal };
   let next = monthFrom(inputs, m.style, goalPerMonth, m.payday, safetyNet(inputs).target);
   for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
-  next = {
-    ...next,
-    alwaysFreedTo: m.alwaysFreedTo,
-    ...(m.paid ? { paid: m.paid } : {}),
-    ...(m.payMoved ? { payMoved: m.payMoved } : {}),
-    ...(m.covers ? { covers: m.covers } : {}),
-  };
+  next = { ...next, ...keepOnReplan(m) };
   return { month: next, due };
 }
 

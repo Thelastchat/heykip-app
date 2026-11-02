@@ -177,7 +177,7 @@ const th: Record<string, string> = {
   Amount: 'จำนวนเงิน',
   Other: 'อื่นๆ',
   'Where’s it from? **· helps Kip plan**': 'เงินมาจากไหน? **· ช่วยให้ Kip วางแผน**',
-  'That’s **everything** — {goal} is fully paid for 🎉': 'แบบนี้**ครบเลย** — {goal} เก็บครบแล้ว 🎉',
+  'That’s **everything** — {goal} is fully paid for': 'แบบนี้**ครบเลย** — {goal} เก็บครบแล้ว',
   'That moves {goal} **{when}**.': '{goal} จะถึงเป้า**{when}**',
   'Every baht counts — {goal} gets a little closer.': 'ทุกบาทมีความหมาย — {goal} ใกล้เข้ามาอีกนิดแล้ว',
   Before: 'ก่อน',
@@ -229,6 +229,29 @@ const th: Record<string, string> = {
   'Saved so far {amount} · that only changes with “Put money in”': 'เก็บได้แล้ว {amount} · เปลี่ยนได้ผ่าน “เติมเงิน” เท่านั้น',
   'Save changes': 'บันทึกการเปลี่ยนแปลง',
   'was {amount}': 'เดิม {amount}',
+  // ---------- More goals (Nov 2026) ----------
+  'New goal': 'เป้าหมายใหม่',
+  'Already saved some? Add it with “Put money in” after': 'มีเก็บไว้บ้างแล้ว? เติมเข้าไปด้วย “เติมเงิน” ทีหลังได้เลย',
+  'Food, transport and bills stay the same': 'ค่ากิน ค่าเดินทาง และบิลเท่าเดิม',
+  'I found {amount} a month for {goal} without touching food, transport or bills.': 'Kip หาได้เดือนละ {amount} ให้ {goal} โดยไม่แตะค่ากิน ค่าเดินทาง หรือบิล',
+  'I found {amount} a month for {goal}. Which one should arrive first?': 'Kip หาได้เดือนละ {amount} ให้ {goal} อยากให้เป้าไหนถึงก่อน?',
+  'Shopping and fun are already at their minimum, so {goal} starts when {first} is done — or it can go first.':
+    'เงินช้อปกับเงินเที่ยวเหลือน้อยสุดแล้ว {goal} เลยเริ่มเก็บหลัง {first} ถึงเป้า — หรือจะให้ไปก่อนก็ได้',
+  '{goal} by {date} needs {amount} a month, so {first} slows down for now.': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เลยต้องเก็บ {first} ช้าลงสักพัก',
+  '{goal} needs {amount} a month — I found it in shopping and fun.': '{goal} ต้องเก็บเดือนละ {amount} — Kip หาได้จากเงินช้อปกับเงินเที่ยว',
+  '{goal} first': '{goal} ก่อน',
+  'The {amount} comes from shopping and fun. Food, transport and bills stay the same': '{amount} มาจากเงินช้อปกับเงินเที่ยว ค่ากิน ค่าเดินทาง และบิลเท่าเดิม',
+  'Pin {goal}': 'ปัก {goal}',
+  'You have 3 goals pinned — that’s the most. Finish or remove one to pin another.': 'ปักครบ 3 เป้าแล้ว ถึงเป้าหรือเอาออกก่อน แล้วค่อยปักอันใหม่',
+  'Make this my first goal': 'ให้เป็นเป้าแรก',
+  'Kip’s line and payday follow your first goal': 'ข้อความของ Kip และวันเงินเดือนออกจะตามเป้าแรก',
+  'Remove this goal': 'เอาเป้านี้ออก',
+  'Remove {goal}?': 'เอา {goal} ออกไหม?',
+  'The {amount} you saved stays yours — HeyKip just stops planning for it. Its monthly share goes to your other goals.':
+    'เงิน {amount} ที่เก็บไว้ยังเป็นของคุณ — HeyKip แค่เลิกวางแผนให้ ส่วนที่เคยเก็บแต่ละเดือนจะไปเข้าเป้าอื่น',
+  'Its monthly share goes to your other goals.': 'ส่วนที่เคยเก็บแต่ละเดือนจะไปเข้าเป้าอื่น',
+  'Keep it': 'เก็บไว้',
+  Remove: 'เอาออก',
 };
 
 export default th;

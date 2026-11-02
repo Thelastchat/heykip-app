@@ -5,7 +5,7 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, CaretRight } from 'phosphor-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -17,10 +17,13 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { Squish } from '@/components/glow/motion';
 import { Button } from '@/components/ui';
+import { AmountRow, Choice, Delta, DueRow } from '@/components/goals/GoalFields';
 import { useAuth } from '@/lib/auth';
 import { dailyOf } from '@/lib/budget';
 import { changes, draftOf, preview, renamed, replanGoal, valid, type GoalDraft, type Keep } from '@/lib/goalEdit';
-import { useHome } from '@/lib/home';
+import { monthNumbers, useHome } from '@/lib/home';
+import { arrivals, replanOne, splitOf, withoutGoal } from '@/lib/goals';
+import { liteOf } from '@/components/goals/bits';
 import { t } from '@/lib/i18n';
 import { goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -29,14 +32,19 @@ import { smallPhoto } from '@/lib/photos';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { isoDay, monthYear, parseDay } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
-import { blackA, colors, fonts, inkA, themed, whiteA } from '@/theme';
+import { blackA, colors, fonts, inkA, pinColors, themed, whiteA } from '@/theme';
 
 export default function GoalEdit() {
   const insets = useSafeAreaInsets();
   const { session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
   const { goals, spent, reload } = useHome(month);
-  const goal = goals[0];
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const goal = goals.find((g) => g.id === id) ?? goals[0];
+  const idx = goal ? goals.indexOf(goal) : 0;
+  const several = goals.length > 1;
+  const lites = useMemo(() => goals.map(liteOf), [goals]);
+  const [confirm, setConfirm] = useState(false);
 
   const [d, setD] = useState<GoalDraft | null>(null);
   const [photo, setPhoto] = useState<string | null>(null); // a newly picked photo (local), until saved
@@ -59,8 +67,30 @@ export default function GoalEdit() {
   // Kip only asks "date or monthly amount?" when just the amount changed.
   const asks = !!c && c.target && !c.date;
   const mode: Keep = asks ? keep : 'date';
-  const plan = useMemo(() => (goal && d && month && c?.money && ok ? replanGoal(month, goal, d, mode) : null), [goal, d, month, c?.money, ok, mode]);
-  const p = plan && month && goal && d ? preview(month, plan.month, goal, d, plan.due, spent) : null;
+  // One goal: Kip re-plans the way Setup does. Several: only this goal's share (and the total) changes.
+  const many = useMemo(
+    () =>
+      several && goal && d && month && c?.money && ok
+        ? {
+            date: replanOne(month, lites, goal.id, { target: d.target ?? 0, due: d.due, monthly: d.monthly }, 'date'),
+            monthly: replanOne(month, lites, goal.id, { target: d.target ?? 0, due: d.due, monthly: d.monthly }, 'monthly'),
+          }
+        : null,
+    [several, goal, d, month, c?.money, ok, lites],
+  );
+  const one = useMemo(() => (!several && goal && d && month && c?.money && ok ? replanGoal(month, goal, d, mode) : null), [several, goal, d, month, c?.money, ok, mode]);
+  const plan = many ? { month: many[mode].month, due: many[mode].due } : one;
+  const before = useMemo(() => (month ? arrivals(lites, splitOf(month, lites), month.payday) : null), [month, lites]);
+  const p =
+    plan && month && goal && d
+      ? many
+        ? {
+            each: [many[mode].was, many[mode].now] as const,
+            daily: [monthNumbers(month, spent).dailyToday, monthNumbers(many[mode].month, spent).dailyToday] as const,
+            arrives: [before?.get(goal.id) ? monthYear(before.get(goal.id)!) : null, many[mode].arrive.get(goal.id) ? monthYear(many[mode].arrive.get(goal.id)!) : null] as const,
+          }
+        : preview(month, plan.month, goal, d, plan.due, spent)
+      : null;
   const dirty = (!!c && (c.title || c.money)) || !!photo || promiseChanged;
 
   if (!goal || !d) {
@@ -115,18 +145,73 @@ export default function GoalEdit() {
       }
       // 4. The month: new numbers when money changed, or just the new name.
       if (plan) {
-        await save(plan.month);
+        await save(idx === 0 && c?.title ? renamed(plan.month, d.title.trim()) : plan.month);
         await supabase
           .from('profiles')
           .update({ daily_budget: dailyOf(plan.month) })
           .eq('id', uid);
-      } else if (c?.title) {
+      } else if (c?.title && idx === 0) {
         await save(renamed(month, d.title.trim()));
       }
       // 5. Every screen loads the goal fresh.
       await reload();
       refreshProfile();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      router.canGoBack() ? router.back() : router.replace('/goals');
+    } catch (e) {
+      setBusy(false);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Pin this goal first: it swaps places with goal 1, keeps its amount, and Kip's line and payday follow it. */
+  async function makeFirst() {
+    if (!goal || !month || idx === 0 || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const old = goals[0];
+      const split = splitOf(month, lites);
+      const steps: [string, Record<string, unknown>][] = [
+        [goal.id, { position: null }],
+        [old.id, { position: idx + 1, pin_color: pinColors[idx] }],
+        [goal.id, { position: 1, pin_color: pinColors[0] }],
+      ];
+      for (const [gid, f] of steps) {
+        const { error: e } = await supabase.from('goals').update(f).eq('id', gid);
+        if (e) throw new Error(t('Couldn’t save: {msg}', { msg: e.message }));
+      }
+      const order = [goal, ...goals.filter((g) => g.id !== goal.id)].map((g) => ({ id: g.id, amount: split.get(g.id) ?? 0 }));
+      await save(renamed({ ...month, goals: order }, goal.title));
+      await reload();
+      router.canGoBack() ? router.back() : router.replace('/goals');
+    } catch (e) {
+      setBusy(false);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Take the goal off the board. What's saved stays the person's; its monthly share goes to the first goal. */
+  async function remove() {
+    if (!goal || !month || !several || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { error: e } = await supabase.from('goals').update({ status: 'someday', position: null }).eq('id', goal.id);
+      if (e) throw new Error(t('Couldn’t save: {msg}', { msg: e.message }));
+      // The goals after it move up a pin.
+      const rest = goals.filter((g) => g.id !== goal.id);
+      for (let i = idx; i < rest.length; i++) {
+        const { error: e2 } = await supabase
+          .from('goals')
+          .update({ position: i + 1, pin_color: pinColors[i] })
+          .eq('id', rest[i].id);
+        if (e2) throw new Error(t('Couldn’t save: {msg}', { msg: e2.message }));
+      }
+      const next = withoutGoal(month, lites, goal.id);
+      await save(idx === 0 ? renamed(next, rest[0].title) : next);
+      await reload();
+      refreshProfile();
       router.canGoBack() ? router.back() : router.replace('/goals');
     } catch (e) {
       setBusy(false);
@@ -209,13 +294,13 @@ export default function GoalEdit() {
                 <Choice
                   on={keep === 'date'}
                   title={t('Keep {date}', { date: goal.due ? monthYear(parseDay(goal.due)) : '' })}
-                  sub={t('Save {amount} a month', { amount: baht(replanGoal(month!, goal, d, 'date').month.goal.amount) })}
+                  sub={t('Save {amount} a month', { amount: baht(many ? many.date.now : replanGoal(month!, goal, d, 'date').month.goal.amount) })}
                   onPress={() => setKeep('date')}
                 />
                 <Choice
                   on={keep === 'monthly'}
-                  title={t('Keep {amount} a month', { amount: baht(month!.goal.amount + month!.goalExtra) })}
-                  sub={t('Arrives {date}', { date: monthYear(parseDay(replanGoal(month!, goal, d, 'monthly').due ?? isoDay(new Date()))) })}
+                  title={t('Keep {amount} a month', { amount: baht(many ? many.monthly.was : month!.goal.amount + month!.goalExtra) })}
+                  sub={t('Arrives {date}', { date: monthYear(parseDay((many ? many.monthly.due : replanGoal(month!, goal, d, 'monthly').due) ?? isoDay(new Date()))) })}
                   onPress={() => setKeep('monthly')}
                 />
               </View>
@@ -245,6 +330,40 @@ export default function GoalEdit() {
           />
         </View>
         {!monthly && <Text style={styles.note}>{t('Saved so far {amount} · that only changes with “Put money in”', { amount: baht(goal.saved) })}</Text>}
+        {several && (
+          <View style={{ gap: 8, marginTop: 8 }}>
+            {idx > 0 && (
+              <Squish onPress={makeFirst} accessibilityRole="button">
+                <Glass radius={24} innerStyle={styles.action}>
+                  <Text style={styles.actionText}>{t('Make this my first goal')}</Text>
+                  <Text style={styles.actionSub}>{t('Kip’s line and payday follow your first goal')}</Text>
+                </Glass>
+              </Squish>
+            )}
+            {confirm ? (
+              <Glass radius={24} innerStyle={[styles.action, { gap: 12 }]}>
+                <Text style={styles.actionText}>{t('Remove {goal}?', { goal: nameNow })}</Text>
+                <Text style={styles.actionSub}>
+                  {goal.saved > 0
+                    ? t('The {amount} you saved stays yours — HeyKip just stops planning for it. Its monthly share goes to your other goals.', { amount: baht(goal.saved) })
+                    : t('Its monthly share goes to your other goals.')}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Squish onPress={() => setConfirm(false)} style={[styles.small, { backgroundColor: inkA(0.06) }]} accessibilityRole="button">
+                    <Text style={styles.actionText}>{t('Keep it')}</Text>
+                  </Squish>
+                  <Squish onPress={remove} style={[styles.small, { backgroundColor: colors.orange }]} accessibilityRole="button">
+                    <Text style={[styles.actionText, { color: colors.onAccent }]}>{t('Remove')}</Text>
+                  </Squish>
+                </View>
+              </Glass>
+            ) : (
+              <Pressable onPress={() => setConfirm(true)} style={{ alignSelf: 'center', padding: 8 }} accessibilityRole="button">
+                <Text style={[styles.actionSub, { color: colors.orangeText }]}>{t('Remove this goal')}</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
         {error && <Text style={styles.warn}>{error}</Text>}
       </ScrollView>
 
@@ -255,113 +374,12 @@ export default function GoalEdit() {
   );
 }
 
-function AmountRow({ label, value, was, onChange }: { label: string; value: number | null; was: number | null; onChange: (v: number | null) => void }) {
-  return (
-    <View style={[styles.row, styles.line]}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.k}>{label}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={styles.v}>฿</Text>
-          <TextInput
-            value={value === null ? '' : value.toLocaleString('en-US')}
-            onChangeText={(s) => {
-              const n = s.replace(/[^\d]/g, '');
-              onChange(n ? Math.min(Number(n), 99_999_999) : null);
-            }}
-            keyboardType="number-pad"
-            placeholder="0"
-            placeholderTextColor={colors.faint}
-            style={[styles.v, styles.input, { flex: 1 }]}
-            accessibilityLabel={label}
-          />
-        </View>
-      </View>
-      {was !== null && <Text style={styles.was}>{t('was {amount}', { amount: baht(was) })}</Text>}
-    </View>
-  );
-}
-
-/** "By when" — the phone's date picker (a typed date on web). */
-function DueRow({ value, onChange }: { value: string | null; onChange: (iso: string) => void }) {
-  const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState(false);
-  const tomorrow = new Date(Date.now() + 86_400_000);
-  const current = value ? parseDay(value) : new Date(tomorrow.getFullYear() + 1, tomorrow.getMonth(), 1);
-  const [picked, setPicked] = useState(current);
-  const dark = colors.paper !== '#FFFFFF';
-
-  if (Platform.OS === 'web')
-    return (
-      <View style={[styles.row, styles.line]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.k}>{t('By when')}</Text>
-          <TextInput
-            defaultValue={value ?? ''}
-            onChangeText={(s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && onChange(s)}
-            placeholder="2027-12-25"
-            placeholderTextColor={colors.faint}
-            style={[styles.v, styles.input]}
-            accessibilityLabel={t('By when')}
-          />
-        </View>
-      </View>
-    );
-
-  const show = () => {
-    if (Platform.OS === 'android') return DateTimePickerAndroid.open({ value: current, minimumDate: tomorrow, mode: 'date', onChange: (e, x) => e.type === 'set' && x && onChange(isoDay(x)) });
-    setPicked(current);
-    setOpen(true);
-  };
-  return (
-    <>
-      <Pressable onPress={show} style={[styles.row, styles.line]} accessibilityRole="button" accessibilityLabel={t('By when')}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.k}>{t('By when')}</Text>
-          <Text style={styles.v}>{value ? monthYear(parseDay(value)) : t('Pick a date')}</Text>
-        </View>
-        <CaretRight size={14} color={colors.faint} weight="bold" />
-      </Pressable>
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.scrim} onPress={() => setOpen(false)} accessibilityLabel={t('Close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-          <Text style={styles.sheetTitle}>{t('By when')}</Text>
-          <DateTimePicker value={picked} minimumDate={tomorrow} mode="date" display="inline" accentColor={colors.ink} themeVariant={dark ? 'dark' : 'light'} onChange={(_, x) => x && setPicked(x)} />
-          <Button
-            label={t('Done')}
-            onPress={() => {
-              onChange(isoDay(picked));
-              setOpen(false);
-            }}
-          />
-        </View>
-      </Modal>
-    </>
-  );
-}
-
-function Choice({ on, title, sub, onPress }: { on: boolean; title: string; sub: string; onPress: () => void }) {
-  return (
-    <Squish onPress={onPress} style={{ flex: 1 }} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={`${title}. ${sub}`}>
-      <Glass radius={20} tint={on ? colors.lime : undefined} innerStyle={[styles.choice, on && styles.choiceOn]}>
-        <Text style={[styles.choiceTitle, on && { color: colors.onAccent }]}>{title}</Text>
-        <Text style={[styles.choiceSub, on && { color: colors.onAccentMuted }]}>{sub}</Text>
-      </Glass>
-    </Squish>
-  );
-}
-
-function Delta({ label, was, now, warn }: { label: string; was: string | null; now: string; warn?: boolean }) {
-  return (
-    <View style={[styles.drow, styles.line]}>
-      <Text style={styles.dk}>{label}</Text>
-      {was ? <Text style={styles.dwas}>{was}</Text> : null}
-      <Text style={[styles.dnow, warn && { color: colors.orangeText }]}>{now}</Text>
-    </View>
-  );
-}
-
 const styles = themed(() =>
   StyleSheet.create({
+    action: { paddingVertical: 14, paddingHorizontal: 16 },
+    actionText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, textAlign: 'center' },
+    actionSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center', marginTop: 2 },
+    small: { flex: 1, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     cover: { height: 200, borderRadius: 24, overflow: 'hidden' },
     photoBtn: { position: 'absolute', right: 12, bottom: 12, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: whiteA(0.9), flexDirection: 'row', alignItems: 'center', gap: 6 },
     photoText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },

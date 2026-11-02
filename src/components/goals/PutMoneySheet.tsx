@@ -60,18 +60,13 @@ export function soonerText(extra: number, perMonth: number) {
   return t('a few days sooner');
 }
 
-export function PutMoneySheet({
-  open,
-  onClose,
-  onDone,
-  goal,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onDone: (newTotal: number) => void;
-  goal: { id: string; name: string; saved: number; target: number; perMonth: number; icon: Icon3D };
-}) {
+export type PutGoal = { id: string; name: string; saved: number; target: number; perMonth: number; icon: Icon3D; photo?: string | null; photoKey?: string | null; color?: string };
+
+export function PutMoneySheet({ open, onClose, onDone, goals, startId }: { open: boolean; onClose: () => void; onDone: (amount: number) => void; goals: PutGoal[]; startId?: string }) {
   const insets = useSafeAreaInsets();
+  const [pick, setPick] = useState(startId ?? goals[0]?.id);
+  const goal = goals.find((g) => g.id === pick) ?? goals[0];
+  const several = goals.length > 1;
   const [amount, setAmount] = useState<number | null>(1000);
   const [custom, setCustom] = useState(false);
   const [from, setFrom] = useState<MoneyFrom | null>(null);
@@ -92,7 +87,8 @@ export function PutMoneySheet({
     setBusy(false);
     if (e) return setError(t('Couldn’t save: {error}', { error: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    onDone(Number(data ?? goal.saved + a));
+    void data;
+    onDone(a);
   }
 
   return (
@@ -104,10 +100,40 @@ export function PutMoneySheet({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Kip mood="happy" size={50} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{t('Put money in {goal}', { goal: goal.name })}</Text>
+              <Text style={styles.title}>{several ? t('Put money in') : t('Put money in {goal}', { goal: goal.name })}</Text>
               <Text style={styles.sub}>{t('Extra money gets you there sooner.')}</Text>
             </View>
           </View>
+
+          {several && (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {goals.map((g) => {
+                const on = g.id === goal.id;
+                return (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => setPick(g.id)}
+                    style={[styles.pickWrap, on && styles.pickOn]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={g.name}>
+                    <View style={[styles.pick, { backgroundColor: g.color ?? colors.lime }]}>
+                      {g.photo ? (
+                        <Image source={{ uri: g.photo, cacheKey: g.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
+                      ) : (
+                        <Image source={ICON3D[g.icon]} style={{ width: 56, height: 56, alignSelf: 'center', marginTop: 8 }} contentFit="contain" />
+                      )}
+                      <View style={styles.pickLabel}>
+                        <Text style={styles.pickText} numberOfLines={1}>
+                          {g.name}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           {custom ? (
             <View style={styles.amountRow}>
@@ -182,9 +208,9 @@ export function PutMoneySheet({
               <View style={{ flex: 1, gap: 8 }}>
                 <Text style={styles.movesText}>
                   {done
-                    ? rich('That’s **everything** — {goal} is fully paid for 🎉', { goal: goal.name }, (s) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>)
+                    ? rich('That’s **everything** — {goal} is fully paid for', { goal: goal.name }, (s) => <Text style={{ fontFamily: fonts.medium }}>{s}</Text>)
                     : sooner
-                      ? rich('That moves {goal} **{when}**.', { goal: goal.name, when: sooner }, (s) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>)
+                      ? rich('That moves {goal} **{when}**.', { goal: goal.name, when: sooner }, (s) => <Text style={{ fontFamily: fonts.medium }}>{s}</Text>)
                       : t('Every baht counts — {goal} gets a little closer.', { goal: goal.name })}
                 </Text>
                 {goal.target > 0 && (
@@ -197,7 +223,7 @@ export function PutMoneySheet({
             </Glass>
           )}
 
-          {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
+          {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orangeText, textAlign: 'center' }}>{error}</Text>}
           <Squish onPress={save} style={[styles.save, (a <= 0 || busy) && { opacity: 0.5 }]} accessibilityRole="button" accessibilityLabel={t('Put {amount} in', { amount: baht(a) })}>
             <Text style={styles.saveText}>{busy ? t('Saving…') : a > 0 ? t('Put {amount} in', { amount: baht(a) }) : t('Put money in')}</Text>
           </Squish>
@@ -244,7 +270,12 @@ const styles = themed(() =>
     amountB: { fontFamily: fonts.regular, fontSize: 30, color: colors.ink },
     pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
     pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-    on: { borderWidth: 1.5, borderColor: colors.ink },
+    on: { borderWidth: 1.5, borderColor: colors.onAccent }, // picked: lime + black outline, in both looks
+    pickWrap: { flex: 1, borderRadius: 22, padding: 2, borderWidth: 2, borderColor: 'transparent' },
+    pickOn: { borderColor: colors.ink },
+    pick: { height: 96, borderRadius: 18, overflow: 'hidden' },
+    pickLabel: { position: 'absolute', left: 6, right: 6, bottom: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.85)', paddingVertical: 4, paddingHorizontal: 8 },
+    pickText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
     label: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, marginBottom: -6 },
     chip: { height: 40, paddingLeft: 5, paddingRight: 13, flexDirection: 'row', alignItems: 'center', gap: 4 },
     moves: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },

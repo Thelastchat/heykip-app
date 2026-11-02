@@ -19,6 +19,7 @@ import { monthNumbers, period, useHome, type HomeGoal } from '@/lib/home';
 import { rich, t } from '@/lib/i18n';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
+import { splitOf } from '@/lib/goals';
 import { checkParts, fromKind, giveJob, moveSaving, safetyFull, savingMoved, savingThisCycle, splitIn, type MoneyIn, type Part } from '@/lib/moneyin';
 import { useMonth } from '@/lib/month';
 import { shortName } from '@/lib/setup/plan';
@@ -74,7 +75,7 @@ export function MoneyInSheet({ items, onClose }: { items: MoneyIn[]; onClose: (m
   async function movePay() {
     if (!month) return;
     setBusy(true);
-    const r = await moveSaving(month, goal?.id ?? null, Number(profile?.safety_saved ?? 0));
+    const r = await moveSaving(month, goals, Number(profile?.safety_saved ?? 0));
     setBusy(false);
     if ('error' in r) return setError(t('Couldn’t move the saving: {msg}', { msg: r.error }));
     save(r.month);
@@ -87,10 +88,11 @@ export function MoneyInSheet({ items, onClose }: { items: MoneyIn[]; onClose: (m
   const n = month ? monthNumbers(month, spent) : null;
   const days = n ? Math.max(1, n.P.daysLeft) : 1;
   const perDay = (left: number) => Math.max(0, Math.round(left / days / 10) * 10);
+  const split = useMemo(() => (month ? splitOf(month, goals) : new Map<string, number>()), [month, goals]);
   const choices: Choice[] = useMemo(() => {
     if (!month || s.extra <= 0) return [];
     const out: Choice[] = goals.map((g, i) => {
-      const per = i === 0 ? month.goal.amount + month.goalExtra : (g.monthly ?? 0);
+      const per = split.get(g.id) ?? 0;
       const sooner = soonerText(s.extra, per);
       const target =
         g.target > 0

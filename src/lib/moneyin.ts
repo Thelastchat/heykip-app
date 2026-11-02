@@ -5,6 +5,7 @@
 //   Kept-for-spending money is remembered on the money-in entry (`job`), and Home adds it to this month.
 import { coverOf, periodKey } from '@/lib/home';
 import type { CatKey, MonthBudget } from '@/lib/budget';
+import { splitOf, type GoalLite } from '@/lib/goals';
 import { supabase } from '@/lib/supabase';
 
 export type MoneyIn = { id: string; amount: number; category: string; note: string | null };
@@ -105,6 +106,27 @@ export function savingThisCycle(month: MonthBudget, safetySaved: number | null =
   return { goal: goal + (month.safety.amount - safety), safety };
 }
 
+/** This payday's goal saving, goal by goal: the planned split, with any difference (a full safety net adds, a cover
+ * takes) settled on the first goal still going, then the next ones. */
+export function paydayShares(month: MonthBudget, goals: GoalLite[], amount: number): [string, number][] {
+  const split = splitOf(month, goals);
+  const out: [string, number][] = goals.map((g) => [g.id, split.get(g.id) ?? 0]);
+  let diff = amount - out.reduce((a, [, v]) => a + v, 0);
+  if (diff > 0) {
+    const i = Math.max(
+      0,
+      out.findIndex(([, v]) => v > 0),
+    );
+    out[i][1] += diff;
+  }
+  for (let i = 0; i < out.length && diff < 0; i++) {
+    const cut = Math.min(-diff, out[i][1]);
+    out[i][1] -= cut;
+    diff += cut;
+  }
+  return out;
+}
+
 /** Is the safety net full? */
 export const safetyFull = (month: MonthBudget | null, saved: number) => !!month && !month.goal.isSafetyNet && month.safety.target > 0 && saved >= month.safety.target;
 
@@ -114,15 +136,19 @@ export const savingMoved = (month: MonthBudget | null, now = new Date()) => !!mo
 /** Move this cycle's saving (goal + safety net) — once per pay cycle. Returns the month to save, or an error. */
 export async function moveSaving(
   month: MonthBudget,
-  goalId: string | null,
+  goals: GoalLite[],
   safetySaved: number | null = null,
   now = new Date(),
 ): Promise<{ month: MonthBudget; goal: number; safety: number } | { error: string }> {
   if (savingMoved(month, now)) return { month, goal: 0, safety: 0 };
   const s = savingThisCycle(month, safetySaved, now);
-  if (goalId && s.goal > 0 && !month.goal.isSafetyNet) {
-    const { error } = await supabase.rpc('put_in_goal', { p_goal: goalId, p_amount: s.goal, p_source: 'payday' });
-    if (error) return { error: error.message };
+  if (goals.length && s.goal > 0 && !month.goal.isSafetyNet) {
+    // Each goal gets its share (More goals); anything extra or taken back to cover a day lands on the first goal.
+    for (const [id, amount] of paydayShares(month, goals, s.goal)) {
+      if (amount <= 0) continue;
+      const { error } = await supabase.rpc('put_in_goal', { p_goal: id, p_amount: amount, p_source: 'payday' });
+      if (error) return { error: error.message };
+    }
   }
   const safety = month.goal.isSafetyNet ? s.goal + s.safety : s.safety;
   if (safety > 0) {

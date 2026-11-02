@@ -24,6 +24,8 @@ import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
+import { MAX_GOALS, splitOf } from '@/lib/goals';
+import { liteOf } from '@/components/goals/bits';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
@@ -67,6 +69,7 @@ export default function Home() {
   // ---- the month in numbers (the same numbers as the + screen) ----
   const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter, extraIn } = monthNumbers(month, spent, now);
   const saving = month ? savingTotal(month) : 0;
+  const split = month ? splitOf(month, goals.map(liteOf)) : new Map<string, number>();
   const goalDate = goal?.due ? parseDay(goal.due) : null;
   const fast = spent.total > 0 && pace > 0;
   const isTodaySelected = selectedDay === now.toDateString();
@@ -160,7 +163,7 @@ export default function Home() {
   async function unlocked(f: PlusFeature) {
     if (f === 'styles' || f === 'customize') return router.push('/month');
     if (f === 'talk') return router.push('/talk');
-    if (f === 'goals') return router.push('/goals');
+    if (f === 'goals') return router.push(goals.length < MAX_GOALS ? '/goal-new' : '/goals');
     if (f === 'automove' && session) {
       await supabase.from('profiles').update({ split_when_paid: true }).eq('id', session.user.id);
       await refreshProfile();
@@ -357,14 +360,18 @@ export default function Home() {
 
         {/* goal */}
         <RiseIn delay={300}>
-          <Section title={t('Your goal')} />
+          <Section title={goals.length > 1 ? t('Your goals') : t('Your goal')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
-            {goal && <GoalCard g={goal} perMonth={month?.goal.amount ?? 0} width={Math.min(312, width - 60)} />}
-            <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel={t('Pin 2 more goals')}>
-              <Image source={ICON3D.piggy} style={{ width: 66, height: 66 }} contentFit="contain" />
-              <Text style={styles.addGoalText}>{isPlus ? t('Add a goal') : t('Pin 2 more goals')}</Text>
-              {!isPlus && <Text style={styles.quiet}>Plus</Text>}
-            </Squish>
+            {goals.map((g) => (
+              <GoalCard key={g.id} g={g} perMonth={split.get(g.id) ?? 0} width={Math.min(312, width - 60)} />
+            ))}
+            {goals.length < MAX_GOALS && (
+              <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add a goal') : t('Pin 2 more goals')}>
+                <Image source={ICON3D.piggy} style={{ width: 66, height: 66 }} contentFit="contain" />
+                <Text style={styles.addGoalText}>{isPlus ? t('Add a goal') : t('Pin 2 more goals')}</Text>
+                {!isPlus && <Text style={styles.quiet}>Plus</Text>}
+              </Squish>
+            )}
           </ScrollView>
         </RiseIn>
 

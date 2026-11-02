@@ -2,7 +2,7 @@
 // then puts back what the person already set up — the bills they added, bills marked paid, their "always" choice.
 // The goal's saved amount and months left come from today, not from the day they signed up.
 import { billsGuess, safetyNet } from '@/lib/brain';
-import { addBill, dailyOf, monthFrom, type MonthBudget } from '@/lib/budget';
+import { addBill, dailyOf, keepOnReplan, monthFrom, type MonthBudget } from '@/lib/budget';
 import { EMPTY_DRAFT, type SetupDraft } from '@/lib/setup/draft';
 import { incomeBasis, monthsUntil, monthYear } from '@/lib/setup/plan';
 
@@ -42,7 +42,7 @@ export function replan(m: MonthBudget, b: Basics, goal: GoalNow, now = new Date(
   const payday = b.incomeType === 'regular' ? b.payday : null;
   let next = monthFrom(inputs, m.style, m.goalPerMonth, payday, safetyNet(inputs).target);
   for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
-  return { ...next, alwaysFreedTo: m.alwaysFreedTo, ...(m.paid ? { paid: m.paid } : {}) };
+  return { ...next, ...keepOnReplan(m) };
 }
 
 /** When the goal arrives at this month's pace (null for monthly goals and when nothing goes to it). */
