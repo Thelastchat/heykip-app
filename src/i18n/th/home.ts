@@ -190,6 +190,23 @@ const th: Record<string, string> = {
   Goals: 'เป้าหมาย',
   'Tell Kip': 'บอก Kip',
   Back: 'กลับ',
+
+  // ---------- Home polish (Nov 2026) ----------
+  '{n} days to payday': 'อีก {n} วันเงินเดือนออก',
+  'Payday is tomorrow': 'พรุ่งนี้เงินเดือนออก',
+  '{n} days left this month': 'เดือนนี้เหลืออีก {n} วัน',
+  'Last day of the month': 'วันสุดท้ายของเดือน',
+  'My promise': 'สัญญากับตัวเอง',
+  'Try free': 'ลองฟรี',
+  '{n} of {total} paid': 'จ่ายแล้ว {n} จาก {total}',
+  'Auto-move on: {amount} moves to {goal} on the {day}': 'เปิดย้ายอัตโนมัติแล้ว: {amount} จะย้ายไป {goal} ทุกวันที่ {n}',
+  'Auto-move on: {amount} moves to {goal} on payday': 'เปิดย้ายอัตโนมัติแล้ว: {amount} จะย้ายไป {goal} ทุกวันเงินเดือนออก',
+  '{name} marked paid': 'จ่าย {name} แล้ว',
+  '{amount} set aside': 'กันไว้ {amount}',
+  'All paid': 'จ่ายครบแล้ว',
+  Paid: 'จ่ายแล้ว',
+  Estimate: 'ประมาณการ',
+  'about {amount}': 'ประมาณ {amount}',
 };
 
 export default th;

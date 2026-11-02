@@ -1,5 +1,5 @@
 // Bills this month: a see-through wallet stack. Each bill is a card; the open one has "slide to mark paid".
-// Paid bills sink to the bottom (tap to undo). Kip's guesses carry a dashed "estimate" tag.
+// Paid bills sink to the bottom (tap to undo). Kip's guesses say "Estimate" and "about ฿…".
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -9,7 +9,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTi
 import Svg, { Path } from 'react-native-svg';
 
 import { Glass } from '@/components/glow/Glass';
-import { rich, t } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { colors, fonts, glow, glassA, inkA, themed } from '@/theme';
 
@@ -66,19 +66,14 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
   }, [unpaidKeys]);
   const total = bills.reduce((a, b) => a + b.amount, 0);
   const left = unpaid.reduce((a, b) => a + b.amount, 0);
-  const paidN = bills.length - unpaid.length;
   const open = order.find((b) => b.key === openKey && !b.paid) ? openKey : null;
 
   return (
     <View>
       <View style={styles.sum}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text style={styles.sumText}>
-            {rich('**{n} of {total}** paid', { n: paidN, total: bills.length }, (s) => (
-              <Text style={{ color: colors.ink, fontFamily: fonts.medium }}>{s}</Text>
-            ))}
-          </Text>
-          <Text style={styles.sumText}>{left === 0 ? t('All paid 🎉') : t('{amount} to go', { amount: baht(left) })}</Text>
+          <Text style={styles.sumText}>{t('{amount} set aside', { amount: baht(total) })}</Text>
+          <Text style={styles.sumText}>{left === 0 ? t('All paid') : t('{amount} to go', { amount: baht(left) })}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 3, height: 8 }}>
           {bills.map((b) => (
@@ -113,18 +108,10 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
                       {b.name}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.sub}>{b.paid ? t('Paid ✓') : b.estimate ? t('Usually') : t('Monthly')}</Text>
-                      {b.estimate && !b.paid && (
-                        <View style={styles.est}>
-                          <Text style={styles.estText}>{t('estimate')}</Text>
-                        </View>
-                      )}
+                      <Text style={styles.sub}>{b.paid ? t('Paid') : b.estimate ? t('Estimate') : t('Monthly')}</Text>
                     </View>
                   </View>
-                  <Text style={[styles.amt, b.paid && styles.done]}>
-                    {b.estimate && !b.paid ? '~' : ''}
-                    {baht(b.amount)}
-                  </Text>
+                  <Text style={[styles.amt, b.paid && styles.done]}>{b.estimate && !b.paid ? t('about {amount}', { amount: baht(b.amount) }) : baht(b.amount)}</Text>
                 </View>
                 {isOpen && <SlideToPay onDone={() => onPaid(b.key, true)} />}
               </View>
@@ -207,8 +194,6 @@ const styles = themed(() =>
     sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     amt: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
     done: { textDecorationLine: 'line-through', opacity: 0.45 },
-    est: { height: 18, paddingHorizontal: 7, borderRadius: 9, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, justifyContent: 'center' },
-    estText: { fontFamily: fonts.regular, fontSize: 10, color: colors.muted },
     slide: { marginTop: 16, height: 50, borderRadius: 999, backgroundColor: glow.control, borderWidth: 1, borderColor: inkA(0.06), justifyContent: 'center', overflow: 'hidden' },
     fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999, backgroundColor: colors.limeDeep },
     slideText: { textAlign: 'center', paddingLeft: 34, fontFamily: fonts.medium, fontSize: 14, color: colors.ink, opacity: 0.75 },
