@@ -29,6 +29,19 @@ function hasThai(node: ReactNode): boolean {
 /** The Thai version of a Geist font; anything else (handwriting, already Thai) stays as it is. */
 const thaiFor = (family: string | undefined) => (family ? (TO_THAI[family] ?? family) : fonts.thai);
 
+/**
+ * Thai needs more height than English: tone marks (เป้า) sit above the letters and vowels hang below, so a line set
+ * tight for English cuts them off on iOS. Thai lines get at least 1.5× their size, and no squeezed letter spacing.
+ */
+function thaiRoom(flat: TextStyle | undefined): TextStyle | null {
+  const size = flat?.fontSize ?? 14;
+  const lh = flat?.lineHeight;
+  const tight = lh !== undefined && lh < size * 1.5;
+  const squeezed = (flat?.letterSpacing ?? 0) < 0;
+  if (!tight && !squeezed) return null;
+  return { ...(tight ? { lineHeight: Math.ceil(size * 1.5) } : null), ...(squeezed ? { letterSpacing: 0 } : null) };
+}
+
 // React 19: `ref` arrives as an ordinary prop and is passed straight through.
 export function Text(props: ComponentProps<typeof RNText>) {
   const parent = useContext(Inherited);
@@ -41,7 +54,8 @@ export function Text(props: ComponentProps<typeof RNText>) {
   // On lime / pastel / photo surfaces the text stays dark, in Light and in Dark.
   const c = flat?.color;
   const accentColor = accent && (c === undefined || c === colors.ink || c === colors.muted) ? (c === colors.muted ? colors.onAccentMuted : colors.onAccent) : undefined;
-  const style = (thai && shown !== own) || accentColor ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, accentColor ? { color: accentColor } : null] : props.style;
+  const room = thai ? thaiRoom(flat) : null;
+  const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
   return (
     <Inherited.Provider value={family}>
       <RNText {...props} style={style} />
