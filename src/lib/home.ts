@@ -38,6 +38,8 @@ export type Spent = {
   payIn?: number;
 };
 
+export type CatSpend = { id: string; amount: number; at: string; note: string | null; cat: string };
+
 /** Taken back from this cycle's goal saving / the safety net to cover going over (see moneyin.ts). */
 export function coverOf(month: MonthBudget | null, now = new Date()) {
   const pk = month ? periodKey(month.payday, now) : '';
@@ -143,7 +145,7 @@ async function signed(path: string | null | undefined): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-type TxRow = { amount: number; kind: string; occurred_at: string; job: unknown; cat: string };
+type TxRow = { id: string; amount: number; kind: string; occurred_at: string; job: unknown; cat: string; note: string | null };
 type Raw = { key: string; at: number; goals: HomeGoal[]; tx: TxRow[] };
 
 const FRESH_MS = 10_000;
@@ -161,7 +163,7 @@ async function fetchRaw(key: string, userId: string, payday: number | null): Pro
       .eq('status', 'active')
       .order('position'),
     supabase.from('promises').select('goal_id, text, signature_url, signed_at').eq('user_id', userId).order('signed_at', { ascending: false }),
-    supabase.from('transactions').select('amount, kind, occurred_at, job, categories(key)').eq('user_id', userId).gte('occurred_at', since),
+    supabase.from('transactions').select('id, amount, kind, occurred_at, job, note, categories(key)').eq('user_id', userId).gte('occurred_at', since),
   ]);
   const goals = await Promise.all(
     (g ?? []).map(async (x) => {
@@ -186,6 +188,8 @@ async function fetchRaw(key: string, userId: string, payday: number | null): Pro
     }),
   );
   const rows = (tx ?? []).map((t) => ({
+    id: t.id as string,
+    note: (t.note as string | null) ?? null,
     amount: Number(t.amount),
     kind: t.kind as string,
     occurred_at: t.occurred_at as string,
@@ -272,7 +276,20 @@ export function useHome(month: MonthBudget | null) {
   const spent = useMemo(() => spentFrom(raw, month, payday), [raw, monthShape, payday]);
   const streak = useMemo(() => streakOf((raw?.tx ?? []).map((t) => t.occurred_at)), [raw]);
 
-  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload };
+  /** This pay cycle's spends that count against one Left-to-spend category, newest first (no extra request). */
+  const spendsIn = useCallback(
+    (key: CatKey): CatSpend[] => {
+      const start = period(payday).start.getTime();
+      return (raw?.tx ?? [])
+        .filter((x) => x.kind === 'spend' && new Date(x.occurred_at).getTime() >= start && budgetKey(x.cat, month) === key)
+        .map((x) => ({ id: x.id, amount: x.amount, at: x.occurred_at, note: x.note, cat: x.cat }))
+        .sort((a, b) => b.at.localeCompare(a.at));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [raw, monthShape, payday],
+  );
+
+  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn };
 }
 
 /** Consecutive days with at least one log, ending today (or yesterday, so the streak doesn't break before you log today). */

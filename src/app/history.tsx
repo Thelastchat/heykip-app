@@ -3,9 +3,9 @@
 // that; tap an entry to change its category; swipe left to delete. Home updates when you come back.
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CaretLeft, CaretRight } from 'phosphor-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,7 +52,9 @@ export default function History() {
   const payday = month?.payday ?? null;
   const [offset, setOffset] = useState(0); // 0 = this pay cycle, -1 = the one before…
   const [rows, setRows] = useState<Entry[] | null>(null);
-  const [filter, setFilter] = useState<string | null>(null); // 'spend:food' | 'income' | null
+  const { cat } = useLocalSearchParams<{ cat?: string }>();
+  const [filter, setFilter] = useState<string | null>(cat ? `spend:${cat}` : null); // 'spend:food' | 'income' | null
+  const firstOffset = useRef(true);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +102,11 @@ export default function History() {
     }, [load]),
   );
   useEffect(() => {
+    // Opened from a Home category: keep that filter on the first load, reset it when the months change.
+    if (firstOffset.current) {
+      firstOffset.current = false;
+      return;
+    }
     setRows(null);
     setFilter(null);
   }, [offset]);

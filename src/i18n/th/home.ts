@@ -278,6 +278,19 @@ const th: Record<string, string> = {
   '{goal} by {date} needs {amount} a month. Your pay can’t fit that next to {first}. Here’s what can work:':
     '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหวถ้าเก็บ {first} ด้วย ลองแบบนี้ดู:',
   '{goal} by {date} needs {amount} a month. Your pay can’t fit that right now. Here’s what can work:': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหว ลองแบบนี้ดู:',
+  // category sheet
+  '**All used.** More {cat} now comes out of the rest of your month': '**ใช้ครบแล้ว** ถ้าใช้{cat}เพิ่ม จะหักจากเงินส่วนอื่นของเดือนนี้',
+  '**Going fast.** About {amount} a day keeps {cat} in plan for the next {n} days': '**ใช้เร็วไปนิด** ใช้วันละประมาณ {amount} {cat}จะอยู่ในแผนไปอีก {n} วัน',
+  'Nothing spent yet. That’s {amount} a day for the next {n} days': 'ยังไม่ได้ใช้เลย ใช้ได้วันละ {amount} ไปอีก {n} วัน',
+  'On track. About {amount} a day for the next {n} days': 'ตามแผนดี ใช้ได้วันละประมาณ {amount} ไปอีก {n} วัน',
+  left: 'เหลือ',
+  'of {total} · {spent} spent': 'จาก {total} · ใช้ไป {spent}',
+  'This pay cycle': 'รอบเงินเดือนนี้',
+  '1 spend': '1 รายการ',
+  '{n} spends': '{n} รายการ',
+  'Nothing here yet. Spends you add to {cat} show up here': 'ยังไม่มีรายการ ที่จดเป็นหมวด{cat}จะขึ้นที่นี่',
+  'See all in History': 'ดูทั้งหมดในประวัติ',
+  'Change {cat} budget': 'ปรับงบ{cat}',
 };
 
 export default th;

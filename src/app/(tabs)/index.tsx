@@ -15,6 +15,7 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillStack, type Bill } from '@/components/home/BillStack';
+import { CatSheet, type CatInfo } from '@/components/home/CatSheet';
 import { OverSheet, type OverInfo } from '@/components/home/OverSheet';
 import { SlipFinder } from '@/components/home/SlipFinder';
 import { WeekStrip } from '@/components/home/WeekStrip';
@@ -47,12 +48,13 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
-  const { goals, spent, streak, reload } = useHome(month);
+  const { goals, spent, streak, reload, spendsIn } = useHome(month);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
   const [kipMood, setKipMood] = useState<KipMood>('happy');
   const [overOpen, setOverOpen] = useState(false);
+  const [catOpen, setCatOpen] = useState<CatKey | null>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
 
   useFocusEffect(
@@ -238,6 +240,8 @@ export default function Home() {
     })
     .sort((a, b) => Number(b.going) - Number(a.going));
 
+  const catTile = catOpen ? spendTiles.find((x) => x.s.key === catOpen) : undefined;
+
   const shownSpent = spent.byDay[selectedDay] ?? 0;
   const sel = new Date(selectedDay);
   // How long this pay cycle has left: the plain-words version of the old "23 days" circle.
@@ -383,7 +387,7 @@ export default function Home() {
               return (
                 <Squish
                   key={s.key}
-                  onPress={() => router.push('/month')}
+                  onPress={() => setCatOpen(s.key)}
                   accessibilityRole="button"
                   accessibilityLabel={t('{category}: {left} left of {total}', { category: t(CATEGORY[s.key].name), left: baht(left), total: baht(s.amount) })}>
                   <Glass radius={24} innerStyle={styles.cat}>
@@ -455,6 +459,13 @@ export default function Home() {
             setOverOpen(false);
             if (msg) flash(msg);
           }}
+        />
+      )}
+      {catTile && (
+        <CatSheet
+          info={{ key: catTile.s.key, name: catShort(catTile.s.key), budget: catTile.s.amount, used: catTile.used, going: catTile.going, daysLeft: P.daysLeft } satisfies CatInfo}
+          spends={spendsIn(catTile.s.key)}
+          onClose={() => setCatOpen(null)}
         />
       )}
       {toast && (
