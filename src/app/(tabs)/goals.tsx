@@ -160,21 +160,25 @@ export default function Goals() {
         {month && !month.goal.isSafetyNet && month.safety.amount > 0 && (
           <RiseIn delay={180}>
             <Section title={t('Safety net')} right={t('always on')} />
-            <View style={{ paddingHorizontal: 18 }}>
+            <Squish onPress={() => router.push('/safety')} style={{ paddingHorizontal: 18 }} accessibilityRole="button" accessibilityLabel={t('Safety net')}>
               <Glass radius={26} innerStyle={styles.pot}>
                 <Float>
                   <Image source={ICON3D.shield} style={{ width: 52, height: 52 }} contentFit="contain" />
                 </Float>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.potName}>{t('For emergencies')}</Text>
-                  <Text style={styles.sub}>{t('Grows to {amount} — 3 months of basics', { amount: baht(month.safety.target) })}</Text>
+                  <Text style={styles.sub}>
+                    {Number(profile?.safety_saved ?? 0) >= month.safety.target && month.safety.target > 0
+                      ? t('Full ✓ — 3 months of basics')
+                      : t('{saved} of {amount} — 3 months of basics', { saved: baht(Number(profile?.safety_saved ?? 0)), amount: baht(month.safety.target) })}
+                  </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.potAmt}>{baht(Number(profile?.safety_saved ?? 0))}</Text>
-                  <Text style={styles.sub}>{t('saved · {amount} a month', { amount: baht(month.safety.amount) })}</Text>
+                  <Text style={styles.potAmt}>{t('{amount}/mo', { amount: baht(month.safety.amount) })}</Text>
+                  <Text style={styles.sub}>{t('See all')} ›</Text>
                 </View>
               </Glass>
-            </View>
+            </Squish>
           </RiseIn>
         )}
 

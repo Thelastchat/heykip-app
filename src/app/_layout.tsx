@@ -58,6 +58,7 @@ function RootStack() {
         <Stack.Screen name="slips" options={{ presentation: 'modal' }} />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="history" />
+        <Stack.Screen name="safety" />
         <Stack.Screen name="talk" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
     </Stack>

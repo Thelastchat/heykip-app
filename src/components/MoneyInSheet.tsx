@@ -19,7 +19,7 @@ import { monthNumbers, period, useHome, type HomeGoal } from '@/lib/home';
 import { rich, t } from '@/lib/i18n';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
-import { checkParts, fromKind, giveJob, moveSaving, savingMoved, savingThisCycle, splitIn, type MoneyIn, type Part } from '@/lib/moneyin';
+import { checkParts, fromKind, giveJob, moveSaving, safetyFull, savingMoved, savingThisCycle, splitIn, type MoneyIn, type Part } from '@/lib/moneyin';
 import { useMonth } from '@/lib/month';
 import { shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
@@ -58,9 +58,9 @@ export function MoneyInSheet({ items, onClose }: { items: MoneyIn[]; onClose: (m
   const usual = month?.income ?? 0;
   const s = splitIn(items, usual, payBefore ?? 0);
   const goal = goals[0] ?? null;
-  const saving = month ? savingThisCycle(month) : { goal: 0, safety: 0 };
+  const saving = month ? savingThisCycle(month, Number(profile?.safety_saved ?? 0)) : { goal: 0, safety: 0 };
   const alreadyMoved = savingMoved(month);
-  const showSafety = !!month && !month.goal.isSafetyNet && (month.safety.amount > 0 || month.safety.target > 0);
+  const showSafety = !!month && !month.goal.isSafetyNet && (month.safety.amount > 0 || month.safety.target > 0) && !safetyFull(month, Number(profile?.safety_saved ?? 0));
 
   // Payday auto-move (Plus): the moment this cycle's pay is all in, the saving moves — once.
   useEffect(() => {
@@ -74,7 +74,7 @@ export function MoneyInSheet({ items, onClose }: { items: MoneyIn[]; onClose: (m
   async function movePay() {
     if (!month) return;
     setBusy(true);
-    const r = await moveSaving(month, goal?.id ?? null);
+    const r = await moveSaving(month, goal?.id ?? null, Number(profile?.safety_saved ?? 0));
     setBusy(false);
     if ('error' in r) return setError(t('Couldn’t move the saving: {msg}', { msg: r.error }));
     save(r.month);

@@ -74,7 +74,7 @@ export async function giveJob(items: MoneyIn[], parts: Part[], from: 'bonus' | '
       if (error) return error.message;
       job.goals = { ...job.goals, [p.goalId]: (job.goals?.[p.goalId] ?? 0) + p.amount };
     } else if (p.to === 'safety') {
-      const { error } = await supabase.rpc('put_in_safety', { p_amount: p.amount });
+      const { error } = await supabase.rpc('put_in_safety', { p_amount: p.amount, p_kind: 'extra' });
       if (error) return error.message;
       job.safety = (job.safety ?? 0) + p.amount;
     } else if (p.to === 'spend') job.spend = (job.spend ?? 0) + p.amount;
@@ -96,24 +96,37 @@ export async function giveJob(items: MoneyIn[], parts: Part[], from: 'bonus' | '
 }
 
 /** This month's saving, after anything taken back from the goal to cover a day that ran over. */
-export function savingThisCycle(month: MonthBudget, now = new Date()) {
-  return { goal: Math.max(0, month.goal.amount + month.goalExtra - coverOf(month, now).goal), safety: month.safety.amount };
+export function savingThisCycle(month: MonthBudget, safetySaved: number | null = null, now = new Date()) {
+  const goal = Math.max(0, month.goal.amount + month.goalExtra - coverOf(month, now).goal);
+  // A full safety net stops taking money: whatever it doesn't need goes to the goal instead.
+  if (safetySaved === null || month.goal.isSafetyNet || month.safety.target <= 0) return { goal, safety: month.safety.amount };
+  const room = Math.max(0, month.safety.target - safetySaved);
+  const safety = Math.min(month.safety.amount, room);
+  return { goal: goal + (month.safety.amount - safety), safety };
 }
+
+/** Is the safety net full? */
+export const safetyFull = (month: MonthBudget | null, saved: number) => !!month && !month.goal.isSafetyNet && month.safety.target > 0 && saved >= month.safety.target;
 
 /** Has this pay cycle's saving already been moved? */
 export const savingMoved = (month: MonthBudget | null, now = new Date()) => !!month && month.payMoved === periodKey(month.payday, now);
 
 /** Move this cycle's saving (goal + safety net) — once per pay cycle. Returns the month to save, or an error. */
-export async function moveSaving(month: MonthBudget, goalId: string | null, now = new Date()): Promise<{ month: MonthBudget; goal: number; safety: number } | { error: string }> {
+export async function moveSaving(
+  month: MonthBudget,
+  goalId: string | null,
+  safetySaved: number | null = null,
+  now = new Date(),
+): Promise<{ month: MonthBudget; goal: number; safety: number } | { error: string }> {
   if (savingMoved(month, now)) return { month, goal: 0, safety: 0 };
-  const s = savingThisCycle(month, now);
+  const s = savingThisCycle(month, safetySaved, now);
   if (goalId && s.goal > 0 && !month.goal.isSafetyNet) {
     const { error } = await supabase.rpc('put_in_goal', { p_goal: goalId, p_amount: s.goal, p_source: 'payday' });
     if (error) return { error: error.message };
   }
   const safety = month.goal.isSafetyNet ? s.goal + s.safety : s.safety;
   if (safety > 0) {
-    const { error } = await supabase.rpc('put_in_safety', { p_amount: safety });
+    const { error } = await supabase.rpc('put_in_safety', { p_amount: safety, p_kind: 'payday' });
     if (error) return { error: error.message };
   }
   return { month: { ...month, payMoved: periodKey(month.payday, now) }, goal: month.goal.isSafetyNet ? 0 : s.goal, safety };
@@ -137,7 +150,7 @@ export async function cover(
   }
   // The safety net is a real pot: covering from it always takes from what's saved there.
   if (take.safety > 0) {
-    const { error } = await supabase.rpc('put_in_safety', { p_amount: -take.safety });
+    const { error } = await supabase.rpc('put_in_safety', { p_amount: -take.safety, p_kind: 'cover' });
     if (error) return { error: error.message };
   }
   const was = coverOf(month, now);

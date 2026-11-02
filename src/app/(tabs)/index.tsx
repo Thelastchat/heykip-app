@@ -75,7 +75,7 @@ export default function Home() {
   const showOverToday = isTodaySelected && overToday > 0;
 
   // Going over: what it changes (the sheet behind the minus numbers).
-  const goalPerMonth = month && !month.goal.isSafetyNet ? savingThisCycle(month).goal : 0;
+  const goalPerMonth = month && !month.goal.isSafetyNet ? savingThisCycle(month, Number(profile?.safety_saved ?? 0)).goal : 0;
   const goalLeft = goal ? Math.max(0, goal.target - goal.saved) : 0;
   const safetySaved = Number(profile?.safety_saved ?? 0);
   const cover = overCover(overMonth, goal && goal.kind !== 'monthly' ? goalPerMonth : 0, safetySaved, goalLeft);
