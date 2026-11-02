@@ -13,10 +13,15 @@ const WEB = {
   'react-native-web/dist/exports/TextInput': path.join(__dirname, 'src', 'lib', 'web', 'TextInput.ts'),
 };
 
+// Compare paths loosely (case, slashes, symlinks): if rn.ts ever failed to recognise itself, it would import itself
+// forever ("Maximum call stack size exceeded" in rn.ts).
+const same = (a, b) => path.normalize(a).toLowerCase() === path.normalize(b).toLowerCase();
+const isShimFile = (f) => same(f, SHIM) || same(f, THAI_TEXT) || /[\\/]src[\\/]lib[\\/](rn\.ts|thaiText\.tsx)$/i.test(f);
+
 const upstream = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const from = context.originModulePath;
-  const ours = from.startsWith(SRC) && from !== SHIM && from !== THAI_TEXT;
+  const ours = from.toLowerCase().startsWith(SRC.toLowerCase()) && !isShimFile(from);
   // Phones: `import { Text } from 'react-native'` → src/lib/rn.ts.
   if (ours && moduleName === 'react-native') return { type: 'sourceFile', filePath: SHIM };
   // Web: react-native-web's babel plugin imports each part on its own (…/exports/Text).
