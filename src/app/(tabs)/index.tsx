@@ -275,7 +275,8 @@ export default function Home() {
             <CountUp
               value={isTodaySelected ? (showOverToday ? overToday : leftToday) : shownSpent}
               format={showOverToday ? (n) => <>−{Big(n)}</> : Big}
-              style={[styles.n1, showOverToday && { color: colors.orangeText }, overMonth > 0 && { fontSize: 38, lineHeight: 44 }]}
+              style={[styles.n1, showOverToday && { color: colors.orangeText }, overMonth > 0 && { fontSize: 38, lineHeight: 48, marginTop: -6 }]}
+              fit
             />
             {showOverToday ? (
               <View style={styles.overLbl}>
@@ -302,7 +303,8 @@ export default function Home() {
                   {Big(n)}
                 </>
               )}
-              style={[styles.n2, overMonth > 0 && { color: colors.orangeText, fontSize: 26 }]}
+              style={[styles.n2, overMonth > 0 && { color: colors.orangeText, fontSize: 26, lineHeight: 33, marginTop: -3 }]}
+              fit
             />
             <Text style={[styles.lbl, overMonth > 0 && styles.overText]}>{overMonth > 0 ? t('Over this month') : t('Left this month')}</Text>
             {overMonth <= 0 && extraIn > 0 && <Text style={styles.extraIn}>{t('incl. +{amount} extra', { amount: baht(extraIn) })}</Text>}
@@ -409,7 +411,7 @@ export default function Home() {
         {/* Plus */}
         <RiseIn delay={420}>
           <Section title={t('Do more with Kip')} tag="✦ PLUS" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.rowOuter, { marginTop: -38 }]} contentContainerStyle={[styles.rowInner, { paddingTop: 40 }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.rowOuter, { marginTop: -38, marginBottom: -46 }]} contentContainerStyle={[styles.rowInner, { paddingTop: 56 }]}>
             {plusCards.map((c, i) => (
               <Squish key={c.f} onPress={() => openFeature(c.f)} style={styles.plus} accessibilityRole="button" accessibilityLabel={isPlus ? c.title : t('{title} — Plus', { title: c.title })}>
                 <Float delay={i * 700} style={styles.plusIcon}>
@@ -589,8 +591,8 @@ const styles = themed(() =>
     avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.paper },
     hello: { paddingHorizontal: 22, paddingTop: 26, fontFamily: fonts.regular, fontSize: 34, lineHeight: 40, letterSpacing: -1.1, color: colors.ink },
     nums: { flexDirection: 'row', alignItems: 'flex-end', gap: 14, paddingHorizontal: 22, paddingTop: 22 },
-    n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 50, color: colors.ink, fontVariant: ['tabular-nums'] },
-    n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 34, color: colors.soft, fontVariant: ['tabular-nums'] },
+    n1: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 58, marginTop: -8, color: colors.ink, fontVariant: ['tabular-nums'] },
+    n2: { fontFamily: fonts.regular, fontSize: 30, letterSpacing: -1, lineHeight: 38, marginTop: -4, color: colors.soft, fontVariant: ['tabular-nums'] },
     lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 6 },
     overLbl: { flexDirection: 'row', alignItems: 'center', gap: 3 },
     overText: { color: colors.orangeText, fontFamily: fonts.medium },

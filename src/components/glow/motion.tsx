@@ -38,7 +38,7 @@ export function Squish({ children, style, onPress, haptic = true, ...rest }: Pre
 }
 
 /** A number that counts to its value (and from its last value when it changes). */
-export function CountUp({ value, format, style, ms = 1000 }: { value: number; format: (n: number) => ReactNode; style?: StyleProp<TextStyle>; ms?: number }) {
+export function CountUp({ value, format, style, ms = 1000, fit }: { value: number; format: (n: number) => ReactNode; style?: StyleProp<TextStyle>; ms?: number; fit?: boolean }) {
   const [shown, setShown] = useState(0);
   const from = useRef(0);
   useEffect(() => {
@@ -58,9 +58,9 @@ export function CountUp({ value, format, style, ms = 1000 }: { value: number; fo
       from.current = value;
     };
   }, [value, ms]);
-  // Numbers never wrap: on a phone they shrink to fit instead.
+  // `fit`: stay on one line and shrink to fit (needs a lineHeight tall enough for the digits, or iPhone clips their tops).
   return (
-    <Text style={style} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+    <Text style={style} {...(fit ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.6 } : {})}>
       {format(Math.round(shown))}
     </Text>
   );
