@@ -59,6 +59,8 @@ const th: Record<string, string> = {
   'Kip finds slips': 'Kip หาสลิปให้',
   'Looks only in: {albums}': 'ดูเฉพาะใน: {albums}',
   'Kip stopped looking in your albums.': 'Kip เลิกดูอัลบั้มแล้ว',
+  // ---------- Slips polish (Nov 2026) ----------
+  'Any Thai bank app · up to 10 at once · never kept': 'ใช้ได้ทุกแอปธนาคารไทย · ครั้งละไม่เกิน 10 รูป · อ่านแล้วไม่เก็บ',
 };
 
 export default th;

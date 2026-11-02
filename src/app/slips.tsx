@@ -187,12 +187,12 @@ export default function Slips() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 18 }}>
+      <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20 }}>
         <ScreenHeader title={t('Slips')} />
       </View>
 
       {phase === 'reading' && (
-        <ScrollView contentContainerStyle={{ padding: 18, gap: 18, paddingBottom: insets.bottom + 24 }}>
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: insets.bottom + 24 }}>
           <View style={styles.grid}>
             {slips.map((s) => (
               <Thumb key={s.id} slip={s} />
@@ -205,13 +205,13 @@ export default function Slips() {
           <View style={{ alignItems: 'center' }}>
             <Kip mood="think" size={110} />
           </View>
-          <Text style={[styles.small, { textAlign: 'center' }]}>{t('Any Thai bank app · up to 10 at once · slips are read, never kept')}</Text>
+          <Text style={[styles.small, { textAlign: 'center' }]}>{t('Any Thai bank app · up to 10 at once · never kept')}</Text>
         </ScrollView>
       )}
 
       {phase === 'review' && (
         <>
-          <ScrollView contentContainerStyle={{ padding: 18, gap: 10, paddingBottom: 120 + insets.bottom }}>
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: 120 + insets.bottom }}>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
               <Kip mood={problem ? 'careful' : 'happy'} size={44} />
               <Glass radius={20} style={{ flex: 1 }} innerStyle={styles.bub}>
@@ -234,7 +234,7 @@ export default function Slips() {
                                 ? 'Got it. **Tap the category to change it.**'
                                 : 'Read all {n}. **Tap a category to change it.**',
                           { n: slips.length, r: repeats, x: repeats + skipped },
-                          (s) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>,
+                          (s) => <Text style={{ fontFamily: fonts.medium }}>{s}</Text>,
                         ))}
                 </Text>
               </Glass>
@@ -249,11 +249,7 @@ export default function Slips() {
             {toSave.length > 0 && (
               <View style={styles.sum}>
                 <Text style={styles.small}>{inn > 0 ? t('Out {out} · in +{inn}', { out: baht(out), inn: baht(inn) }) : t('Out {out}', { out: baht(out) })}</Text>
-                {leftAfter !== null && (
-                  <Text style={styles.small}>
-                    {t('Left today after:')} <Text style={{ color: colors.ink, fontFamily: fonts.semibold }}>{baht(leftAfter)}</Text>
-                  </Text>
-                )}
+                {leftAfter !== null && <Text style={[styles.small, { color: colors.ink, fontFamily: fonts.medium }]}>{t('{amount} left today after', { amount: baht(leftAfter) })}</Text>}
               </View>
             )}
           </ScrollView>
@@ -355,7 +351,6 @@ function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
         <Text style={styles.small} numberOfLines={2}>
           {whenText(slip.at)}
           {isIn ? t(' · money in') : ''}
-          {slip.already ? t(' · saved before') : ''}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 6 }}>
@@ -381,7 +376,7 @@ function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
 
 const styles = themed(() =>
   StyleSheet.create({
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
     thumb: {
       width: '31%',
       aspectRatio: 0.58,
@@ -396,11 +391,11 @@ const styles = themed(() =>
     tick: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     big: { fontFamily: fonts.medium, fontSize: 22, letterSpacing: -0.4, color: colors.ink, textAlign: 'center' },
     sub: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center' },
-    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
-    bub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
+    bub: { paddingVertical: 12, paddingHorizontal: 16, borderTopLeftRadius: 6 },
     bubText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
     row: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-    mini: { width: 44, height: 60, borderRadius: 9, borderWidth: 1, borderColor: inkA(0.08), backgroundColor: colors.paper },
+    mini: { width: 44, height: 60, borderRadius: 8, borderWidth: 1, borderColor: inkA(0.08), backgroundColor: colors.paper },
     name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     amt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
     struck: { textDecorationLine: 'line-through', color: colors.muted },
@@ -410,22 +405,22 @@ const styles = themed(() =>
       gap: 4,
       height: 28,
       paddingLeft: 4,
-      paddingRight: 9,
+      paddingRight: 8,
       borderRadius: 999,
       backgroundColor: glassA(0.75),
       borderWidth: 1,
       borderColor: colors.paper,
     },
     catText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-    tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: inkA(0.07) },
-    tagText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
-    sum: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 2, gap: 10 },
-    foot: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingTop: 10 },
+    tag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: inkA(0.07) },
+    tagText: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
+    sum: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4, gap: 12 },
+    foot: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12 },
     dark: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     darkText: { fontFamily: fonts.medium, fontSize: 16, color: colors.paper },
     light: { height: 56, alignItems: 'center', justifyContent: 'center' },
     lightText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
-    catPick: { height: 42, paddingLeft: 6, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    catPick: { height: 44, paddingLeft: 4, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
   }),
 );
