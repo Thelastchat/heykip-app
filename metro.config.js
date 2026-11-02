@@ -18,9 +18,12 @@ const WEB = {
 const same = (a, b) => path.normalize(a).toLowerCase() === path.normalize(b).toLowerCase();
 const isShimFile = (f) => same(f, SHIM) || same(f, THAI_TEXT) || /[\\/]src[\\/]lib[\\/](rn\.ts|thaiText\.tsx)$/i.test(f);
 
+const REAL = '@real/react-native';
 const upstream = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const from = context.originModulePath;
+  // The shim files ask for the real thing by its own name, which is never redirected.
+  if (moduleName === REAL) return (upstream ?? context.resolveRequest)(context, 'react-native', platform);
   const ours = from.toLowerCase().startsWith(SRC.toLowerCase()) && !isShimFile(from);
   // Phones: `import { Text } from 'react-native'` → src/lib/rn.ts.
   if (ours && moduleName === 'react-native') return { type: 'sourceFile', filePath: SHIM };

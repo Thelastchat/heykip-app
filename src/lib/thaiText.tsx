@@ -3,7 +3,7 @@
 // signature font are left alone. The app's `react-native` imports point here through metro.config.js, so every
 // screen gets this without changing its imports.
 import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
-import { StyleSheet, Text as RNText, TextInput as RNTextInput, type TextStyle } from 'react-native';
+import { StyleSheet, Text as RNText, TextInput as RNTextInput, type TextStyle } from '@real/react-native';
 
 import { OnAccent } from '@/lib/accent';
 import { colors, fonts } from '@/theme';
