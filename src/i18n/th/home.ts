@@ -212,6 +212,23 @@ const th: Record<string, string> = {
   'Full · 3 months of basics': 'เต็มแล้ว · พอใช้ 3 เดือน',
   '{saved} of {amount}': '{saved} จาก {amount}',
   '{amount} saved for {goal}': 'เก็บ {amount} ให้ {goal} แล้ว',
+  // ---------- Edit goal (Nov 2026) ----------
+  'Edit goal': 'แก้เป้าหมาย',
+  'How much': 'เท่าไหร่',
+  'By when': 'ภายในเมื่อไหร่',
+  'Pick a date': 'เลือกวัน',
+  'That’s less than you’ve already saved ({amount}).': 'น้อยกว่าที่เก็บได้แล้ว ({amount})',
+  '{amount} more. Keep {date}, or keep saving the same each month?': 'เพิ่มขึ้น {amount} จะคงวันเดิม {date} หรือเก็บเท่าเดิมทุกเดือนดี?',
+  '{amount} less. Keep {date} and save less each month, or keep the same and get there sooner?': 'ลดลง {amount} จะคงวันเดิม {date} แล้วเก็บน้อยลง หรือเก็บเท่าเดิมแล้วถึงเร็วขึ้นดี?',
+  'Here’s your month with the new {goal}.': 'นี่คือเดือนของคุณกับ {goal} แบบใหม่',
+  'Keep {amount} a month': 'เก็บเท่าเดิม {amount} ต่อเดือน',
+  'Arrives {date}': 'ถึงเป้า {date}',
+  'Daily money': 'เงินใช้ต่อวัน',
+  'Nothing changes until you save': 'ยังไม่มีอะไรเปลี่ยนจนกว่าจะกดบันทึก',
+  'Why this goal matters to you': 'ทำไมเป้านี้ถึงสำคัญกับคุณ',
+  'Saved so far {amount} · that only changes with “Put money in”': 'เก็บได้แล้ว {amount} · เปลี่ยนได้ผ่าน “เติมเงิน” เท่านั้น',
+  'Save changes': 'บันทึกการเปลี่ยนแปลง',
+  'was {amount}': 'เดิม {amount}',
 };
 
 export default th;

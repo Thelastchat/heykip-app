@@ -5,7 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretRight, LockSimple, Plus } from 'phosphor-react-native';
+import { CaretRight, LockSimple, PencilSimple, Plus } from 'phosphor-react-native';
 
 import { PlusSheet } from '@/components/PlusSheet';
 import { plusPitch } from '@/components/plusPitch';
@@ -148,7 +148,7 @@ export default function Goals() {
             payday={month?.payday ?? null}
             icon={icon}
             onPut={() => setPutOpen(true)}
-            onEdit={() => router.push('/month')}
+            onEdit={() => router.push('/goal-edit')}
             isPlus={isPlus}
             autoOn={!!profile?.split_when_paid}
           />
@@ -301,7 +301,7 @@ function Hero({
   const type = typeInfo(goal.goalType, goal.kind as never);
   return (
     <Glass radius={28}>
-      <View style={styles.photo}>
+      <Squish onPress={onEdit} haptic={false} style={styles.photo} accessibilityRole="button" accessibilityLabel={t('Edit goal')}>
         {goal.photo ? (
           <Image source={{ uri: goal.photo, cacheKey: goal.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
@@ -329,7 +329,7 @@ function Hero({
             ) : null}
           </View>
         ) : null}
-      </View>
+      </Squish>
 
       <View style={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -357,8 +357,9 @@ function Hero({
             <Plus size={16} color={colors.paper} weight="bold" />
             <Text style={[styles.btnText, { color: colors.paper }]}>{t('Put money in')}</Text>
           </Squish>
-          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: inkA(0.07) }]} accessibilityRole="button" accessibilityLabel={t('Edit the plan')}>
-            <Text style={styles.btnText}>{t('Edit')}</Text>
+          <Squish onPress={onEdit} style={[styles.btn, { flex: 1, backgroundColor: inkA(0.07) }]} accessibilityRole="button" accessibilityLabel={t('Edit goal')}>
+            <PencilSimple size={16} color={colors.ink} />
+            <Text style={styles.btnText}>{t('Edit goal')}</Text>
           </Squish>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
