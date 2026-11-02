@@ -129,7 +129,7 @@ export default function Talk() {
   async function listen(l = lang) {
     if (!isPlus) return setLocked(true);
     if (!(await ai.ensure())) return;
-    if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap 🎤 on your keyboard.'));
+    if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap the mic on your keyboard.'));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setListening(true);
     const problem = await voice.start(l);
@@ -233,26 +233,24 @@ export default function Talk() {
         </Pressable>
         <Glass radius={999} innerStyle={styles.status}>
           <View style={[styles.dot, turns.some((x) => x.state === 'thinking') && { backgroundColor: colors.orange }]} />
-          <Text style={styles.statusText}>{turns.some((x) => x.state === 'thinking') ? t('Thinking…') : isPlus ? 'Kip · Plus' : t('Kip · Plus feature')}</Text>
+          <Text style={styles.statusText}>{turns.some((x) => x.state === 'thinking') ? t('Thinking…') : isPlus ? 'Kip' : t('Kip · Plus feature')}</Text>
         </Glass>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         ref={scroll}
-        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 20, gap: 14, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         {turns.length === 0 && (
-          <RiseIn style={{ alignItems: 'center', gap: 4, marginTop: 10 }}>
-            <Text style={styles.hey}>{first != null ? t('Hey {name}', { name: first }) : t('Hey there')}</Text>
+          <RiseIn style={{ alignItems: 'center', marginTop: 12 }}>
             <Text style={styles.h1}>{t('What did you spend today?')}</Text>
-            <View style={{ marginVertical: 18 }}>
-              <Kip mood="listen" size={170} />
+            <View style={{ marginVertical: 20 }}>
+              <Kip mood="listen" size={168} />
             </View>
-            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>
-              {t('Just type it like you’d text a friend — what you spent, money that came in, or “Can I buy…?”.')} {n ? t('You have {amount} left today.', { amount: baht(n.leftToday) }) : ''}
-            </Text>
+            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
+            {n && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
           </RiseIn>
         )}
 
@@ -287,7 +285,7 @@ export default function Talk() {
           showsHorizontalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           style={{ flexGrow: 0 }}
-          contentContainerStyle={{ paddingHorizontal: 18, gap: 7, paddingBottom: 10 }}>
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
           {suggestions().map((s) => (
             <Squish key={s} onPress={() => send(s)} accessibilityRole="button">
               <Glass radius={999} innerStyle={styles.sug}>
@@ -300,16 +298,16 @@ export default function Talk() {
 
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel={t('Talk to Kip out loud')}>
-          <Glass radius={25} innerStyle={styles.mic}>
+          <Glass radius={24} innerStyle={styles.mic}>
             <Microphone size={20} color={colors.ink} weight="bold" />
           </Glass>
         </Pressable>
-        <Glass radius={25} style={{ flex: 1 }} innerStyle={styles.inputWrap}>
+        <Glass radius={24} style={{ flex: 1 }} innerStyle={styles.inputWrap}>
           <TextInput
             value={text}
             onChangeText={setText}
             onFocus={() => !isPlus && setLocked(true)}
-            placeholder={isPlus ? t('Lunch 60, got paid 18,000… or “Can I buy…?”') : t('Talk to Kip is a Plus feature')}
+            placeholder={isPlus ? t('Lunch 60, or “Can I buy…?”') : t('Talk to Kip is a Plus feature')}
             placeholderTextColor={colors.faint}
             style={styles.input}
             onSubmitEditing={() => send()}
@@ -318,8 +316,8 @@ export default function Talk() {
             accessibilityLabel={t('Message Kip')}
           />
         </Glass>
-        <Squish onPress={() => send()} style={[styles.send, !text.trim() && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel={t('Send')}>
-          <ArrowUp size={20} color={colors.paper} weight="bold" />
+        <Squish onPress={() => send()} style={[styles.send, !text.trim() && styles.sendOff]} accessibilityRole="button" accessibilityLabel={t('Send')}>
+          <ArrowUp size={20} color={text.trim() ? colors.paper : colors.muted} weight="bold" />
         </Squish>
       </View>
 
@@ -418,15 +416,13 @@ function Answer({
     return (
       <>
         <KipLine text={reply.reply} />
-        <Glass radius={24} innerStyle={{ padding: 14, gap: 10 }}>
-          {turn.saved && <Text style={styles.cap}>{t('SAVED ✓')}</Text>}
+        <Glass radius={24} innerStyle={{ padding: 16, gap: 12 }}>
+          {turn.saved && <Text style={styles.cap}>{t('Saved')}</Text>}
           {ins.length > 0 && (
             <>
               <View style={styles.secRow}>
-                <Text style={styles.cap}>{t('MONEY IN')}</Text>
-                <View style={styles.inPill}>
-                  <Text style={styles.inPillText}>+{baht(inTotal)}</Text>
-                </View>
+                <Text style={styles.cap}>{t('Money in')}</Text>
+                <Text style={[styles.capNum, { color: colors.lavenderText }]}>+{baht(inTotal)}</Text>
               </View>
               {ins.map((it, i) => row(it, i, notes[i]))}
             </>
@@ -435,11 +431,8 @@ function Answer({
           {outs.length > 0 && (
             <>
               <View style={styles.secRow}>
-                <Text style={styles.cap}>{ins.length ? t('SPENT') : turn.saved ? t('SPENT') : t('KIP HEARD · TAP × TO REMOVE')}</Text>
-                <Text style={[styles.cap, { color: colors.ink }]}>
-                  {baht(outTotal)}
-                  {leftAfter !== null ? ` · ${t('{amount} left today', { amount: baht(leftAfter) })}` : ''}
-                </Text>
+                <Text style={styles.cap}>{ins.length || turn.saved ? t('Spent') : t('Kip heard')}</Text>
+                {leftAfter !== null && <Text style={styles.capNum}>{t('{amount} left today after', { amount: baht(leftAfter) })}</Text>}
               </View>
               {outs.map((it, i) => row(it, i, null))}
             </>
@@ -476,7 +469,7 @@ function Answer({
     return (
       <>
         <KipLine text={answer} mood={plan.fits ? 'happy' : 'careful'} />
-        <Glass radius={26} innerStyle={{ padding: 16, gap: 12 }}>
+        <Glass radius={24} innerStyle={{ padding: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Image source={ICON3D[dbCatIcon(it.category)]} style={{ width: 48, height: 48 }} contentFit="contain" />
             <View style={{ flex: 1 }}>
@@ -488,7 +481,7 @@ function Answer({
           {plan.fits && plan.moves.length > 0 && (
             <>
               <View style={{ height: 1, backgroundColor: inkA(0.07) }} />
-              <Text style={styles.cap}>{t('KIP’S PLAN')}</Text>
+              <Text style={styles.cap}>{t('Kip’s plan')}</Text>
               {plan.moves.map((m) => (
                 <View key={m.from} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Image source={ICON3D[CAT_ICON3D[m.from]]} style={{ width: 36, height: 36 }} contentFit="contain" />
@@ -505,7 +498,7 @@ function Answer({
           )}
         </Glass>
         {plan.fits && (
-          <Glass radius={22} tint="rgba(255,252,154,0.55)" innerStyle={{ padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Glass radius={24} tint={colors.lime} innerStyle={{ padding: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Image source={ICON3D[goal.icon]} style={{ width: 40, height: 40 }} contentFit="contain" />
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{goal.arrives ? t('{goal} stays on {when}', { goal: goal.name, when: goal.arrives }) : t('{goal} stays on track', { goal: goal.name })}</Text>
@@ -514,7 +507,7 @@ function Answer({
           </Glass>
         )}
         {turn.bought ? (
-          <Text style={[styles.sub, { textAlign: 'center' }]}>{plan.fits && plan.moves.length ? t('Bought ✓ — I’ve logged it and moved the money.') : t('Bought ✓ — I’ve logged it.')}</Text>
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{plan.fits && plan.moves.length ? t('Bought — I’ve logged it and moved the money.') : t('Bought — I’ve logged it.')}</Text>
         ) : turn.dismissed ? (
           <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Okay — no change. Good call checking first.')}</Text>
         ) : (
@@ -541,39 +534,39 @@ function Answer({
 const styles = themed(() =>
   StyleSheet.create({
     secRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    inPill: { backgroundColor: 'rgba(220,210,247,0.75)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
-    inPillText: { fontFamily: fonts.medium, fontSize: 12, color: '#5B4A96', fontVariant: ['tabular-nums'] }, // on the lavender pill: same in both looks
     hr: { height: 1, backgroundColor: inkA(0.07), marginVertical: 2 },
     goalBar: { height: 10, borderRadius: 5, backgroundColor: inkA(0.07), overflow: 'hidden' },
     goalBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 5 },
-    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 },
+    top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
     round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    status: { height: 34, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
+    status: { height: 32, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
     statusText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-    hey: { fontFamily: fonts.regular, fontSize: 15, color: colors.muted },
+    left: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 8, fontVariant: ['tabular-nums'] },
     h1: { fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -1, color: colors.ink, textAlign: 'center' },
     sub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted },
-    me: { alignSelf: 'flex-end', maxWidth: '80%', backgroundColor: colors.ink, borderRadius: 22, borderBottomRightRadius: 6, paddingVertical: 11, paddingHorizontal: 15 },
+    me: { alignSelf: 'flex-end', maxWidth: '80%', backgroundColor: colors.ink, borderRadius: 20, borderBottomRightRadius: 6, paddingVertical: 12, paddingHorizontal: 16 },
     meText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.paper },
-    kipBub: { paddingVertical: 11, paddingHorizontal: 14, borderTopLeftRadius: 6 },
+    kipBub: { paddingVertical: 12, paddingHorizontal: 16, borderTopLeftRadius: 6 },
     kipText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
-    cap: { fontFamily: fonts.medium, fontSize: 11, letterSpacing: 0.8, color: colors.muted },
+    cap: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    capNum: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, fontVariant: ['tabular-nums'] },
     itemName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     itemAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
     price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
     x: { width: 22, height: 22, borderRadius: 11, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
-    dark: { height: 52, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    dark: { height: 48, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     darkText: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
-    light: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    light: { height: 48, alignItems: 'center', justifyContent: 'center' },
     lightText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    sug: { height: 38, paddingHorizontal: 13, justifyContent: 'center' },
+    sug: { height: 36, paddingHorizontal: 12, justifyContent: 'center' },
     sugText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
-    bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, paddingTop: 6 },
-    mic: { width: 50, height: 50, alignItems: 'center', justifyContent: 'center' },
-    inputWrap: { height: 50, paddingHorizontal: 16, justifyContent: 'center' },
+    bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 8 },
+    mic: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+    inputWrap: { height: 48, paddingHorizontal: 16, justifyContent: 'center' },
     input: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
-    send: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    send: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    sendOff: { backgroundColor: inkA(0.08) },
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
     toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
   }),

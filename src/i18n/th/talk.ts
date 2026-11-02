@@ -197,6 +197,14 @@ const th: Record<string, string> = {
   'Send my code': 'ส่งรหัสให้หน่อย',
   'Sign in': 'ล็อกอิน',
   'Use a different email': 'ใช้อีเมลอื่น',
+  // ---------- Talk polish (Nov 2026) ----------
+  'Talking out loud works in the HeyKip app build. For now, tap the mic on your keyboard.': 'พูดกับ Kip ได้ในแอป HeyKip ตัวจริงนะ ตอนนี้กดไมค์บนคีย์บอร์ดไปก่อน',
+  'Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”': 'พิมพ์มาเหมือนแชทกับเพื่อนได้เลย: ใช้อะไรไป มีเงินเข้า หรือ “ซื้อ … ไหวมั้ย?”',
+  'Lunch 60, or “Can I buy…?”': 'ข้าวเที่ยง 60 หรือ “ซื้อ … ไหวมั้ย?”',
+  'Kip heard': 'Kip ได้ยินแบบนี้',
+  '{amount} left today after': 'หลังจากนี้วันนี้เหลือ {amount}',
+  'Bought — I’ve logged it and moved the money.': 'ซื้อแล้ว — Kip จดให้และย้ายเงินให้แล้ว',
+  'Bought — I’ve logged it.': 'ซื้อแล้ว — Kip จดให้แล้ว',
 };
 
 export default th;
