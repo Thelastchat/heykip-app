@@ -18,6 +18,7 @@ export {
   StyleSheet,
   Switch,
   View,
+  useColorScheme,
   useWindowDimensions,
 } from '@real/react-native';
 export type { ImageSourcePropType, PressableProps, StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from '@real/react-native';
