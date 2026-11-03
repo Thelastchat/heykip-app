@@ -228,6 +228,21 @@ export function plan(i: Inputs, style: Style, goalPerMonth?: number | null): Res
     goal = Math.max(0, goal + fun);
     fun = 0;
   }
+  // Never plan money that isn't there: when rent, bills and living leave less than the usual safety-net amount,
+  // giving, learning and the safety net shrink to what's actually left (living costs stay realistic).
+  let over = fixed + L + goal + net + invest + learn + give + fun - i.income;
+  if (over > 0) {
+    const g = Math.min(give, over);
+    give -= g;
+    over -= g;
+    const l = Math.min(learn, over);
+    learn -= l;
+    over -= l;
+    const v = Math.min(invest, over);
+    invest -= v;
+    over -= v;
+    net -= Math.min(net, over);
+  }
   fun = r10(fun);
 
   const goalMonths = i.goal.type === 'monthly' ? null : goal > 0 ? Math.ceil(need / goal) : null;

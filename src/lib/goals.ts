@@ -7,7 +7,7 @@
 // · The timeline simulates payday by payday, so "Phone first" shows the real dates for both goals.
 import { funMinimum, livingFor, livingTotal, safetyNet } from '@/lib/brain';
 import { addBill, keepOnReplan, monthFrom, type MonthBudget } from '@/lib/budget';
-import { isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
+import { dayInMonth, isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
 
 export type GoalLite = { id: string; kind: string; target: number; saved: number; due: string | null; monthly: number | null };
 export const MAX_GOALS = 3;
@@ -58,7 +58,7 @@ export function arrivals(goals: GoalLite[], amounts: Map<string, number>, payday
   const left = new Map(goals.map((g) => [g.id, isMonthly(g) ? Infinity : Math.max(0, g.target - g.saved)]));
   const per = new Map(goals.map((g) => [g.id, amounts.get(g.id) ?? 0]));
   const out = new Map<string, Date | null>(goals.map((g) => [g.id, null]));
-  const at = (k: number) => new Date(now.getFullYear(), now.getMonth() + k, payday ?? 1);
+  const at = (k: number) => dayInMonth(now.getFullYear(), now.getMonth() + k, payday ?? 1);
   for (const g of goals) if (!isMonthly(g) && (left.get(g.id) ?? 0) <= 0) out.set(g.id, now);
   for (let k = 1; k <= 120; k++) {
     let freed = 0;

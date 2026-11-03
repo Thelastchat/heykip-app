@@ -44,7 +44,8 @@ export function isoDay(d: Date): string {
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /** The given day of a month, pulled back to the month's last day when needed (31st in February → 28th). */
-function dayInMonth(year: number, month: number, day: number) {
+/** That day in that month — the 31st becomes the 30th (or 28th) in a shorter month, never the 1st of the next. */
+export function dayInMonth(year: number, month: number, day: number) {
   const last = new Date(year, month + 1, 0).getDate();
   return new Date(year, month, Math.min(day, last));
 }

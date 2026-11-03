@@ -5,7 +5,7 @@ import { safetyNet } from '@/lib/brain';
 import { addBill, keepOnReplan, monthFrom, type MonthBudget } from '@/lib/budget';
 import { monthNumbers, type HomeGoal, type Spent } from '@/lib/home';
 import { arrivesWith } from '@/lib/replan';
-import { isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
+import { dayInMonth, isoDay, monthsUntil, parseDay } from '@/lib/setup/plan';
 
 export type GoalDraft = { title: string; target: number | null; due: string | null; monthly: number | null };
 export type Keep = 'date' | 'monthly';
@@ -46,7 +46,7 @@ export function replanGoal(m: MonthBudget, g: HomeGoal, d: GoalDraft, keep: Keep
     // Same amount each month: the date moves to whenever that amount gets there.
     goalPerMonth = perNow;
     const months = Math.ceil(Math.max(0, (d.target ?? 0) - g.saved) / perNow);
-    due = isoDay(new Date(now.getFullYear(), now.getMonth() + months, m.payday ?? 1));
+    due = isoDay(dayInMonth(now.getFullYear(), now.getMonth() + months, m.payday ?? 1));
     goal = { ...goal, target: d.target ?? 0, months: null };
   } else {
     // Same date (or a new one): Kip works out the monthly amount, the way Setup does.

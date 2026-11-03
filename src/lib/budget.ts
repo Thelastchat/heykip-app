@@ -305,7 +305,9 @@ export function removeBill(m: MonthBudget, index: number): MonthBudget {
   const items = [...(m.bills.items ?? [])];
   const [bill] = items.splice(index, 1);
   if (!bill) return m;
-  return { ...m, bills: { ...m.bills, items }, goalExtra: m.goalExtra + bill.amount };
+  // A bill bigger than everything it could take from left the month short; only the money it really took comes back.
+  const short = Math.max(0, billsTotal(m) + savingTotal(m) + spendingTotal(m) - m.income);
+  return { ...m, bills: { ...m.bills, items }, goalExtra: m.goalExtra + bill.amount - Math.min(bill.amount, short) };
 }
 
 /** A budget went up: take a little from each other category, in proportion. Never from bills, the goal or the safety net. */

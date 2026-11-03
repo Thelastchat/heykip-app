@@ -23,7 +23,7 @@ import { useHome, type HomeGoal } from '@/lib/home';
 import { goalIcon3D, goalTypeIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
+import { dayInMonth, monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
 
@@ -55,7 +55,7 @@ function arrives(left: number, perMonth: number, payday: number | null, now = ne
   if (left <= 0) return t('Goal reached');
   if (perMonth <= 0) return t('When there’s room');
   const months = Math.ceil(left / perMonth);
-  const d = new Date(now.getFullYear(), now.getMonth() + months, payday ?? 1);
+  const d = dayInMonth(now.getFullYear(), now.getMonth() + months, payday ?? 1);
   return monthYear(d);
 }
 

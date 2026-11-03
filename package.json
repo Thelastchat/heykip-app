@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "esbuild": "^0.24.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -58,7 +59,8 @@
     "lint": "expo lint",
     "web:skia": "setup-skia-web public",
     "check:plans": "npx tsx scripts/check-plans.ts",
-    "check:rn": "node scripts/check-rn.js"
+    "check:rn": "node scripts/check-rn.js",
+    "test:logic": "tsx scripts/check-plans.ts && node tests/bundle.cjs tests/logic.test.ts"
   },
   "private": true
 }
