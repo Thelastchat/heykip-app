@@ -6,7 +6,7 @@ import { addBill, billsTotal, lowerBudget, monthFrom, raiseBudget, removeBill, s
 import { arrivals, assess, funRoom, goalTotal, planNew, replanOne, splitOf, withoutGoal, type GoalLite } from '../src/lib/goals';
 import { replanGoal } from '../src/lib/goalEdit';
 import { monthNumbers, overCover, period, periodAt, streakOf, type Spent } from '../src/lib/home';
-import { checkParts, paydayShares, savingThisCycle, splitIn } from '../src/lib/moneyin';
+import { checkParts, paydayMoves, paydayShares, savingThisCycle, splitIn } from '../src/lib/moneyin';
 import { replan } from '../src/lib/replan';
 import { isoDay } from '../src/lib/setup/plan';
 
@@ -193,6 +193,19 @@ for (let n = 0; n < 3000; n++) {
   const amount = int(0, goalTotal(m) * 2);
   const sh = paydayShares(mm, goals, amount);
   check('Payday: each goal’s share adds up to what moved', sh.reduce((a, [, v]) => a + v, 0) === amount && sh.every(([, v]) => v >= 0), () => ({ sh, amount }));
+
+  // Payday never over-fills a goal; nothing is lost.
+  const gs = goals.map((x) => ({ ...x, saved: pick([0, x.target, Math.max(0, x.target - r100(0, 3000))]) }));
+  const pm = paydayMoves(mm, gs, sc);
+  check('Payday: goals + safety net get exactly the month’s saving', pm.goals.reduce((a, [, v]) => a + v, 0) + pm.safety === sc.goal + sc.safety, () => ({ pm, sc }));
+  check(
+    'Payday: a goal never gets more than it still needs',
+    pm.goals.every(([id, v]) => {
+      const g = gs.find((x) => x.id === id)!;
+      return g.kind === 'monthly' || v <= g.target - g.saved;
+    }),
+    () => ({ pm, gs }),
+  );
 
   const usual = r100(9000, 60000),
     before = pick([0, 0, r100(0, usual)]);

@@ -75,6 +75,9 @@ export default function Home() {
   const goalDate = goal?.due ? parseDay(goal.due) : null;
   const fast = spent.total > 0 && pace > 0;
   const isTodaySelected = selectedDay === now.toDateString();
+  // Kip's card: on small phones Kip gets smaller and the words keep clear of him (card padding 20, Kip at right 12).
+  const kipSize = width < 360 ? 80 : 104;
+  const sayWidth = Math.min(192, width - 40 - 20 - 12 - kipSize - 8);
   const dailyPlan = P.total ? spendBudget / P.total : 0;
   const showOverToday = isTodaySelected && overToday > 0;
 
@@ -337,10 +340,10 @@ export default function Home() {
           <Glass radius={28}>
             <View style={{ padding: 20, minHeight: 176 }}>
               <View style={styles.kip} pointerEvents="none">
-                <Kip mood={kipMood} size={104} />
+                <Kip mood={kipMood} size={kipSize} />
               </View>
               <Text style={styles.kipName}>Kip</Text>
-              <Text style={styles.say}>{say}</Text>
+              <Text style={[styles.say, { maxWidth: sayWidth }]}>{say}</Text>
               <View style={styles.two}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.twoK}>{t('Spent today')}</Text>

@@ -22,7 +22,14 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
   if (Platform.OS === 'web') {
     return (
       <SmallTile label={label} style={style}>
-        <TextInput value={value ?? ''} onChangeText={(t) => /^\d{4}-\d{2}-\d{2}$/.test(t) && onChange(t)} placeholder="2026-12-19" placeholderTextColor={colors.faint} style={smallValueStyle()} />
+        <TextInput
+          value={value ?? ''}
+          onChangeText={(t) => /^\d{4}-\d{2}-\d{2}$/.test(t) && onChange(t)}
+          placeholder="2026-12-19"
+          placeholderTextColor={colors.faint}
+          style={smallValueStyle()}
+          accessibilityLabel={label}
+        />
       </SmallTile>
     );
   }

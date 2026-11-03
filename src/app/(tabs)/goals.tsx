@@ -474,13 +474,17 @@ function Hero({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
           <Image source={ICON3D.income} style={{ width: 28, height: 28 }} contentFit="contain" />
           <Text style={[styles.sub, { flex: 1 }]}>
-            {isPlus && autoOn
-              ? payday
-                ? t('{amount} moves in by itself on the {day}.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
-                : t('{amount} moves in by itself on payday.', { amount: baht(perMonth) })
-              : payday
-                ? t('{amount} goes in on the {day} — Kip reminds you that morning.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
-                : t('{amount} goes in on payday — Kip reminds you that morning.', { amount: baht(perMonth) })}
+            {!monthly && left <= 0
+              ? t('You made it. Pin your next goal when you’re ready.')
+              : perMonth <= 0
+                ? t('Nothing goes in each month yet. Every day you spend under budget can go here.')
+                : isPlus && autoOn
+                  ? payday
+                    ? t('{amount} moves in by itself on the {day}.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
+                    : t('{amount} moves in by itself on payday.', { amount: baht(perMonth) })
+                  : payday
+                    ? t('{amount} goes in on the {day} — Kip reminds you that morning.', { amount: baht(perMonth), day: ordinal(payday), n: payday })
+                    : t('{amount} goes in on payday — Kip reminds you that morning.', { amount: baht(perMonth) })}
           </Text>
         </View>
       </View>

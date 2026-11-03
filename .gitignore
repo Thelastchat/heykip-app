@@ -44,3 +44,4 @@ example
 
 # Skia web runtime (copied by `npm run web:skia`)
 public/canvaskit.wasm
+tests/e2e/out/

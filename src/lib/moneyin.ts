@@ -127,6 +127,23 @@ export function paydayShares(month: MonthBudget, goals: GoalLite[], amount: numb
   return out;
 }
 
+/** Payday, worked out: each goal gets its share but never more than it still needs — anything beyond that
+ * (a goal that's reached, or one ฿200 from done) goes to the safety net instead of piling up in a finished goal. */
+export function paydayMoves(month: MonthBudget, goals: GoalLite[], s: { goal: number; safety: number }): { goals: [string, number][]; safety: number } {
+  if (month.goal.isSafetyNet) return { goals: [], safety: s.goal + s.safety };
+  let safety = s.safety;
+  const out: [string, number][] = [];
+  for (const [id, amount] of goals.length && s.goal > 0 ? paydayShares(month, goals, s.goal) : []) {
+    const g = goals.find((x) => x.id === id);
+    const room = !g || g.kind === 'monthly' || g.target <= 0 ? amount : Math.max(0, g.target - g.saved);
+    const put = Math.min(amount, room);
+    if (put > 0) out.push([id, put]);
+    safety += amount - put;
+  }
+  if (!goals.length) safety += s.goal;
+  return { goals: out, safety };
+}
+
 /** Is the safety net full? */
 export const safetyFull = (month: MonthBudget | null, saved: number) => !!month && !month.goal.isSafetyNet && month.safety.target > 0 && saved >= month.safety.target;
 
@@ -142,20 +159,18 @@ export async function moveSaving(
 ): Promise<{ month: MonthBudget; goal: number; safety: number } | { error: string }> {
   if (savingMoved(month, now)) return { month, goal: 0, safety: 0 };
   const s = savingThisCycle(month, safetySaved, now);
-  if (goals.length && s.goal > 0 && !month.goal.isSafetyNet) {
-    // Each goal gets its share (More goals); anything extra or taken back to cover a day lands on the first goal.
-    for (const [id, amount] of paydayShares(month, goals, s.goal)) {
-      if (amount <= 0) continue;
-      const { error } = await supabase.rpc('put_in_goal', { p_goal: id, p_amount: amount, p_source: 'payday' });
-      if (error) return { error: error.message };
-    }
+  // Each goal gets its share (More goals), never more than it still needs; the rest goes to the safety net.
+  const plan = paydayMoves(month, goals, s);
+  for (const [id, amount] of plan.goals) {
+    const { error } = await supabase.rpc('put_in_goal', { p_goal: id, p_amount: amount, p_source: 'payday' });
+    if (error) return { error: error.message };
   }
-  const safety = month.goal.isSafetyNet ? s.goal + s.safety : s.safety;
+  const safety = plan.safety;
   if (safety > 0) {
     const { error } = await supabase.rpc('put_in_safety', { p_amount: safety, p_kind: 'payday' });
     if (error) return { error: error.message };
   }
-  return { month: { ...month, payMoved: periodKey(month.payday, now) }, goal: month.goal.isSafetyNet ? 0 : s.goal, safety };
+  return { month: { ...month, payMoved: periodKey(month.payday, now) }, goal: plan.goals.reduce((a, [, v]) => a + v, 0), safety };
 }
 
 // ---------- covering a day that ran over ----------
