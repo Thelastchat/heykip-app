@@ -69,6 +69,15 @@ for (let n = 0; n < 3000; n++) {
         () => ({ i, s, spend: m.spend }),
       );
     }
+    // Switching style keeps the bills you added (Netflix, gym…).
+    const withBill = addBill(m, 'Netflix', 419).month;
+    const switched = withStyle(withBill, pick(STYLES));
+    check(
+      'Style switch: bills you added stay',
+      (switched.bills.items ?? []).some((b) => b.name === 'Netflix' && b.amount === 419),
+      () => ({ s, items: switched.bills.items }),
+    );
+    check('Style switch: every baht still has a job', near(jobs(switched), m.income) || !near(jobs(withBill), m.income), () => ({ s, jobs: jobs(switched), income: m.income }));
     // Switching style and back gives the same plan (nothing drifts).
     const back = withStyle(withStyle(m, pick(STYLES)), s);
     check('Style switch: switching away and back gives the same plan', JSON.stringify(back.spend) === JSON.stringify(m.spend) && back.goal.amount === m.goal.amount, () => ({ i, s }));

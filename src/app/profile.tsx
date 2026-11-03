@@ -232,7 +232,7 @@ export default function Profile() {
               value={month ? baht(billsTotal(month)) : '—'}
               onPress={() => month && basics && setOpen('rent')}
             />
-            <SetRow icon="piggy" title={t('Money style')} sub={t('How your month is split')} value={styleName} soft onPress={() => router.push('/month')} />
+            <SetRow icon="piggy" title={t('Money style')} sub={t('How your month is split')} value={styleName} soft onPress={() => router.push('/styles')} />
           </Glass>
         </RiseIn>
         <Text style={styles.note}>{t('Change one and Kip re-plans your month — you’ll see the new numbers first.')}</Text>

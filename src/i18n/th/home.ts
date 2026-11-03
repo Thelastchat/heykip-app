@@ -292,6 +292,8 @@ const th: Record<string, string> = {
   'Change {cat} budget': 'ปรับงบ{cat}',
   'You made it. Pin your next goal when you’re ready.': 'ทำได้แล้ว อยากตั้งเป้าหมายใหม่เมื่อไหร่ก็ปักหมุดได้เลย',
   'Nothing goes in each month yet. Every day you spend under budget can go here.': 'ตอนนี้ยังไม่มีเงินเข้าทุกเดือน วันไหนใช้น้อยกว่างบ ส่วนที่เหลือเอามาใส่ตรงนี้ได้',
+  'Keep {name}': 'ใช้{name}ต่อ',
+  'Switch to {name}': 'เปลี่ยนเป็น{name}',
 };
 
 export default th;

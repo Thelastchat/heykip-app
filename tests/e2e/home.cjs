@@ -296,4 +296,35 @@ module.exports = async function homeTests(browser) {
     }
     await page.close();
   });
+
+  scenario('Plus · Money styles: switch to Save first');
+  await safely(async () => {
+    const { db } = person({ plan: 'trial' });
+    db.profiles[0].budget.bills.items = [{ name: 'Netflix', amount: 419 }];
+    db.profiles[0].budget.bills.guess -= 419;
+    const page = await open(browser, { db });
+    await tap(page, visible(page.getByRole('button', { name: /^Money styles/ })), { wait: 2000 }).catch(() => go(page, '/styles'));
+    if (!page.url().includes('/styles')) await go(page, '/styles');
+    await sane(page, 'Money styles');
+    const row = visible(page.getByRole('radio', { name: /^Save first:/ }));
+    const promised = ((await row.getAttribute('aria-label')) || '').match(/: ([A-Z][a-z]{2} \d{4}),/)?.[1];
+    await tap(page, row, { wait: 1200 });
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^Switch to Save first$/ })), { wait: 2500 });
+    const m = db.profiles[0].budget;
+    await check(page, 'Money styles: the month is now Save first', m.style === 'savefirst', () => m.style);
+    await check(
+      page,
+      'Money styles: Netflix is still a bill',
+      (m.bills.items ?? []).some((b) => b.name === 'Netflix'),
+      () => m.bills,
+    );
+    await check(page, 'Money styles: every baht has a job', Math.abs(jobs(m) - m.income) <= 10, () => ({ jobs: jobs(m), income: m.income }));
+    await go(page, '/goals');
+    const goals = await sane(page, 'Goals after switching');
+    await check(page, `Goals shows the date the picker promised (${promised})`, !!promised && goals.includes(promised), () => ({ promised, goals: goals.slice(0, 300) }));
+    await go(page, '/');
+    const home = await sane(page, 'Home after switching');
+    await check(page, `Home: left this month is the new spending money (${fmt(X.spendingTotal(m))})`, home.includes(fmt(X.spendingTotal(m))), () => home.slice(0, 200));
+    await page.close();
+  });
 };

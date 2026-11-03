@@ -166,7 +166,8 @@ export default function Home() {
     unlocked(f);
   }
   async function unlocked(f: PlusFeature) {
-    if (f === 'styles' || f === 'customize') return router.push('/month');
+    if (f === 'styles') return router.push('/styles');
+    if (f === 'customize') return router.push('/month');
     if (f === 'talk') return router.push('/talk');
     if (f === 'goals') return router.push(goals.length < MAX_GOALS ? '/goal-new' : '/goals');
     if (f === 'automove' && session) {

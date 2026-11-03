@@ -53,6 +53,7 @@ function RootStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="month" />
+        <Stack.Screen name="styles" />
         <Stack.Screen name="kip-moods" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
         <Stack.Screen name="slips" options={{ presentation: 'modal' }} />

@@ -211,11 +211,14 @@ export function monthFrom(inputs: Inputs, style: BudgetStyle, goalPerMonth: numb
   };
 }
 
-/** Switch money style: re-plan from the same numbers. */
-export const withStyle = (m: MonthBudget, style: BudgetStyle): MonthBudget => ({
-  ...monthFrom(m.inputs, style, m.goalPerMonth, m.payday, m.safety.target),
-  ...keepOnReplan(m),
-});
+/** Switch money style: re-plan from the same numbers, keeping the bills you added (Netflix, gym…) and what this
+ *  month already has (bills marked paid, the payday move, the goal split). A new style starts from Kip's amount for
+ *  the goal unless `goalPerMonth` says otherwise. */
+export function withStyle(m: MonthBudget, style: BudgetStyle, goalPerMonth: number | null = m.goalPerMonth): MonthBudget {
+  let next = monthFrom(m.inputs, style, goalPerMonth, m.payday, m.safety.target);
+  for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
+  return { ...next, ...keepOnReplan(m) };
+}
 
 /** What any re-plan keeps: the "always" choice, bills marked paid, this cycle's payday move, covers, the goal split. */
 export const keepOnReplan = (m: MonthBudget) => ({

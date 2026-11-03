@@ -3,7 +3,7 @@
 const { check, scenario, open, go, sane } = require('./kit.cjs');
 const { person } = require('./seed.cjs');
 
-const ROUTES = ['/', '/goals', '/add', '/history', '/month', '/profile', '/safety', '/slips', '/talk', '/privacy', '/privacy-policy', '/kip-moods', '/goal-edit?id=g1', '/goal-new'];
+const ROUTES = ['/', '/goals', '/add', '/history', '/month', '/profile', '/safety', '/slips', '/talk', '/privacy', '/privacy-policy', '/kip-moods', '/goal-edit?id=g1', '/goal-new', '/styles'];
 const days = (n) => n;
 
 const PEOPLE = {

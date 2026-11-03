@@ -16,23 +16,7 @@ import { RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillGlyph, glyphFor } from '@/components/home/BillStack';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
-import {
-  CATEGORY,
-  STYLES,
-  billsTotal,
-  dailyOf,
-  addBill,
-  lowerBudget,
-  removeBill,
-  raiseBudget,
-  savingTotal,
-  spendingTotal,
-  takePlan,
-  withStyle,
-  type CatKey,
-  type FreedTo,
-  type MonthBudget,
-} from '@/lib/budget';
+import { CATEGORY, STYLES, billsTotal, dailyOf, addBill, lowerBudget, removeBill, raiseBudget, savingTotal, spendingTotal, takePlan, type CatKey, type FreedTo, type MonthBudget } from '@/lib/budget';
 import { t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -50,7 +34,7 @@ function period(payday: number | null, now = new Date()) {
   return [start, new Date(next.getFullYear(), next.getMonth(), next.getDate() - 1)] as const;
 }
 
-type Sheet = null | { stage: 'addBill' } | { stage: 'style' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
+type Sheet = null | { stage: 'addBill' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
 
 export function MonthScreen({
   month,
@@ -113,10 +97,7 @@ export function MonthScreen({
           <ScreenHeader
             title={t('Your month')}
             right={
-              <Squish
-                onPress={() => (isPlus ? setSheet({ stage: 'style' }) : onLocked?.('styles'))}
-                accessibilityRole="button"
-                accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
+              <Squish onPress={() => (isPlus ? router.push('/styles') : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
                 <Glass radius={999} innerStyle={styles.stylePill}>
                   <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>{style.name}</Text>
                   {isPlus ? <CaretDown size={11} color={colors.ink} weight="bold" /> : <MiniLock />}
@@ -262,15 +243,6 @@ export function MonthScreen({
         <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       </View>
       <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>
-        {sheet?.stage === 'style' && (
-          <StylePicker
-            current={month.style}
-            onPick={(k) => {
-              save(withStyle(month, k));
-              setSheet(null);
-            }}
-          />
-        )}
         {sheet?.stage === 'addBill' && (
           <AddBill
             month={month}
@@ -457,19 +429,6 @@ function SheetTitle({ mood, title, sub }: { mood: 'happy' | 'think' | 'idle'; ti
         <Text style={{ fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.muted }}>{sub}</Text>
       </View>
     </View>
-  );
-}
-
-function StylePicker({ current, onPick }: { current: MonthBudget['style']; onPick: (k: MonthBudget['style']) => void }) {
-  return (
-    <>
-      <SheetTitle mood="idle" title={t('Money style')} sub={t('Your goal, safety net and bills stay the same. This only changes how spending is split.')} />
-      <View style={{ gap: 8 }}>
-        {STYLES.map((s) => (
-          <Option key={s.key} title={s.name} sub={s.desc} color={s.tagColor} on={s.key === current} tag={s.key === 'kip' ? t('Recommended') : undefined} onPress={() => onPick(s.key)} />
-        ))}
-      </View>
-    </>
   );
 }
 
