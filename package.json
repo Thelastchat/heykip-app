@@ -60,7 +60,9 @@
     "web:skia": "setup-skia-web public",
     "check:plans": "npx tsx scripts/check-plans.ts",
     "check:rn": "node scripts/check-rn.js",
-    "test:logic": "tsx scripts/check-plans.ts && node tests/bundle.cjs tests/logic.test.ts"
+    "test:logic": "tsx scripts/check-plans.ts && node tests/bundle.cjs tests/logic.test.ts",
+    "test:e2e": "node tests/e2e/run.cjs",
+    "test": "npm run test:logic && npm run test:e2e"
   },
   "private": true
 }

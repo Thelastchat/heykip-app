@@ -27,7 +27,10 @@ const scenario = (name) => {
 
 /** A fresh phone: chosen look and language, signed in or not, with this database behind it. */
 async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signedIn = true, path: p = '/', width = 390 } = {}) {
-  const page = await browser.newPage({ viewport: { width, height: 844 }, deviceScaleFactor: 1 });
+  // Each test is its own phone: a private browser context, so storage never leaks between tests.
+  const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  page.on('close', () => ctx.close().catch(() => {}));
   // “No handler for tag”: the gesture library on the web, when a swiped row is removed — doesn't happen on phones.
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));

@@ -177,7 +177,8 @@ module.exports = async function setupTests(browser) {
       nums: nums.slice(0, 6),
     }));
     await check(page, `Home: left this month is ฿${spend.toLocaleString('en-US')}`, home.includes(spend.toLocaleString('en-US')), () => home.slice(0, 300));
-    homes.push({ name: s.name, db, page });
+    homes.push({ name: s.name, db });
+    await page.close();
   }
   return homes;
 };
