@@ -1,6 +1,7 @@
 // Thai text in IBM Plex Sans Thai. Geist has no Thai letters, so any Text (or TextInput) whose words contain Thai
-// gets the Plex Thai weight that matches its Geist weight. English stays in Geist; Caveat (handwriting) and the
-// signature font are left alone. The app's `react-native` imports point here through metro.config.js, so every
+// gets the Plex Thai weight that matches its Geist weight. English stays in Geist. Caveat (handwriting) has no Thai
+// either, so Thai handwriting gets Sriracha, a marker-pen font, a little smaller to match Caveat's size. The
+// signature font is left alone. The app's `react-native` imports point here through metro.config.js, so every
 // screen gets this without changing its imports.
 import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
 import { StyleSheet, Text as RNText, TextInput as RNTextInput, type TextStyle } from '@real/react-native';
@@ -15,7 +16,16 @@ const TO_THAI: Record<string, string> = {
   [fonts.medium]: fonts.thaiMedium,
   [fonts.semibold]: fonts.thaiSemibold,
   [fonts.bold]: fonts.thaiBold,
+  [fonts.hand]: fonts.handThai,
 };
+
+/** Sriracha draws bigger than Caveat at the same size; this brings it back in line. */
+const HAND_SCALE = 0.85;
+function handSize(flat: TextStyle | undefined): TextStyle | null {
+  if (flat?.fontFamily !== fonts.hand) return null;
+  const size = Math.round((flat.fontSize ?? 14) * HAND_SCALE);
+  return { fontSize: size, ...(flat.lineHeight !== undefined ? { lineHeight: Math.max(Math.round(flat.lineHeight * HAND_SCALE), Math.ceil(size * 1.5)) } : null) };
+}
 
 /** The font a nested Text inherits from the Text around it. */
 const Inherited = createContext<string | undefined>(undefined);
@@ -54,7 +64,8 @@ export function Text(props: ComponentProps<typeof RNText>) {
   // On lime / pastel / photo surfaces the text stays dark, in Light and in Dark.
   const c = flat?.color;
   const accentColor = accent && (c === undefined || c === colors.ink || c === colors.muted) ? (c === colors.muted ? colors.onAccentMuted : colors.onAccent) : undefined;
-  const room = thai ? thaiRoom(flat) : null;
+  const hand = thai ? handSize(flat) : null;
+  const room = thai ? (hand ?? thaiRoom(flat)) : null;
   const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
   return (
     <Inherited.Provider value={family}>
@@ -67,5 +78,6 @@ export function TextInput(props: ComponentProps<typeof RNTextInput>) {
   const thai = THAI.test(props.value ?? props.defaultValue ?? '') || (!props.value && THAI.test(props.placeholder ?? ''));
   if (!thai) return <RNTextInput {...props} />;
   const own = (StyleSheet.flatten(props.style) as TextStyle | undefined)?.fontFamily;
-  return <RNTextInput {...props} style={[props.style, { fontFamily: thaiFor(own) }]} />;
+  const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
+  return <RNTextInput {...props} style={[props.style, { fontFamily: thaiFor(own) }, handSize(flat)]} />;
 }

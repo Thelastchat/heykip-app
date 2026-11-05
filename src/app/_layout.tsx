@@ -1,6 +1,7 @@
 import { Caveat_600SemiBold } from '@expo-google-fonts/caveat';
 import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold, useFonts } from '@expo-google-fonts/geist';
 import { MrsSaintDelafield_400Regular } from '@expo-google-fonts/mrs-saint-delafield';
+import { Sriracha_400Regular } from '@expo-google-fonts/sriracha';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
@@ -62,6 +63,7 @@ function RootStack() {
         <Stack.Screen name="goal-new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="history" />
+        <Stack.Screen name="calendar" />
         <Stack.Screen name="safety" />
         <Stack.Screen name="talk" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>
@@ -80,6 +82,7 @@ export default function RootLayout() {
     'IBMPlexSansThai-SemiBold': require('../../assets/fonts/IBMPlexSansThai-SemiBold.ttf'),
     'IBMPlexSansThai-Bold': require('../../assets/fonts/IBMPlexSansThai-Bold.ttf'),
     Caveat_600SemiBold,
+    Sriracha_400Regular,
     MrsSaintDelafield_400Regular,
   });
 

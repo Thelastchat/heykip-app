@@ -128,6 +128,7 @@ export const fonts = {
   thaiSemibold: 'IBMPlexSansThai-SemiBold',
   thaiBold: 'IBMPlexSansThai-Bold',
   hand: 'Caveat_600SemiBold',
+  handThai: 'Sriracha_400Regular', // Caveat has no Thai letters: Thai handwriting switches to this marker-pen font
   signature: 'MrsSaintDelafield_400Regular',
 } as const;
 

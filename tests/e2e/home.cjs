@@ -388,4 +388,51 @@ module.exports = async function homeTests(browser) {
     );
     await page.close();
   });
+
+  scenario('Full calendar · this month, a month back, the one-year limit');
+  await safely(async () => {
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const ago = (n) => new Date(Date.now() - n * 86400000);
+    const { db } = person({ spends: [['food', 120, 0, 'Bubble tea'], ['food', 2000, 40, 'Big dinner'], ['home_bills', 7000, 40, 'Rent'], ['transport', 90, 400, 'Old Grab']] });
+    const page = await open(browser, { db });
+    await sane(page, 'Home');
+    await tap(page, visible(page.getByRole('button', { name: 'Full calendar' })), { wait: 2000 });
+    const now = new Date();
+    const cal = await sane(page, 'Full calendar');
+    await check(page, `Opens on this month (${MONTHS[now.getMonth()]} ${now.getFullYear()})`, cal.includes(`${MONTHS[now.getMonth()]} ${now.getFullYear()}`), () => cal.slice(0, 300));
+    const todayCell = page.getByRole('button', { name: new RegExp(`^[A-Z][a-z]{2} ${now.getDate()}, spent 120$`) });
+    await check(page, 'Today shows the ฿120 spent', (await todayCell.count()) === 1, () => cal.slice(0, 600));
+    await check(page, 'This month’s spends are listed for today', cal.includes('Bubble tea'), () => cal.slice(-500));
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const cells = await page.getByRole('button', { name: /^[A-Z][a-z]{2} \d+(, spent \d+)?$/ }).count();
+    await check(page, `The month has its real ${days} days`, cells === days, () => cells);
+
+    // Back to the month of the ฿2,000 dinner.
+    const d40 = ago(40);
+    const back = (now.getFullYear() - d40.getFullYear()) * 12 + now.getMonth() - d40.getMonth();
+    for (let i = 0; i < back; i++) await tap(page, visible(page.getByRole('button', { name: 'Previous month' })), { wait: 1200 });
+    const before = await sane(page, 'A month back');
+    await check(page, `Arrows go back to ${MONTHS[d40.getMonth()]}`, before.includes(`${MONTHS[d40.getMonth()]} ${d40.getFullYear()}`), () => before.slice(0, 300));
+    const cell = page.getByRole('button', { name: new RegExp(`^[A-Z][a-z]{2} ${d40.getDate()}, spent (\\d+)$`) });
+    const label = (await cell.count()) ? await cell.getAttribute('aria-label') : '';
+    await check(page, 'That day shows ฿2,000 — the ฿7,000 rent is planned money, left out like on Home', /spent 2000$/.test(label || ''), () => label);
+    await tap(page, cell, { wait: 600 });
+    const day = await sane(page, 'Day card');
+    await check(page, 'Tapping the day lists the dinner, and says how far over the daily budget', day.includes('Big dinner') && /฿[\d,]+ over/.test(day) && !day.includes('Rent'), () => day.slice(-500));
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^See all in History$/ })), { wait: 2500 });
+    const hist = await sane(page, 'History from the calendar');
+    await check(page, 'See all in History opens the pay cycle with that day', hist.includes('Big dinner'), () => hist.slice(0, 500));
+    await page.goBack();
+    await page.waitForTimeout(1500);
+
+    // The limit: 12 months back, then the arrow stops.
+    for (let i = back; i < 12; i++) await tap(page, visible(page.getByRole('button', { name: 'Previous month' })), { wait: 900 });
+    const last = await sane(page, 'Oldest month');
+    const old = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+    await check(page, `Stops at ${MONTHS[old.getMonth()]} ${old.getFullYear()}, with the one-year note`, last.includes(`${MONTHS[old.getMonth()]} ${old.getFullYear()}`) && last.includes('goes back one year'), () => last.slice(-400));
+    const prev = page.getByRole('button', { name: 'Previous month' });
+    await check(page, 'The back arrow is off', (await prev.getAttribute('aria-disabled')) === 'true', () => prev.getAttribute('aria-disabled'));
+    await check(page, 'Nothing from over a year ago shows', !last.includes('Old Grab'), () => last.slice(-400));
+    await page.close();
+  });
 };

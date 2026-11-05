@@ -9,7 +9,8 @@ import { monthNumbers, overCover, period, periodAt, streakOf, type Spent } from 
 import { checkParts, paydayMoves, paydayShares, savingThisCycle, splitIn } from '../src/lib/moneyin';
 import { replan } from '../src/lib/replan';
 import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearlySetAside } from '../src/lib/everymonth';
-import { isoDay } from '../src/lib/setup/plan';
+import { isoDay, dayInMonth } from '../src/lib/setup/plan';
+import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 
 // ---------- tiny test kit ----------
 let seed = 20261103;
@@ -400,6 +401,88 @@ for (let n = 0; n < 2000; n++) {
     guessType('AIS Fibre') === 'internet' && guessType('AIS') === 'phone' && guessType('ค่าไฟ') === 'utilities' && guessType('ให้แม่') === 'family',
     () => [guessType('AIS Fibre'), guessType('AIS'), guessType('ค่าไฟ'), guessType('ให้แม่')],
   );
+}
+
+// ---------- real calendar: month lengths, paydays, the Full calendar ----------
+{
+  const realDays = (y: number, m: number) => (m === 1 ? ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28) : [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m]);
+  for (let y = 2024; y <= 2040; y++)
+    for (let m = 0; m < 12; m++) {
+      const g = monthGrid(y, m);
+      const days = g.filter(Boolean) as Date[];
+      check('Calendar: every month has its real number of days (Feb 28, or 29 in a leap year)', days.length === realDays(y, m), () => [y, m, days.length]);
+      check('Calendar: the 1st sits under its real weekday, and weeks are full rows', g.indexOf(days[0]) === new Date(y, m, 1).getDay() && g.length % 7 === 0, () => [y, m]);
+      check(
+        'Calendar: days run 1, 2, 3… with no gaps or repeats',
+        days.every((d, i) => d.getDate() === i + 1 && d.getMonth() === m),
+        () => [y, m],
+      );
+      for (let pd = 1; pd <= 31; pd++) {
+        const d = dayInMonth(y, m, pd);
+        check('Payday: the 29th–31st lands on the month’s last day when the month is shorter, never in the next month', d.getMonth() === m && d.getDate() === Math.min(pd, realDays(y, m)), () => [
+          y,
+          m,
+          pd,
+          d.toDateString(),
+        ]);
+      }
+    }
+  check(
+    'Calendar: 2028 is a leap year (Feb has 29), 2027 and 2100 aren’t',
+    monthGrid(2028, 1).filter(Boolean).length === 29 && monthGrid(2027, 1).filter(Boolean).length === 28 && monthGrid(2100, 1).filter(Boolean).length === 28,
+    () => 0,
+  );
+
+  // Every day of five years, every payday: the money month always holds today and runs payday → next payday.
+  for (let i = 0; i < 365 * 5; i++) {
+    const now = new Date(2026, 0, 1 + i, 13);
+    const pd = int(1, 31);
+    const p = period(pd, now);
+    const startDay = Math.min(pd, realDays(p.start.getFullYear(), p.start.getMonth()));
+    const endDay = Math.min(pd, realDays(p.end.getFullYear(), p.end.getMonth()));
+    check('Money month: today is always inside it', p.start <= now && now < p.end, () => [now.toDateString(), pd, p.start.toDateString(), p.end.toDateString()]);
+    check('Money month: starts and ends on payday (or the last day of a short month)', p.start.getDate() === startDay && p.end.getDate() === endDay, () => [
+      now.toDateString(),
+      pd,
+      p.start.toDateString(),
+      p.end.toDateString(),
+    ]);
+    check('Money month: 28–31 days long, one month apart', p.total >= 28 && p.total <= 31 && (p.end.getMonth() - p.start.getMonth() + 12) % 12 === 1, () => [now.toDateString(), pd, p.total]);
+    check('Money month: days left is 1 or more and never more than the month', p.daysLeft >= 1 && p.daysLeft <= p.total, () => [now.toDateString(), pd, p.daysLeft, p.total]);
+
+    // The Full calendar's one-year limit.
+    const oldest = earliestDay(now);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const back = monthAt(OLDEST, now);
+    check(
+      'Full calendar: goes back exactly one year (29 Feb → 28 Feb)',
+      oldest.getFullYear() === now.getFullYear() - 1 && oldest.getMonth() === now.getMonth() && oldest.getDate() === Math.min(now.getDate(), realDays(oldest.getFullYear(), oldest.getMonth())),
+      () => [now.toDateString(), oldest.toDateString()],
+    );
+    check('Full calendar: the oldest month the arrows reach holds the oldest day', back.y === oldest.getFullYear() && back.m === oldest.getMonth(), () => [now.toDateString(), back]);
+    check(
+      'Full calendar: today and the oldest day open; tomorrow and the day before the limit don’t',
+      dayOpen(today, now) &&
+        dayOpen(oldest, now) &&
+        !dayOpen(new Date(today.getTime() + 86_400_000 * 1.5), now) &&
+        !dayOpen(new Date(oldest.getFullYear(), oldest.getMonth(), oldest.getDate() - 1), now),
+      () => now.toDateString(),
+    );
+  }
+
+  const at = (d: number, h = 12) => new Date(2026, 9, d, h).toISOString();
+  const rows = [
+    { id: 'a', amount: 65, at: at(18, 9), note: 'Bubble tea', cat: 'food' },
+    { id: 'b', amount: 180, at: at(18, 14), note: null, cat: 'transport' },
+    { id: 'c', amount: 7000, at: at(18, 10), note: 'Rent', cat: 'home_bills' },
+    { id: 'd', amount: 300, at: at(2), note: null, cat: 'food' },
+    { id: 'e', amount: 99, at: new Date(2025, 9, 1).toISOString(), note: null, cat: 'food' },
+  ];
+  const ds = daysFrom(rows, null, new Date(2025, 10, 5));
+  const k18 = new Date(2026, 9, 18).toDateString();
+  check('Full calendar: a day adds up its spends, rent & bills left out (like Home)', ds.byDay[k18] === 245 && ds.total === 545 && ds.items[k18].length === 2, () => ds);
+  check('Full calendar: a day’s spends list newest first', ds.items[k18][0].id === 'b', () => ds.items[k18]);
+  check('Full calendar: nothing from before the one-year limit counts', !Object.keys(ds.byDay).includes(new Date(2025, 9, 1).toDateString()), () => ds.byDay);
 }
 
 // ---------- report ----------

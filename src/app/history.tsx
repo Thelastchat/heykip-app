@@ -17,7 +17,8 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { Squish } from '@/components/glow/motion';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
-import { budgetKey, monthNumbers, periodAt, periodMonth, useHome } from '@/lib/home';
+import { dropCalendarCache } from '@/lib/calendar';
+import { budgetKey, monthNumbers, period, periodAt, periodMonth, useHome } from '@/lib/home';
 import { dayShort, monthLong, monthShort, shownYear, t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
@@ -52,12 +53,25 @@ export default function History() {
   const payday = month?.payday ?? null;
   const [offset, setOffset] = useState(0); // 0 = this pay cycle, -1 = the one before…
   const [rows, setRows] = useState<Entry[] | null>(null);
-  const { cat } = useLocalSearchParams<{ cat?: string }>();
+  const { cat, at } = useLocalSearchParams<{ cat?: string; at?: string }>();
   const [filter, setFilter] = useState<string | null>(cat ? `spend:${cat}` : null); // 'spend:food' | 'income' | null
   const firstOffset = useRef(true);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Opened from the Full calendar on a day: show the pay cycle that day is in (once the plan has loaded).
+  const atDone = useRef(false);
+  useEffect(() => {
+    if (!at || atDone.current || !month) return;
+    atDone.current = true;
+    const day = new Date(at);
+    if (Number.isNaN(day.getTime())) return;
+    const a = period(payday, day).start;
+    const b = period(payday).start;
+    const by = (a.getFullYear() - b.getFullYear()) * 12 + (a.getMonth() - b.getMonth());
+    if (by < 0) setOffset(by);
+  }, [at, month, payday]);
 
   const P = useMemo(() => periodAt(payday, offset), [payday, offset]);
   const named = periodMonth(P);
@@ -141,6 +155,7 @@ export default function History() {
 
   async function remove(e: Entry) {
     setRows((xs) => (xs ? xs.filter((x) => x.id !== e.id) : xs));
+    dropCalendarCache();
     const { error: err } = await supabase.from('transactions').delete().eq('id', e.id);
     if (err) {
       setError(t('Couldn’t delete: {msg}', { msg: err.message }));
@@ -154,6 +169,7 @@ export default function History() {
     setEditing(null);
     if (!id || c === e.cat) return;
     setRows((xs) => (xs ? xs.map((x) => (x.id === e.id ? { ...x, cat: c } : x)) : xs));
+    dropCalendarCache();
     const { error: err } = await supabase.from('transactions').update({ category_id: id }).eq('id', e.id);
     if (err) {
       setError(t('Couldn’t change it: {msg}', { msg: err.message }));

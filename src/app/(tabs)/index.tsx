@@ -3,7 +3,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { CaretRight, Flame, LockSimple, Plus, UserCircle } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, Flame, LockSimple, Plus, UserCircle } from 'phosphor-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -344,6 +344,13 @@ export default function Home() {
 
         <RiseIn delay={180} style={{ paddingHorizontal: 16, marginTop: 24 }}>
           <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setSelectedDay(d.toDateString())} now={now} />
+          <View style={styles.calRow}>
+            <Squish style={styles.calBtn} accessibilityRole="button" onPress={() => router.push('/calendar' as never)}>
+              <CalendarBlank size={16} color={colors.ink} />
+              <Text style={styles.calText}>{t('Full calendar')}</Text>
+              <CaretRight size={13} color={colors.ink} weight="bold" />
+            </Squish>
+          </View>
         </RiseIn>
 
         {/* Kip finding slips: only when there's something to set up or something new */}
@@ -669,6 +676,9 @@ const styles = themed(() =>
     },
     tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
     noteHead: { fontFamily: fonts.regular, fontSize: 12, color: blackA(0.55) },
+    calRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+    calBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: inkA(0.05) },
+    calText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
     noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
     strip: { position: 'absolute', left: 12, right: 12, bottom: 12 },
     stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.onAccent },

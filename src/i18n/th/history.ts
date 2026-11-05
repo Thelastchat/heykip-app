@@ -56,5 +56,20 @@ const th: Record<string, string> = {
   'Tap an entry to change its category · swipe left to delete it.': 'แตะรายการเพื่อเปลี่ยนหมวด · ปัดซ้ายเพื่อลบ',
   'Change its category': 'เปลี่ยนหมวด',
   'Couldn’t change it: {msg}': 'เปลี่ยนไม่ได้: {msg}',
+  // Full calendar
+  'Full calendar': 'ปฏิทินเต็ม',
+  'Previous month': 'เดือนก่อน',
+  'Next month': 'เดือนถัดไป',
+  'Spent {amount}': 'ใช้ไป {amount}',
+  'never over {daily}': 'ไม่เคยเกิน {daily}',
+  '1 day over {daily}': 'เกิน {daily} 1 วัน',
+  '{n} days over {daily}': 'เกิน {daily} {n} วัน',
+  'Under {amount}': 'ไม่เกิน {amount}',
+  Over: 'เกิน',
+  '{amount} over': 'เกิน {amount}',
+  'Nothing spent this day': 'วันนั้นไม่ได้ใช้เงิน',
+  'Tap a day to see what you spent': 'แตะวันไหนก็ได้เพื่อดูว่าใช้อะไรไป',
+  'Couldn’t load this month. Go back and try again': 'โหลดเดือนนี้ไม่ได้ ลองกลับออกไปแล้วเข้ามาใหม่',
+  'The calendar goes back one year, to {date}. Older days still count in your totals': 'ปฏิทินย้อนดูได้ 1 ปี ถึง {date} วันที่เก่ากว่านั้นยังนับรวมในยอดของคุณเหมือนเดิม',
 };
 export default th;
