@@ -1,8 +1,9 @@
 // The bottom sheet every Profile edit uses: the same frosted cream sheet as "Put money in".
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
@@ -12,7 +13,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={sheet.grip} />
@@ -24,7 +25,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
             {children}
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafe>
     </Modal>
   );
 }

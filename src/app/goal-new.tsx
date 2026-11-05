@@ -7,9 +7,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { BookmarkSimple, Camera } from 'phosphor-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { AmountRow, Delta, DueRow } from '@/components/goals/GoalFields';
@@ -267,7 +268,7 @@ export default function GoalNew() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe style={{ flex: 1 }}>
       <GlowBackground />
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20 }}>
         {step === 'what' ? (
@@ -458,7 +459,7 @@ export default function GoalNew() {
           />
         )}
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }
 

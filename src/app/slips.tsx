@@ -19,7 +19,9 @@ import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
-import { budgetKey, monthNumbers, useHome } from '@/lib/home';
+import { budgetKey, monthNumbers, periodKey, useHome } from '@/lib/home';
+import { addBill } from '@/lib/budget';
+import { matchBill, type BillMatch } from '@/lib/everymonth';
 import { dayShort, monthShort, rich, t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
@@ -51,7 +53,7 @@ function payload(a: PickedSlip): { image: string; type: string } | null {
 export default function Slips() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
-  const { month } = useMonth();
+  const { month, save: saveMonth } = useMonth();
   const { spent } = useHome(month);
   const [phase, setPhase] = useState<'reading' | 'review'>('reading');
   const [slips, setSlips] = useState<Slip[]>([]);
@@ -133,6 +135,27 @@ export default function Slips() {
   }
 
   const toSave = slips.filter((s) => s.state === 'done' && !s.already);
+  // Bills (approved mockup): a slip that pays a bill in the plan ticks it off (on unless untapped); a Home & bills slip
+  // Kip hasn't seen is offered for Every month (off unless tapped). Matched on the phone — no extra requests.
+  const pk = month ? periodKey(month.payday, new Date()) : '';
+  const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
+  const matches = useMemo(() => {
+    const out = new Map<string, BillMatch>();
+    if (!month) return out;
+    const taken = new Set<string>();
+    for (const sl of toSave) {
+      const m = matchBill(sl, month, paidKeys, taken);
+      if (!m) continue;
+      if (m.kind === 'paid') taken.add(m.key);
+      out.set(sl.id, m);
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month, toSave.map((x) => `${x.id}:${x.category}:${x.amount}`).join('|'), paidKeys.join('|')]);
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
+  const ticked = (id: string) => ticks[id] ?? matches.get(id)?.kind === 'paid';
+  const willPay = [...matches.entries()].filter(([id, m]) => m.kind === 'paid' && ticked(id)).map(([, m]) => m as Extract<BillMatch, { kind: 'paid' }>);
+  const willAdd = [...matches.entries()].filter(([id, m]) => m.kind === 'new' && ticked(id)).map(([, m]) => m as Extract<BillMatch, { kind: 'new' }>);
   const skipped = slips.filter((s) => s.state !== 'done').length;
   const repeats = slips.filter((s) => s.already).length;
   const out = toSave.filter((s) => s.money === 'out').reduce((a, s) => a + s.amount, 0);
@@ -172,6 +195,13 @@ export default function Slips() {
     setBusy(false);
     if (error) return setProblem(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // Tick off the bills these slips paid, and add the new ones the person chose.
+    if (month && (willPay.length || willAdd.length)) {
+      let next = month;
+      for (const b of willAdd) next = addBill(next, b.name, b.amount, { type: b.type }).month;
+      if (willPay.length) next = { ...next, paid: { period: pk, keys: [...new Set([...paidKeys, ...willPay.map((b) => b.key)])] } };
+      await saveMonth(next);
+    }
     // Money in from a slip gets a job too, the same as everywhere else.
     const inn = (saved ?? []).filter((r) => r.kind === 'income');
     if (inn.length)
@@ -242,13 +272,34 @@ export default function Slips() {
 
             {slips.map((s, i) => (
               <RiseIn key={s.id} delay={80 + i * 60}>
-                <Row slip={s} onCategory={() => setEditing(s.id)} />
+                <Row
+                  slip={s}
+                  onCategory={() => setEditing(s.id)}
+                  match={s.already ? undefined : matches.get(s.id)}
+                  on={ticked(s.id)}
+                  onTick={() => setTicks((x) => ({ ...x, [s.id]: !ticked(s.id) }))}
+                  impact={(() => {
+                    const m = matches.get(s.id);
+                    if (!month || m?.kind !== 'new') return '';
+                    const r = addBill(month, m.name, m.amount);
+                    return r.short > 0
+                      ? t('{amount} more than your month can carry', { amount: baht(r.short) })
+                      : r.fromGoal > 0
+                        ? t('{amount} less for {goal} a month', { amount: baht(r.fromGoal), goal: month.goal.title })
+                        : r.fromFun > 0
+                          ? t('{amount} less fun money a month', { amount: baht(r.fromFun) })
+                          : t('Fits in my bill estimate — nothing else changes');
+                  })()}
+                />
               </RiseIn>
             ))}
 
             {toSave.length > 0 && (
               <View style={styles.sum}>
-                <Text style={styles.small}>{inn > 0 ? t('Out {out} · in +{inn}', { out: baht(out), inn: baht(inn) }) : t('Out {out}', { out: baht(out) })}</Text>
+                <Text style={styles.small}>
+                  {inn > 0 ? t('Out {out} · in +{inn}', { out: baht(out), inn: baht(inn) }) : t('Out {out}', { out: baht(out) })}
+                  {willPay.length ? (willPay.length === 1 ? t(' · {name} marked paid', { name: willPay[0].name }) : t(' · {n} bills marked paid', { n: willPay.length })) : ''}
+                </Text>
                 {leftAfter !== null && <Text style={[styles.small, { color: colors.ink, fontFamily: fonts.medium }]}>{t('{amount} left today after', { amount: baht(leftAfter) })}</Text>}
               </View>
             )}
@@ -329,7 +380,7 @@ function Thumb({ slip }: { slip: Slip }) {
   );
 }
 
-function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
+function Row({ slip, onCategory, match, on, onTick, impact }: { slip: Slip; onCategory: () => void; match?: BillMatch; on?: boolean; onTick?: () => void; impact?: string }) {
   const isIn = slip.money === 'in';
   if (slip.state !== 'done')
     return (
@@ -342,34 +393,59 @@ function Row({ slip, onCategory }: { slip: Slip; onCategory: () => void }) {
       </Glass>
     );
   return (
-    <Glass radius={22} innerStyle={[styles.row, slip.already && { opacity: 0.55 }]}>
-      <Image source={{ uri: slip.uri }} style={styles.mini} contentFit="cover" />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.name} numberOfLines={1}>
-          {isIn ? t('From {name}', { name: slip.name || t('someone') }) : slip.name || t('Transfer')}
-        </Text>
-        <Text style={styles.small} numberOfLines={2}>
-          {whenText(slip.at)}
-          {isIn ? t(' · money in') : ''}
-        </Text>
+    <Glass radius={22} innerStyle={slip.already && { opacity: 0.55 }}>
+      <View style={styles.row}>
+        <Image source={{ uri: slip.uri }} style={styles.mini} contentFit="cover" />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.name} numberOfLines={1}>
+            {isIn ? t('From {name}', { name: slip.name || t('someone') }) : slip.name || t('Transfer')}
+          </Text>
+          <Text style={styles.small} numberOfLines={2}>
+            {whenText(slip.at)}
+            {isIn ? t(' · money in') : ''}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+          <Text style={[styles.amt, isIn && { color: colors.lavenderText }, slip.already && styles.struck]}>
+            {isIn ? '+' : ''}
+            {baht(slip.amount)}
+          </Text>
+          {slip.already ? (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{t('Already in')}</Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={onCategory}
+              hitSlop={6}
+              style={[styles.cat, isIn && { backgroundColor: 'rgba(220,210,247,0.75)' }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Change category')}>
+              <Image source={ICON3D[isIn ? inCatIcon(slip.category as InCat) : dbCatIcon(slip.category as DbCat)]} style={{ width: 22, height: 22 }} contentFit="contain" />
+              <Text style={[styles.catText, isIn && { color: '#5B4A96' }]}>{isIn ? IN_CAT_NAME[slip.category as InCat] : DB_CAT_NAME[slip.category as DbCat]}</Text>
+              <CaretDown size={10} color={colors.muted} weight="bold" />
+            </Pressable>
+          )}
+        </View>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 6 }}>
-        <Text style={[styles.amt, isIn && { color: colors.lavenderText }, slip.already && styles.struck]}>
-          {isIn ? '+' : ''}
-          {baht(slip.amount)}
-        </Text>
-        {slip.already ? (
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{t('Already in')}</Text>
+      {match && (
+        <Pressable
+          onPress={onTick}
+          style={styles.sug}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: !!on }}
+          accessibilityLabel={match.kind === 'paid' ? t('Mark {name} paid', { name: match.name }) : t('Add {name} to every month', { name: match.name })}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sugText}>
+              {match.kind === 'paid'
+                ? rich('**{name}** · mark it paid', { name: match.name }, (x) => <Text style={{ fontFamily: fonts.medium }}>{x}</Text>)
+                : rich('**Every month?** Add {name}', { name: match.name }, (x) => <Text style={{ fontFamily: fonts.medium }}>{x}</Text>)}
+            </Text>
+            <Text style={styles.small}>{match.kind === 'paid' ? t('About the same as {name} in your plan', { name: match.name }) : impact}</Text>
           </View>
-        ) : (
-          <Pressable onPress={onCategory} hitSlop={6} style={[styles.cat, isIn && { backgroundColor: 'rgba(220,210,247,0.75)' }]} accessibilityRole="button" accessibilityLabel={t('Change category')}>
-            <Image source={ICON3D[isIn ? inCatIcon(slip.category as InCat) : dbCatIcon(slip.category as DbCat)]} style={{ width: 22, height: 22 }} contentFit="contain" />
-            <Text style={[styles.catText, isIn && { color: '#5B4A96' }]}>{isIn ? IN_CAT_NAME[slip.category as InCat] : DB_CAT_NAME[slip.category as DbCat]}</Text>
-            <CaretDown size={10} color={colors.muted} weight="bold" />
-          </Pressable>
-        )}
-      </View>
+          <View style={[styles.billTick, on && styles.billTickOn]}>{on && <Check size={14} color={colors.onAccent} weight="bold" />}</View>
+        </Pressable>
+      )}
     </Glass>
   );
 }
@@ -395,6 +471,10 @@ const styles = themed(() =>
     bub: { paddingVertical: 12, paddingHorizontal: 16, borderTopLeftRadius: 6 },
     bubText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
     row: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    sug: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: inkA(0.08) },
+    sugText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+    billTick: { width: 26, height: 26, borderRadius: 9, borderWidth: 1.5, borderColor: colors.faint, alignItems: 'center', justifyContent: 'center' },
+    billTickOn: { backgroundColor: colors.lime, borderColor: colors.onAccent },
     mini: { width: 44, height: 60, borderRadius: 8, borderWidth: 1, borderColor: inkA(0.08), backgroundColor: colors.paper },
     name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     amt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },

@@ -3,9 +3,10 @@
 import { router } from 'expo-router';
 import { CaretLeft, Lock } from 'phosphor-react-native';
 import { useRef, type ComponentRef, type ReactNode, type RefObject } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { CatIcon } from '@/components/CatIcon';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -25,7 +26,7 @@ export const nth = (n: number) => (getLang() === 'th' ? t('day {n}', { n }) : or
 export function SetupScreen({ step, footer, children, scrollRef }: { step?: number; footer: ReactNode; children: ReactNode; scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null> }) {
   const insets = useSafeAreaInsets();
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe style={{ flex: 1 }}>
       <GlowBackground />
       <ScrollView
         ref={scrollRef}
@@ -36,7 +37,7 @@ export function SetupScreen({ step, footer, children, scrollRef }: { step?: numb
         {children}
       </ScrollView>
       <View style={{ paddingHorizontal: 18, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 16) + 8, gap: 10 }}>{footer}</View>
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }
 

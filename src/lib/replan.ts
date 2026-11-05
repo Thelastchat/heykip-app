@@ -41,7 +41,7 @@ export function replan(m: MonthBudget, b: Basics, goal: GoalNow, now = new Date(
   };
   const payday = b.incomeType === 'regular' ? b.payday : null;
   let next = monthFrom(inputs, m.style, m.goalPerMonth, payday, safetyNet(inputs).target);
-  for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
+  for (const { name, amount, ...extra } of m.bills.items ?? []) next = addBill(next, name, amount, extra).month;
   return { ...next, ...keepOnReplan(m) };
 }
 

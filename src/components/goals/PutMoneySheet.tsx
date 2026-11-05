@@ -3,9 +3,10 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
@@ -93,7 +94,7 @@ export function PutMoneySheet({ open, onClose, onDone, goals, startId }: { open:
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={styles.grip} />
@@ -228,7 +229,7 @@ export function PutMoneySheet({ open, onClose, onDone, goals, startId }: { open:
             <Text style={styles.saveText}>{busy ? t('Saving…') : a > 0 ? t('Put {amount} in', { amount: baht(a) }) : t('Put money in')}</Text>
           </Squish>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafe>
     </Modal>
   );
 }

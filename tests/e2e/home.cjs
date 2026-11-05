@@ -327,4 +327,65 @@ module.exports = async function homeTests(browser) {
     await check(page, `Home: left this month is the new spending money (${fmt(X.spendingTotal(m))})`, home.includes(fmt(X.spendingTotal(m))), () => home.slice(0, 200));
     await page.close();
   });
+
+  scenario('Bills · a big new bill slows the goal — Home and Goals agree');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, path: '/month' });
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^Add a bill/ })), { wait: 1000 });
+    await type(page, 'Bill name', 'Car loan');
+    await type(page, 'Amount a month', 8000);
+    await page.waitForTimeout(500);
+    await sane(page, 'Add a bill');
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^Add (Car loan|it|bill)/ })), { wait: 2000 });
+    const m = db.profiles[0].budget;
+    await check(
+      page,
+      'The bill is in the plan',
+      (m.bills.items ?? []).some((b) => b.name === 'Car loan' && b.amount === 8000),
+      () => m.bills,
+    );
+    await check(page, 'Every baht still has a job', Math.abs(jobs(m) - m.income) <= 10, () => ({ jobs: jobs(m), income: m.income }));
+    await go(page, '/goals');
+    const goals = await sane(page, 'Goals after the bill');
+    const arr = goals.match(/Arrives \| ([A-Z][a-z]{2} \d{4})/)?.[1];
+    await go(page, '/');
+    const home = await sane(page, 'Home after the bill');
+    await check(page, `Home’s Kip line uses the same date as Goals (${arr})`, !!arr && home.includes(arr), () => ({ arr, home: home.slice(0, 500) }));
+    await check(page, 'The bill really slowed the goal (it’s later than Dec 2027)', !!arr && arr !== 'Dec 2027', () => arr);
+    await page.close();
+  });
+
+  scenario('Every month · add a yearly insurance from Home');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db });
+    const home0 = await sane(page, 'Home');
+    const m0 = db.profiles[0].budget;
+    const N0 = X.monthNumbers(m0, { total: 0, today: 0, bills: 0, byCat: {}, byDay: {} }, new Date());
+    await check(page, `Home shows today’s budget even before spending (“of ${fmt(N0.dailyToday)}”)`, home0.includes(`of ${fmt(N0.dailyToday)}`), () => home0.slice(0, 200));
+    await check(page, 'Home’s section is called “Every month”', home0.includes('Every month'), () => home0.slice(-400));
+    await tap(page, visible(page.getByRole('button', { name: 'Add to every month' })), { wait: 2000 });
+    await sane(page, 'Add to every month');
+    await tap(page, visible(page.getByRole('radio', { name: 'Insurance' })), { wait: 200 });
+    await type(page, 'Bill name', 'Car insurance');
+    await tap(page, visible(page.getByRole('radio').filter({ hasText: /^Every year$/ })), { wait: 300 });
+    await type(page, 'Amount a year', 12000);
+    await page.waitForTimeout(500);
+    const sheet = await sane(page, 'Yearly bill');
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^Add Car insurance · ฿12,000 a year$/ })), { wait: 2000 });
+    const m = db.profiles[0].budget;
+    const it = (m.bills.items ?? []).find((b) => b.name === 'Car insurance');
+    await check(page, 'Saved as a yearly insurance (฿12,000, with a due month)', it && it.type === 'insurance' && it.yearly && it.yearly.total === 12000, () => it);
+    const months = it ? Math.max(1, (Number(it.yearly.due.slice(0, 4)) - new Date().getFullYear()) * 12 + Number(it.yearly.due.slice(5)) - 1 - new Date().getMonth()) : 0;
+    await check(page, `It sets aside enough each month to be ready by then (${it && it.amount} × ${months} ≥ ฿12,000)`, it && it.amount * months >= 12000, () => ({ it, months }));
+    await check(page, 'Kip explained the catch-up in the sheet', /months away\. I’ll set aside/.test(sheet), () => sheet.slice(-500));
+    await check(page, 'Every baht still has a job', Math.abs(jobs(m) - m.income) <= 10, () => ({ jobs: jobs(m), income: m.income }));
+    await go(page, '/');
+    const home = await sane(page, 'Home with the insurance');
+    await check(page, 'Home shows it as “Every year · due …” with how much is ready', /Car insurance \| Every year · due [A-Z][a-z]{2}/.test(home) && home.includes('of ฿12,000 ready'), () =>
+      home.slice(-700),
+    );
+    await page.close();
+  });
 };

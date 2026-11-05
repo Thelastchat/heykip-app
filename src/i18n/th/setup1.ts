@@ -273,6 +273,7 @@ const th: Record<string, string> = {
   'Setting up your month…': 'กำลังจัดเดือนนี้ให้…',
   'Your plan, your goal and your promise — all yours, free.': 'ทั้งแผน เป้าหมาย และคำสัญญา — ได้ครบ ฟรีเลย',
   'Try again': 'ลองใหม่',
+  'Family trip to Hua Hin': 'เที่ยวหัวหินกับครอบครัว',
 };
 
 export default th;

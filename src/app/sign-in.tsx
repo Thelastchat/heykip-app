@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { BackButton } from '@/components/setup/kit';
 import { Button, Muted, T } from '@/components/ui';
@@ -46,7 +47,7 @@ export default function SignIn() {
   return (
     <SafeAreaView style={styles.safe}>
       <GlowBackground />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
+      <KeyboardSafe style={styles.wrap}>
         <View style={{ minHeight: 46 }}>{canGoBack && <BackButton size={46} />}</View>
         <View style={styles.top}>
           <Kip mood={saving ? 'happy' : 'idle'} size={150} />
@@ -101,7 +102,7 @@ export default function SignIn() {
             </>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafe>
     </SafeAreaView>
   );
 }

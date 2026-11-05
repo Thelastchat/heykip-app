@@ -32,9 +32,11 @@ export const GOAL_TYPES: GoalTypeInfo[] = [
     },
     icon: 'family',
     color: colors.peach,
-    kind: 'monthly',
+    // Money sent to family each month leaves your account — it lives in Every month, not in goals.
+    // A Family goal is saving for something together, like a trip.
+    kind: 'trip',
     get example() {
-      return t('Help Mom & Dad');
+      return t('Family trip to Hua Hin');
     },
   },
   {
@@ -229,17 +231,6 @@ type Seed = { id: string; type: GoalTypeKey; title: string; why: string; target?
 const r500 = (n: number) => Math.max(500, Math.round(n / 500) * 500);
 
 const SEEDS: Seed[] = [
-  {
-    id: 'mom',
-    type: 'family',
-    get title() {
-      return t('Help Mom & Dad');
-    },
-    get why() {
-      return t('A steady amount each payday — the kind of help that adds up.');
-    },
-    monthly: (i) => r500(Math.min(3000, i.income * 0.05)),
-  },
   {
     id: 'bday',
     type: 'gift',

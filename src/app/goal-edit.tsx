@@ -8,9 +8,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, CaretRight } from 'phosphor-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Glass } from '@/components/glow/Glass';
@@ -223,7 +224,7 @@ export default function GoalEdit() {
   const nameNow = d.title.trim() || goal.title;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe style={{ flex: 1 }}>
       <GlowBackground />
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20 }}>
         <ScreenHeader title={t('Edit goal')} close />
@@ -370,7 +371,7 @@ export default function GoalEdit() {
       <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
         <Button label={busy ? t('Saving…') : plan ? t('Save changes') : t('Save')} disabled={!dirty || !ok || busy} loading={busy} onPress={saveAll} />
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }
 

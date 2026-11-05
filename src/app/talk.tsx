@@ -5,9 +5,10 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ArrowUp, Microphone, X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
@@ -223,7 +224,7 @@ export default function Talk() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe style={{ flex: 1 }}>
       <GlowBackground />
       <View style={[styles.top, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" accessibilityLabel={t('Close')}>
@@ -345,7 +346,7 @@ export default function Talk() {
           {pitch.talk.body}
         </PlusSheet>
       )}
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }
 

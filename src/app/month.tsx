@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { MonthScreen } from '@/components/MonthScreen';
@@ -12,6 +13,7 @@ import { useMonth } from '@/lib/month';
 // Changing amounts and money styles is Plus; adding a bill stays free.
 export default function YourMonth() {
   const { month, loading, error, save } = useMonth();
+  const { add } = useLocalSearchParams<{ add?: string }>();
   const { spent } = useHome(month);
   const { profile } = useAuth();
   const [locked, setLocked] = useState<null | 'styles' | 'customize'>(null);
@@ -21,7 +23,7 @@ export default function YourMonth() {
   const pitch = plusPitch(month, goal.split(' ')[0] === 'Safety' ? t('your safety net') : goal.replace(/ trip$/i, ''), funLeft);
   return (
     <>
-      <MonthScreen month={month} loading={loading} error={error} save={save} spent={spent.byCat} isPlus={isPlus} onLocked={setLocked} />
+      <MonthScreen month={month} loading={loading} error={error} save={save} spent={spent.byCat} isPlus={isPlus} onLocked={setLocked} openAdd={add === '1'} />
       {locked && (
         <PlusSheet open onClose={() => setLocked(null)} onUnlocked={() => setLocked(null)} title={pitch[locked].title} sub={pitch[locked].sub}>
           {pitch[locked].body}

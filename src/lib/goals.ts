@@ -85,7 +85,7 @@ export function arrivals(goals: GoalLite[], amounts: Map<string, number>, payday
 /** Re-plan the month with a new goal-saving total, keeping everything the person already set up this month. */
 export function withGoalTotal(m: MonthBudget, total: number, split: { id: string; amount: number }[] | undefined): MonthBudget {
   let next = monthFrom(m.inputs, m.style, Math.max(0, Math.round(total)), m.payday, safetyNet(m.inputs).target);
-  for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
+  for (const { name, amount, ...extra } of m.bills.items ?? []) next = addBill(next, name, amount, extra).month;
   return carry(m, { ...next, ...(split ? { goals: split } : {}) });
 }
 

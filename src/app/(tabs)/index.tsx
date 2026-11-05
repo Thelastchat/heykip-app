@@ -4,11 +4,10 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
 import { CaretRight, Flame, LockSimple, Plus, UserCircle } from 'phosphor-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Kip, type KipMood } from '@/components/Kip';
 import { PlusSheet, type PlusFeature } from '@/components/PlusSheet';
 import { fasterStyle, plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
@@ -25,7 +24,8 @@ import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
-import { MAX_GOALS, splitOf } from '@/lib/goals';
+import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
+import { dueLabel, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
 import { liteOf } from '@/components/goals/bits';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -52,7 +52,6 @@ export default function Home() {
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
-  const [kipMood, setKipMood] = useState<KipMood>('happy');
   const [overOpen, setOverOpen] = useState(false);
   const [catOpen, setCatOpen] = useState<CatKey | null>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
@@ -72,12 +71,12 @@ export default function Home() {
   const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter, extraIn } = monthNumbers(month, spent, now);
   const saving = month ? savingTotal(month) : 0;
   const split = month ? splitOf(month, goals.map(liteOf)) : new Map<string, number>();
-  const goalDate = goal?.due ? parseDay(goal.due) : null;
+  // When each goal really arrives at this month's pace — the same as the Goals screen (a new bill or a style change
+  // moves it), not the date saved at setup.
+  const arrive = month ? arrivals(goals.map(liteOf), splitOf(month, goals.map(liteOf)), month.payday ?? null) : new Map<string, Date | null>();
+  const goalDate = goal && goal.kind !== 'monthly' ? (arrive.get(goal.id) ?? null) : null;
   const fast = spent.total > 0 && pace > 0;
   const isTodaySelected = selectedDay === now.toDateString();
-  // Kip's card: on small phones Kip gets smaller and the words keep clear of him (card padding 20, Kip at right 12).
-  const kipSize = width < 360 ? 80 : 104;
-  const sayWidth = Math.min(192, width - 40 - 20 - 12 - kipSize - 8);
   const dailyPlan = P.total ? spendBudget / P.total : 0;
   const showOverToday = isTodaySelected && overToday > 0;
 
@@ -123,19 +122,6 @@ export default function Home() {
     reload();
     return null;
   }
-
-  // Kip celebrates when something new was logged today, then settles.
-  const lastToday = useRef(spent.today);
-  useEffect(() => {
-    if (spent.today > lastToday.current) {
-      setKipMood('celebrate');
-      const id = setTimeout(() => setKipMood(fast ? 'careful' : 'happy'), 2200);
-      lastToday.current = spent.today;
-      return () => clearTimeout(id);
-    }
-    lastToday.current = spent.today;
-    setKipMood(fast ? 'careful' : 'happy');
-  }, [spent.today, fast]);
 
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
@@ -219,8 +205,20 @@ export default function Home() {
   const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
   const bills: Bill[] = month
     ? [
-        ...(month.bills.rent > 0 ? [{ key: 'rent', name: t('Rent'), amount: month.bills.rent }] : []),
-        ...(month.bills.items ?? []).map((b) => ({ key: `item:${b.name}`, name: b.name, amount: b.amount })),
+        ...(month.bills.rent > 0 ? [{ key: 'rent', name: t('Rent'), amount: month.bills.rent, type: 'rent' as const }] : []),
+        ...(month.bills.items ?? []).map((b) => ({
+          key: `item:${b.name}`,
+          name: b.name,
+          amount: b.amount,
+          type: typeOf(b),
+          ...(b.yearly
+            ? {
+                sub: t('Every year · due {month}', { month: dueLabel(b.yearly.due) }),
+                note: t('{ready} of {total} ready', { ready: baht(readyOf(b, now)), total: baht(b.yearly.total) }),
+                perMonth: true,
+              }
+            : { sub: t('{type} · monthly', { type: typeName(typeOf(b)) }) }),
+        })),
         ...(month.bills.guess > 0 ? [{ key: 'guess', name: t('Other bills'), amount: month.bills.guess, estimate: true }] : []),
       ].map((b) => ({ ...b, paid: paidKeys.includes(b.key) }))
     : [];
@@ -229,7 +227,10 @@ export default function Home() {
     const keys = new Set(paidKeys);
     if (paid) keys.add(key);
     else keys.delete(key);
-    save({ ...month, paid: { period: pk, keys: [...keys] } } as MonthBudget);
+    // A yearly item paid in (or after) the month it's due starts its next year: due again in a year, total ÷ 12 a month.
+    const item = (month.bills.items ?? []).find((b) => `item:${b.name}` === key);
+    const base = paid && item?.yearly && monthsToDue(item.yearly.due, now) <= 1 ? rollYearly(month, item.name, now) : month;
+    save({ ...base, paid: { period: pk, keys: [...keys] } } as MonthBudget);
     if (paid) flash(t('{name} marked paid', { name: bills.find((b) => b.key === key)?.name ?? t('Bill') }));
   }
 
@@ -293,16 +294,28 @@ export default function Home() {
             <CountUp
               value={isTodaySelected ? (showOverToday ? overToday : leftToday) : shownSpent}
               format={showOverToday ? (n) => <>−{Big(n)}</> : Big}
-              style={[styles.n1, showOverToday && { color: colors.orangeText }, overMonth > 0 && { fontSize: 38, lineHeight: 48, marginTop: -6 }]}
+              style={[styles.n1, showOverToday && { color: colors.orangeText }]}
               fit
             />
             {showOverToday ? (
               <View style={styles.overLbl}>
-                <Text style={[styles.lbl, styles.overText]}>{t('Over today')}</Text>
+                <Text style={styles.lbl}>
+                  <Text style={styles.overText}>{t('Over today')}</Text>
+                  {t(' · of {amount}', { amount: baht(dailyToday) })}
+                </Text>
                 <CaretRight size={11} color={colors.orangeText} weight="bold" style={{ marginTop: 6 }} />
               </View>
             ) : (
-              <Text style={styles.lbl}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
+              <Text style={styles.lbl}>
+                {isTodaySelected ? (
+                  <>
+                    {t('Left today')}
+                    {t(' · of {amount}', { amount: baht(dailyToday) })}
+                  </>
+                ) : (
+                  t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })
+                )}
+              </Text>
             )}
           </Pressable>
           <View style={styles.vbar} />
@@ -321,7 +334,7 @@ export default function Home() {
                   {Big(n)}
                 </>
               )}
-              style={[styles.n2, overMonth > 0 && { color: colors.orangeText, fontSize: 26, lineHeight: 33, marginTop: -3 }]}
+              style={[styles.n2, overMonth > 0 && { color: colors.orangeText }]}
               fit
             />
             <Text style={[styles.lbl, overMonth > 0 && styles.overText]}>{overMonth > 0 ? t('Over this month') : t('Left this month')}</Text>
@@ -339,12 +352,9 @@ export default function Home() {
         {/* Kip */}
         <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 24 }}>
           <Glass radius={28}>
-            <View style={{ padding: 20, minHeight: 176 }}>
-              <View style={styles.kip} pointerEvents="none">
-                <Kip mood={kipMood} size={kipSize} />
-              </View>
+            <View style={{ padding: 20 }}>
               <Text style={styles.kipName}>Kip</Text>
-              <Text style={[styles.say, { maxWidth: sayWidth }]}>{say}</Text>
+              <Text style={styles.say}>{say}</Text>
               <View style={styles.two}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.twoK}>{t('Spent today')}</Text>
@@ -371,7 +381,7 @@ export default function Home() {
           <Section title={goals.length > 1 ? t('Your goals') : t('Your goal')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {goals.map((g) => (
-              <GoalCard key={g.id} g={g} perMonth={split.get(g.id) ?? 0} width={Math.min(312, width - 60)} />
+              <GoalCard key={g.id} g={g} perMonth={split.get(g.id) ?? 0} arrives={arrive.get(g.id) ?? null} width={Math.min(312, width - 60)} />
             ))}
             {goals.length < MAX_GOALS && (
               <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add a goal') : t('Pin 2 more goals')}>
@@ -448,7 +458,7 @@ export default function Home() {
         {/* bills */}
         {bills.length > 0 && (
           <RiseIn delay={480} style={{ paddingHorizontal: 20 }}>
-            <Section title={t('Bills this month')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
+            <Section title={t('Every month')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
             <BillStack bills={bills} onPaid={setPaid} />
           </RiseIn>
         )}
@@ -513,11 +523,11 @@ function Section({ title, right, onRight, caret, inset = true }: { title: string
   );
 }
 
-function GoalCard({ g, perMonth, width }: { g: HomeGoal; perMonth: number; width: number }) {
+function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: number; arrives: Date | null; width: number }) {
   const type = typeInfo(g.goalType, g.kind as never);
   const short = g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never);
   const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
-  const days = g.due ? Math.max(0, Math.round((parseDay(g.due).getTime() - Date.now()) / 86_400_000)) : null;
+  const days = arrives ? Math.max(0, Math.round((arrives.getTime() - Date.now()) / 86_400_000)) : null;
   const line = (g.promise ?? '').split('\n')[0];
   return (
     <Squish
@@ -606,9 +616,8 @@ const styles = themed(() =>
     overText: { color: colors.orangeText, fontFamily: fonts.medium },
     extraIn: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText, marginTop: 2 },
     vbar: { width: 1, height: 56, marginBottom: 4, backgroundColor: inkA(0.08) },
-    kip: { position: 'absolute', right: 12, top: 8 },
     kipName: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-    say: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 24, color: colors.ink, marginTop: 4, maxWidth: 192, minHeight: 72 },
+    say: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 24, color: colors.ink, marginTop: 4 },
     two: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: inkA(0.08) },
     twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: inkA(0.08), paddingLeft: 16 },
     twoK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },

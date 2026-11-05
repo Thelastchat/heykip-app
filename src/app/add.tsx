@@ -28,6 +28,7 @@ import { pickSlips } from '@/lib/slips';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { useAiConsent } from '@/components/AiConsent';
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money, inkA, themed } from '@/theme';
 import { Accent } from '@/lib/accent';
@@ -314,7 +315,7 @@ export default function Add() {
   const shown = digits ? Number(digits.replace(/\.$/, '')).toLocaleString('en-US', { maximumFractionDigits: 2 }) + (digits.endsWith('.') ? '.' : '') : '0';
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) }}>
+    <KeyboardSafe style={{ flex: 1, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) }}>
       <GlowBackground />
       <View style={{ paddingHorizontal: 20 }}>
         <ScreenHeader
@@ -479,7 +480,7 @@ export default function Add() {
           <ChatPeek ask={t('KBank slip · 13:05')} answer={t('Got it — ฿80, Transport, today 13:05. Saved')} />
         </PlusSheet>
       )}
-    </View>
+    </KeyboardSafe>
   );
 }
 

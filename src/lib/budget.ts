@@ -153,6 +153,12 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
 
 // ---------- the month ----------
 
+/** What kind of thing it is (picks its icon). Missing = guessed from the name. */
+export type BillType = 'rent' | 'utilities' | 'phone' | 'internet' | 'streaming' | 'fitness' | 'insurance' | 'loan' | 'family' | 'other';
+/** Something paid every month — a bill, a subscription, money for family. A yearly one (insurance) is set aside monthly:
+ *  `amount` is what this month sets aside; `yearly` says how much is due and when (see everymonth.ts). */
+export type BillItem = { name: string; amount: number; type?: BillType; yearly?: { total: number; due: string; since: string } };
+
 export type MonthBudget = {
   v: 2;
   style: BudgetStyle;
@@ -164,7 +170,7 @@ export type MonthBudget = {
   goal: { title: string; amount: number; isSafetyNet: boolean };
   safety: { amount: number; target: number };
   goalExtra: number; // money moved to the goal from a lowered budget
-  bills: { rent: number; guess: number; items?: { name: string; amount: number }[] }; // guess = bills Kip hasn't seen yet
+  bills: { rent: number; guess: number; items?: BillItem[] }; // guess = bills Kip hasn't seen yet
   spend: { key: CatKey; amount: number }[];
   /** Bills marked paid this month (cleared when a new month starts). */
   paid?: { period: string; keys: string[] };
@@ -216,7 +222,7 @@ export function monthFrom(inputs: Inputs, style: BudgetStyle, goalPerMonth: numb
  *  the goal unless `goalPerMonth` says otherwise. */
 export function withStyle(m: MonthBudget, style: BudgetStyle, goalPerMonth: number | null = m.goalPerMonth): MonthBudget {
   let next = monthFrom(m.inputs, style, goalPerMonth, m.payday, m.safety.target);
-  for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
+  for (const { name, amount, ...extra } of m.bills.items ?? []) next = addBill(next, name, amount, extra).month;
   return { ...next, ...keepOnReplan(m) };
 }
 
@@ -268,7 +274,7 @@ export type BillImpact = { month: MonthBudget; fromGuess: number; fromFun: numbe
 
 const FUN_KEYS: CatKey[] = ['shopping', 'fun', 'spend_freely', 'learning', 'giving'];
 
-export function addBill(m: MonthBudget, name: string, amount: number): BillImpact {
+export function addBill(m: MonthBudget, name: string, amount: number, extra: Omit<BillItem, 'name' | 'amount'> = {}): BillImpact {
   let left = Math.max(0, Math.round(amount));
   const fromGuess = Math.min(left, m.bills.guess);
   left -= fromGuess;
@@ -291,7 +297,7 @@ export function addBill(m: MonthBudget, name: string, amount: number): BillImpac
   return {
     month: {
       ...m,
-      bills: { ...m.bills, guess: m.bills.guess - fromGuess, items: [...(m.bills.items ?? []), { name, amount }] },
+      bills: { ...m.bills, guess: m.bills.guess - fromGuess, items: [...(m.bills.items ?? []), { ...extra, name, amount }] },
       spend: m.spend.map((s) => ({ ...s, amount: s.amount - (cut.get(s.key) ?? 0) })),
       goalExtra: m.goalExtra - extraCut,
       goal: { ...m.goal, amount: m.goal.amount - (fromGoal - extraCut) },

@@ -4,23 +4,42 @@ import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { CaretDown, Check, Lock, Plus, X } from 'phosphor-react-native';
 import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Ring, Squish } from '@/components/glow/motion';
-import { BillGlyph, glyphFor } from '@/components/home/BillStack';
+import { BillGlyph, billTint } from '@/components/home/BillStack';
+import { BILL_TYPES, dueLabel, guessType, monthsToDue, nextDue, typeName, typeOf, yearlySetAside } from '@/lib/everymonth';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
-import { CATEGORY, STYLES, billsTotal, dailyOf, addBill, lowerBudget, removeBill, raiseBudget, savingTotal, spendingTotal, takePlan, type CatKey, type FreedTo, type MonthBudget } from '@/lib/budget';
-import { t } from '@/lib/i18n';
+import {
+  CATEGORY,
+  STYLES,
+  billsTotal,
+  dailyOf,
+  addBill,
+  lowerBudget,
+  removeBill,
+  raiseBudget,
+  savingTotal,
+  spendingTotal,
+  takePlan,
+  type BillItem,
+  type BillType,
+  type CatKey,
+  type FreedTo,
+  type MonthBudget,
+} from '@/lib/budget';
+import { monthShort, t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
-import { shortDate } from '@/lib/setup/plan';
+import { isoDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
@@ -44,6 +63,7 @@ export function MonthScreen({
   spent,
   isPlus = true,
   onLocked,
+  openAdd = false,
 }: {
   month: MonthBudget | null;
   loading: boolean;
@@ -54,9 +74,11 @@ export function MonthScreen({
   /** Free users: changing amounts and money styles are Plus. Bills are facts, so adding one stays free. */
   isPlus?: boolean;
   onLocked?: (f: 'styles' | 'customize') => void;
+  /** Opened from Home's "Add to every month": the add sheet is open straight away. */
+  openAdd?: boolean;
 }) {
   const insets = useSafeAreaInsets();
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [sheet, setSheet] = useState<Sheet>(openAdd ? { stage: 'addBill' } : null);
   const [notice, setNotice] = useState<string | null>(null);
 
   if (loading || !month) {
@@ -155,10 +177,10 @@ export function MonthScreen({
             {(month.bills.items ?? []).map((b, i) => (
               <Row
                 key={`${b.name}-${i}`}
-                glyph={{ name: b.name, tint: tintFor(b.name) }}
+                glyph={{ name: b.name, type: typeOf(b), tint: billTint(b.name, typeOf(b)) }}
                 title={b.name}
-                sub={t('Monthly')}
-                amount={baht(b.amount)}
+                sub={b.yearly ? t('Every year · due {month} · {total}', { month: dueLabel(b.yearly.due), total: baht(b.yearly.total) }) : t('{type} · monthly', { type: typeName(typeOf(b)) })}
+                amount={b.yearly ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
                 divider
                 right={
                   <Pressable onPress={() => save(removeBill(month, i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Remove {name}', { name: b.name })} style={styles.xBtn}>
@@ -246,8 +268,8 @@ export function MonthScreen({
         {sheet?.stage === 'addBill' && (
           <AddBill
             month={month}
-            onAdd={(name, amount) => {
-              const r = addBill(month, name, amount);
+            onAdd={(name, amount, extra) => {
+              const r = addBill(month, name, amount, extra);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               save(r.month);
               setNotice(
@@ -315,11 +337,6 @@ function hintFor(k: CatKey) {
   return hint[k];
 }
 
-function tintFor(name: string) {
-  const g = glyphFor(name);
-  return ({ house: colors.lavender, bolt: colors.lime, drop: colors.sky, phone: colors.peach, wifi: colors.sage, play: colors.pink, receipt: colors.sand } as const)[g];
-}
-
 function FlowPart({ flex, color, label, amount, delay, kind }: { flex: number; color: string; label: string; amount: number; delay: number; kind: 'accent' | 'solid' | 'plain' }) {
   if (flex <= 0) return null;
   return (
@@ -347,7 +364,7 @@ function Row({
   right,
 }: {
   icon?: Icon3D;
-  glyph?: { name: string; tint: string };
+  glyph?: { name: string; tint: string; type?: BillType };
   title: string;
   sub: string;
   amount: string;
@@ -361,7 +378,7 @@ function Row({
         <Image source={ICON3D[icon]} style={{ width: 44, height: 44 }} contentFit="contain" />
       ) : glyph ? (
         <View style={[styles.gico, { backgroundColor: glyph.tint }]}>
-          <BillGlyph name={glyph.name} />
+          <BillGlyph name={glyph.name} type={glyph.type} />
         </View>
       ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -407,13 +424,13 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t('Close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
           <View style={styles.grabber} />
           {children}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafe>
     </Modal>
   );
 }
@@ -526,56 +543,117 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
   );
 }
 
-function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, amount: number) => void }) {
+/** Add to every month (approved mockup): what kind it is, its name, every month or every year, and what it does. */
+function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, amount: number, extra: Omit<BillItem, 'name' | 'amount'>) => void }) {
+  const [type, setType] = useState<BillType | null>(null);
   const [name, setName] = useState('');
+  const [yearly, setYearly] = useState(false);
   const [amount, setAmount] = useState<number | null>(null);
-  const preview = amount ? addBill(month, name || t('New bill'), amount) : null;
+  const now = new Date();
+  const [dueMonth, setDueMonth] = useState((now.getMonth() + 3) % 12);
+  const due = nextDue(dueMonth, now);
+  const kind = type ?? (name.trim() ? guessType(name) : 'other');
+  // A yearly item sets aside what still has to be ready over the months left; that's what the month carries.
+  const perMonth = amount ? (yearly ? yearlySetAside(amount, due, 0, now) : amount) : 0;
+  const preview = perMonth ? addBill(month, name || t('New bill'), perMonth) : null;
   const goalName = month.goal.isSafetyNet ? t('your safety net') : month.goal.title;
+  const months = monthsToDue(due, now);
+  const after = amount ? yearlySetAside(amount, `${Number(due.slice(0, 4)) + 1}${due.slice(4)}`, 0, new Date(Number(due.slice(0, 4)), Number(due.slice(5)) - 1, 2)) : 0;
   return (
     <>
-      <SheetTitle mood="think" title={t('Add a bill')} sub={t('Anything that comes every month: subscriptions, a gym, a phone instalment.')} />
+      <SheetTitle mood="think" title={t('Add to every month')} sub={t('Kip sets the money aside before you spend')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {['Netflix', 'YouTube Premium', 'Spotify', 'iCloud', t('Gym'), t('Phone instalment')].map((n) => (
-          <Pressable key={n} onPress={() => setName(n)} style={[styles.quickChip, name === n && { backgroundColor: colors.sky, borderColor: colors.ink }]} accessibilityRole="button">
-            <Text style={{ fontFamily: name === n ? fonts.semibold : fonts.medium, fontSize: 13, color: name === n ? colors.onAccent : colors.ink }}>{n}</Text>
+        {BILL_TYPES.map((k) => {
+          const on = kind === k && (type !== null || !!name.trim());
+          const dark = k === 'loan'; // the loan glyph sits on a black circle, so its picked chip is black with white text
+          return (
+            <Pressable
+              key={k}
+              onPress={() => setType(k)}
+              style={[styles.typeChip, on && { backgroundColor: billTint(name, k), borderColor: dark ? colors.lime : colors.onAccent }]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={typeName(k)}>
+              <View style={[styles.typeIco, { backgroundColor: billTint(name, k) }]}>
+                <BillGlyph name={name} type={k} />
+              </View>
+              <Text style={{ fontFamily: on ? fonts.semibold : fonts.medium, fontSize: 13, color: on ? (dark ? '#FFFFFF' : colors.onAccent) : colors.ink }}>{typeName(k)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <TextInput value={name} onChangeText={setName} placeholder={t('Name — e.g. AIS Fibre, Mum & Dad')} placeholderTextColor={colors.faint} style={styles.field} accessibilityLabel={t('Bill name')} />
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {[false, true].map((y) => (
+          <Pressable key={String(y)} onPress={() => setYearly(y)} style={[styles.pill2, yearly === y && styles.pill2On]} accessibilityRole="radio" accessibilityState={{ selected: yearly === y }}>
+            <Text style={{ fontFamily: yearly === y ? fonts.semibold : fonts.medium, fontSize: 14, color: yearly === y ? colors.onAccent : colors.ink }}>{y ? t('Every year') : t('Every month')}</Text>
           </Pressable>
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <TextInput value={name} onChangeText={setName} placeholder={t('Name')} placeholderTextColor={colors.faint} style={[styles.field, { flex: 1.4 }]} accessibilityLabel={t('Bill name')} />
-        <View style={[styles.field, { flex: 1, flexDirection: 'row', alignItems: 'center' }]}>
-          <Text style={styles.fieldText}>฿</Text>
-          <TextInput
-            value={amount === null ? '' : amount.toLocaleString('en-US')}
-            onChangeText={(t) => {
-              const d = t.replace(/[^\d]/g, '');
-              setAmount(d ? Math.min(Number(d), 999_999) : null);
-            }}
-            placeholder="179"
-            placeholderTextColor={colors.faint}
-            keyboardType="number-pad"
-            style={[styles.fieldText, { flex: 1, padding: 0 }]}
-            accessibilityLabel={t('Amount a month')}
-          />
-        </View>
+      <View style={[styles.field, { flexDirection: 'row', alignItems: 'center' }]}>
+        <Text style={styles.fieldText}>฿</Text>
+        <TextInput
+          value={amount === null ? '' : amount.toLocaleString('en-US')}
+          onChangeText={(v) => {
+            const d = v.replace(/[^\d]/g, '');
+            setAmount(d ? Math.min(Number(d), 9_999_999) : null);
+          }}
+          placeholder={yearly ? '12,000' : '599'}
+          placeholderTextColor={colors.faint}
+          keyboardType="number-pad"
+          style={[styles.fieldText, { flex: 1, padding: 0 }]}
+          accessibilityLabel={yearly ? t('Amount a year') : t('Amount a month')}
+        />
       </View>
+      {yearly && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} keyboardShouldPersistTaps="handled">
+          {Array.from({ length: 12 }, (_, i) => (now.getMonth() + 1 + i) % 12).map((mo) => (
+            <Pressable
+              key={mo}
+              onPress={() => setDueMonth(mo)}
+              style={[styles.pill2, { flex: 0, paddingHorizontal: 14 }, dueMonth === mo && styles.pill2On]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: dueMonth === mo }}
+              accessibilityLabel={t('Due in {month}', { month: monthShort(mo) })}>
+              <Text style={{ fontFamily: dueMonth === mo ? fonts.semibold : fonts.medium, fontSize: 14, color: dueMonth === mo ? colors.onAccent : colors.ink }}>{monthShort(mo)}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
       {preview && (
         <View style={styles.takeBox}>
+          {yearly && amount ? (
+            <Text style={[styles.impact, { paddingTop: 6 }]}>
+              {months > 1
+                ? perMonth > after
+                  ? t('{month} is {n} months away. I’ll set aside {per} a month until then, then {after} a month.', { month: monthShort(dueMonth), n: months, per: baht(perMonth), after: baht(after) })
+                  : t('{month} is {n} months away. I’ll set aside {per} a month.', { month: monthShort(dueMonth), n: months, per: baht(perMonth) })
+                : t('It’s due next month: I’ll set aside {per} this month, then {after} a month.', { per: baht(perMonth), after: baht(after) })}
+            </Text>
+          ) : null}
           <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.ink, paddingVertical: 6 }}>{t('What it does to your month')}</Text>
           {preview.fromGuess > 0 && <Text style={styles.impact}>{t('✓ {amt} fits inside my bill guess — that’s what the guess is for.', { amt: baht(preview.fromGuess) })}</Text>}
           {preview.fromFun > 0 && <Text style={styles.impact}>{t('• {amt} less fun money a month.', { amt: baht(preview.fromFun) })}</Text>}
           {preview.fromGoal > 0 && <Text style={styles.impact}>{t('• {amt} less for {goal} a month — it’ll take a little longer.', { amt: baht(preview.fromGoal), goal: goalName })}</Text>}
           {preview.short > 0 && <Text style={[styles.impact, { color: colors.orange }]}>{t('• {amt} more than your month can carry. Something else has to go.', { amt: baht(preview.short) })}</Text>}
           {preview.fromFun === 0 && preview.fromGoal === 0 && preview.short === 0 && <Text style={styles.impact}>{t('Nothing else changes.')}</Text>}
-          <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>
-            {t('{amt} a year. Worth it? Only you can say — I just make sure you see it.', { amt: baht((amount ?? 0) * 12) })}
-          </Text>
+          {!yearly && (
+            <Text style={[styles.impact, { color: colors.muted, paddingBottom: 6 }]}>
+              {t('{amt} a year. Worth it? Only you can say — I just make sure you see it.', { amt: baht((amount ?? 0) * 12) })}
+            </Text>
+          )}
         </View>
       )}
       <Button
-        label={amount ? t('Add {name} · {amt} a month', { name: name || t('bill'), amt: baht(amount) }) : t('Add bill')}
+        label={
+          amount
+            ? yearly
+              ? t('Add {name} · {amt} a year', { name: name || t('bill'), amt: baht(amount) })
+              : t('Add {name} · {amt} a month', { name: name || t('bill'), amt: baht(amount) })
+            : t('Add')
+        }
         disabled={!amount || !name.trim()}
-        onPress={() => amount && onAdd(name.trim(), amount)}
+        onPress={() => amount && onAdd(name.trim(), perMonth, { type: kind, ...(yearly ? { yearly: { total: amount, due, since: isoDay(now) } } : {}) })}
       />
     </>
   );
@@ -696,6 +774,21 @@ const styles = themed(() =>
     moneyText: { fontFamily: fonts.bold, fontSize: 34, letterSpacing: -1, color: colors.ink, fontVariant: ['tabular-nums'] },
     step: { flex: 1, height: 40, borderRadius: radius.pill, backgroundColor: colors.grey, alignItems: 'center', justifyContent: 'center' },
     takeBox: { borderRadius: 18, backgroundColor: colors.grey, paddingVertical: 6, paddingHorizontal: 14 },
+    typeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      height: 40,
+      paddingLeft: 4,
+      paddingRight: 12,
+      borderRadius: radius.pill,
+      backgroundColor: inkA(0.05),
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+    },
+    typeIco: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    pill2: { flex: 1, height: 42, borderRadius: radius.pill, backgroundColor: inkA(0.05), alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+    pill2On: { backgroundColor: colors.lime, borderColor: colors.onAccent },
     quickChip: { height: 32, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.grey, borderWidth: 1.5, borderColor: 'transparent', justifyContent: 'center' },
     field: { height: 50, borderRadius: 14, backgroundColor: colors.grey, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     fieldText: { fontFamily: fonts.semibold, fontSize: 18, color: colors.ink, fontVariant: ['tabular-nums'] },

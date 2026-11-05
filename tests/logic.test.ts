@@ -8,6 +8,7 @@ import { replanGoal } from '../src/lib/goalEdit';
 import { monthNumbers, overCover, period, periodAt, streakOf, type Spent } from '../src/lib/home';
 import { checkParts, paydayMoves, paydayShares, savingThisCycle, splitIn } from '../src/lib/moneyin';
 import { replan } from '../src/lib/replan';
+import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearlySetAside } from '../src/lib/everymonth';
 import { isoDay } from '../src/lib/setup/plan';
 
 // ---------- tiny test kit ----------
@@ -347,6 +348,58 @@ for (let n = 0; n < 1500; n++) {
         now: goalTotal(r.month),
       }));
   }
+}
+
+// ---------- 7. Every month: yearly items, types, slips → bills ----------
+for (let n = 0; n < 2000; n++) {
+  const i = person();
+  if (!i) continue;
+  const m = month(i);
+  const now = new Date(2026, int(0, 11), int(1, 28));
+  const total = r100(1200, 30000);
+  const due = nextDue(int(0, 11), now);
+  const per = yearlySetAside(total, due, 0, now);
+  check('Yearly: setting aside every month until it’s due covers it in full', per * monthsToDue(due, now) >= total, () => ({ total, due, per, months: monthsToDue(due, now) }));
+  const added = addBill(m, 'Car insurance', per, { type: 'insurance', yearly: { total, due, since: isoDay(now) } });
+  check('Yearly: every baht still has a job (or the shortfall is reported)', near(jobs(added.month) - added.short, m.income), () => ({ per, short: added.short }));
+  const item = added.month.bills.items!.at(-1)!;
+  check('Yearly: what’s ready never goes past what’s due', readyOf(item, new Date(now.getFullYear() + 2, now.getMonth(), 1)) <= total, () => item);
+  // Paid → next year: due a year later, sets aside total ÷ 12 (or less), nothing appears from nowhere.
+  const rolled = rollYearly(added.month, 'Car insurance', now);
+  const r = rolled.bills.items!.at(-1)!;
+  check('Yearly paid: due again a year later', Number(r.yearly!.due.slice(0, 4)) === Number(due.slice(0, 4)) + 1 && r.yearly!.due.slice(5) === due.slice(5), () => ({ due, next: r.yearly!.due }));
+  check('Yearly paid: every baht still has a job', near(jobs(rolled) - added.short, m.income), () => ({ jobs: jobs(rolled), income: m.income }));
+  check('Yearly paid: the next year sets aside no more than before', r.amount <= item.amount, () => ({ before: item.amount, after: r.amount }));
+  // Re-plans keep the type and the yearly details.
+  const switched = withStyle(added.month, pick(STYLES));
+  const kept = switched.bills.items!.find((b) => b.name === 'Car insurance');
+  check('Re-plan keeps a bill’s type and yearly details', kept?.type === 'insurance' && kept?.yearly?.total === total, () => kept);
+}
+// Slips → bills.
+{
+  const i = { income: 25000, rent: 7000, bills: 1500, goal: { type: 'trip' as const, title: 'Japan', target: 60000, saved: 5000, months: 25, monthly: null } };
+  let m = month(i, 'kip', 25);
+  m = addBill(m, 'Netflix', 419).month;
+  const slip = (name: string, amount: number, category = 'home_bills') => ({ name, amount, category, money: 'out' as const });
+  const rent = matchBill(slip('นายสมศักดิ์ ใจดี', 7000), m, [], new Set());
+  check('Slip → bill: a ฿7,000 Home & bills slip pays the rent', rent?.kind === 'paid' && rent.key === 'rent', () => rent);
+  const rent2 = matchBill(slip('นายสมศักดิ์ ใจดี', 6900), m, [], new Set());
+  check('Slip → bill: within 5% still matches (฿6,900 ≈ rent)', rent2?.kind === 'paid' && rent2.key === 'rent', () => rent2);
+  const paidAlready = matchBill(slip('นายสมศักดิ์ ใจดี', 7000), m, ['rent'], new Set());
+  check('Slip → bill: rent already paid this month isn’t ticked again', paidAlready?.kind === 'new', () => paidAlready);
+  const nf = matchBill(slip('NETFLIX.COM', 419, 'fun'), m, [], new Set());
+  check('Slip → bill: “Netflix” by name, even filed under Fun', nf?.kind === 'paid' && nf.key === 'item:Netflix', () => nf);
+  const gym = matchBill(slip('FITNESS FIRST', 990), m, [], new Set());
+  check('Slip → bill: an unknown Home & bills slip is offered as new, typed Fitness', gym?.kind === 'new' && gym.type === 'fitness', () => gym);
+  const food = matchBill(slip('ร้านข้าวมันไก่', 60, 'food'), m, [], new Set());
+  check('Slip → bill: an everyday spend is never a bill', food === null, () => food);
+  const twice = matchBill(slip('someone', 7000), m, [], new Set(['rent']));
+  check('Slip → bill: two slips can’t both pay the same rent', twice?.kind !== 'paid', () => twice);
+  check(
+    'Bill types: AIS Fibre → Internet, AIS → Phone, ค่าไฟ → Water & electricity, แม่ → Family',
+    guessType('AIS Fibre') === 'internet' && guessType('AIS') === 'phone' && guessType('ค่าไฟ') === 'utilities' && guessType('ให้แม่') === 'family',
+    () => [guessType('AIS Fibre'), guessType('AIS'), guessType('ค่าไฟ'), guessType('ให้แม่')],
+  );
 }
 
 // ---------- report ----------

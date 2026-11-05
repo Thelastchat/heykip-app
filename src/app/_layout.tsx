@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import Stack from 'expo-router/stack';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { LangProvider, takeReturnTo } from '@/lib/i18n';
@@ -86,16 +87,18 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <LookProvider>
-        <LangProvider>
-          <AuthProvider>
-            <SetupProvider>
-              <Bar />
-              <RootStack />
-            </SetupProvider>
-          </AuthProvider>
-        </LangProvider>
-      </LookProvider>
+      <KeyboardProvider>
+        <LookProvider>
+          <LangProvider>
+            <AuthProvider>
+              <SetupProvider>
+                <Bar />
+                <RootStack />
+              </SetupProvider>
+            </AuthProvider>
+          </LangProvider>
+        </LookProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

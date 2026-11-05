@@ -56,7 +56,7 @@ export function replanGoal(m: MonthBudget, g: HomeGoal, d: GoalDraft, keep: Keep
 
   const inputs = { ...m.inputs, goal };
   let next = monthFrom(inputs, m.style, goalPerMonth, m.payday, safetyNet(inputs).target);
-  for (const bill of m.bills.items ?? []) next = addBill(next, bill.name, bill.amount).month;
+  for (const { name, amount, ...extra } of m.bills.items ?? []) next = addBill(next, name, amount, extra).month;
   next = { ...next, ...keepOnReplan(m) };
   return { month: next, due };
 }
