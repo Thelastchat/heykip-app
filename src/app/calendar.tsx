@@ -1,5 +1,5 @@
-// Full calendar (approved mockup): a month at a time, each day with what was spent and a dot — lime under the daily
-// budget, orange over. Tap a day to see its spends. Opens on this month; goes back one year and no further.
+// Full calendar (approved mockup): a month at a time, each day with what was spent and a dot — grey under the daily
+// budget, black over (white, light grey and black only, like Home's week). Tap a day to see its spends. Opens on this month; goes back one year and no further.
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { CaretLeft, CaretRight } from 'phosphor-react-native';
@@ -150,7 +150,7 @@ export default function FullCalendar() {
                     const over = daily > 0 && amount > daily;
                     const on = picked === k;
                     const isToday = k === now.toDateString();
-                    const dot = !open || !loaded ? 'transparent' : isToday && amount === 0 ? inkA(0.12) : over ? colors.orange : amount > 0 ? colors.limeDeep : inkA(0.12);
+                    const dot = !open || !loaded ? 'transparent' : over ? (on ? colors.paper : colors.ink) : amount > 0 ? (on ? 'rgba(255,255,255,0.5)' : inkA(0.22)) : 'transparent';
                     return (
                       <Pressable
                         key={k}
@@ -164,7 +164,7 @@ export default function FullCalendar() {
                           {d.getDate()}
                           {k === payday ? <Text style={[styles.pay, on && { color: colors.paper }]}>฿</Text> : null}
                         </Text>
-                        <Text style={[styles.amt, over && { color: colors.orangeText }, on && { color: colors.paper }]} numberOfLines={1}>
+                        <Text style={[styles.amt, over && { color: colors.ink, fontFamily: fonts.medium }, on && { color: colors.paper }]} numberOfLines={1}>
                           {open && loaded ? (amount > 0 ? Math.round(amount).toLocaleString('en-US') : '–') : ' '}
                         </Text>
                         <View style={[styles.dot, { backgroundColor: dot }]} />
@@ -183,10 +183,10 @@ export default function FullCalendar() {
         {loaded && daily > 0 && (
           <View style={styles.legend}>
             <Text style={styles.lg}>
-              <Text style={{ color: colors.limeDeep }}>●</Text> {t('Under {amount}', { amount: dailyShown })}
+              <Text style={{ color: inkA(0.22) }}>●</Text> {t('Under {amount}', { amount: dailyShown })}
             </Text>
             <Text style={styles.lg}>
-              <Text style={{ color: colors.orange }}>●</Text> {t('Over')}
+              <Text style={{ color: colors.ink }}>●</Text> {t('Over')}
             </Text>
             {payday && <Text style={styles.lg}>฿ {t('Payday')}</Text>}
           </View>
@@ -244,7 +244,7 @@ const styles = themed(() =>
     wd: { flex: 1, textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     grid: { paddingHorizontal: 12, gap: 4 },
     wrow: { flexDirection: 'row' },
-    cell: { flex: 1, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 2 },
+    cell: { flex: 1, height: 58, borderRadius: 999, alignItems: 'center', justifyContent: 'center', gap: 2 },
     on: { backgroundColor: colors.ink },
     today: { borderWidth: 1.5, borderColor: colors.ink },
     dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
@@ -275,7 +275,7 @@ const styles = themed(() =>
     all: { alignItems: 'center', paddingVertical: 12 },
     allT: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
     note: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 16, paddingHorizontal: 24 },
-    end: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 20, backgroundColor: inkA(0.04) },
+    end: { marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 28, backgroundColor: inkA(0.04) },
     endT: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.muted },
   }),
 );

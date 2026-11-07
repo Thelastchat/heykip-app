@@ -328,6 +328,17 @@ const th: Record<string, string> = {
   Insurance: 'ประกัน',
   Loan: 'เงินกู้/ผ่อน',
   'Phone plan': 'ค่าโทรศัพท์',
+  // Home top (approved mockup G2)
+  'Nothing left this month': 'เดือนนี้ไม่เหลือแล้ว',
+  '{spent} spent of {total}': 'ใช้ไป {spent} จาก {total}',
+  'This week': 'สัปดาห์นี้',
+  'Kip says: {text}': 'Kip บอกว่า: {text}',
+  Read: 'อ่าน',
+  'Inside the safe zone': 'อยู่ในโซนปลอดภัย',
+  'Above the safe zone': 'เกินโซนปลอดภัย',
+  'Safe zone': 'โซนปลอดภัย',
+  'Payday · {amount} left': 'เงินเดือนออก · เหลือ {amount}',
+  'Payday · {amount} short': 'เงินเดือนออก · ขาด {amount}',
 };
 
 export default th;

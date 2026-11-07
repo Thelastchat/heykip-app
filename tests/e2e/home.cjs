@@ -90,7 +90,7 @@ module.exports = async function homeTests(browser) {
     const N = X.monthNumbers(m, { total: spentSoFar(db), today: spentToday(db), bills: 0, byCat: {}, byDay: {} }, new Date());
     const home = await sane(page, 'Home after a big day');
     await check(page, `Home shows ${fmt(N.overToday)} over today`, N.overToday > 0 && home.includes(fmt(N.overToday)), () => ({ over: N.overToday, home: home.slice(0, 300) }));
-    await tap(page, visible(page.getByRole('button').filter({ hasText: fmt(N.overToday) })).first(), { wait: 1500 }).catch(() => {});
+    await tap(page, visible(page.getByRole('button', { name: /over today — see what it changes/ })).first(), { wait: 1500 }).catch(() => {});
     const sheet = await sane(page, 'Over-today sheet');
     await check(page, `Over-today sheet: the days ahead carry it (${fmt(N.dailyAfter)} a day for ${N.daysAfter} days)`, sheet.includes(fmt(N.dailyAfter)), () => ({ N, sheet: sheet.slice(0, 500) }));
     await page.close();
@@ -350,8 +350,10 @@ module.exports = async function homeTests(browser) {
     const goals = await sane(page, 'Goals after the bill');
     const arr = goals.match(/Arrives \| ([A-Z][a-z]{2} \d{4})/)?.[1];
     await go(page, '/');
-    const home = await sane(page, 'Home after the bill');
-    await check(page, `Home’s Kip line uses the same date as Goals (${arr})`, !!arr && home.includes(arr), () => ({ arr, home: home.slice(0, 500) }));
+    await sane(page, 'Home after the bill');
+    await tap(page, visible(page.getByRole('button', { name: /^Kip says:/ })), { wait: 1200 });
+    const kip = await sane(page, 'Kip’s note');
+    await check(page, `Kip’s note on Home uses the same date as Goals (${arr})`, !!arr && kip.includes(arr), () => ({ arr, kip: kip.slice(-500) }));
     await check(page, 'The bill really slowed the goal (it’s later than Dec 2027)', !!arr && arr !== 'Dec 2027', () => arr);
     await page.close();
   });

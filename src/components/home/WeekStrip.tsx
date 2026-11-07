@@ -1,4 +1,5 @@
-// The week at a glance, inside the pay period: one dot per day — lime under your daily amount, orange over.
+// The week at a glance, inside the pay period (approved mockup G2): white pills, today/selected in black. A grey dot
+// is a day you spent under your daily amount, a black dot a day you went over. No lime or orange here.
 // Tap a day to see what you spent that day; tap today to go back.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -54,7 +55,7 @@ export function WeekStrip({
                   : `${name} ${d.getDate()}`
             }
             accessibilityState={{ selected: on }}
-            style={[styles.day, on && styles.on, later && { opacity: 0.45 }]}>
+            style={[styles.day, on && styles.on, later && { opacity: 0.5 }]}>
             <Text style={[styles.dn, on && { color: glassA(0.6) }]}>{name}</Text>
             <Text style={[styles.dd, on && { color: colors.paper }]}>
               {d.getDate()}
@@ -63,9 +64,9 @@ export function WeekStrip({
             <View
               style={[
                 styles.dot,
-                dot === 'over' && { backgroundColor: colors.orange },
-                dot === 'under' && { backgroundColor: colors.limeDeep },
-                (dot === 'none' || dot === 'empty') && { backgroundColor: inkA(0.12) },
+                dot === 'over' && { backgroundColor: on ? colors.paper : colors.ink },
+                dot === 'under' && { backgroundColor: on ? glassA(0.5) : inkA(0.22) },
+                (dot === 'none' || dot === 'empty') && { backgroundColor: 'transparent' },
               ]}
             />
           </Pressable>
@@ -78,7 +79,7 @@ export function WeekStrip({
 const styles = themed(() =>
   StyleSheet.create({
     row: { flexDirection: 'row', gap: 6 },
-    day: { flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 3 },
+    day: { flex: 1, height: 68, borderRadius: 999, alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: colors.card, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' },
     on: { backgroundColor: colors.ink, boxShadow: '0 10px 20px rgba(17,17,17,0.18)' },
     dn: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },

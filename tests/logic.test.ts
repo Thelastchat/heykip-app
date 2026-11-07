@@ -11,6 +11,7 @@ import { replan } from '../src/lib/replan';
 import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearlySetAside } from '../src/lib/everymonth';
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
+import { paceOf } from '../src/lib/pace';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 
 // ---------- tiny test kit ----------
@@ -525,6 +526,45 @@ for (let n = 0; n < 2000; n++) {
   check('Full calendar: a day adds up its spends, rent & bills left out (like Home)', ds.byDay[k18] === 245 && ds.total === 545 && ds.items[k18].length === 2, () => ds);
   check('Full calendar: a day’s spends list newest first', ds.items[k18][0].id === 'b', () => ds.items[k18]);
   check('Full calendar: nothing from before the one-year limit counts', !Object.keys(ds.byDay).includes(new Date(2025, 9, 1).toDateString()), () => ds.byDay);
+}
+
+// ---------- Home's pay-month line (safe zone) ----------
+{
+  for (let i = 0; i < 4000; i++) {
+    const total = int(28, 31);
+    const dayIndex = int(0, total - 1);
+    const budget = r100(2000, 30000);
+    const start = new Date(2026, int(0, 11), int(1, 28));
+    const byDay: Record<string, number> = {};
+    let sum = 0;
+    for (let d = 0; d <= dayIndex; d++) {
+      const v = rand() < 0.2 ? 0 : int(20, Math.round((budget / total) * 2));
+      byDay[new Date(start.getFullYear(), start.getMonth(), start.getDate() + d).toDateString()] = v;
+      sum += v;
+    }
+    // a spend after today must never count
+    byDay[new Date(start.getFullYear(), start.getMonth(), start.getDate() + dayIndex + 1).toDateString()] = 99999;
+    const p = paceOf(byDay, start, total, dayIndex, budget);
+    check('Pace line: one point per day from payday to today, ending at what’s spent', p.cum.length === dayIndex + 1 && p.spent === sum && p.cum[p.cum.length - 1] === sum, () => ({
+      dayIndex,
+      n: p.cum.length,
+      sum,
+      spent: p.spent,
+    }));
+    check(
+      'Pace line: it only goes up (spending never un-happens)',
+      p.cum.every((c, k) => k === 0 || c >= p.cum[k - 1]),
+      () => p.cum,
+    );
+    check('Pace line: inside the safe zone = spent no more than the plan allows by today', p.inside === sum <= (budget * (dayIndex + 1)) / total, () => ({ sum, plan: p.planToday }));
+    check('Pace line: payday estimate is never less than what’s already spent', p.projected >= sum, () => p);
+    check('Pace line: left on payday = spending money − estimate (฿10 steps)', Math.abs(p.leftAtPayday - (budget - p.projected)) <= 5 && p.leftAtPayday % 10 === 0, () => p);
+  }
+  const s = new Date(2026, 9, 25);
+  const flat: Record<string, number> = {};
+  for (let d = 0; d < 14; d++) flat[new Date(2026, 9, 25 + d).toDateString()] = 350;
+  const even = paceOf(flat, s, 31, 13, 10850);
+  check('Pace line: spending exactly the plan lands on ฿0 left on payday', even.leftAtPayday === 0 && even.inside, () => even);
 }
 
 // ---------- report ----------
