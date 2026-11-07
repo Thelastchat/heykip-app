@@ -40,12 +40,15 @@ import { supabase } from '@/lib/supabase';
 import { colors, fonts, inkA, themed, whiteA, blackA } from '@/theme';
 
 /** ฿ drawn smaller next to a big number. */
-const Big = (n: number) => (
+// The baht sign at about half the number's size: big enough to read, small enough to let the number lead.
+const bahtSized = (size: number) => (n: number) => (
   <>
-    <Text style={{ fontSize: 26 }}>฿</Text>
+    <Text style={{ fontSize: size }}>฿</Text>
     {n.toLocaleString('en-US')}
   </>
 );
+const Big = bahtSized(32);
+const Small = bahtSized(20);
 
 export default function Home() {
   const insets = useSafeAreaInsets();
@@ -86,6 +89,7 @@ export default function Home() {
   const line = paceOf(spent.byDay, P.start, P.total, P.dayIndex, spendBudget);
   const firstName = profile?.display_name?.split(' ')[0];
   const showOverToday = isTodaySelected && overToday > 0;
+  const monthOver = overMonth > 0;
 
   // Going over: what it changes (the sheet behind the minus numbers).
   const goalPerMonth = month && !month.goal.isSafetyNet ? savingThisCycle(month, Number(profile?.safety_saved ?? 0)).goal : 0;
@@ -291,60 +295,76 @@ export default function Home() {
           </Text>
         </RiseIn>
 
-        {/* the two numbers (approved mockup G2): today on the left, the month on the right, each with its label under it */}
+        {/* the two numbers (approved mockup G2): the one that matters on the left, big; the other on the right.
+            Over is said in words and in orange (never a minus sign), and only one number is orange at a time:
+            once the month is used up, "over today" means nothing, so the month leads and today just says what you spent. */}
         <RiseIn delay={120} style={styles.nums}>
-          <Pressable
-            style={{ flexShrink: 1 }}
-            disabled={!showOverToday}
-            onPress={() => setOverOpen(true)}
-            accessibilityRole={showOverToday ? 'button' : undefined}
-            accessibilityLabel={showOverToday ? t('{amount} over today — see what it changes', { amount: baht(overToday) }) : undefined}>
-            <CountUp
-              value={isTodaySelected ? (showOverToday ? overToday : leftToday) : shownSpent}
-              format={showOverToday ? (n) => <>−{Big(n)}</> : Big}
-              style={[styles.n1, showOverToday && { color: colors.orangeText }]}
-              fit
-            />
-            {showOverToday ? (
+          {monthOver && isTodaySelected ? (
+            <Pressable
+              style={{ flexShrink: 1 }}
+              onPress={() => setOverOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('{amount} over this month — see what it changes', { amount: baht(overMonth) })}>
+              <CountUp value={overMonth} format={Big} style={[styles.n1, { color: colors.orangeText }]} fit />
               <View style={styles.overLbl}>
-                <Text style={[styles.l1, styles.overText]}>{t('Over today')}</Text>
+                <Text style={[styles.l1, styles.overText]}>{t('Over this month')}</Text>
                 <CaretRight size={12} color={colors.orangeText} weight="bold" style={{ marginTop: 6 }} />
               </View>
-            ) : (
-              <Text style={styles.l1}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
-            )}
-            {isTodaySelected && (
-              <Text style={styles.l2}>{overMonth > 0 && dailyToday <= 0 ? t('Nothing left this month') : t('{spent} spent of {total}', { spent: baht(spent.today), total: baht(dailyToday) })}</Text>
-            )}
-          </Pressable>
-          <Pressable
-            style={{ alignItems: 'flex-end', flexShrink: 1 }}
-            onPress={() => (overMonth > 0 ? setOverOpen(true) : router.push('/history'))}
-            accessibilityRole="button"
-            accessibilityLabel={
-              overMonth > 0 ? t('{amount} over this month — see what it changes', { amount: baht(overMonth) }) : t('{amount} left this month — see history', { amount: baht(leftMonth) })
-            }>
-            <CountUp
-              value={overMonth > 0 ? overMonth : leftMonth}
-              format={(n) => (
-                <>
-                  {overMonth > 0 ? '−' : ''}
-                  {Big(n)}
-                </>
+              <Text style={styles.l2}>{t('Spending money was {amount}', { amount: baht(spendBudget) })}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={{ flexShrink: 1 }}
+              disabled={!showOverToday}
+              onPress={() => setOverOpen(true)}
+              accessibilityRole={showOverToday ? 'button' : undefined}
+              accessibilityLabel={showOverToday ? t('{amount} over today — see what it changes', { amount: baht(overToday) }) : undefined}>
+              <CountUp value={isTodaySelected ? (showOverToday ? overToday : leftToday) : shownSpent} format={Big} style={[styles.n1, showOverToday && { color: colors.orangeText }]} fit />
+              {showOverToday ? (
+                <View style={styles.overLbl}>
+                  <Text style={[styles.l1, styles.overText]}>{t('Over today')}</Text>
+                  <CaretRight size={12} color={colors.orangeText} weight="bold" style={{ marginTop: 6 }} />
+                </View>
+              ) : (
+                <Text style={styles.l1}>{isTodaySelected ? t('Left today') : t('Spent {day} {date}', { day: dayShort(sel.getDay()), date: sel.getDate() })}</Text>
               )}
-              style={[styles.n2, overMonth > 0 && { color: colors.orangeText }]}
-              fit
-            />
-            <Text style={[styles.l1, overMonth > 0 && styles.overText]}>{overMonth > 0 ? t('Over this month') : t('Left this month')}</Text>
-            <Text style={styles.l2}>{t('of {amount}', { amount: baht(spendBudget) })}</Text>
-            {overMonth <= 0 && extraIn > 0 && <Text style={styles.extraIn}>{t('incl. +{amount} extra', { amount: baht(extraIn) })}</Text>}
-          </Pressable>
+              {isTodaySelected && <Text style={styles.l2}>{t('{spent} spent of {total}', { spent: baht(spent.today), total: baht(dailyToday) })}</Text>}
+            </Pressable>
+          )}
+          {monthOver && isTodaySelected ? (
+            <Pressable
+              style={{ alignItems: 'flex-end', flexShrink: 1 }}
+              onPress={() => router.push('/history')}
+              accessibilityRole="button"
+              accessibilityLabel={t('{amount} spent today — see history', { amount: baht(spent.today) })}>
+              <CountUp value={spent.today} format={Small} style={styles.n2} fit />
+              <Text style={styles.l1}>{t('Spent today')}</Text>
+              <Text style={styles.l2}>{t('Must-haves until payday')}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={{ alignItems: 'flex-end', flexShrink: 1 }}
+              onPress={() => router.push('/history')}
+              accessibilityRole="button"
+              accessibilityLabel={t('{amount} left this month — see history', { amount: baht(leftMonth) })}>
+              <CountUp value={leftMonth} format={Small} style={styles.n2} fit />
+              <Text style={styles.l1}>{t('Left this month')}</Text>
+              <Text style={styles.l2}>{t('of {amount}', { amount: baht(spendBudget) })}</Text>
+              {extraIn > 0 && <Text style={styles.extraIn}>{t('incl. +{amount} extra', { amount: baht(extraIn) })}</Text>}
+            </Pressable>
+          )}
         </RiseIn>
 
         {/* the pay month as one line, with the plan as a safe zone (approved mockup G2) */}
         {spendBudget > 0 && (
-          <RiseIn delay={160} style={{ paddingHorizontal: 20, marginTop: 44 }}>
-            <PaceChart pace={line} budget={spendBudget} total={P.total} start={P.start} />
+          <RiseIn delay={160} style={{ paddingHorizontal: 20, marginTop: 20 }}>
+            <View style={styles.paceCard}>
+              <View style={styles.paceHead}>
+                <Text style={styles.weekLbl}>{t('This pay month')}</Text>
+                <Text style={styles.paceSpent}>{t('{amount} spent', { amount: baht(line.spent) })}</Text>
+              </View>
+              <PaceChart pace={line} budget={spendBudget} total={P.total} start={P.start} />
+            </View>
           </RiseIn>
         )}
 
@@ -363,7 +383,7 @@ export default function Home() {
         <SlipFinder isPlus={isPlus} />
 
         {/* Kip: one line on Home; tap to read the whole thing */}
-        <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 18 }}>
+        <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 16 }}>
           <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
             <KipStill size={32} />
             <Text style={styles.kipText} numberOfLines={1}>
@@ -372,6 +392,7 @@ export default function Home() {
             </Text>
             <View style={styles.readBtn}>
               <Text style={styles.readText}>{t('Read')}</Text>
+              <CaretRight size={12} color={colors.muted} weight="bold" />
             </View>
           </Squish>
         </RiseIn>
@@ -620,24 +641,27 @@ const styles = themed(() =>
     quiet: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.paper },
     hello: { paddingHorizontal: 20, paddingTop: 20, fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -0.9, color: colors.ink },
-    l1: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 6 },
-    l2: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted, marginTop: 1, fontVariant: ['tabular-nums'] },
-    weekHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    l1: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 4 },
+    l2: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
+    paceCard: { borderRadius: 32, backgroundColor: colors.paper, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
+    paceHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 48 },
+    paceSpent: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
+    weekHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     weekLbl: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     kipLine: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      paddingVertical: 10,
-      paddingLeft: 10,
-      paddingRight: 10,
+      gap: 12,
+      paddingVertical: 8,
+      paddingLeft: 8,
+      paddingRight: 16,
       borderRadius: 999,
-      backgroundColor: colors.card,
-      boxShadow: '0 4px 14px rgba(0,0,0,0.05)',
+      backgroundColor: colors.paper,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)',
     },
     kipText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-    readBtn: { borderRadius: 999, backgroundColor: colors.ink, paddingHorizontal: 12, paddingVertical: 6 },
-    readText: { fontFamily: fonts.medium, fontSize: 13, color: colors.paper },
+    readBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 },
+    readText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
     nums: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingHorizontal: 20, paddingTop: 20 },
     n1: { fontFamily: fonts.medium, fontSize: 60, letterSpacing: -3, lineHeight: 70, marginTop: -8, color: colors.ink, fontVariant: ['tabular-nums'] },
     n2: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, lineHeight: 34, color: colors.ink, fontVariant: ['tabular-nums'] },
@@ -646,7 +670,7 @@ const styles = themed(() =>
     overText: { color: colors.orangeText, fontFamily: fonts.medium },
     extraIn: { fontFamily: fonts.medium, fontSize: 12, color: colors.lavenderText, marginTop: 2 },
     vbar: { width: 1, height: 56, marginBottom: 4, backgroundColor: inkA(0.08) },
-    kipName: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+    kipName: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
     say: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 24, color: colors.ink, marginTop: 4 },
     two: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: inkA(0.08) },
     twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: inkA(0.08), paddingLeft: 16 },
@@ -699,8 +723,8 @@ const styles = themed(() =>
     },
     tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
     noteHead: { fontFamily: fonts.regular, fontSize: 12, color: blackA(0.55) },
-    calBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.card, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
-    calText: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+    calBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.card, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
+    calText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
     noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
     strip: { position: 'absolute', left: 12, right: 12, bottom: 12 },
     stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.onAccent },

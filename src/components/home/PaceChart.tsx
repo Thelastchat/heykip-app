@@ -85,7 +85,8 @@ export function PaceChart({ pace, budget, total, start }: { pace: Pace; budget: 
       <View style={styles.foot}>
         <Text style={styles.axis}>{`${start.getDate()} ${monthShort(start.getMonth())}`}</Text>
         <View style={styles.chip}>
-          <Text style={styles.chipT}>{short ? t('Payday · {amount} short', { amount: baht(-pace.leftAtPayday) }) : t('Payday · {amount} left', { amount: baht(pace.leftAtPayday) })}</Text>
+          <Text style={styles.chipK}>{t('Payday')}</Text>
+          <Text style={styles.chipT}>{short ? t('{amount} short', { amount: baht(-pace.leftAtPayday) }) : t('{amount} left', { amount: baht(pace.leftAtPayday) })}</Text>
         </View>
       </View>
     </View>
@@ -94,11 +95,22 @@ export function PaceChart({ pace, budget, total, start }: { pace: Pace; budget: 
 
 const styles = themed(() =>
   StyleSheet.create({
-    bub: { position: 'absolute', alignItems: 'center', justifyContent: 'center', height: 30, borderRadius: 999, backgroundColor: colors.card, boxShadow: '0 4px 14px rgba(0,0,0,0.10)' },
+    bub: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: 28,
+      borderRadius: 999,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: inkA(0.08),
+      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    },
     bubT: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
-    foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    axis: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted },
-    chip: { borderRadius: 999, backgroundColor: colors.ink, paddingHorizontal: 12, paddingVertical: 6 },
-    chipT: { fontFamily: fonts.medium, fontSize: 12, color: colors.paper, fontVariant: ['tabular-nums'] },
+    foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12 },
+    axis: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    chip: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+    chipK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    chipT: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, fontVariant: ['tabular-nums'] },
   }),
 );

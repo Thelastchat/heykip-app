@@ -339,6 +339,13 @@ const th: Record<string, string> = {
   'Safe zone': 'โซนปลอดภัย',
   'Payday · {amount} left': 'เงินเดือนออก · เหลือ {amount}',
   'Payday · {amount} short': 'เงินเดือนออก · ขาด {amount}',
+  'Spending money was {amount}': 'เงินใช้จ่ายเดือนนี้ {amount}',
+  '{amount} spent today — see history': 'วันนี้ใช้ไป {amount} — ดูประวัติ',
+  'Must-haves until payday': 'ใช้แค่ที่จำเป็นจนเงินเดือนออก',
+  'This pay month': 'รอบเงินเดือนนี้',
+  '{amount} left': 'เหลือ {amount}',
+  '{amount} short': 'ขาด {amount}',
+  '{amount} spent': 'ใช้ไป {amount}',
 };
 
 export default th;
