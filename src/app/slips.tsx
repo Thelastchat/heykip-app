@@ -19,7 +19,7 @@ import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
-import { budgetKey, monthNumbers, periodKey, useHome } from '@/lib/home';
+import { budgetKey, monthNumbers, period, periodKey, useHome } from '@/lib/home';
 import { addBill } from '@/lib/budget';
 import { matchBill, type BillMatch } from '@/lib/everymonth';
 import { dayShort, monthShort, rich, t } from '@/lib/i18n';
@@ -143,15 +143,16 @@ export default function Slips() {
     const out = new Map<string, BillMatch>();
     if (!month) return out;
     const taken = new Set<string>();
+    const cycleStart = period(month.payday).start;
     for (const sl of toSave) {
-      const m = matchBill(sl, month, paidKeys, taken);
+      const m = matchBill(sl, month, paidKeys, taken, cycleStart);
       if (!m) continue;
       if (m.kind === 'paid') taken.add(m.key);
       out.set(sl.id, m);
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, toSave.map((x) => `${x.id}:${x.category}:${x.amount}`).join('|'), paidKeys.join('|')]);
+  }, [month, toSave.map((x) => `${x.id}:${x.category}:${x.amount}:${x.at.getTime()}`).join('|'), paidKeys.join('|')]);
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const ticked = (id: string) => ticks[id] ?? matches.get(id)?.kind === 'paid';
   const willPay = [...matches.entries()].filter(([id, m]) => m.kind === 'paid' && ticked(id)).map(([, m]) => m as Extract<BillMatch, { kind: 'paid' }>);

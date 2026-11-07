@@ -91,7 +91,7 @@ export function rollYearly(m: MonthBudget, name: string, now = new Date()): Mont
 
 // ---------- slips → bills ----------
 
-export type SlipLike = { name: string; amount: number; category: string; money: 'in' | 'out' };
+export type SlipLike = { name: string; amount: number; category: string; money: 'in' | 'out'; at?: Date };
 /** paid = this slip pays a bill in the plan (tick it off); new = a bill Kip hasn't seen (offer to add it). */
 export type BillMatch = { kind: 'paid'; key: string; name: string } | { kind: 'new'; name: string; amount: number; type: BillType };
 
@@ -112,17 +112,20 @@ const sameName = (a: string, b: string) => {
  * Does this slip pay a bill in the plan? By name (a bill you added, like "Netflix") or by amount (within ~5%) for a
  * Home & bills / Installments slip. Bills already paid this cycle, or matched by another slip (`taken`), are skipped.
  * A Home & bills slip that matches nothing becomes an offer to add it to Every month.
+ * A slip from before this pay cycle (`cycleStart`) paid an older month's bill: it never ticks off this month's — it's
+ * just saved on its own day. (Unless it's a bill Kip hasn't seen: that's still worth offering.)
  */
-export function matchBill(slip: SlipLike, m: MonthBudget, paidKeys: string[], taken: Set<string>): BillMatch | null {
+export function matchBill(slip: SlipLike, m: MonthBudget, paidKeys: string[], taken: Set<string>, cycleStart?: Date): BillMatch | null {
   if (slip.money !== 'out' || slip.amount <= 0) return null;
   const isBill = BILL_CATS.includes(slip.category);
   const plan = [
     ...(m.bills.rent > 0 ? [{ key: 'rent', name: t('Rent'), amount: m.bills.rent, real: 'rent' }] : []),
     ...(m.bills.items ?? []).filter((b) => !b.yearly).map((b) => ({ key: `item:${b.name}`, name: b.name, amount: b.amount, real: b.name })),
-  ].filter((b) => !paidKeys.includes(b.key) && !taken.has(b.key));
-  const byName = plan.find((b) => b.key !== 'rent' && sameName(slip.name, b.real));
-  const byAmount = isBill ? plan.find((b) => near(slip.amount, b.amount)) : undefined;
-  const hit = byName ?? byAmount;
+  ];
+  const find = (list: typeof plan) => list.find((b) => b.key !== 'rent' && sameName(slip.name, b.real)) ?? (isBill ? list.find((b) => near(slip.amount, b.amount)) : undefined);
+  if (cycleStart && slip.at && slip.at < cycleStart)
+    return find(plan) ? null : isBill ? { kind: 'new', name: slip.name.trim() || t('New bill'), amount: Math.round(slip.amount), type: guessType(slip.name) } : null;
+  const hit = find(plan.filter((b) => !paidKeys.includes(b.key) && !taken.has(b.key)));
   if (hit) return { kind: 'paid', key: hit.key, name: hit.name };
   if (!isBill) return null;
   return { kind: 'new', name: slip.name.trim() || t('New bill'), amount: Math.round(slip.amount), type: guessType(slip.name) };

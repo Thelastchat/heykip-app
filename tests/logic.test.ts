@@ -396,6 +396,13 @@ for (let n = 0; n < 2000; n++) {
   check('Slip → bill: an everyday spend is never a bill', food === null, () => food);
   const twice = matchBill(slip('someone', 7000), m, [], new Set(['rent']));
   check('Slip → bill: two slips can’t both pay the same rent', twice?.kind !== 'paid', () => twice);
+  const start = new Date(2026, 10, 1);
+  const oldRent = matchBill({ ...slip('นายสมศักดิ์ ใจดี', 7000), at: new Date(2026, 9, 1) }, m, [], new Set(), start);
+  check('Slip → bill: last month’s rent slip doesn’t tick off this month’s rent (and isn’t offered as a new bill)', oldRent === null, () => oldRent);
+  const newRent = matchBill({ ...slip('นายสมศักดิ์ ใจดี', 7000), at: new Date(2026, 10, 2) }, m, [], new Set(), start);
+  check('Slip → bill: this cycle’s rent slip still ticks it off', newRent?.kind === 'paid' && newRent.key === 'rent', () => newRent);
+  const oldGym = matchBill({ ...slip('FITNESS FIRST', 990), at: new Date(2026, 9, 1) }, m, [], new Set(), start);
+  check('Slip → bill: an old slip for a bill Kip hasn’t seen is still offered', oldGym?.kind === 'new', () => oldGym);
   check(
     'Bill types: AIS Fibre → Internet, AIS → Phone, ค่าไฟ → Water & electricity, แม่ → Family',
     guessType('AIS Fibre') === 'internet' && guessType('AIS') === 'phone' && guessType('ค่าไฟ') === 'utilities' && guessType('ให้แม่') === 'family',
