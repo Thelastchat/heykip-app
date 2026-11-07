@@ -62,6 +62,7 @@ export default function FullCalendar() {
   const loaded = rows[key];
   const data = useMemo(() => daysFrom(loaded ?? [], month, oldest), [loaded, month, oldest.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
   const grid = useMemo(() => monthGrid(y, m), [y, m]);
+  const weeks = useMemo(() => Array.from({ length: grid.length / 7 }, (_, w) => grid.slice(w * 7, w * 7 + 7)), [grid]);
   const payday = month?.payday ? dayInMonth(y, m, month.payday).toDateString() : null;
   const overDays = Object.values(data.byDay).filter((v) => daily > 0 && v > daily).length;
 
@@ -136,36 +137,42 @@ export default function FullCalendar() {
               ))}
             </View>
 
+            {/* One row per week, seven equal cells (flex, not % widths — iPhone rounds 7 × 14.29% past 100% and drops Saturday). */}
             <View style={styles.grid}>
-              {grid.map((d, i) => {
-                if (!d) return <View key={`b${i}`} style={styles.cell} />;
-                const k = d.toDateString();
-                const open = dayOpen(d, now);
-                const amount = data.byDay[k] ?? 0;
-                const over = daily > 0 && amount > daily;
-                const on = picked === k;
-                const isToday = k === now.toDateString();
-                const dot = !open || !loaded ? 'transparent' : isToday && amount === 0 ? inkA(0.12) : over ? colors.orange : amount > 0 ? colors.limeDeep : inkA(0.12);
-                return (
-                  <Pressable
-                    key={k}
-                    disabled={!open}
-                    onPress={() => setPicked(k)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on, disabled: !open }}
-                    accessibilityLabel={open ? t('{day} {date}, spent {amount}', { day: dayShort(d.getDay()), date: d.getDate(), amount }) : `${dayShort(d.getDay())} ${d.getDate()}`}
-                    style={[styles.cell, on && styles.on, isToday && !on && styles.today]}>
-                    <Text style={[styles.dd, on && { color: colors.paper }, !open && { color: inkA(0.22) }]}>
-                      {d.getDate()}
-                      {k === payday ? <Text style={[styles.pay, on && { color: colors.paper }]}>฿</Text> : null}
-                    </Text>
-                    <Text style={[styles.amt, over && { color: colors.orangeText }, on && { color: colors.paper }]} numberOfLines={1}>
-                      {open && loaded ? (amount > 0 ? Math.round(amount).toLocaleString('en-US') : '–') : ' '}
-                    </Text>
-                    <View style={[styles.dot, { backgroundColor: dot }]} />
-                  </Pressable>
-                );
-              })}
+              {weeks.map((w, wi) => (
+                <View key={wi} style={styles.wrow}>
+                  {w.map((d, j) => {
+                    const i = wi * 7 + j;
+                    if (!d) return <View key={`b${i}`} style={styles.cell} />;
+                    const k = d.toDateString();
+                    const open = dayOpen(d, now);
+                    const amount = data.byDay[k] ?? 0;
+                    const over = daily > 0 && amount > daily;
+                    const on = picked === k;
+                    const isToday = k === now.toDateString();
+                    const dot = !open || !loaded ? 'transparent' : isToday && amount === 0 ? inkA(0.12) : over ? colors.orange : amount > 0 ? colors.limeDeep : inkA(0.12);
+                    return (
+                      <Pressable
+                        key={k}
+                        disabled={!open}
+                        onPress={() => setPicked(k)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on, disabled: !open }}
+                        accessibilityLabel={open ? t('{day} {date}, spent {amount}', { day: dayShort(d.getDay()), date: d.getDate(), amount }) : `${dayShort(d.getDay())} ${d.getDate()}`}
+                        style={[styles.cell, on && styles.on, isToday && !on && styles.today]}>
+                        <Text style={[styles.dd, on && { color: colors.paper }, !open && { color: inkA(0.22) }]}>
+                          {d.getDate()}
+                          {k === payday ? <Text style={[styles.pay, on && { color: colors.paper }]}>฿</Text> : null}
+                        </Text>
+                        <Text style={[styles.amt, over && { color: colors.orangeText }, on && { color: colors.paper }]} numberOfLines={1}>
+                          {open && loaded ? (amount > 0 ? Math.round(amount).toLocaleString('en-US') : '–') : ' '}
+                        </Text>
+                        <View style={[styles.dot, { backgroundColor: dot }]} />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           </View>
         </GestureDetector>
@@ -234,9 +241,10 @@ const styles = themed(() =>
     title: { fontFamily: fonts.semibold, fontSize: 20, color: colors.ink },
     sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
     week: { flexDirection: 'row', paddingHorizontal: 12, marginTop: 20, marginBottom: 4 },
-    wd: { width: `${100 / 7}%`, textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, rowGap: 4 },
-    cell: { width: `${100 / 7}%`, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 2 },
+    wd: { flex: 1, textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    grid: { paddingHorizontal: 12, gap: 4 },
+    wrow: { flexDirection: 'row' },
+    cell: { flex: 1, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 2 },
     on: { backgroundColor: colors.ink },
     today: { borderWidth: 1.5, borderColor: colors.ink },
     dd: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
