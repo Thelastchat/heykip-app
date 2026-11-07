@@ -15,12 +15,14 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
 import { useAiConsent } from '@/components/AiConsent';
+import { CatchUpSheet } from '@/components/CatchUpSheet';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { budgetKey, monthNumbers, period, periodKey, useHome } from '@/lib/home';
-import { addBill } from '@/lib/budget';
+import { addBill, type MonthBudget } from '@/lib/budget';
+import { loadCatchUp, type CatchRow } from '@/lib/catchup';
 import { matchBill, type BillMatch } from '@/lib/everymonth';
 import { dayShort, monthShort, rich, t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
@@ -54,7 +56,7 @@ export default function Slips() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { month, save: saveMonth } = useMonth();
-  const { spent } = useHome(month);
+  const { spent, goals, reload } = useHome(month);
   const [phase, setPhase] = useState<'reading' | 'review'>('reading');
   const [slips, setSlips] = useState<Slip[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export default function Slips() {
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
+  const [catchUp, setCatchUp] = useState<{ rows: CatchRow[]; month: MonthBudget; next: MoneyIn[] } | null>(null);
   const started = useRef(false);
   const ai = useAiConsent(() => router.push('/privacy-policy'));
 
@@ -197,18 +200,32 @@ export default function Slips() {
     if (error) return setProblem(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // Tick off the bills these slips paid, and add the new ones the person chose.
+    let next = month;
     if (month && (willPay.length || willAdd.length)) {
-      let next = month;
-      for (const b of willAdd) next = addBill(next, b.name, b.amount, { type: b.type }).month;
-      if (willPay.length) next = { ...next, paid: { period: pk, keys: [...new Set([...paidKeys, ...willPay.map((b) => b.key)])] } };
-      await saveMonth(next);
+      let m: MonthBudget = month;
+      for (const b of willAdd) m = addBill(m, b.name, b.amount, { type: b.type }).month;
+      if (willPay.length) m = { ...m, paid: { period: pk, keys: [...new Set([...paidKeys, ...willPay.map((b) => b.key)])] } };
+      await saveMonth(m);
+      next = m;
     }
     // Money in from a slip gets a job too, the same as everywhere else.
-    const inn = (saved ?? []).filter((r) => r.kind === 'income');
-    if (inn.length)
-      return setMoneyIn(
-        inn.map((r) => ({ id: r.id as string, amount: Number(r.amount), category: toSave.find((x) => slipKey(x) === r.slip_ref)?.category ?? 'other', note: (r.note as string | null) ?? null })),
-      );
+    const inn: MoneyIn[] = (saved ?? [])
+      .filter((r) => r.kind === 'income')
+      .map((r) => ({ id: r.id as string, amount: Number(r.amount), category: toSave.find((x) => slipKey(x) === r.slip_ref)?.category ?? 'other', note: (r.note as string | null) ?? null }));
+    // Slips from a pay month that's over: if they made it go over, offer to take that from the goal (approved mockup).
+    // One request, and only when there are older slips and a goal with money in it.
+    const savedRefs = new Set((saved ?? []).map((r) => r.slip_ref));
+    const news = toSave.filter((x) => x.money === 'out' && savedRefs.has(slipKey(x))).map((x) => ({ amount: x.amount, at: x.at, cat: x.category as string }));
+    const main = goals[0];
+    if (next && main && main.saved > 0 && news.length) {
+      const rows = await loadCatchUp(session.user.id, news, next).catch(() => [] as CatchRow[]);
+      if (rows.length) return setCatchUp({ rows, month: next, next: inn });
+    }
+    finish(inn);
+  }
+
+  function finish(inn: MoneyIn[]) {
+    if (inn.length) return setMoneyIn(inn);
     router.dismissTo('/');
   }
 
@@ -323,6 +340,25 @@ export default function Slips() {
       )}
 
       {ai.sheet}
+      {catchUp && goals[0] && (
+        <CatchUpSheet
+          rows={catchUp.rows}
+          goal={goals[0]}
+          goals={goals}
+          month={catchUp.month}
+          onTake={async (amount, note) => {
+            const { error } = await supabase.rpc('take_from_goal', { p_goal: goals[0].id, p_amount: amount, p_note: t('Old slips: {months}', { months: note }) });
+            if (error) return error.message;
+            reload();
+            return null;
+          }}
+          onDone={() => {
+            const inn = catchUp.next;
+            setCatchUp(null);
+            finish(inn);
+          }}
+        />
+      )}
       {moneyIn && (
         <MoneyInSheet
           items={moneyIn}

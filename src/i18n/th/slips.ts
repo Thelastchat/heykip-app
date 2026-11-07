@@ -61,6 +61,23 @@ const th: Record<string, string> = {
   'Kip stopped looking in your albums.': 'Kip เลิกดูอัลบั้มแล้ว',
   // ---------- Slips polish (Nov 2026) ----------
   'Any Thai bank app · up to 10 at once · never kept': 'ใช้ได้ทุกแอปธนาคารไทย · ครั้งละไม่เกิน 10 รูป · อ่านแล้วไม่เก็บ',
+  // Old slips catching up a past month
+  '{month} went {amount} over': '{month} ใช้เกินไป {amount}',
+  '{n} past months went {amount} over': '{n} เดือนก่อนใช้เกินรวม {amount}',
+  'The older slip you just saved was from {month}’s pay month. With it, that month spent more than its money for spending, and its saving already went to {goal} on payday.':
+    'สลิปเก่าที่เพิ่งบันทึกเป็นของรอบเงินเดือน{month} พอรวมแล้ว เดือนนั้นใช้เกินเงินใช้จ่าย แต่เงินเก็บของเดือนนั้นเข้า {goal} ไปแล้วตอนเงินเดือนออก',
+  'The {n} older slips you just saved were from {month}’s pay month. With them, that month spent more than its money for spending, and its saving already went to {goal} on payday.':
+    'สลิปเก่า {n} ใบที่เพิ่งบันทึกเป็นของรอบเงินเดือน{month} พอรวมแล้ว เดือนนั้นใช้เกินเงินใช้จ่าย แต่เงินเก็บของเดือนนั้นเข้า {goal} ไปแล้วตอนเงินเดือนออก',
+  'The older slips you just saved were from {n} past pay months. With them, those months spent more than their money for spending, and their saving already went to {goal} on payday.':
+    'สลิปเก่าที่เพิ่งบันทึกมาจาก {n} รอบเงินเดือนที่ผ่านมา พอรวมแล้ว เดือนเหล่านั้นใช้เกินเงินใช้จ่าย แต่เงินเก็บเข้า {goal} ไปแล้วตอนเงินเดือนออก',
+  '{month} spending money': 'เงินใช้จ่าย{month}',
+  'Spent, with these slips': 'ใช้ไป รวมสลิปเหล่านี้',
+  'If you take it from {goal}': 'ถ้าหักจาก {goal}',
+  '{goal} has {amount} saved, so that’s all I can take': '{goal} มีเก็บไว้ {amount} เลยหักได้เท่านี้',
+  'Take {amount} from {goal}': 'หัก {amount} จาก {goal}',
+  'Leave it': 'ไม่ต้อง',
+  'Leave it if that money came from somewhere else, like a bonus or savings outside HeyKip': 'เลือก “ไม่ต้อง” ถ้าเงินก้อนนั้นมาจากที่อื่น เช่น โบนัส หรือเงินเก็บนอก HeyKip',
+  'Old slips: {months}': 'สลิปย้อนหลัง: {months}',
 };
 
 export default th;

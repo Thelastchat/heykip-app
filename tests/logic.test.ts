@@ -10,6 +10,7 @@ import { checkParts, paydayMoves, paydayShares, savingThisCycle, splitIn } from 
 import { replan } from '../src/lib/replan';
 import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearlySetAside } from '../src/lib/everymonth';
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
+import { catchUpRows } from '../src/lib/catchup';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 
 // ---------- tiny test kit ----------
@@ -403,6 +404,40 @@ for (let n = 0; n < 2000; n++) {
   check('Slip → bill: this cycle’s rent slip still ticks it off', newRent?.kind === 'paid' && newRent.key === 'rent', () => newRent);
   const oldGym = matchBill({ ...slip('FITNESS FIRST', 990), at: new Date(2026, 9, 1) }, m, [], new Set(), start);
   check('Slip → bill: an old slip for a bill Kip hasn’t seen is still offered', oldGym?.kind === 'new', () => oldGym);
+  {
+    const mm = { ...m, payday: 25 };
+    const B = spendingTotal(mm);
+    const now = new Date(2026, 10, 7, 13);
+    const sp = (amount: number, mo: number, d: number, cat = 'food') => ({ amount, at: new Date(2026, mo, d, 12), cat });
+    const news = [sp(1280, 9, 11), sp(990, 9, 16, 'shopping'), sp(240, 9, 21, 'transport')];
+    const earlier = [sp(B - 710, 9, 1)];
+    const r1 = catchUpRows(news, [...earlier, ...news], mm, now);
+    check('Old slips: October went ฿1,800 over because of them → one row, ฿1,800', r1.length === 1 && r1[0].over === 1800 && r1[0].slips === 3 && r1[0].month.getMonth() === 9, () => r1);
+    const r2 = catchUpRows(news, [sp(B + 300, 9, 1), ...news], mm, now);
+    check('Old slips: a month already ฿300 over only asks about what the new slips added', r2.length === 1 && r2[0].over === 2510, () => r2);
+    const r3 = catchUpRows(news, [sp(B - 5000, 9, 1), ...news], mm, now);
+    check('Old slips: still under its spending money → nothing to ask', r3.length === 0, () => r3);
+    const rent = [sp(7000, 9, 2, 'home_bills')];
+    const r4 = catchUpRows(rent, [...earlier, ...rent], mm, now);
+    check('Old slips: rent & bills never count as going over', r4.length === 0, () => r4);
+    const fresh = [sp(5000, 10, 1)];
+    const r5 = catchUpRows(fresh, [sp(B, 10, 1), ...fresh], mm, now);
+    check('Old slips: slips from this pay month aren’t old (Home handles those)', r5.length === 0, () => r5);
+    const ancient = [{ amount: 9000, at: new Date(2025, 8, 1), cat: 'food' }];
+    const r6 = catchUpRows(ancient, ancient, mm, now);
+    check('Old slips: older than a year are left alone', r6.length === 0, () => r6);
+    const two = [sp(B + 100, 8, 1), sp(B + 200, 9, 1)];
+    const r7 = catchUpRows(two, two, mm, now);
+    check('Old slips: two past months → two rows, newest first', r7.length === 2 && r7[0].month > r7[1].month && r7[0].over === 200 && r7[1].over === 100, () => r7);
+    for (let i = 0; i < 3000; i++) {
+      const base = int(0, B * 2);
+      const nn = Array.from({ length: int(1, 5) }, () => sp(int(20, 4000), 9, int(1, 24), pick(['food', 'shopping', 'home_bills', 'transport'])));
+      const rr = catchUpRows(nn, [sp(base, 9, 1), ...nn], mm, now);
+      const added = nn.filter((x) => x.cat !== 'home_bills').reduce((a, x) => a + x.amount, 0);
+      const over = rr.reduce((a, r) => a + r.over, 0);
+      check('Old slips: never asks for more than the new slips added, or than the month went over', over <= added && over <= Math.max(0, base + added - B) + 1, () => ({ base, B, added, over }));
+    }
+  }
   check(
     'Bill types: AIS Fibre → Internet, AIS → Phone, ค่าไฟ → Water & electricity, แม่ → Family',
     guessType('AIS Fibre') === 'internet' && guessType('AIS') === 'phone' && guessType('ค่าไฟ') === 'utilities' && guessType('ให้แม่') === 'family',
