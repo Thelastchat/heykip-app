@@ -46,7 +46,7 @@ const th: Record<string, string> = {
   'Not sure? I’ll use {amount} and learn the real number from your slips.': 'ไม่แน่ใจใช่มั้ย? เดี๋ยว Kip ใช้ {amount} ไปก่อน แล้วค่อยดูตัวเลขจริงจากสลิป',
   'Kip adds real living costs too': 'Kip บวกค่าครองชีพจริงให้ด้วยนะ',
   'Food {food} ({perDay}/day) · transport {transport} · health {health} · household {household} = **{total}**. So I never plan a month you can’t actually live. These are starting numbers — once you log for a few weeks, I’ll swap them for your real ones.':
-    'อาหาร {food} ({perDay}/วัน) · เดินทาง {transport} · สุขภาพ {health} · ของใช้ {household} = **{total}** Kip จะได้ไม่วางแผนเดือนที่ใช้ชีวิตจริงไม่ได้ ตัวเลขนี้แค่เริ่มต้นนะ จดไปสักสองสามอาทิตย์ เดี๋ยว Kip เปลี่ยนเป็นตัวเลขจริงให้',
+    'อาหาร {food} ({perDay}/วัน) · เดินทาง {transport} · สุขภาพ {health} · ของใช้ในบ้าน {household} = **{total}** Kip จะได้ไม่วางแผนเดือนที่ใช้ชีวิตจริงไม่ได้ ตัวเลขนี้แค่เริ่มต้นนะ จดไปสักสองสามอาทิตย์ เดี๋ยว Kip เปลี่ยนเป็นตัวเลขจริงให้',
   'That’s more than your monthly income — double-check the numbers?': 'เยอะกว่ารายได้ต่อเดือนอีกนะ ลองเช็กตัวเลขอีกทีมั้ย?',
   'That’s more than a slow month, so I’ll plan on an average month instead.': 'เยอะกว่าเดือนที่งานน้อยอีก เดี๋ยว Kip วางแผนจากเดือนเฉลี่ยแทนนะ',
   'That’s more than a slow month — add a good month too, so I can plan on an average.': 'เยอะกว่าเดือนที่งานน้อยอีกนะ ใส่เดือนที่งานเยอะด้วย Kip จะได้วางแผนจากค่าเฉลี่ย',
@@ -189,7 +189,7 @@ const th: Record<string, string> = {
   'Where your {income} goes': 'รายได้ {income} ไปไหนบ้าง',
   'every month': 'ทุกเดือน',
   'Living = food {food} ({perDay}/day) · transport {transport} · health {health} · household {household}. Based on what one person in Thailand really spends.':
-    'ค่าครองชีพ = อาหาร {food} ({perDay}/วัน) · เดินทาง {transport} · สุขภาพ {health} · ของใช้ {household} อิงจากที่คนหนึ่งคนในไทยใช้จริง',
+    'ค่าครองชีพ = อาหาร {food} ({perDay}/วัน) · เดินทาง {transport} · สุขภาพ {health} · ของใช้ในบ้าน {household} อิงจากที่คนหนึ่งคนในไทยใช้จริง',
   'Bonus, raise or a good month? Put it in and the date moves closer — I’ll show you.': 'ได้โบนัส ขึ้นเงินเดือน หรือเดือนไหนปัง? ใส่เข้ามาเลย วันถึงเป้าจะขยับเร็วขึ้น เดี๋ยว Kip โชว์ให้ดู',
 
   // ---------- congrats · Yay! ----------

@@ -68,6 +68,8 @@ type Turn = {
   dismissed?: boolean;
   /** log: the rows saved, so Undo can take them back */
   savedIds?: string[];
+  /** log: looks like something already logged (same name and amount today) — waits for "Save anyway" */
+  dupe?: string;
   undone?: boolean;
   /** change / fix: what Kip would do (null = it doesn't fit), done once "Do it" is tapped */
   change?: ChangePlan | null;
@@ -203,6 +205,18 @@ export default function Talk() {
     return recent.current;
   }
 
+  /** The first item that matches something logged today (same name, or same amount and kind), if any. */
+  function alreadyLogged(items: Item[], rec: RecentTx[]): string | null {
+    const today = new Date().toDateString();
+    const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+    for (const it of items) {
+      const inChat = turns.some((x) => x.saved && !x.undone && (x.reply?.items ?? []).some((o) => same(o.name, it.name) && o.amount === it.amount && o.money === it.money));
+      const inRecent = !isIn(it) && rec.some((r) => new Date(r.at).toDateString() === today && r.amount === it.amount && same(r.name, it.name));
+      if (inChat || inRecent) return it.name;
+    }
+    return null;
+  }
+
   /** What Kip remembers of each turn: what was said and what came of it (short, the last 6). */
   function history() {
     return turns
@@ -254,7 +268,12 @@ export default function Talk() {
         fix: reply.kind === 'fix' ? planFix(rec, reply.fixes ?? []) : undefined,
       });
       // Logging saves straight away (with Undo) — it's what people do most, so it stays one step.
-      if (reply.kind === 'log' && reply.items.length) saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
+      if (reply.kind === 'log' && reply.items.length) {
+        // …unless it looks already logged (said twice, or a slip already did it): then it waits for "Save anyway".
+        const dupe = alreadyLogged(reply.items as Item[], rec);
+        if (dupe) update(id, { dupe });
+        else saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
+      }
     } else
       update(id, {
         state: 'error',
@@ -405,6 +424,7 @@ export default function Talk() {
                 goalInfo={goalInfo}
                 spent={spent}
                 onUndo={() => undoLog(turn)}
+                onSaveAnyway={() => saveItems(turn, (turn.reply?.items as Item[]) ?? [])}
                 onBuy={(item, plan) => buyIt(turn, item, plan)}
                 onNotNow={() => update(turn.id, { dismissed: true })}
                 onDo={() => (turn.change ? doChange(turn) : doFix(turn))}
@@ -529,6 +549,7 @@ function Answer({
   goalInfo,
   spent,
   onUndo,
+  onSaveAnyway,
   onBuy,
   onNotNow,
   onDo,
@@ -542,6 +563,7 @@ function Answer({
   goalInfo: GoalInfo;
   spent: ReturnType<typeof useHome>['spent'];
   onUndo: () => void;
+  onSaveAnyway: () => void;
   onBuy: (item: LogItem, plan: BuyPlan) => void;
   onNotNow: () => void;
   onDo: () => void;
@@ -597,7 +619,10 @@ function Answer({
     const { notes } = incomeNotes(ins, month);
     // Left for today once these are saved (bills don't touch today's money).
     const todayOut = month ? outs.filter((o) => budgetKey(o.category, month) !== 'bills').reduce((a, o) => a + o.amount, 0) : 0;
-    const leftAfter = month && !turn.saved ? monthNumbers(month, { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }).leftToday : null;
+    // Once saved, Home's numbers already include them; before that, add them in. Either way: what's left for today.
+    const nowN = month ? monthNumbers(month, turn.saved ? spent : { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }) : null;
+    const leftAfter = nowN && !turn.saved ? nowN.leftToday : null;
+    const todayLine = !nowN || turn.undone ? null : nowN.overToday > 0 ? t('{amount} over today', { amount: baht(nowN.overToday) }) : t('{amount} left today', { amount: baht(nowN.leftToday) });
     const row = (it: Item, i: number, note: { text: string; extra: boolean } | null) => (
       <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Image source={ICON3D[isIn(it) ? inCatIcon(it.category) : dbCatIcon(it.category)]} style={{ width: 34, height: 34 }} contentFit="contain" />
@@ -637,9 +662,30 @@ function Answer({
         </Glass>
         {turn.undone ? (
           <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Undone — nothing saved.')}</Text>
+        ) : turn.dupe && !turn.saved ? (
+          turn.dismissed ? (
+            <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Okay — not saved again.')}</Text>
+          ) : (
+            <>
+              <Text style={[styles.sub, { paddingHorizontal: 4 }]}>{t('You already logged {name} today. Save it again?', { name: turn.dupe })}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Squish onPress={onSaveAnyway} style={[styles.dark, { flex: 1 }]} accessibilityRole="button">
+                  <Text style={styles.darkText}>{t('Save anyway')}</Text>
+                </Squish>
+                <Squish onPress={onNotNow} accessibilityRole="button">
+                  <Glass radius={999} innerStyle={[styles.light, { paddingHorizontal: 20 }]}>
+                    <Text style={styles.lightText}>{t('Skip')}</Text>
+                  </Glass>
+                </Squish>
+              </View>
+            </>
+          )
         ) : (
           <View style={styles.doneRow}>
-            <Text style={styles.sub}>{turn.saved ? (items.length > 1 ? t('Saved all {n} · {amount}', { n: items.length, amount: baht(outTotal + inTotal) }) : t('Saved')) : t('Saving…')}</Text>
+            <View style={{ flexShrink: 1 }}>
+              <Text style={styles.sub}>{turn.saved ? (items.length > 1 ? t('Saved all {n} · {amount}', { n: items.length, amount: baht(outTotal + inTotal) }) : t('Saved')) : t('Saving…')}</Text>
+              {turn.saved && outs.length > 0 && todayLine && <Text style={[styles.todayLine, nowN!.overToday > 0 && { color: colors.orangeText }]}>{todayLine}</Text>}
+            </View>
             {turn.saved && (
               <Squish onPress={onUndo} style={styles.undo} accessibilityRole="button">
                 <Text style={styles.undoText}>{t('Undo')}</Text>
@@ -757,6 +803,7 @@ const styles = themed(() =>
     price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
     chRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
     from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    todayLine: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
     doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
     undo: { borderRadius: 999, backgroundColor: inkA(0.05), paddingHorizontal: 12, paddingVertical: 6 },
     undoText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },

@@ -59,8 +59,8 @@ const th: Record<string, string> = {
   Health: 'สุขภาพ',
   Learning: 'เรียนรู้',
   Giving: 'ให้คนอื่น',
-  'Household & other': 'ของใช้และอื่นๆ',
-  Household: 'ของใช้',
+  'Household & other': 'ของใช้ในบ้านและอื่นๆ',
+  Household: 'ของใช้ในบ้าน',
   'Spend freely': 'ใช้ได้อิสระ',
 
   // ---------- Home: Plus ----------

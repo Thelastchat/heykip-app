@@ -8,7 +8,7 @@ const th: Record<string, string> = {
   'Health & beauty': 'สุขภาพและความงาม',
   Learning: 'เรียนรู้',
   Giving: 'ให้คนอื่น',
-  'Household & other': 'ของใช้และอื่นๆ',
+  'Household & other': 'ของใช้ในบ้านและอื่นๆ',
   'Spend freely': 'ใช้ได้อิสระ',
   'Kip’s plan': 'แผนของ Kip',
   'Save first': 'เก็บก่อน',

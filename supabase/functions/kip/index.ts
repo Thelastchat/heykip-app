@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
       `The app is set to ${(context as { language?: string } | undefined)?.language === 'th' ? 'Thai' : 'English'}. In Thai, sound like a friend texting (casual: ได้เลย, นะ, ไหวมั้ย), never formal (no ท่าน, กรุณา). Kip and HeyKip stay in English letters.`,
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
       'You can change their plan in HeyKip (kind=change) and fix what they logged (kind=fix). You cannot send, transfer or pay real money, or touch their bank: say so kindly if asked.',
+      'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',
       `The person's month right now (JSON): ${JSON.stringify(context ?? {}).slice(0, 5000)}`,
     ].join('\n');

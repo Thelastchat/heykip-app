@@ -224,6 +224,10 @@ const th: Record<string, string> = {
   '{goal} saved so far': '{goal} เก็บได้แล้ว',
   'No date yet': 'ยังไม่มีวันที่',
   Deleted: 'ลบแล้ว',
+  'Okay — not saved again.': 'โอเค ไม่บันทึกซ้ำ',
+  'You already logged {name} today. Save it again?': 'วันนี้จด {name} ไปแล้วนะ จะบันทึกซ้ำมั้ย',
+  'Save anyway': 'บันทึกอยู่ดี',
+  Skip: 'ข้าม',
   'Replaced by the one below.': 'ใช้อันล่างแทนแล้ว',
 };
 

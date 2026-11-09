@@ -480,6 +480,8 @@ module.exports = async function homeTests(browser) {
       { kind: 'fix', reply: 'Here’s what changes:', fixes: [{ ref: 'r1', op: 'delete' }] },
       { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'take_goal', amount: 2000 }] },
       { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'remove_bill', name: 'Spotify' }] },
+      { kind: 'log', reply: 'Logged.', items: [{ name: 'ข้าวผัด', amount: 70, money: 'out', category: 'food' }] },
+      { kind: 'log', reply: 'Logged.', items: [{ name: 'ข้าวผัด', amount: 70, money: 'out', category: 'food' }] },
     ];
     const page = await open(browser, { db, path: '/talk' });
     const say = async (text) => {
@@ -542,6 +544,19 @@ module.exports = async function homeTests(browser) {
     await say('remove Spotify');
     txt = await sane(page, 'Refused change');
     await check(page, 'Something that isn’t there is refused — no card, no Do it', /doesn’t fit your plan/.test(txt), () => txt.slice(-300));
+
+    const n0 = db.transactions.length;
+    await say('ข้าวผัด 70');
+    txt = await sane(page, 'Logged once');
+    await check(page, 'After logging, Kip says what’s left (or over) for today', /฿[\d,]+ (left|over) today/.test(txt.slice(-200)), () => txt.slice(-200));
+    await say('ข้าวผัด 70');
+    txt = await sane(page, 'Said twice');
+    await check(page, 'Saying the same thing twice asks first — nothing saved twice', db.transactions.length === n0 + 1 && /already logged ข้าวผัด today/.test(txt), () => ({
+      n: db.transactions.length - n0,
+      txt: txt.slice(-300),
+    }));
+    await tap(page, visible(page.getByRole('button', { name: 'Save anyway' })), { wait: 1500 });
+    await check(page, '“Save anyway” saves it', db.transactions.length === n0 + 2, () => db.transactions.length - n0);
     await page.close();
   });
 };
