@@ -7,40 +7,13 @@ import { View } from 'react-native';
 
 import { askKipDo, KipAnswer, kipProblem, TellKipBox, useTellKip, type ChangeRow } from '@/components/TellKip';
 import { Sheet } from '@/components/profile/Sheet';
-import { addBill, CATEGORY, dailyOf, lowerBudget, raiseBudget, removeBill, type CatKey, type MonthBudget } from '@/lib/budget';
+import { CATEGORY, dailyOf, type MonthBudget } from '@/lib/budget';
 import { t } from '@/lib/i18n';
 import { CAT_ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
+import { applyOps, type Op } from '@/lib/monthops';
 
-type Op = { op: 'move' | 'set' | 'add_bill' | 'remove_bill'; from?: string; to?: string; category?: string; amount?: number; name?: string };
-
-/** Make the changes the same way the screen does. Returns null if something doesn't fit this month. */
-export function applyOps(m: MonthBudget, ops: Op[]): MonthBudget | null {
-  const has = (k?: string): k is CatKey => !!k && m.spend.some((s) => s.key === k);
-  let next = m;
-  for (const o of ops) {
-    const amount = Math.round(Number(o.amount) || 0);
-    if (o.op === 'move') {
-      if (!has(o.from) || !has(o.to) || o.from === o.to || amount <= 0) return null;
-      const from = next.spend.find((s) => s.key === o.from)!.amount;
-      const take = Math.min(from, amount);
-      next = { ...next, spend: next.spend.map((s) => (s.key === o.from ? { ...s, amount: s.amount - take } : s.key === o.to ? { ...s, amount: s.amount + take } : s)) };
-    } else if (o.op === 'set') {
-      if (!has(o.category) || amount < 0) return null;
-      const cur = next.spend.find((s) => s.key === o.category)!.amount;
-      next = amount > cur ? raiseBudget(next, o.category, amount) : amount < cur ? lowerBudget(next, o.category, amount, next.alwaysFreedTo ?? 'goal') : next;
-    } else if (o.op === 'add_bill') {
-      const name = (o.name ?? '').trim().slice(0, 40);
-      if (!name || amount <= 0) return null;
-      next = addBill(next, name, amount).month;
-    } else if (o.op === 'remove_bill') {
-      const i = (next.bills.items ?? []).findIndex((b) => b.name.toLowerCase() === (o.name ?? '').trim().toLowerCase());
-      if (i < 0) return null;
-      next = removeBill(next, i);
-    } else return null;
-  }
-  return next;
-}
+export { applyOps };
 
 /** Every number that changed, side by side. */
 export function monthDiff(a: MonthBudget, b: MonthBudget): ChangeRow[] {

@@ -1,11 +1,14 @@
-// Talk to Kip (Plus). Type what you spent, ask "Can I buy this?", or ask anything about your month.
-// The server only understands the words; every number here comes from the person's own plan.
+// Talk to Kip (Plus) — agent Kip (approved mockup). Type what you spent, ask "Can I buy this?", ask anything about
+// your month, change your plan ("add Netflix 419 every month") or fix what you logged ("delete the coffee").
+// Logging saves straight away with Undo; anything that changes the plan shows a card with every number and waits
+// for "Do it". Kip remembers the conversation. The server only understands the words; every number here comes from
+// the person's own plan, checked by the app.
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ArrowUp, Microphone, X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardSafe } from '@/components/KeyboardSafe';
@@ -23,6 +26,10 @@ import { CATEGORY } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
 import { CAT_ICON3D, goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
+import { planChange, planFix, type ChangePlan, type FixPlan, type RecentTx } from '@/lib/agent';
+import type { ChangeRow } from '@/components/TellKip';
+import type { MonthBudget } from '@/lib/budget';
+import { liteOf } from '@/components/goals/bits';
 import type { MoneyIn } from '@/lib/moneyin';
 import {
   applyBuy,
@@ -47,7 +54,7 @@ import { useMonth } from '@/lib/month';
 import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
-import { colors, fonts, glow, inkA, themed } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 type Turn = {
   id: number;
@@ -59,6 +66,17 @@ type Turn = {
   saved?: boolean;
   bought?: boolean;
   dismissed?: boolean;
+  /** log: the rows saved, so Undo can take them back */
+  savedIds?: string[];
+  undone?: boolean;
+  /** change / fix: what Kip would do (null = it doesn't fit), done once "Do it" is tapped */
+  change?: ChangePlan | null;
+  fix?: FixPlan | null;
+  done?: boolean;
+  /** change: the month before, for Undo */
+  before?: MonthBudget;
+  /** change / fix: a newer one came ("actually make it ฿279"), so this one can't be done any more */
+  replaced?: boolean;
 };
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
@@ -162,6 +180,46 @@ export default function Talk() {
   }
   const update = (id: number, patch: Partial<Turn>) => setTurns((ts) => ts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
+  // What Kip can fix: the last 20 things logged, loaded the first time it's needed (and again after a change).
+  const recent = useRef<RecentTx[] | null>(null);
+  async function loadRecent(): Promise<RecentTx[]> {
+    if (recent.current) return recent.current;
+    if (!session) return [];
+    const { data } = await supabase
+      .from('transactions')
+      .select('id, amount, note, occurred_at, kind, categories(key)')
+      .eq('user_id', session.user.id)
+      .eq('kind', 'spend')
+      .order('occurred_at', { ascending: false })
+      .limit(20);
+    recent.current = (data ?? []).map((r, i) => ({
+      ref: `r${i + 1}`,
+      id: r.id as string,
+      name: (r.note as string | null) || DB_CAT_NAME[((r.categories as unknown as { key: string } | null)?.key ?? 'other') as DbCat] || '',
+      amount: Number(r.amount),
+      category: ((r.categories as unknown as { key: string } | null)?.key ?? 'other') as DbCat,
+      at: (r.occurred_at as string | null) ?? new Date().toISOString(),
+    }));
+    return recent.current;
+  }
+
+  /** What Kip remembers of each turn: what was said and what came of it (short, the last 6). */
+  function history() {
+    return turns
+      .filter((x) => x.state === 'done' && x.reply)
+      .slice(-6)
+      .map((x) => {
+        const r = x.reply!;
+        const what =
+          r.kind === 'log' && x.saved && !x.undone
+            ? `(Logged: ${(r.items ?? []).map((i) => `${i.name} ${i.amount}`).join(', ')})`
+            : r.kind === 'change' || r.kind === 'fix'
+              ? `(Proposed: ${(JSON.stringify(r.kind === 'change' ? r.ops : r.fixes) ?? '').slice(0, 160)} — ${x.done ? (x.undone ? 'done, then undone' : 'done') : 'not done yet'})`
+              : '';
+        return { me: x.me, kip: `${r.reply} ${what}`.trim() };
+      });
+  }
+
   async function send(said = text) {
     const msg = said.trim();
     if (!msg) return;
@@ -172,11 +230,32 @@ export default function Talk() {
     setText('');
     setTurns((ts) => [...ts, { id, me: msg, state: 'thinking' }]);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 60);
-    const res = await askKip(msg, kipContext(month, spent, goal ? { name: short, arrives } : null, first));
-    // The buy answer is worked out once, from the month as it was when Kip answered.
-    if (res.ok)
-      update(id, { state: 'done', reply: { ...res.reply, items: clean(res.reply.items) }, plan: res.reply.kind === 'buy' && res.reply.buy && month ? buyPlan(month, spent, res.reply.buy) : null });
-    else
+    const rec = await loadRecent();
+    const res = await askKip(
+      msg,
+      kipContext(month, spent, goal ? { name: short, arrives } : null, first, {
+        goalSaved: goal?.saved,
+        recent: rec.map((r) => ({ ref: r.ref, name: r.name, amount: r.amount, category: r.category, day: (r.at ?? '').slice(0, 10) })),
+      }),
+      history(),
+    );
+    // Every answer is worked out once, from the month as it was when Kip answered.
+    if (res.ok) {
+      const reply = { ...res.reply, items: clean(res.reply.items) };
+      const lites = goals.map(liteOf);
+      // A new change replaces any earlier one still waiting for "Do it" — only the latest can be done.
+      if (reply.kind === 'change' || reply.kind === 'fix')
+        setTurns((ts) => ts.map((x) => (x.id !== id && (x.reply?.kind === 'change' || x.reply?.kind === 'fix') && !x.done && !x.dismissed ? { ...x, replaced: true } : x)));
+      update(id, {
+        state: 'done',
+        reply,
+        plan: reply.kind === 'buy' && reply.buy && month ? buyPlan(month, spent, reply.buy) : null,
+        change: reply.kind === 'change' && month ? planChange(month, lites, reply.ops ?? []) : undefined,
+        fix: reply.kind === 'fix' ? planFix(rec, reply.fixes ?? []) : undefined,
+      });
+      // Logging saves straight away (with Undo) — it's what people do most, so it stays one step.
+      if (reply.kind === 'log' && reply.items.length) saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
+    } else
       update(id, {
         state: 'error',
         error:
@@ -203,12 +282,66 @@ export default function Talk() {
     const { data: saved, error } = await supabase.from('transactions').insert(rows).select('id, kind, amount, note');
     if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(turn.id, { saved: true });
+    update(turn.id, { saved: true, savedIds: (saved ?? []).map((r) => r.id as string) });
+    recent.current = null;
     reload();
     // Money in: the same "give it a job" sheet as everywhere else.
     const inn = (saved ?? []).map((r, i) => ({ r, it: items[i] })).filter(({ r }) => r.kind === 'income');
     if (inn.length) setMoneyIn(inn.map(({ r, it }) => ({ id: r.id as string, amount: Number(r.amount), category: it.category, note: (r.note as string | null) ?? null })));
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
+  }
+
+  async function undoLog(turn: Turn) {
+    if (!turn.savedIds?.length) return;
+    const { error } = await supabase.from('transactions').delete().in('id', turn.savedIds);
+    if (error) return flash(t('Couldn’t undo: {msg}', { msg: error.message }));
+    update(turn.id, { undone: true });
+    recent.current = null;
+    reload();
+  }
+
+  /** "Do it": the change Kip showed, made with the app's own rules. */
+  async function doChange(turn: Turn) {
+    if (!month || !turn.change) return;
+    const before = month;
+    if (turn.change.take > 0 && goal) {
+      const { error } = await supabase.rpc('take_from_goal', { p_goal: goal.id, p_amount: turn.change.take, p_note: t('Kip: {said}', { said: turn.me.slice(0, 60) }) });
+      if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
+    }
+    if (turn.change.next !== month) save(turn.change.next);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    update(turn.id, { done: true, before });
+    reload();
+  }
+  async function undoChange(turn: Turn) {
+    if (!turn.before || !turn.change) return;
+    if (turn.change.take > 0 && goal) {
+      const { error } = await supabase.rpc('put_in_goal', { p_goal: goal.id, p_amount: turn.change.take, p_source: 'extra', p_note: t('Undo') });
+      if (error) return flash(t('Couldn’t undo: {msg}', { msg: error.message }));
+    }
+    save(turn.before);
+    update(turn.id, { undone: true });
+    reload();
+  }
+  async function doFix(turn: Turn) {
+    if (!turn.fix) return;
+    for (const e of turn.fix.edits) {
+      const q =
+        e.op === 'delete'
+          ? supabase.from('transactions').delete().eq('id', e.tx.id)
+          : e.op === 'amount'
+            ? supabase.from('transactions').update({ amount: e.amount }).eq('id', e.tx.id)
+            : supabase
+                .from('transactions')
+                .update({ category_id: ids[`spend:${e.category}`] ?? null })
+                .eq('id', e.tx.id);
+      const { error } = await q;
+      if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    update(turn.id, { done: true });
+    recent.current = null;
+    reload();
   }
 
   async function buyIt(turn: Turn, item: LogItem, plan: BuyPlan) {
@@ -271,9 +404,11 @@ export default function Talk() {
                 goal={{ name: short, arrives, icon: goalIcon }}
                 goalInfo={goalInfo}
                 spent={spent}
-                onSave={(items) => saveItems(turn, items)}
+                onUndo={() => undoLog(turn)}
                 onBuy={(item, plan) => buyIt(turn, item, plan)}
                 onNotNow={() => update(turn.id, { dismissed: true })}
+                onDo={() => (turn.change ? doChange(turn) : doFix(turn))}
+                onUndoChange={() => undoChange(turn)}
               />
             )}
           </View>
@@ -308,7 +443,7 @@ export default function Talk() {
             value={text}
             onChangeText={setText}
             onFocus={() => !isPlus && setLocked(true)}
-            placeholder={isPlus ? t('Lunch 60, or “Can I buy…?”') : t('Talk to Kip is a Plus feature')}
+            placeholder={isPlus ? t('Message Kip') : t('Talk to Kip is a Plus feature')}
             placeholderTextColor={colors.faint}
             style={styles.input}
             onSubmitEditing={() => send()}
@@ -361,6 +496,30 @@ function KipLine({ text, mood = 'happy' }: { text: string; mood?: 'happy' | 'thi
   );
 }
 
+/** Kip's change, every number before → after. "Preview" until it's done. */
+function ChangeCard({ rows, preview, faded }: { rows: ChangeRow[]; preview: boolean; faded?: boolean }) {
+  return (
+    <Glass radius={24} style={faded ? { opacity: 0.5 } : undefined} innerStyle={{ paddingHorizontal: 16, paddingVertical: 6 }}>
+      <View style={[styles.secRow, { paddingTop: 8, paddingBottom: 4 }]}>
+        <Text style={styles.cap}>{preview ? t('What changes') : t('Changed')}</Text>
+        {preview && <Text style={styles.cap}>{t('Preview')}</Text>}
+      </View>
+      {rows.map((r, i) => (
+        <View key={i} style={[styles.chRow, i > 0 && { borderTopWidth: 1, borderTopColor: inkA(0.06) }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.itemName}>{r.title}</Text>
+            {r.sub ? <Text style={styles.sub}>{r.sub}</Text> : null}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+            {r.from ? <Text style={styles.from}>{r.from}</Text> : null}
+            <Text style={[styles.itemAmt, r.warn && { color: colors.orangeText }]}>{r.to}</Text>
+          </View>
+        </View>
+      ))}
+    </Glass>
+  );
+}
+
 function Answer({
   turn,
   reply,
@@ -369,9 +528,11 @@ function Answer({
   goal,
   goalInfo,
   spent,
-  onSave,
+  onUndo,
   onBuy,
   onNotNow,
+  onDo,
+  onUndoChange,
 }: {
   turn: Turn;
   reply: KipReply;
@@ -380,11 +541,53 @@ function Answer({
   goal: { name: string; arrives: string | null; icon: keyof typeof ICON3D };
   goalInfo: GoalInfo;
   spent: ReturnType<typeof useHome>['spent'];
-  onSave: (items: Item[]) => void;
+  onUndo: () => void;
   onBuy: (item: LogItem, plan: BuyPlan) => void;
   onNotNow: () => void;
+  onDo: () => void;
+  onUndoChange: () => void;
 }) {
-  const [items, setItems] = useState<Item[]>((reply.items as Item[]) ?? []);
+  const items = (reply.items as Item[]) ?? [];
+
+  if (reply.kind === 'change' || reply.kind === 'fix') {
+    const p = reply.kind === 'change' ? turn.change : turn.fix;
+    if (!p) return <KipLine mood="careful" text={t('Hmm, that doesn’t fit your plan right now. Try saying it another way?')} />;
+    return (
+      <>
+        <KipLine text={reply.reply} />
+        <ChangeCard rows={p.rows} preview={!turn.done} faded={!!turn.replaced || !!turn.dismissed} />
+        {turn.undone ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Undone — back how it was.')}</Text>
+        ) : turn.done ? (
+          <View style={styles.doneRow}>
+            <Text style={styles.sub}>
+              <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{t('Done')}</Text>
+            </Text>
+            {reply.kind === 'change' && (
+              <Squish onPress={onUndoChange} style={styles.undo} accessibilityRole="button">
+                <Text style={styles.undoText}>{t('Undo')}</Text>
+              </Squish>
+            )}
+          </View>
+        ) : turn.replaced ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Replaced by the one below.')}</Text>
+        ) : turn.dismissed ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Okay — nothing changed.')}</Text>
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Squish onPress={onDo} style={[styles.dark, { flex: 1 }]} accessibilityRole="button">
+              <Text style={styles.darkText}>{t('Do it')}</Text>
+            </Squish>
+            <Squish onPress={onNotNow} accessibilityRole="button">
+              <Glass radius={999} innerStyle={[styles.light, { paddingHorizontal: 20 }]}>
+                <Text style={styles.lightText}>{t('Not now')}</Text>
+              </Glass>
+            </Squish>
+          </View>
+        )}
+      </>
+    );
+  }
 
   if (reply.kind === 'log' && items.length) {
     const ins = items.filter(isIn);
@@ -395,7 +598,6 @@ function Answer({
     // Left for today once these are saved (bills don't touch today's money).
     const todayOut = month ? outs.filter((o) => budgetKey(o.category, month) !== 'bills').reduce((a, o) => a + o.amount, 0) : 0;
     const leftAfter = month && !turn.saved ? monthNumbers(month, { ...spent, total: spent.total + todayOut, today: spent.today + todayOut }).leftToday : null;
-    const remove = (it: Item) => setItems((xs) => xs.filter((x) => x !== it));
     const row = (it: Item, i: number, note: { text: string; extra: boolean } | null) => (
       <View key={`${it.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Image source={ICON3D[isIn(it) ? inCatIcon(it.category) : dbCatIcon(it.category)]} style={{ width: 34, height: 34 }} contentFit="contain" />
@@ -407,18 +609,12 @@ function Answer({
           {isIn(it) ? '+' : ''}
           {baht(it.amount)}
         </Text>
-        {!turn.saved && (
-          <Pressable onPress={() => remove(it)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Remove {name}', { name: it.name })} style={styles.x}>
-            <X size={11} color={colors.muted} weight="bold" />
-          </Pressable>
-        )}
       </View>
     );
     return (
       <>
         <KipLine text={reply.reply} />
         <Glass radius={24} innerStyle={{ padding: 16, gap: 12 }}>
-          {turn.saved && <Text style={styles.cap}>{t('Saved')}</Text>}
           {ins.length > 0 && (
             <>
               <View style={styles.secRow}>
@@ -438,15 +634,19 @@ function Answer({
               {outs.map((it, i) => row(it, i, null))}
             </>
           )}
-          {!turn.saved && (
-            <Squish onPress={() => onSave(items)} style={styles.dark} accessibilityRole="button">
-              <Text style={styles.darkText}>
-                {items.length > 1 ? t('Save all {n}', { n: items.length }) : t('Save it')}
-                {ins.length ? '' : ` · ${baht(outTotal)}`}
-              </Text>
-            </Squish>
-          )}
         </Glass>
+        {turn.undone ? (
+          <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Undone — nothing saved.')}</Text>
+        ) : (
+          <View style={styles.doneRow}>
+            <Text style={styles.sub}>{turn.saved ? (items.length > 1 ? t('Saved all {n} · {amount}', { n: items.length, amount: baht(outTotal + inTotal) }) : t('Saved')) : t('Saving…')}</Text>
+            {turn.saved && (
+              <Squish onPress={onUndo} style={styles.undo} accessibilityRole="button">
+                <Text style={styles.undoText}>{t('Undo')}</Text>
+              </Squish>
+            )}
+          </View>
+        )}
       </>
     );
   }
@@ -555,7 +755,11 @@ const styles = themed(() =>
     itemName: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     itemAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
     price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
-    x: { width: 22, height: 22, borderRadius: 11, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
+    chRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
+    undo: { borderRadius: 999, backgroundColor: inkA(0.05), paddingHorizontal: 12, paddingVertical: 6 },
+    undoText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
     dark: { height: 48, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     darkText: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
     light: { height: 48, alignItems: 'center', justifyContent: 'center' },

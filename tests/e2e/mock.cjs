@@ -75,7 +75,13 @@ async function install(page, db) {
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(u.includes('/user') ? user : session) });
   });
   await page.route('**/functions/v1/**', (r) => {
-    db.writes.push('function ' + r.request().url().split('/functions/v1/')[1]);
+    const name = r.request().url().split('/functions/v1/')[1];
+    db.writes.push('function ' + name);
+    // A test can script Kip: db.kip = [reply, reply, …] answers the "kip" function in order (and keeps what was sent).
+    if (name === 'kip' && db.kip && db.kip.length) {
+      (db.kipSent ??= []).push(JSON.parse(r.request().postData() || '{}'));
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.kip.shift()) });
+    }
     return r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'offline in tests' }) });
   });
   await page.route('**/storage/v1/**', (r) => {

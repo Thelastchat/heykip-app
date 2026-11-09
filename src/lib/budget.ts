@@ -282,13 +282,21 @@ export function addBill(m: MonthBudget, name: string, amount: number, extra: Omi
   const fun = m.spend.filter((s) => FUN_KEYS.includes(s.key) && s.amount > 0);
   const pool = fun.reduce((a, s) => a + s.amount, 0);
   const fromFun = Math.min(left, pool);
-  let got = 0;
+  // In proportion (฿10 steps), then whatever rounding left over goes to whichever still has room — never more than a
+  // category has, so nothing goes below ฿0.
   const cut = new Map<CatKey, number>();
-  fun.forEach((s, i) => {
-    const c = i === fun.length - 1 ? fromFun - got : Math.min(s.amount, round10((fromFun * s.amount) / pool));
+  let got = 0;
+  for (const s of fun) {
+    const c = Math.min(s.amount, round10((fromFun * s.amount) / pool), fromFun - got);
     cut.set(s.key, c);
     got += c;
-  });
+  }
+  for (const s of fun) {
+    if (got >= fromFun) break;
+    const more = Math.min(s.amount - (cut.get(s.key) ?? 0), fromFun - got);
+    cut.set(s.key, (cut.get(s.key) ?? 0) + more);
+    got += more;
+  }
   left -= fromFun;
   const goalHave = m.goal.amount + m.goalExtra;
   const fromGoal = Math.min(left, goalHave);

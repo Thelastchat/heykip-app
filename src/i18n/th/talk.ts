@@ -206,6 +206,25 @@ const th: Record<string, string> = {
   'Bought — I’ve logged it and moved the money.': 'ซื้อแล้ว — Kip จดให้และย้ายเงินให้แล้ว',
   'Bought — I’ve logged it.': 'ซื้อแล้ว — Kip จดให้แล้ว',
   'Your money': 'เรื่องเงิน',
+  // agent Kip
+  'Couldn’t undo: {msg}': 'ย้อนกลับไม่ได้: {msg}',
+  'Kip: {said}': 'Kip: {said}',
+  Undo: 'ย้อนกลับ',
+  'What changes': 'สิ่งที่จะเปลี่ยน',
+  Changed: 'เปลี่ยนแล้ว',
+  Preview: 'ตัวอย่าง',
+  'Hmm, that doesn’t fit your plan right now. Try saying it another way?': 'อืม อันนี้ไม่เข้ากับแผนตอนนี้นะ ลองพูดอีกแบบได้มั้ย',
+  'Undone — back how it was.': 'ย้อนกลับแล้ว กลับเป็นเหมือนเดิม',
+  'Okay — nothing changed.': 'โอเค ไม่ได้เปลี่ยนอะไร',
+  'Undone — nothing saved.': 'ย้อนกลับแล้ว ไม่ได้บันทึก',
+  'Saved all {n} · {amount}': 'บันทึกครบ {n} รายการ · {amount}',
+  '{total} a year · set aside every month': 'ปีละ {total} · กันไว้ทุกเดือน',
+  'Marked paid': 'จ่ายแล้ว',
+  'Saving a month': 'เก็บต่อเดือน',
+  '{goal} saved so far': '{goal} เก็บได้แล้ว',
+  'No date yet': 'ยังไม่มีวันที่',
+  Deleted: 'ลบแล้ว',
+  'Replaced by the one below.': 'ใช้อันล่างแทนแล้ว',
 };
 
 export default th;

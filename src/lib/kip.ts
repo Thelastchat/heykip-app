@@ -7,6 +7,7 @@ import type { Icon3D } from '@/lib/icons3d';
 import { CAT_ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
+import type { AgentOp, FixOp } from '@/lib/agent';
 
 /** Every category key the server can return (the database's categories). */
 export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other';
@@ -15,7 +16,14 @@ export type InCat = 'pay' | 'side_gigs' | 'gifts' | 'other';
 export type LogItem = { name: string; amount: number; category: DbCat; money?: 'in' | 'out' };
 export type InItem = { name: string; amount: number; category: InCat; money: 'in' };
 export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
-export type KipReply = { kind: 'log' | 'buy' | 'answer'; reply: string; items?: (LogItem | InItem)[]; buy?: LogItem };
+export type KipReply = {
+  kind: 'log' | 'buy' | 'answer' | 'change' | 'fix';
+  reply: string;
+  items?: (LogItem | InItem)[];
+  buy?: LogItem;
+  ops?: AgentOp[];
+  fixes?: FixOp[];
+};
 
 /** Category names, translated each time they're read. */
 export const DB_CAT_NAME: Record<DbCat, string> = {
@@ -107,7 +115,13 @@ export function incomeNotes(items: InItem[], month: MonthBudget | null) {
 }
 
 /** The month as numbers Kip may quote. */
-export function kipContext(month: MonthBudget | null, spent: Spent, goal: { name: string; arrives: string | null } | null, name?: string | null) {
+export function kipContext(
+  month: MonthBudget | null,
+  spent: Spent,
+  goal: { name: string; arrives: string | null } | null,
+  name?: string | null,
+  extra: { goalSaved?: number; recent?: { ref: string; name: string; amount: number; category: string; day: string }[] } = {},
+) {
   if (!month) return { language: getLang() };
   const n = monthNumbers(month, spent);
   return {
@@ -119,13 +133,21 @@ export function kipContext(month: MonthBudget | null, spent: Spent, goal: { name
     daysLeft: n.P.daysLeft,
     dailyBudget: n.dailyToday,
     paceThisMonth: n.pace > 0 ? `${n.pace} baht faster than plan` : `${-n.pace} baht under plan`,
-    goal: goal ? { name: goal.name, arrives: goal.arrives, perMonth: month.goal.amount + month.goalExtra } : undefined,
-    categories: month.spend.map((s) => ({ name: CATEGORY[s.key].name, budget: s.amount, spent: spent.byCat[s.key] ?? 0, left: Math.max(0, s.amount - (spent.byCat[s.key] ?? 0)) })),
+    goal: goal ? { name: goal.name, arrives: goal.arrives, perMonth: month.goal.amount + month.goalExtra, savedSoFar: extra.goalSaved } : undefined,
+    categories: month.spend.map((s) => ({ key: s.key, name: CATEGORY[s.key].name, budget: s.amount, spent: spent.byCat[s.key] ?? 0, left: Math.max(0, s.amount - (spent.byCat[s.key] ?? 0)) })),
+    rent: month.bills.rent,
+    bills: (month.bills.items ?? []).map((b) => ({ name: b.name, perMonth: b.amount, ...(b.yearly ? { yearly: b.yearly.total, due: b.yearly.due } : {}) })),
+    moneyStyle: month.style,
+    ...extra,
   };
 }
 
-export async function askKip(text: string, context: object): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
-  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context } });
+export async function askKip(
+  text: string,
+  context: object,
+  history: { me: string; kip: string }[] = [],
+): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
+  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };

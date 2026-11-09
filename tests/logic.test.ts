@@ -12,6 +12,7 @@ import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearly
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
 import { paceOf } from '../src/lib/pace';
+import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 
 // ---------- tiny test kit ----------
@@ -565,6 +566,99 @@ for (let n = 0; n < 2000; n++) {
   for (let d = 0; d < 14; d++) flat[new Date(2026, 9, 25 + d).toDateString()] = 350;
   const even = paceOf(flat, s, 31, 13, 10850);
   check('Pace line: spending exactly the plan lands on ฿0 left on payday', even.leftAtPayday === 0 && even.inside, () => even);
+}
+
+// ---------- agent Kip: changes and fixes ----------
+{
+  const OPS = ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'style'] as const;
+  const BKEYS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'learning', 'giving', 'other'];
+  let tried = 0;
+  for (let i = 0; i < 3000; i++) {
+    const inp = person();
+    if (!inp) continue;
+    const m = month(inp);
+    const lite: GoalLite = { id: 'g1', kind: 'trip', target: r100(20000, 300000), saved: r100(0, 20000), due: null, monthly: null };
+    const ops: AgentOp[] = Array.from({ length: int(1, 3) }, () => {
+      const op = pick(OPS);
+      return {
+        op,
+        from: pick(BKEYS),
+        to: pick(BKEYS),
+        category: pick(BKEYS),
+        amount: int(10, 6000),
+        name: pick(['Netflix', 'Gym', 'Mom', 'rent', 'AIA']),
+        due_month: rand() < 0.3 ? int(1, 12) : undefined,
+        style: pick(['kip', '503020', 'jars', 'savefirst']),
+      };
+    });
+    const p = planChange(m, [lite], ops);
+    if (!p) continue;
+    tried++;
+    check('Agent change: every baht still has a job', Math.abs(jobs(p.next) - p.next.income) <= 10, () => ({ ops, jobs: jobs(p.next), income: p.next.income }));
+    check('Agent change: no budget goes below ฿0', p.next.spend.every((x) => x.amount >= 0) && p.next.goal.amount + p.next.goalExtra >= 0, () => ops);
+    check('Agent change: never takes more than the goal has saved', p.take >= 0 && p.take <= lite.saved, () => ({ take: p.take, saved: lite.saved }));
+    check('Agent change: always shows what changes, ending with the goal’s date', p.rows.length > 0 && p.rows[p.rows.length - 1].title === p.next.goal.title, () => p.rows);
+  }
+  check('Agent change: the random runs did real changes', tried > 500, () => tried);
+
+  const inp = person('trip')!;
+  const m = { ...month(inp, 'kip', 25) };
+  const lite: GoalLite = { id: 'g1', kind: 'trip', target: 200000, saved: 12400, due: null, monthly: null };
+  const nf = planChange(m, [lite], [{ op: 'add_bill', name: 'Netflix', amount: 419, bill_type: 'streaming' }]);
+  check(
+    'Agent: "add Netflix 419 every month" adds it as Streaming, ฿419 a month',
+    !!nf && (nf.next.bills.items ?? []).some((b) => b.name === 'Netflix' && b.amount === 419 && b.type === 'streaming'),
+    () => nf?.next.bills,
+  );
+  const yr = planChange(m, [lite], [{ op: 'add_bill', name: 'AIA', amount: 12000, due_month: 2 }], new Date(2026, 10, 9));
+  const aia = yr?.next.bills.items?.find((b) => b.name === 'AIA');
+  check(
+    'Agent: "insurance 12,000 every February" sets aside 12,000 over the months until Feb (฿4,000)',
+    !!aia && aia.yearly?.total === 12000 && aia.yearly.due === '2027-02' && aia.amount === 4000 && aia.type === 'insurance',
+    () => aia,
+  );
+  const fun = m.spend.find((x) => x.key === 'fun')!.amount;
+  const tg = planChange(m, [lite], [{ op: 'to_goal', from: 'fun', amount: 500 }]);
+  check(
+    'Agent: "move 500 from fun to Japan" — fun −500, saving +500 this month',
+    !!tg && tg.next.spend.find((x) => x.key === 'fun')!.amount === fun - Math.min(500, fun) && tg.next.goal.amount + tg.next.goalExtra === m.goal.amount + m.goalExtra + Math.min(500, fun),
+    () => tg?.rows,
+  );
+  check('Agent: taking more than the goal has is refused', planChange(m, [lite], [{ op: 'take_goal', amount: 12401 }]) === null, () => 0);
+  const tk = planChange(m, [lite], [{ op: 'take_goal', amount: 2000 }]);
+  check('Agent: "take 2,000 from Japan" shows saved ฿12,400 → ฿10,400', !!tk && tk.take === 2000 && tk.rows.some((r) => r.from === '฿12,400' && r.to === '฿10,400'), () => tk?.rows);
+  const paid = planChange(m, [lite], [{ op: 'pay_bill', name: 'rent' }], new Date(2026, 10, 9));
+  check(
+    'Agent: "I paid rent" marks rent paid this pay month; twice is refused',
+    m.bills.rent === 0 ? paid === null : !!paid && paid.next.paid!.keys.includes('rent') && planChange(paid.next, [lite], [{ op: 'pay_bill', name: 'rent' }], new Date(2026, 10, 9)) === null,
+    () => paid?.next.paid,
+  );
+  check('Agent: removing a bill that isn’t there is refused', planChange(m, [lite], [{ op: 'remove_bill', name: 'Spotify' }]) === null, () => 0);
+  check('Agent: switching to the style you already have is refused', planChange(m, [lite], [{ op: 'style', style: m.style }]) === null, () => m.style);
+  check('Agent: an unknown change is refused, never guessed', planChange(m, [lite], [{ op: 'transfer' as never, amount: 100 }]) === null, () => 0);
+
+  const recent = [
+    { ref: 'r1', id: 'a', name: 'Coffee', amount: 55, category: 'food' as const, at: '2026-11-09T08:00:00Z' },
+    { ref: 'r2', id: 'b', name: 'Shopee', amount: 500, category: 'food' as const, at: '2026-11-08T08:00:00Z' },
+  ];
+  const fx = planFix(recent, [
+    { ref: 'r1', op: 'delete' },
+    { ref: 'r2', op: 'category', category: 'shopping' },
+  ]);
+  check(
+    'Agent fix: "delete the coffee, Shopee was shopping" — two edits, both shown',
+    !!fx && fx.edits.length === 2 && fx.edits[0].op === 'delete' && fx.edits[1].category === 'shopping' && fx.rows.length === 2,
+    () => fx,
+  );
+  check('Agent fix: something not in the recent list is refused', planFix(recent, [{ ref: 'r9', op: 'delete' }]) === null, () => 0);
+  check('Agent fix: "change it to the same category" is refused', planFix(recent, [{ ref: 'r1', op: 'category', category: 'food' }]) === null, () => 0);
+  check(
+    'Agent fix: a new amount must be real and different',
+    planFix(recent, [{ ref: 'r1', op: 'amount', amount: 0 }]) === null &&
+      planFix(recent, [{ ref: 'r1', op: 'amount', amount: 55 }]) === null &&
+      !!planFix(recent, [{ ref: 'r1', op: 'amount', amount: 65 }]),
+    () => 0,
+  );
 }
 
 // ---------- report ----------

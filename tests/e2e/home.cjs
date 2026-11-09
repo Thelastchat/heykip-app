@@ -395,7 +395,14 @@ module.exports = async function homeTests(browser) {
   await safely(async () => {
     const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const ago = (n) => new Date(Date.now() - n * 86400000);
-    const { db } = person({ spends: [['food', 120, 0, 'Bubble tea'], ['food', 2000, 40, 'Big dinner'], ['home_bills', 7000, 40, 'Rent'], ['transport', 90, 400, 'Old Grab']] });
+    const { db } = person({
+      spends: [
+        ['food', 120, 0, 'Bubble tea'],
+        ['food', 2000, 40, 'Big dinner'],
+        ['home_bills', 7000, 40, 'Rent'],
+        ['transport', 90, 400, 'Old Grab'],
+      ],
+    });
     const page = await open(browser, { db });
     await sane(page, 'Home');
     await tap(page, visible(page.getByRole('button', { name: 'Full calendar' })), { wait: 2000 });
@@ -435,10 +442,106 @@ module.exports = async function homeTests(browser) {
     for (let i = back; i < 12; i++) await tap(page, visible(page.getByRole('button', { name: 'Previous month' })), { wait: 900 });
     const last = await sane(page, 'Oldest month');
     const old = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-    await check(page, `Stops at ${MONTHS[old.getMonth()]} ${old.getFullYear()}, with the one-year note`, last.includes(`${MONTHS[old.getMonth()]} ${old.getFullYear()}`) && last.includes('goes back one year'), () => last.slice(-400));
+    await check(
+      page,
+      `Stops at ${MONTHS[old.getMonth()]} ${old.getFullYear()}, with the one-year note`,
+      last.includes(`${MONTHS[old.getMonth()]} ${old.getFullYear()}`) && last.includes('goes back one year'),
+      () => last.slice(-400),
+    );
     const prev = page.getByRole('button', { name: 'Previous month' });
     await check(page, 'The back arrow is off', (await prev.getAttribute('aria-disabled')) === 'true', () => prev.getAttribute('aria-disabled'));
     await check(page, 'Nothing from over a year ago shows', !last.includes('Old Grab'), () => last.slice(-400));
+    await page.close();
+  });
+
+  scenario('Agent Kip · log, change, remember, fix, take from the goal');
+  await safely(async () => {
+    const { db } = person({
+      plan: 'plus',
+      spends: [
+        ['food', 55, 0, 'Coffee'],
+        ['food', 500, 1, 'Shopee'],
+      ],
+    });
+    db.profiles[0].ai_consent_at = new Date().toISOString();
+    db.goals[0].saved_amount = 12400;
+    db.kip = [
+      {
+        kind: 'log',
+        reply: 'Logged 3.',
+        items: [
+          { name: 'ข้าวมันไก่', amount: 60, money: 'out', category: 'food' },
+          { name: 'Grab', amount: 120, money: 'out', category: 'transport' },
+          { name: 'ชานม', amount: 45, money: 'out', category: 'food' },
+        ],
+      },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'add_bill', name: 'Netflix', amount: 419, bill_type: 'streaming' }] },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'add_bill', name: 'Netflix', amount: 279, bill_type: 'streaming' }] },
+      { kind: 'fix', reply: 'Here’s what changes:', fixes: [{ ref: 'r1', op: 'delete' }] },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'take_goal', amount: 2000 }] },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'remove_bill', name: 'Spotify' }] },
+    ];
+    const page = await open(browser, { db, path: '/talk' });
+    const say = async (text) => {
+      await type(page, 'Message Kip', text);
+      await tap(page, visible(page.getByRole('button', { name: 'Send' })), { wait: 1800 });
+    };
+    const before = db.transactions.length;
+    await say('ข้าวมันไก่ 60, Grab 120, ชานม 45');
+    let txt = await sane(page, 'Kip logged three');
+    await check(page, 'Logging saves straight away: 3 new spends, with Undo', db.transactions.length === before + 3 && /Saved all 3/.test(txt), () => ({
+      n: db.transactions.length - before,
+      txt: txt.slice(-300),
+    }));
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })).last(), { wait: 1200 });
+    await check(page, 'Undo takes the 3 back', db.transactions.length === before, () => db.transactions.length - before);
+
+    await say('add Netflix 419 every month');
+    txt = await sane(page, 'Netflix preview');
+    await check(
+      page,
+      'A change shows a preview card first — nothing saved yet',
+      /Netflix/.test(txt) && /Preview/.test(txt) && !(db.profiles[0].budget.bills.items ?? []).some((b) => b.name === 'Netflix'),
+      () => txt.slice(-400),
+    );
+    await say('actually it’s the ฿279 plan');
+    const sent = db.kipSent[db.kipSent.length - 1];
+    await check(page, 'Kip remembers: the follow-up is sent with the conversation so far', Array.isArray(sent.history) && sent.history.some((h) => /Netflix/.test(h.me)), () => sent.history);
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })).last(), { wait: 1500 });
+    const nf = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Netflix');
+    await check(
+      page,
+      '“Do it” adds Netflix at ฿279 a month, and every baht still has a job',
+      !!nf && nf.amount === 279 && Math.abs(jobs(db.profiles[0].budget) - db.profiles[0].budget.income) <= 10,
+      () => db.profiles[0].budget.bills,
+    );
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })).last(), { wait: 1500 });
+    await check(page, 'Undo puts the month back', !(db.profiles[0].budget.bills.items ?? []).some((b) => b.name === 'Netflix'), () => db.profiles[0].budget.bills);
+
+    const coffee = db.transactions.find((x) => x.note === 'Coffee');
+    await say('delete the coffee');
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })).last(), { wait: 1500 });
+    await check(
+      page,
+      'A fix (“delete the coffee”) deletes that one, only on Do it',
+      !!coffee && !db.transactions.some((x) => x.id === coffee.id) && db.transactions.some((x) => x.note === 'Shopee'),
+      () => db.transactions.map((x) => x.note),
+    );
+
+    await say('take 2000 from Japan');
+    txt = await sane(page, 'Take from goal preview');
+    await check(page, 'Taking from the goal shows saved ฿12,400 → ฿10,400 first', /฿12,400/.test(txt) && /฿10,400/.test(txt), () => txt.slice(-400));
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })).last(), { wait: 1500 });
+    await check(
+      page,
+      '…and Do it takes it out of the goal',
+      db.writes.some((w) => w === 'rpc take_from_goal 2000'),
+      () => db.writes.filter((w) => w.startsWith('rpc')),
+    );
+
+    await say('remove Spotify');
+    txt = await sane(page, 'Refused change');
+    await check(page, 'Something that isn’t there is refused — no card, no Do it', /doesn’t fit your plan/.test(txt), () => txt.slice(-300));
     await page.close();
   });
 };
