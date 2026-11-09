@@ -166,8 +166,8 @@ export default function Profile() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: insets.bottom + 40, gap: 16 }} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title={t('You')} />
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 180, gap: 16 }} showsVerticalScrollIndicator={false}>
+        <ScreenHeader title={t('You')} back={false} />
 
         <RiseIn>
           <Glass radius={24} innerStyle={styles.me}>
@@ -346,7 +346,7 @@ export default function Profile() {
       )}
 
       {toast && (
-        <View style={[styles.toast, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+        <View style={[styles.toast, { bottom: Math.max(insets.bottom, 12) + 96 }]} pointerEvents="none">
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}

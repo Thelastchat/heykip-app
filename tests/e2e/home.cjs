@@ -418,9 +418,13 @@ module.exports = async function homeTests(browser) {
     const cell = page.getByRole('button', { name: new RegExp(`^[A-Z][a-z]{2} ${d40.getDate()}, spent (\\d+)$`) });
     const label = (await cell.count()) ? await cell.getAttribute('aria-label') : '';
     await check(page, 'That day shows ฿2,000 — the ฿7,000 rent is planned money, left out like on Home', /spent 2000$/.test(label || ''), () => label);
+    // the calendar is a tab now: the bar floats over the last week, so bring the day to the middle first (as a thumb would)
+    await cell.evaluate((e) => e.scrollIntoView({ block: 'center' }));
     await tap(page, cell, { wait: 600 });
     const day = await sane(page, 'Day card');
-    await check(page, 'Tapping the day lists the dinner, and says how far over the daily budget', day.includes('Big dinner') && /฿[\d,]+ over/.test(day) && !day.includes('Rent'), () => day.slice(-500));
+    // only the day card (under the legend): Home stays mounted behind the calendar tab on the web, and its text would count too
+    const card = day.slice(day.lastIndexOf('Payday'));
+    await check(page, 'Tapping the day lists the dinner, and says how far over the daily budget', card.includes('Big dinner') && /฿[\d,]+ over/.test(card) && !card.includes('Rent'), () => card);
     await tap(page, visible(page.getByRole('button').filter({ hasText: /^See all in History$/ })), { wait: 2500 });
     const hist = await sane(page, 'History from the calendar');
     await check(page, 'See all in History opens the pay cycle with that day', hist.includes('Big dinner'), () => hist.slice(0, 500));

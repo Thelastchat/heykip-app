@@ -109,9 +109,9 @@ export default function FullCalendar() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView contentContainerStyle={[styles.body, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.body, { paddingTop: insets.top + 8, paddingBottom: 180 }]} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 20 }}>
-          <ScreenHeader title={t('Full calendar')} />
+          <ScreenHeader title={t('Full calendar')} back={false} />
         </View>
 
         <GestureDetector gesture={swipe}>

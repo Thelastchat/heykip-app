@@ -3,7 +3,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { CalendarBlank, CaretRight, Flame, LockSimple, Plus, UserCircle } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, Flame, LockSimple, Plus } from 'phosphor-react-native';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -282,9 +282,6 @@ export default function Home() {
               {streak > 0 ? (streak > 1 ? t('days logged') : t('day logged')) : t('Log today to start a streak')}
             </Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('Profile and settings')} onPress={() => router.push('/profile')} style={styles.avatar}>
-            {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 40, height: 40 }} /> : <UserCircle size={40} color={colors.ink} weight="light" />}
-          </Pressable>
         </RiseIn>
 
         <RiseIn delay={60}>
@@ -639,7 +636,6 @@ const styles = themed(() =>
     streak: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40 },
     streakText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
     quiet: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-    avatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.paper },
     hello: { paddingHorizontal: 20, paddingTop: 20, fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -0.9, color: colors.ink },
     l1: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 4 },
     l2: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },

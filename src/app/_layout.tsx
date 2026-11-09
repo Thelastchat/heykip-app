@@ -53,7 +53,6 @@ function RootStack() {
       {/* Signed in and set up: the app. */}
       <Stack.Protected guard={signedIn && onboarded}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="profile" />
         <Stack.Screen name="month" />
         <Stack.Screen name="styles" />
         <Stack.Screen name="kip-moods" />
@@ -63,7 +62,6 @@ function RootStack() {
         <Stack.Screen name="goal-new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="privacy" />
         <Stack.Screen name="history" />
-        <Stack.Screen name="calendar" />
         <Stack.Screen name="safety" />
         <Stack.Screen name="talk" options={{ presentation: 'fullScreenModal' }} />
       </Stack.Protected>

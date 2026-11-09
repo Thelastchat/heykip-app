@@ -343,6 +343,7 @@ const th: Record<string, string> = {
   '{amount} spent today — see history': 'วันนี้ใช้ไป {amount} — ดูประวัติ',
   'Must-haves until payday': 'ใช้แค่ที่จำเป็นจนเงินเดือนออก',
   'This pay month': 'รอบเงินเดือนนี้',
+  Calendar: 'ปฏิทิน',
   '{amount} left': 'เหลือ {amount}',
   '{amount} short': 'ขาด {amount}',
   '{amount} spent': 'ใช้ไป {amount}',
