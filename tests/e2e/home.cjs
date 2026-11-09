@@ -625,4 +625,33 @@ module.exports = async function homeTests(browser) {
     }
     await home.close();
   });
+
+  scenario('Home · tap the graph: This pay month');
+  await safely(async () => {
+    const { db } = person({
+      spends: [
+        ['food', 300, 0, 'Lunch'],
+        ['shopping', 2600, 2, 'Shoes'],
+        ['transport', 200, 1, 'Grab'],
+      ],
+    });
+    const page = await open(browser, { db });
+    await tap(page, visible(page.getByRole('button', { name: 'This pay month — see the details' })), { wait: 1000 });
+    const txt = await sane(page, 'This pay month');
+    const N = X.monthNumbers(db.profiles[0].budget, { total: spentSoFar(db), today: spentToday(db), bills: 0, byCat: {}, byDay: {} }, new Date());
+    const per = N.P.daysLeft > 1 ? Math.floor(N.leftMonth / (N.P.daysLeft - 1) / 10) * 10 : 0;
+    await check(page, `It says what each day can be from here (฿${per.toLocaleString('en-US')})`, N.P.daysLeft <= 1 || txt.includes(`Keep days under ฿${per.toLocaleString('en-US')}`), () =>
+      txt.slice(-600),
+    );
+    await check(
+      page,
+      'It explains why, and lists what’s pushing the line up — biggest first',
+      /Why:/.test(txt) && txt.indexOf('Shopping') < txt.indexOf('Food') && /What’s pushing the line up/.test(txt),
+      () => txt.slice(-600),
+    );
+    await tap(page, visible(page.getByRole('button', { name: /^Shopping:/ })), { wait: 1000 });
+    const cat = await sane(page, 'Shopping from the graph');
+    await check(page, 'A category opens its sheet', /Shoes/.test(cat), () => cat.slice(-400));
+    await page.close();
+  });
 };

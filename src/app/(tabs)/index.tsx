@@ -19,6 +19,7 @@ import { OverSheet, type OverInfo } from '@/components/home/OverSheet';
 import { SlipFinder } from '@/components/home/SlipFinder';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { PaceChart } from '@/components/home/PaceChart';
+import { PaceSheet } from '@/components/home/PaceSheet';
 import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
 import { DaySheet } from '@/components/DaySheet';
@@ -64,6 +65,7 @@ export default function Home() {
   const [kipOpen, setKipOpen] = useState(false);
   // Tapping a day on the week opens that day (approved mockup) — everything spent, money in, and Add to this day.
   const [dayOpen, setDayOpen] = useState<Date | null>(null);
+  const [paceOpen, setPaceOpen] = useState(false);
   const [catOpen, setCatOpen] = useState<CatKey | null>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
 
@@ -358,13 +360,13 @@ export default function Home() {
         {/* the pay month as one line, with the plan as a safe zone (approved mockup G2) */}
         {spendBudget > 0 && (
           <RiseIn delay={160} style={{ paddingHorizontal: 20, marginTop: 20 }}>
-            <View style={styles.paceCard}>
+            <Pressable style={styles.paceCard} onPress={() => setPaceOpen(true)} accessibilityRole="button" accessibilityLabel={t('This pay month — see the details')}>
               <View style={styles.paceHead}>
                 <Text style={styles.weekLbl}>{t('This pay month')}</Text>
                 <Text style={styles.paceSpent}>{t('{amount} spent', { amount: baht(line.spent) })}</Text>
               </View>
               <PaceChart pace={line} budget={spendBudget} total={P.total} start={P.start} />
-            </View>
+            </Pressable>
           </RiseIn>
         )}
 
@@ -485,6 +487,25 @@ export default function Home() {
         )}
       </ScrollView>
 
+      {paceOpen && month && (
+        <PaceSheet
+          pace={line}
+          budget={spendBudget}
+          total={P.total}
+          start={P.start}
+          end={P.end}
+          left={leftMonth}
+          daysAfter={P.daysLeft - 1}
+          perDayAfter={P.daysLeft > 1 ? Math.floor(leftMonth / (P.daysLeft - 1) / 10) * 10 : 0}
+          cats={month.spend
+            .map((x) => ({ key: x.key, spent: spent.byCat[x.key] ?? 0, budget: x.amount }))
+            .filter((c) => c.spent > 0)
+            .sort((a, b) => b.spent - a.spent)
+            .slice(0, 3)}
+          onCat={(k) => setCatOpen(k)}
+          onClose={() => setPaceOpen(false)}
+        />
+      )}
       {dayOpen && <DaySheet day={dayOpen} {...dayOf(dayOpen)} daily={dailyPlan} onClose={() => setDayOpen(null)} />}
       {kipOpen && (
         <KipSheet

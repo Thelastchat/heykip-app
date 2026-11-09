@@ -15,7 +15,7 @@ const H = 120;
  * A smooth line through the points that never dips or bulges past them (monotone cubic, Fritsch–Carlson):
  * spending only goes up, so the line must too.
  */
-function smooth(pts: [number, number][]) {
+export function smooth(pts: [number, number][]) {
   const n = pts.length;
   if (n < 2) return `M${pts[0][0]},${pts[0][1]}`;
   const dx = pts.slice(1).map((p, i) => p[0] - pts[i][0]);
