@@ -1,6 +1,5 @@
 // Full calendar (approved mockup): a month at a time, each day with what was spent and a dot — grey under the daily
 // budget, black over (white, light grey and black only, like Home's week). Tap a day to see its spends. Opens on this month; goes back one year and no further.
-import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { CaretLeft, CaretRight } from 'phosphor-react-native';
 import { useCallback, useMemo, useState } from 'react';
@@ -9,20 +8,16 @@ import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handl
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { DaySheet } from '@/components/DaySheet';
 import { GlowBackground } from '@/components/glow/GlowBackground';
-import { Squish } from '@/components/glow/motion';
 import { useAuth } from '@/lib/auth';
 import { dayOpen, daysFrom, earliestDay, loadMonth, monthAt, monthGrid, OLDEST } from '@/lib/calendar';
 import { monthNumbers, useHome, type CatSpend } from '@/lib/home';
 import { dayShort, monthLong, monthShort, shownYear, t } from '@/lib/i18n';
-import { ICON3D } from '@/lib/icons3d';
-import { DB_CAT_NAME, dbCatIcon, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dayInMonth } from '@/lib/setup/plan';
 import { colors, fonts, inkA, themed } from '@/theme';
-
-const asCat = (c: string) => (c in DB_CAT_NAME ? c : 'other') as DbCat;
 
 export default function FullCalendar() {
   const insets = useSafeAreaInsets();
@@ -31,7 +26,9 @@ export default function FullCalendar() {
   const { spent } = useHome(month);
   const now = new Date();
   const [offset, setOffset] = useState(0); // 0 = this month, −12 = the oldest
-  const [rows, setRows] = useState<Record<string, CatSpend[]>>({});
+  const [rows, setRows] = useState<Record<string, { rows: CatSpend[]; ins: CatSpend[] }>>({});
+  // Tapping a day opens it (approved mockup): the same day sheet as Home's week.
+  const [open, setOpen] = useState<Date | null>(null);
   const [error, setError] = useState(false);
   const [picked, setPicked] = useState<string | null>(now.toDateString());
 
@@ -60,7 +57,7 @@ export default function FullCalendar() {
 
   const oldest = earliestDay(now);
   const loaded = rows[key];
-  const data = useMemo(() => daysFrom(loaded ?? [], month, oldest), [loaded, month, oldest.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const data = useMemo(() => daysFrom(loaded?.rows ?? [], month, oldest), [loaded, month, oldest.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
   const grid = useMemo(() => monthGrid(y, m), [y, m]);
   const weeks = useMemo(() => Array.from({ length: grid.length / 7 }, (_, w) => grid.slice(w * 7, w * 7 + 7)), [grid]);
   const payday = month?.payday ? dayInMonth(y, m, month.payday).toDateString() : null;
@@ -99,12 +96,6 @@ export default function FullCalendar() {
       ]
         .filter(Boolean)
         .join(' · ');
-
-  const pickedDate = picked ? new Date(picked) : null;
-  const pickedHere = pickedDate && pickedDate.getFullYear() === y && pickedDate.getMonth() === m ? pickedDate : null;
-  const dayItems = pickedHere ? (data.items[pickedHere.toDateString()] ?? []) : [];
-  const dayTotal = pickedHere ? (data.byDay[pickedHere.toDateString()] ?? 0) : 0;
-  const dayOver = daily > 0 ? Math.round(dayTotal - daily) : 0;
 
   return (
     <View style={{ flex: 1 }}>
@@ -155,7 +146,10 @@ export default function FullCalendar() {
                       <Pressable
                         key={k}
                         disabled={!open}
-                        onPress={() => setPicked(k)}
+                        onPress={() => {
+                          setPicked(k);
+                          setOpen(d);
+                        }}
                         accessibilityRole="button"
                         accessibilityState={{ selected: on, disabled: !open }}
                         accessibilityLabel={open ? t('{day} {date}, spent {amount}', { day: dayShort(d.getDay()), date: d.getDate(), amount }) : `${dayShort(d.getDay())} ${d.getDate()}`}
@@ -192,34 +186,17 @@ export default function FullCalendar() {
           </View>
         )}
 
-        {loaded && pickedHere && (
-          <View style={styles.card}>
-            <View style={styles.dh}>
-              <Text style={styles.dhT}>{`${dayShort(pickedHere.getDay())} ${pickedHere.getDate()} ${monthShort(pickedHere.getMonth())} · ${baht(dayTotal)}`}</Text>
-              {dayOver > 0 && <Text style={styles.over}>{t('{amount} over', { amount: baht(dayOver) })}</Text>}
-            </View>
-            {dayItems.length === 0 ? (
-              <Text style={styles.empty}>{t('Nothing spent this day')}</Text>
-            ) : (
-              dayItems.map((s, i) => (
-                <View key={s.id} style={[styles.row, i > 0 && styles.line]}>
-                  <Image source={ICON3D[dbCatIcon(asCat(s.cat))]} style={{ width: 28, height: 28 }} contentFit="contain" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName} numberOfLines={1}>
-                      {s.note || DB_CAT_NAME[asCat(s.cat)]}
-                    </Text>
-                    {s.note ? <Text style={styles.rowCat}>{DB_CAT_NAME[asCat(s.cat)]}</Text> : null}
-                  </View>
-                  <Text style={styles.rowAmt}>{baht(s.amount)}</Text>
-                </View>
-              ))
-            )}
-            <Squish style={styles.all} accessibilityRole="button" onPress={() => router.push(`/history?at=${encodeURIComponent(pickedHere.toISOString())}` as never)}>
-              <Text style={styles.allT}>{t('See all in History')}</Text>
-            </Squish>
-          </View>
+        {loaded && offset !== OLDEST && <Text style={styles.note}>{t('Tap a day to see what you spent')}</Text>}
+        {open && loaded && (
+          <DaySheet
+            day={open}
+            spends={loaded.rows.filter((r) => new Date(r.at).toDateString() === open.toDateString())}
+            ins={loaded.ins.filter((r) => new Date(r.at).toDateString() === open.toDateString())}
+            daily={daily}
+            onHistory={() => router.push(`/history?at=${encodeURIComponent(open.toISOString())}` as never)}
+            onClose={() => setOpen(null)}
+          />
         )}
-        {loaded && !pickedHere && offset !== OLDEST && <Text style={styles.note}>{t('Tap a day to see what you spent')}</Text>}
 
         {offset === OLDEST && (
           <View style={styles.end}>

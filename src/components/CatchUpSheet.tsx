@@ -145,7 +145,7 @@ const styles = themed(() =>
       maxHeight: '92%',
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
-      backgroundColor: colors.sheet,
+      backgroundColor: colors.sheet.replace(/,\s*[\d.]+\)$/, ',1)'),
       paddingTop: 10,
       paddingHorizontal: 20,
       gap: 16,

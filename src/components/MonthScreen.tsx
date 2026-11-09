@@ -2,8 +2,8 @@ import { MonthTellKip } from '@/components/MonthTellKip';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { CaretDown, Check, Lock, Plus, X } from 'phosphor-react-native';
-import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { CaretDown, CaretRight, Check, Lock, Plus } from 'phosphor-react-native';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { BillGlyph, billTint } from '@/components/home/BillStack';
-import { BILL_TYPES, dueLabel, guessType, monthsToDue, nextDue, typeName, typeOf, yearlySetAside } from '@/lib/everymonth';
+import { BILL_TYPES, dueLabel, editBill, guessType, monthsToDue, nextDue, typeName, typeOf, yearlySetAside } from '@/lib/everymonth';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
 import {
@@ -53,7 +53,13 @@ function period(payday: number | null, now = new Date()) {
   return [start, new Date(next.getFullYear(), next.getMonth(), next.getDate() - 1)] as const;
 }
 
-type Sheet = null | { stage: 'addBill' } | { stage: 'edit'; key: CatKey } | { stage: 'freed'; key: CatKey; to: number } | { stage: 'take'; key: CatKey; to: number };
+type Sheet =
+  | null
+  | { stage: 'addBill' }
+  | { stage: 'editBill'; which: number | 'rent' }
+  | { stage: 'edit'; key: CatKey }
+  | { stage: 'freed'; key: CatKey; to: number }
+  | { stage: 'take'; key: CatKey; to: number };
 
 export function MonthScreen({
   month,
@@ -64,6 +70,7 @@ export function MonthScreen({
   isPlus = true,
   onLocked,
   openAdd = false,
+  openEdit,
 }: {
   month: MonthBudget | null;
   loading: boolean;
@@ -76,10 +83,21 @@ export function MonthScreen({
   onLocked?: (f: 'styles' | 'customize') => void;
   /** Opened from Home's "Add to every month": the add sheet is open straight away. */
   openAdd?: boolean;
+  /** Opened from a bill on Home: that bill's edit sheet is open straight away ('rent' or the bill's name). */
+  openEdit?: string;
 }) {
   const insets = useSafeAreaInsets();
-  const [sheet, setSheet] = useState<Sheet>(openAdd ? { stage: 'addBill' } : null);
+  const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
+  const [sheet, setSheet] = useState<Sheet>(openAdd ? { stage: 'addBill' } : startEdit === 'rent' || startEdit >= 0 ? { stage: 'editBill', which: startEdit } : null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Opened from a bill on Home before the plan had loaded: open its sheet once it has.
+  const editOpened = useRef(startEdit === 'rent' || startEdit >= 0);
+  useEffect(() => {
+    if (editOpened.current || !openEdit || !month) return;
+    editOpened.current = true;
+    const w = openEdit === 'rent' ? ('rent' as const) : (month.bills.items ?? []).findIndex((b) => b.name === openEdit);
+    if (w === 'rent' || w >= 0) setSheet({ stage: 'editBill', which: w });
+  }, [month, openEdit]);
 
   if (loading || !month) {
     return (
@@ -173,21 +191,25 @@ export function MonthScreen({
         <Section n={2} title={t('Bills')} right={baht(bills)} />
         <RiseIn delay={180} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
-            <Row glyph={{ name: 'Rent', tint: colors.lavender }} title={t('Rent')} sub={t('You told me')} amount={baht(month.bills.rent)} />
+            {/* every bill (rent too) opens its edit sheet: rename, type, amount, how often, delete */}
+            <Pressable onPress={() => setSheet({ stage: 'editBill', which: 'rent' })} accessibilityRole="button" accessibilityLabel={t('Edit {name}', { name: t('Rent') })}>
+              <Row glyph={{ name: 'Rent', tint: colors.lavender }} title={t('Rent')} sub={t('Every month')} amount={baht(month.bills.rent)} right={<CaretRight size={14} color={colors.faint} />} />
+            </Pressable>
             {(month.bills.items ?? []).map((b, i) => (
-              <Row
-                key={`${b.name}-${i}`}
-                glyph={{ name: b.name, type: typeOf(b), tint: billTint(b.name, typeOf(b)) }}
-                title={b.name}
-                sub={b.yearly ? t('Every year · due {month} · {total}', { month: dueLabel(b.yearly.due), total: baht(b.yearly.total) }) : t('{type} · monthly', { type: typeName(typeOf(b)) })}
-                amount={b.yearly ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
-                divider
-                right={
-                  <Pressable onPress={() => save(removeBill(month, i))} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Remove {name}', { name: b.name })} style={styles.xBtn}>
-                    <X size={12} color={colors.muted} weight="bold" />
-                  </Pressable>
-                }
-              />
+              <Pressable key={`${b.name}-${i}`} onPress={() => setSheet({ stage: 'editBill', which: i })} accessibilityRole="button" accessibilityLabel={t('Edit {name}', { name: b.name })}>
+                <Row
+                  glyph={{ name: b.name, type: typeOf(b), tint: billTint(b.name, typeOf(b)) }}
+                  title={b.name}
+                  sub={
+                    b.yearly
+                      ? t('{type} · every year, due {month} · {total}', { type: typeName(typeOf(b)), month: dueLabel(b.yearly.due), total: baht(b.yearly.total) })
+                      : t('{type} · monthly', { type: typeName(typeOf(b)) })
+                  }
+                  amount={b.yearly ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
+                  divider
+                  right={<CaretRight size={14} color={colors.faint} />}
+                />
+              </Pressable>
             ))}
             <Row glyph={{ name: 'Other bills', tint: colors.sand }} title={t('Other bills')} sub={t('Kip’s guess — shrinks as you add real ones')} amount={`~${baht(month.bills.guess)}`} divider />
             <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={styles.addRow} accessibilityRole="button">
@@ -286,6 +308,40 @@ export function MonthScreen({
                         .join(', '),
                     }),
               );
+              setSheet(null);
+            }}
+          />
+        )}
+        {sheet?.stage === 'editBill' && (
+          <AddBill
+            month={month}
+            which={sheet.which}
+            onAdd={() => {}}
+            onEdit={(r, name) => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              save(r.month);
+              setNotice(
+                r.freed > 0
+                  ? t('{name} updated — {amt} a month back to {goal}.', { name, amt: baht(r.freed), goal: month.goal.title })
+                  : r.fromFun + r.fromGoal + r.fromGuess > 0
+                    ? t('{name} updated: {parts}.', {
+                        name,
+                        parts: [
+                          r.fromGuess ? t('{amt} from my bill guess', { amt: baht(r.fromGuess) }) : '',
+                          r.fromFun ? t('{amt} from fun money', { amt: baht(r.fromFun) }) : '',
+                          r.fromGoal ? t('{amt} from {goal}', { amt: baht(r.fromGoal), goal: month.goal.title }) : '',
+                        ]
+                          .filter(Boolean)
+                          .join(', '),
+                      })
+                    : t('{name} updated.', { name }),
+              );
+              setSheet(null);
+            }}
+            onDelete={(i, name) => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              save(removeBill(month, i));
+              setNotice(t('{name} deleted — its money goes back to {goal}.', { name, goal: month.goal.title }));
               setSheet(null);
             }}
           />
@@ -544,52 +600,107 @@ function Freed({ month, cat, to, onDone }: { month: MonthBudget; cat: CatKey; to
 }
 
 /** Add to every month (approved mockup): what kind it is, its name, every month or every year, and what it does. */
-function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, amount: number, extra: Omit<BillItem, 'name' | 'amount'>) => void }) {
-  const [type, setType] = useState<BillType | null>(null);
-  const [name, setName] = useState('');
-  const [yearly, setYearly] = useState(false);
-  const [amount, setAmount] = useState<number | null>(null);
+/** Add a bill — or, with `which`, edit one (rent or an item): the same sheet, filled in (approved mockup). */
+function AddBill({
+  month,
+  onAdd,
+  which,
+  onEdit,
+  onDelete,
+}: {
+  month: MonthBudget;
+  onAdd: (name: string, amount: number, extra: Omit<BillItem, 'name' | 'amount'>) => void;
+  which?: number | 'rent';
+  onEdit?: (r: NonNullable<ReturnType<typeof editBill>>, name: string) => void;
+  onDelete?: (index: number, name: string) => void;
+}) {
+  const isRent = which === 'rent';
+  const old = typeof which === 'number' ? month.bills.items?.[which] : undefined;
+  const editing = isRent || !!old;
+  const [type, setType] = useState<BillType | null>(isRent ? 'rent' : (old?.type ?? (old ? guessType(old.name) : null)));
+  const [name, setName] = useState(isRent ? t('Rent') : (old?.name ?? ''));
+  const [yearly, setYearly] = useState(!!old?.yearly);
+  const [amount, setAmount] = useState<number | null>(isRent ? month.bills.rent : old ? (old.yearly ? old.yearly.total : old.amount) : null);
+  const [sure, setSure] = useState(false);
   const now = new Date();
-  const [dueMonth, setDueMonth] = useState((now.getMonth() + 3) % 12);
+  const [dueMonth, setDueMonth] = useState(old?.yearly ? Number(old.yearly.due.slice(5)) - 1 : (now.getMonth() + 3) % 12);
   const due = nextDue(dueMonth, now);
   const kind = type ?? (name.trim() ? guessType(name) : 'other');
   // A yearly item sets aside what still has to be ready over the months left; that's what the month carries.
-  const perMonth = amount ? (yearly ? yearlySetAside(amount, due, 0, now) : amount) : 0;
-  const preview = perMonth ? addBill(month, name || t('New bill'), perMonth) : null;
+  // Editing a yearly bill without touching its total or month keeps what it sets aside now.
+  const sameYearly = !!old?.yearly && yearly && amount === old.yearly.total && due === old.yearly.due;
+  const perMonth = amount ? (yearly ? (sameYearly ? old!.amount : yearlySetAside(amount, due, 0, now)) : amount) : 0;
+  const edit =
+    editing && amount !== null
+      ? editBill(month, which!, { perMonth, name: name.trim(), type: isRent ? undefined : kind, yearly: yearly ? (sameYearly ? old!.yearly : { total: amount, due, since: isoDay(now) }) : null })
+      : null;
+  const preview = editing
+    ? edit
+      ? { fromGuess: edit.fromGuess, fromFun: edit.fromFun, fromGoal: edit.fromGoal, short: 0 }
+      : perMonth
+        ? { fromGuess: 0, fromFun: 0, fromGoal: 0, short: addBill(month, 'x', Math.max(0, perMonth - (isRent ? month.bills.rent : (old?.amount ?? 0)))).short }
+        : null
+    : perMonth
+      ? addBill(month, name || t('New bill'), perMonth)
+      : null;
+  const changed =
+    editing &&
+    (isRent
+      ? amount !== month.bills.rent
+      : !!old && (name.trim() !== old.name || kind !== (old.type ?? guessType(old.name)) || yearly !== !!old.yearly || perMonth !== old.amount || (yearly && !sameYearly)));
   const goalName = month.goal.isSafetyNet ? t('your safety net') : month.goal.title;
   const months = monthsToDue(due, now);
   const after = amount ? yearlySetAside(amount, `${Number(due.slice(0, 4)) + 1}${due.slice(4)}`, 0, new Date(Number(due.slice(0, 4)), Number(due.slice(5)) - 1, 2)) : 0;
   return (
     <>
-      <SheetTitle mood="think" title={t('Add to every month')} sub={t('Kip sets the money aside before you spend')} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {BILL_TYPES.map((k) => {
-          const on = kind === k && (type !== null || !!name.trim());
-          const dark = k === 'loan'; // the loan glyph sits on a black circle, so its picked chip is black with white text
-          return (
-            <Pressable
-              key={k}
-              onPress={() => setType(k)}
-              style={[styles.typeChip, on && { backgroundColor: billTint(name, k), borderColor: dark ? colors.lime : colors.onAccent }]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: on }}
-              accessibilityLabel={typeName(k)}>
-              <View style={[styles.typeIco, { backgroundColor: billTint(name, k) }]}>
-                <BillGlyph name={name} type={k} />
-              </View>
-              <Text style={{ fontFamily: on ? fonts.semibold : fonts.medium, fontSize: 13, color: on ? (dark ? '#FFFFFF' : colors.onAccent) : colors.ink }}>{typeName(k)}</Text>
+      <SheetTitle
+        mood="think"
+        title={editing ? (isRent ? t('Rent') : t('Edit bill')) : t('Add to every month')}
+        sub={editing ? t('Changes start this pay month') : t('Kip sets the money aside before you spend')}
+      />
+      {!isRent && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {BILL_TYPES.map((k) => {
+            const on = kind === k && (type !== null || !!name.trim());
+            const dark = k === 'loan'; // the loan glyph sits on a black circle, so its picked chip is black with white text
+            return (
+              <Pressable
+                key={k}
+                onPress={() => setType(k)}
+                style={[styles.typeChip, on && { backgroundColor: billTint(name, k), borderColor: dark ? colors.lime : colors.onAccent }]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={typeName(k)}>
+                <View style={[styles.typeIco, { backgroundColor: billTint(name, k) }]}>
+                  <BillGlyph name={name} type={k} />
+                </View>
+                <Text style={{ fontFamily: on ? fonts.semibold : fonts.medium, fontSize: 13, color: on ? (dark ? '#FFFFFF' : colors.onAccent) : colors.ink }}>{typeName(k)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      {!isRent && (
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder={t('Name — e.g. AIS Fibre, Mum & Dad')}
+          placeholderTextColor={colors.faint}
+          style={styles.field}
+          accessibilityLabel={t('Bill name')}
+        />
+      )}
+      {!isRent && (
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {[false, true].map((y) => (
+            <Pressable key={String(y)} onPress={() => setYearly(y)} style={[styles.pill2, yearly === y && styles.pill2On]} accessibilityRole="radio" accessibilityState={{ selected: yearly === y }}>
+              <Text style={{ fontFamily: yearly === y ? fonts.semibold : fonts.medium, fontSize: 14, color: yearly === y ? colors.onAccent : colors.ink }}>
+                {y ? t('Every year') : t('Every month')}
+              </Text>
             </Pressable>
-          );
-        })}
-      </View>
-      <TextInput value={name} onChangeText={setName} placeholder={t('Name — e.g. AIS Fibre, Mum & Dad')} placeholderTextColor={colors.faint} style={styles.field} accessibilityLabel={t('Bill name')} />
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {[false, true].map((y) => (
-          <Pressable key={String(y)} onPress={() => setYearly(y)} style={[styles.pill2, yearly === y && styles.pill2On]} accessibilityRole="radio" accessibilityState={{ selected: yearly === y }}>
-            <Text style={{ fontFamily: yearly === y ? fonts.semibold : fonts.medium, fontSize: 14, color: yearly === y ? colors.onAccent : colors.ink }}>{y ? t('Every year') : t('Every month')}</Text>
-          </Pressable>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
       <View style={[styles.field, { flexDirection: 'row', alignItems: 'center' }]}>
         <Text style={styles.fieldText}>฿</Text>
         <TextInput
@@ -620,7 +731,12 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
           ))}
         </ScrollView>
       )}
-      {preview && (
+      {editing && edit && edit.freed > 0 && (
+        <View style={styles.takeBox}>
+          <Text style={[styles.impact, { paddingVertical: 8 }]}>{t('✓ {amt} a month goes back to {goal}.', { amt: baht(edit.freed), goal: goalName })}</Text>
+        </View>
+      )}
+      {preview && !(editing && (!changed || (edit && edit.freed > 0) || perMonth === (isRent ? month.bills.rent : old?.amount))) && (
         <View style={styles.takeBox}>
           {yearly && amount ? (
             <Text style={[styles.impact, { paddingTop: 6 }]}>
@@ -644,17 +760,28 @@ function AddBill({ month, onAdd }: { month: MonthBudget; onAdd: (name: string, a
           )}
         </View>
       )}
-      <Button
-        label={
-          amount
-            ? yearly
-              ? t('Add {name} · {amt} a year', { name: name || t('bill'), amt: baht(amount) })
-              : t('Add {name} · {amt} a month', { name: name || t('bill'), amt: baht(amount) })
-            : t('Add')
-        }
-        disabled={!amount || !name.trim()}
-        onPress={() => amount && onAdd(name.trim(), perMonth, { type: kind, ...(yearly ? { yearly: { total: amount, due, since: isoDay(now) } } : {}) })}
-      />
+      {editing ? (
+        <>
+          <Button label={t('Save changes')} disabled={!changed || !edit || (!isRent && !name.trim())} onPress={() => edit && onEdit?.(edit, isRent ? t('Rent') : name.trim())} />
+          {!isRent && old && (
+            <Pressable onPress={() => (sure ? onDelete?.(which as number, old.name) : setSure(true))} style={{ alignItems: 'center', paddingVertical: 12 }} accessibilityRole="button">
+              <Text style={{ fontFamily: fonts.medium, fontSize: 15, color: colors.orangeText }}>{sure ? t('Delete {name}? Tap again', { name: old.name }) : t('Delete this bill')}</Text>
+            </Pressable>
+          )}
+        </>
+      ) : (
+        <Button
+          label={
+            amount
+              ? yearly
+                ? t('Add {name} · {amt} a year', { name: name || t('bill'), amt: baht(amount) })
+                : t('Add {name} · {amt} a month', { name: name || t('bill'), amt: baht(amount) })
+              : t('Add')
+          }
+          disabled={!amount || !name.trim()}
+          onPress={() => amount && onAdd(name.trim(), perMonth, { type: kind, ...(yearly ? { yearly: { total: amount, due, since: isoDay(now) } } : {}) })}
+        />
+      )}
     </>
   );
 }

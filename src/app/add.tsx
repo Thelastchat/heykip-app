@@ -1,7 +1,7 @@
 // "Add it yourself" — Spent / Got paid, a category, a note, when, and the keypad.
 // Kip shows what this does to today's money before you save, using the same numbers as Home.
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -213,7 +213,12 @@ export default function Add() {
   const [cat, setCat] = useState<Cat>(SPEND_MAIN[0]);
   const [more, setMore] = useState(false);
   const [note, setNote] = useState('');
-  const [when, setWhen] = useState(() => new Date());
+  // Opened from a day ("Add to this day"): that day is already set.
+  const { at } = useLocalSearchParams<{ at?: string }>();
+  const [when, setWhen] = useState(() => {
+    const d = at ? new Date(at) : null;
+    return d && !Number.isNaN(d.getTime()) && d.getTime() <= Date.now() ? d : new Date();
+  });
   const [pickWhen, setPickWhen] = useState(false);
   const [slip, setSlip] = useState(false);
   const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);

@@ -21,6 +21,7 @@ import { WeekStrip } from '@/components/home/WeekStrip';
 import { PaceChart } from '@/components/home/PaceChart';
 import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
+import { DaySheet } from '@/components/DaySheet';
 import { plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
@@ -55,12 +56,14 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
-  const { goals, spent, streak, reload, spendsIn } = useHome(month);
+  const { goals, spent, streak, reload, spendsIn, dayOf } = useHome(month);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
   const [overOpen, setOverOpen] = useState(false);
   const [kipOpen, setKipOpen] = useState(false);
+  // Tapping a day on the week opens that day (approved mockup) — everything spent, money in, and Add to this day.
+  const [dayOpen, setDayOpen] = useState<Date | null>(null);
   const [catOpen, setCatOpen] = useState<CatKey | null>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
 
@@ -373,7 +376,7 @@ export default function Home() {
               <Text style={styles.calText}>{t('Full calendar')}</Text>
             </Squish>
           </View>
-          <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setSelectedDay(d.toDateString())} now={now} />
+          <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setDayOpen(d)} now={now} />
         </RiseIn>
 
         {/* Kip finding slips: only when there's something to set up or something new */}
@@ -482,6 +485,7 @@ export default function Home() {
         )}
       </ScrollView>
 
+      {dayOpen && <DaySheet day={dayOpen} {...dayOf(dayOpen)} daily={dailyPlan} onClose={() => setDayOpen(null)} />}
       {kipOpen && (
         <KipSheet
           say={say}

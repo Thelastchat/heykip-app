@@ -64,7 +64,18 @@ export function KipSheet({ say, spentToday, over, goalName, goalWhen, isPlus, on
 const styles = themed(() =>
   StyleSheet.create({
     dim: { flex: 1, backgroundColor: inkA(0.38) },
-    sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.sheet, paddingTop: 10, paddingHorizontal: 20, gap: 14 },
+    sheet: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      backgroundColor: colors.sheet.replace(/,\s*[\d.]+\)$/, ',1)'),
+      paddingTop: 10,
+      paddingHorizontal: 20,
+      gap: 14,
+    },
     grip: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: inkA(0.15), marginBottom: 4 },
     head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     name: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },

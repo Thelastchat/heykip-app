@@ -12,6 +12,7 @@ import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearly
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
 import { paceOf } from '../src/lib/pace';
+import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 
@@ -659,6 +660,54 @@ for (let n = 0; n < 2000; n++) {
       !!planFix(recent, [{ ref: 'r1', op: 'amount', amount: 65 }]),
     () => 0,
   );
+}
+
+// ---------- editing a bill ----------
+{
+  let n = 0;
+  for (let i = 0; i < 3000; i++) {
+    const inp = person();
+    if (!inp) continue;
+    let m = month(inp);
+    const add = addBill(m, pick(['Netflix', 'Gym', 'AIA']), int(100, 3000), { type: 'other' });
+    if (add.short > 0) continue;
+    m = add.month;
+    const idx = (m.bills.items ?? []).length - 1;
+    const which = rand() < 0.3 ? ('rent' as const) : idx;
+    const was = which === 'rent' ? m.bills.rent : m.bills.items![idx].amount;
+    const to = rand() < 0.2 ? was : int(0, was * 3 + 500);
+    const r = editBill(m, which, { perMonth: to, name: rand() < 0.5 ? 'Renamed' : undefined });
+    if (!r) {
+      check('Edit bill: refused only when the extra really doesn’t fit', to > was && addBill(m, 'x', to - was).short > 0, () => ({ was, to }));
+      continue;
+    }
+    n++;
+    const now = which === 'rent' ? r.month.bills.rent : r.month.bills.items![idx].amount;
+    check('Edit bill: the bill now carries the new amount', now === to, () => ({ was, to, now }));
+    check('Edit bill: every baht still has a job', Math.abs(jobs(r.month) - r.month.income) <= 10, () => ({ was, to, jobs: jobs(r.month), income: r.month.income }));
+    check('Edit bill: no budget below ฿0', r.month.spend.every((x) => x.amount >= 0) && r.month.goal.amount + r.month.goalExtra >= 0, () => ({ was, to }));
+    check(
+      'Edit bill: less a month goes back to the goal; more comes from guess → fun → goal',
+      to < was
+        ? r.freed === was - to && r.month.goalExtra === m.goalExtra + (was - to)
+        : to > was
+          ? r.fromGuess + r.fromFun + r.fromGoal === to - was
+          : r.freed === 0 && r.fromGuess + r.fromFun + r.fromGoal === 0,
+      () => ({ was, to, r: { ...r, month: undefined } }),
+    );
+    if (to === was)
+      check(
+        'Edit bill: a rename alone moves no money',
+        JSON.stringify(r.month.spend) === JSON.stringify(m.spend) && r.month.goalExtra === m.goalExtra && r.month.bills.guess === m.bills.guess,
+        () => 0,
+      );
+    check(
+      'Edit bill: no helper bill left behind',
+      !(r.month.bills.items ?? []).some((b) => b.name.startsWith('\u0000')) && (r.month.bills.items ?? []).length === (m.bills.items ?? []).length,
+      () => r.month.bills.items,
+    );
+  }
+  check('Edit bill: the random runs did real edits', n > 1000, () => n);
 }
 
 // ---------- report ----------

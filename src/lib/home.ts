@@ -289,7 +289,18 @@ export function useHome(month: MonthBudget | null) {
     [raw, monthShape, payday],
   );
 
-  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn };
+  /** One day's spends and money in, newest first (no extra request — the last 60 days are already loaded). */
+  const dayOf = useCallback(
+    (d: Date): { spends: CatSpend[]; ins: CatSpend[] } => {
+      const k = d.toDateString();
+      const rows = (raw?.tx ?? []).filter((x) => new Date(x.occurred_at).toDateString() === k).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+      const as = (x: TxRow): CatSpend => ({ id: x.id, amount: x.amount, at: x.occurred_at, note: x.note, cat: x.cat });
+      return { spends: rows.filter((x) => x.kind === 'spend').map(as), ins: rows.filter((x) => x.kind === 'income').map(as) };
+    },
+    [raw],
+  );
+
+  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn, dayOf };
 }
 
 /** Consecutive days with at least one log, ending today (or yesterday, so the streak doesn't break before you log today). */

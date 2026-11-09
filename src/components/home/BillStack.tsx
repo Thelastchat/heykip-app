@@ -156,7 +156,18 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
                     <Text style={[styles.amt, b.paid && styles.done]}>
                       {b.estimate && !b.paid ? t('about {amount}', { amount: baht(b.amount) }) : b.perMonth ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
                     </Text>
-                    {b.note && !b.paid ? <Text style={styles.sub}>{b.note}</Text> : null}
+                    {b.note && !b.paid && !isOpen ? <Text style={styles.sub}>{b.note}</Text> : null}
+                    {/* An open bill can be edited (approved mockup): rename, amount, how often — in Your month's sheet */}
+                    {isOpen && !b.estimate && (b.key === 'rent' || b.key.startsWith('item:')) && (
+                      <Pressable
+                        onPress={() => router.push(`/month?edit=${encodeURIComponent(b.key === 'rent' ? 'rent' : b.key.slice(5))}` as never)}
+                        hitSlop={8}
+                        style={[styles.editPill, { marginTop: 4 }]}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Edit {name}', { name: b.name })}>
+                        <Text style={styles.editText}>{t('Edit')}</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
                 {isOpen && <SlideToPay onDone={() => onPaid(b.key, true)} />}
@@ -229,6 +240,8 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
 
 const styles = themed(() =>
   StyleSheet.create({
+    editPill: { borderRadius: 999, backgroundColor: inkA(0.06), paddingHorizontal: 10, paddingVertical: 4 },
+    editText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     sum: { marginBottom: 14 },
     sumText: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     cardShadow: { boxShadow: '0 -6px 16px rgba(17,17,17,0.045)' },

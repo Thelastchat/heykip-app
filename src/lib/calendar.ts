@@ -64,36 +64,39 @@ export function daysFrom(rows: CatSpend[], month: MonthBudget | null, from: Date
   return out;
 }
 
-const cache = new Map<string, { rows: CatSpend[] }>();
+const cache = new Map<string, { rows: CatSpend[]; ins: CatSpend[] }>();
 
 /** Forget what's kept (after adding or changing a spend). */
 export function dropCalendarCache() {
   cache.clear();
 }
 
-/** A month's spends: loaded once, then reused. */
-export async function loadMonth(userId: string, y: number, m: number, now = new Date()): Promise<CatSpend[]> {
+/** A month's spends (and money in, for the day sheet): loaded once, then reused. */
+export async function loadMonth(userId: string, y: number, m: number, now = new Date()): Promise<{ rows: CatSpend[]; ins: CatSpend[] }> {
   const key = `${userId}:${y}-${m}`;
   const isNow = y === now.getFullYear() && m === now.getMonth();
   const hit = cache.get(key);
-  if (hit && !isNow) return hit.rows;
+  if (hit && !isNow) return hit;
   const { data, error } = await supabase
     .from('transactions')
-    .select('id, amount, note, occurred_at, categories(key)')
+    .select('id, amount, note, kind, occurred_at, categories(key)')
     .eq('user_id', userId)
-    .eq('kind', 'spend')
+    .in('kind', ['spend', 'income'])
     .gte('occurred_at', new Date(y, m, 1).toISOString())
     .lt('occurred_at', new Date(y, m + 1, 1).toISOString())
     .order('occurred_at', { ascending: false })
     .limit(2000);
   if (error) throw error;
-  const rows: CatSpend[] = (data ?? []).map((r) => ({
+  const all = (data ?? []).map((r) => ({
+    kind: r.kind as string,
     id: r.id as string,
     amount: Number(r.amount),
     at: r.occurred_at as string,
     note: (r.note as string | null) ?? null,
     cat: (r.categories as unknown as { key: string } | null)?.key ?? 'other',
   }));
-  cache.set(key, { rows });
-  return rows;
+  const strip = ({ kind: _k, ...x }: (typeof all)[number]): CatSpend => x;
+  const hitNew = { rows: all.filter((x) => x.kind === 'spend').map(strip), ins: all.filter((x) => x.kind === 'income').map(strip) };
+  cache.set(key, hitNew);
+  return hitNew;
 }

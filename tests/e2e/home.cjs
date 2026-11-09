@@ -411,7 +411,12 @@ module.exports = async function homeTests(browser) {
     await check(page, `Opens on this month (${MONTHS[now.getMonth()]} ${now.getFullYear()})`, cal.includes(`${MONTHS[now.getMonth()]} ${now.getFullYear()}`), () => cal.slice(0, 300));
     const todayCell = page.getByRole('button', { name: new RegExp(`^[A-Z][a-z]{2} ${now.getDate()}, spent 120$`) });
     await check(page, 'Today shows the ฿120 spent', (await todayCell.count()) === 1, () => cal.slice(0, 600));
-    await check(page, 'This month’s spends are listed for today', cal.includes('Bubble tea'), () => cal.slice(-500));
+    await tap(page, todayCell, { wait: 800 });
+    const todaySheet = await sane(page, 'Today’s day sheet');
+    await check(page, 'Tapping today opens it: today’s spends are listed', todaySheet.includes('Bubble tea') && todaySheet.includes('Add to this day'), () => todaySheet.slice(-500));
+    await page.keyboard.press('Escape');
+    await page.mouse.click(195, 60);
+    await page.waitForTimeout(600);
     const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const cells = await page.getByRole('button', { name: /^[A-Z][a-z]{2} \d+(, spent \d+)?$/ }).count();
     await check(page, `The month has its real ${days} days`, cells === days, () => cells);
@@ -430,8 +435,8 @@ module.exports = async function homeTests(browser) {
     await tap(page, cell, { wait: 600 });
     const day = await sane(page, 'Day card');
     // only the day card (under the legend): Home stays mounted behind the calendar tab on the web, and its text would count too
-    const card = day.slice(day.lastIndexOf('Payday'));
-    await check(page, 'Tapping the day lists the dinner, and says how far over the daily budget', card.includes('Big dinner') && /฿[\d,]+ over/.test(card) && !card.includes('Rent'), () => card);
+    const card = day.slice(day.lastIndexOf('Tap a day to see what you spent'));
+    await check(page, 'Tapping the day lists the dinner, and how far over the daily budget (rent is listed but never counted)', card.includes('Big dinner') && /฿1,6\d\d over/.test(card), () => card);
     await tap(page, visible(page.getByRole('button').filter({ hasText: /^See all in History$/ })), { wait: 2500 });
     const hist = await sane(page, 'History from the calendar');
     await check(page, 'See all in History opens the pay cycle with that day', hist.includes('Big dinner'), () => hist.slice(0, 500));
@@ -558,5 +563,66 @@ module.exports = async function homeTests(browser) {
     await tap(page, visible(page.getByRole('button', { name: 'Save anyway' })), { wait: 1500 });
     await check(page, '“Save anyway” saves it', db.transactions.length === n0 + 2, () => db.transactions.length - n0);
     await page.close();
+  });
+
+  scenario('Every month · edit a bill, rent and delete; days open with Add to this day');
+  await safely(async () => {
+    const { db } = person({
+      spends: [
+        ['food', 120, 1, 'Lunch'],
+        ['transport', 40, 1, 'วิน'],
+      ],
+    });
+    // A bill added the way the app adds one (out of Kip's guess), so every baht has a job from the start.
+    db.profiles[0].budget.bills.items = [{ name: 'Aia', amount: 300, type: 'insurance' }];
+    db.profiles[0].budget.bills.guess -= 300;
+    db.transactions.push({ ...db.transactions[0], id: 'inc1', kind: 'income', amount: 18000, note: 'เงินเดือน', category_id: null, occurred_at: new Date(Date.now() - 86400000).toISOString() });
+    const B = () => db.profiles[0].budget;
+    const page = await open(browser, { db, path: '/month' });
+    await tap(page, visible(page.getByRole('button', { name: 'Edit Aia' })), { wait: 800 });
+    const sheet = await sane(page, 'Edit sheet');
+    await check(page, 'Tapping a bill opens it filled in: name and amount', /Edit bill/.test(sheet) && (await page.getByLabel('Bill name').inputValue()) === 'Aia', () => sheet.slice(-400));
+    await page.getByLabel('Bill name').fill('AIA health');
+    await page.getByLabel('Amount a month').fill('500');
+    await page.waitForTimeout(300);
+    const goalBefore = B().goal.amount + B().goalExtra;
+    await tap(page, visible(page.getByRole('button', { name: 'Save changes' })), { wait: 800 });
+    const aia = (B().bills.items ?? [])[0];
+    await check(
+      page,
+      'Save changes: renamed and ฿500 a month, still one bill, every baht has a job',
+      aia?.name === 'AIA health' && aia.amount === 500 && B().bills.items.length === 1 && Math.abs(jobs(B()) - B().income) <= 10,
+      () => B().bills,
+    );
+    const rentWas = B().bills.rent;
+    await tap(page, visible(page.getByRole('button', { name: 'Edit Rent' })), { wait: 800 });
+    await page.getByLabel('Amount a month').fill(String(rentWas - 1000));
+    await page.waitForTimeout(300);
+    await tap(page, visible(page.getByRole('button', { name: 'Save changes' })), { wait: 800 });
+    await check(
+      page,
+      'Rent can be changed: ฿1,000 less rent goes to the goal',
+      B().bills.rent === rentWas - 1000 && B().goal.amount + B().goalExtra >= goalBefore && Math.abs(jobs(B()) - B().income) <= 10,
+      () => ({ rent: B().bills.rent, goal: B().goal.amount + B().goalExtra }),
+    );
+    await tap(page, visible(page.getByRole('button', { name: 'Edit AIA health' })), { wait: 800 });
+    await tap(page, visible(page.getByRole('button', { name: 'Delete this bill' })), { wait: 400 });
+    await check(page, 'Delete asks once first', (B().bills.items ?? []).length === 1, () => B().bills.items);
+    await tap(page, visible(page.getByRole('button', { name: /Delete AIA health\? Tap again/ })), { wait: 800 });
+    await check(page, '…then deletes it', (B().bills.items ?? []).length === 0 && Math.abs(jobs(B()) - B().income) <= 10, () => B().bills.items);
+    await page.close();
+
+    // A day on Home's week opens that day.
+    const home = await open(browser, { db });
+    const y = new Date(Date.now() - 86400000);
+    const day = home.getByRole('button', { name: new RegExp(`^[A-Z][a-z]{2} ${y.getDate()}, spent`) }).first();
+    if (await day.count()) {
+      await tap(home, day, { wait: 1000 });
+      const txt = await sane(home, 'Day sheet');
+      await check(home, 'Tapping yesterday shows its spends and money in', /Lunch/.test(txt) && /วิน/.test(txt) && /เงินเดือน/.test(txt) && /Add to this day/.test(txt), () => txt.slice(-500));
+      await tap(home, visible(home.getByRole('button', { name: 'Add to this day' })), { wait: 1500 });
+      await check(home, '“Add to this day” opens Add on that day', /\/add\?at=/.test(home.url()), () => home.url());
+    }
+    await home.close();
   });
 };

@@ -5,7 +5,7 @@
 // fun money, then the goal. Food, transport and the safety net are never touched.
 // A yearly item sets aside what still has to be ready, spread over the months left until it's due (catch-up), then
 // total ÷ 12 once it's paid and starts again.
-import type { BillItem, BillType, MonthBudget } from '@/lib/budget';
+import { addBill, type BillItem, type BillType, type MonthBudget } from '@/lib/budget';
 import { monthShort, t } from '@/lib/i18n';
 import { isoDay } from '@/lib/setup/plan';
 
@@ -87,6 +87,47 @@ export function rollYearly(m: MonthBudget, name: string, now = new Date()): Mont
   const freed = Math.max(0, it.amount - amount);
   const next = items.map((x, k) => (k === i ? { ...x, amount: Math.min(x.amount, amount), yearly: { ...x.yearly!, due, since: isoDay(now) } } : x));
   return { ...m, bills: { ...m.bills, items: next }, goalExtra: m.goalExtra + freed };
+}
+
+// ---------- editing a bill (approved mockup) ----------
+
+export type BillEdit = { month: MonthBudget; fromGuess: number; fromFun: number; fromGoal: number; freed: number };
+
+/**
+ * Change a bill (or rent) in place. A rename or a new type moves no money. More money a month comes from the same
+ * places as a new bill (Kip's guess, then fun money, then the goal); less goes back to the goal, like removing a bill.
+ * Null when the extra doesn't fit the month — never an overspent plan.
+ */
+export function editBill(m: MonthBudget, which: number | 'rent', next: { perMonth: number; name?: string; type?: BillType; yearly?: BillItem['yearly'] | null }): BillEdit | null {
+  const items = [...(m.bills.items ?? [])];
+  const was = which === 'rent' ? m.bills.rent : items[which]?.amount;
+  if (was === undefined) return null;
+  const now = Math.max(0, Math.round(next.perMonth));
+  const d = now - was;
+  let month = m;
+  let took = { fromGuess: 0, fromFun: 0, fromGoal: 0 };
+  if (d > 0) {
+    // Take the extra the way a new bill would, then fold it into this bill.
+    const r = addBill(m, '\u0000edit', d);
+    if (r.short > 0) return null;
+    month = { ...r.month, bills: { ...r.month.bills, items: (r.month.bills.items ?? []).filter((b) => b.name !== '\u0000edit') } };
+    took = { fromGuess: r.fromGuess, fromFun: r.fromFun, fromGoal: r.fromGoal };
+  } else if (d < 0) month = { ...m, goalExtra: m.goalExtra - d };
+  if (which === 'rent') month = { ...month, bills: { ...month.bills, rent: now } };
+  else {
+    const old = items[which];
+    const name = (next.name ?? old.name).trim().slice(0, 40) || old.name;
+    const item: BillItem = { ...old, name, amount: now, ...(next.type ? { type: next.type } : {}) };
+    if (next.yearly === null) delete item.yearly;
+    else if (next.yearly) item.yearly = next.yearly;
+    const list = [...(month.bills.items ?? [])];
+    list[which] = item;
+    month = { ...month, bills: { ...month.bills, items: list } };
+    // A paid mark follows the bill's new name.
+    if (name !== old.name && month.paid?.keys.includes(`item:${old.name}`))
+      month = { ...month, paid: { ...month.paid, keys: month.paid.keys.map((k) => (k === `item:${old.name}` ? `item:${name}` : k)) } };
+  }
+  return { month, ...took, freed: Math.max(0, -d) };
 }
 
 // ---------- slips → bills ----------

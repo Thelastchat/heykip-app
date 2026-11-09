@@ -205,6 +205,23 @@ const th: Record<string, string> = {
   'Not now': 'ไว้ก่อน',
   'A new phone': 'มือถือใหม่',
   'Moving out': 'ย้ายออกไปอยู่เอง',
+  // editing a bill, and a day
+  'Edit {name}': 'แก้ {name}',
+  '{type} · every year, due {month} · {total}': '{type} · ทุกปี ครบ {month} · {total}',
+  '{name} updated — {amt} a month back to {goal}.': 'แก้ {name} แล้ว เดือนละ {amt} กลับไปที่ {goal}',
+  '{name} updated: {parts}.': 'แก้ {name} แล้ว: {parts}',
+  '{name} updated.': 'แก้ {name} แล้ว',
+  '{name} deleted — its money goes back to {goal}.': 'ลบ {name} แล้ว เงินส่วนนั้นกลับไปที่ {goal}',
+  'Edit bill': 'แก้รายการ',
+  'Changes start this pay month': 'เริ่มใช้รอบเงินเดือนนี้',
+  '✓ {amt} a month goes back to {goal}.': '✓ เดือนละ {amt} กลับไปที่ {goal}',
+  'Delete {name}? Tap again': 'ลบ {name} มั้ย แตะอีกครั้ง',
+  'Delete this bill': 'ลบรายการนี้',
+  'That day’s money': 'เงินของวันนั้น',
+  'Also that day': 'วันนั้นยังมี',
+  'Money in · {name}': 'เงินเข้า · {name}',
+  'Nothing logged this day': 'วันนั้นยังไม่ได้จดอะไร',
+  'Add to this day': 'เพิ่มในวันนั้น',
 };
 
 export default th;
