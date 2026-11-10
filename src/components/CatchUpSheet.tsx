@@ -15,6 +15,7 @@ import { monthLong, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { monthYear, shortName } from '@/lib/setup/plan';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 type Props = { rows: CatchRow[]; goal: HomeGoal; goals: HomeGoal[]; month: MonthBudget; onTake: (amount: number, note: string) => Promise<string | null>; onDone: () => void };
 
@@ -45,7 +46,7 @@ export function CatchUpSheet({ rows, goal, goals, month, onTake, onDone }: Props
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onDone}>
       <Pressable style={styles.dim} onPress={onDone} accessibilityLabel={t('Close')} />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onDone} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 12 }} showsVerticalScrollIndicator={false} bounces={false}>
           <View style={styles.head}>
@@ -120,7 +121,7 @@ export function CatchUpSheet({ rows, goal, goals, month, onTake, onDone }: Props
           </Squish>
           <Text style={styles.fine}>{t('Leave it if that money came from somewhere else, like a bonus or savings outside HeyKip')}</Text>
         </ScrollView>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }

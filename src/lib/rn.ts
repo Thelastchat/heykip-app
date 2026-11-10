@@ -11,10 +11,10 @@ export {
   KeyboardAvoidingView,
   Linking,
   Modal,
+  PanResponder,
   PixelRatio,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   View,
@@ -23,3 +23,4 @@ export {
 } from '@real/react-native';
 export type { ImageSourcePropType, PressableProps, StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from '@real/react-native';
 export { Text, TextInput } from './thaiText';
+export { ScrollView } from './scrollView';

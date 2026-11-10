@@ -13,6 +13,7 @@ import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 type Props = { day: Date; spends: CatSpend[]; ins: CatSpend[]; daily: number; loading?: boolean; onHistory?: () => void; onClose: () => void };
 
@@ -35,7 +36,7 @@ export function DaySheet({ day, spends, ins, daily, loading, onHistory, onClose 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 4 }} showsVerticalScrollIndicator={false} bounces={false}>
           <View style={styles.head}>
@@ -98,7 +99,7 @@ export function DaySheet({ day, spends, ins, daily, loading, onHistory, onClose 
             </Pressable>
           )}
         </ScrollView>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }

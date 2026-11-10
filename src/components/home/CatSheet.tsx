@@ -16,6 +16,7 @@ import { CAT_ICON3D, ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 const SHOWN = 5;
 /** Tiles whose spends are one database category, so History can show just that one. */
@@ -58,7 +59,7 @@ export function CatSheet({ info, spends, onClose }: { info: CatInfo; spends: Cat
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-      <View style={[sheet.sheet, styles.box, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onClose} style={[sheet.sheet, styles.box, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={sheet.grip} />
         <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
           <View style={styles.head} accessible accessibilityLabel={t('{category}: {left} left of {total}', { category: name, left: baht(left), total: baht(budget) })}>
@@ -112,7 +113,7 @@ export function CatSheet({ info, spends, onClose }: { info: CatInfo; spends: Cat
             </Squish>
           </View>
         </ScrollView>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }

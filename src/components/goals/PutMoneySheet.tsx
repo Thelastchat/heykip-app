@@ -15,6 +15,7 @@ import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 export type MoneyFrom = 'bonus' | 'leftover' | 'side' | 'gift';
 const FROM: { key: MoneyFrom; label: string; icon: Icon3D }[] = [
@@ -96,7 +97,7 @@ export function PutMoneySheet({ open, onClose, onDone, goals, startId }: { open:
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+        <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={styles.grip} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Kip mood="happy" size={50} />
@@ -228,7 +229,7 @@ export function PutMoneySheet({ open, onClose, onDone, goals, startId }: { open:
           <Squish onPress={save} style={[styles.save, (a <= 0 || busy) && { opacity: 0.5 }]} accessibilityRole="button" accessibilityLabel={t('Put {amount} in', { amount: baht(a) })}>
             <Text style={styles.saveText}>{busy ? t('Saving…') : a > 0 ? t('Put {amount} in', { amount: baht(a) }) : t('Put money in')}</Text>
           </Squish>
-        </View>
+        </DragSheet>
       </KeyboardSafe>
     </Modal>
   );

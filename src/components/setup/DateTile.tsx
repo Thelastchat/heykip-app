@@ -9,6 +9,7 @@ import { isoDay, parseDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, radius, inkA, themed } from '@/theme';
 
 import { SmallTile, smallValueStyle } from './kit';
+import { DragSheet } from '@/components/DragSheet';
 
 /** "By when?" — a tile that opens the system date picker. Only future dates. */
 export function DateTile({ label, value, onChange, style, emptyLabel }: { label: string; value: string | null; onChange: (iso: string) => void; style?: StyleProp<ViewStyle>; emptyLabel?: string }) {
@@ -52,7 +53,7 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
       </SmallTile>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.scrim} onPress={() => setOpen(false)} accessibilityLabel={t('Close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <DragSheet onClose={() => setOpen(false)} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <Text style={styles.sheetTitle}>{label}</Text>
           <DateTimePicker value={picked} minimumDate={tomorrow} mode="date" display="inline" accentColor={colors.ink} themeVariant="light" onChange={(_, d) => d && setPicked(d)} />
           <Button
@@ -62,7 +63,7 @@ export function DateTile({ label, value, onChange, style, emptyLabel }: { label:
               setOpen(false);
             }}
           />
-        </View>
+        </DragSheet>
       </Modal>
     </>
   );

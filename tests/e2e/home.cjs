@@ -655,6 +655,39 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  // ---------- Sheets close with a drag ----------
+  scenario('Sheets · drag down to close');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db });
+    const dragDown = async (loc, dy) => {
+      const box = await loc.boundingBox();
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      for (let k = 1; k <= 20; k++) {
+        await page.mouse.move(x, y + (dy * k) / 20);
+        await page.waitForTimeout(16);
+      }
+      await page.mouse.up();
+      await page.waitForTimeout(900);
+    };
+    const ask = () => page.getByRole('button', { name: /^Ask Kip anything/ });
+    await tap(page, visible(page.getByRole('button', { name: /^Kip says:/ })), { wait: 1200 });
+    await check(page, 'Kip’s note opens', (await ask().count()) > 0, () => '');
+    await dragDown(visible(page.getByText('Kip', { exact: true })), 40);
+    await check(page, 'A small drag springs back — the sheet stays', (await ask().count()) > 0, () => '');
+    await dragDown(visible(page.getByText('Kip', { exact: true })), 260);
+    await check(page, 'Dragging it down closes it', (await ask().count()) === 0, () => '');
+    const why = () => page.getByText(/^Why:/);
+    await tap(page, visible(page.getByRole('button', { name: 'This pay month — see the details' })), { wait: 1000 });
+    const opened = await why().count();
+    await dragDown(visible(page.getByText('This pay month', { exact: true })), 260);
+    await check(page, 'The pay-month sheet closes with a drag too', opened > 0 && (await why().count()) === 0, () => opened);
+    await page.close();
+  });
+
   // ---------- Plus can't be faked ----------
   // The database refuses plan writes from the app (guard_plan); the mock does the same and keeps each try as "refused …".
   scenario('Plus · the free week is started by the server');

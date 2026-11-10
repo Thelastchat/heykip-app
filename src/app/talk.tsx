@@ -378,7 +378,7 @@ export default function Talk() {
   }
 
   return (
-    <KeyboardSafe style={{ flex: 1 }}>
+    <KeyboardSafe style={{ flex: 1 }} done={false}>
       <GlowBackground />
       <View style={[styles.top, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" accessibilityLabel={t('Close')}>

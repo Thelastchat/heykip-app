@@ -8,6 +8,7 @@ import { KipStill } from '@/components/KipStill';
 import { Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 type Props = {
   say: string;
@@ -25,7 +26,7 @@ export function KipSheet({ say, spentToday, over, goalName, goalWhen, isPlus, on
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <View style={styles.head}>
           <KipStill size={44} />
@@ -56,7 +57,7 @@ export function KipSheet({ say, spentToday, over, goalName, goalWhen, isPlus, on
             {isPlus ? <CaretRight size={16} color={colors.muted} /> : <LockSimple size={16} color={colors.muted} />}
           </View>
         </Squish>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }

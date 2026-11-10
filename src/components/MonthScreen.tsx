@@ -41,6 +41,7 @@ import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { isoDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, blackA } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -482,10 +483,10 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t('Close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
+        <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
           <View style={styles.grabber} />
           {children}
-        </View>
+        </DragSheet>
       </KeyboardSafe>
     </Modal>
   );

@@ -16,6 +16,7 @@ import { CAT_ICON3D, ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import type { Pace } from '@/lib/pace';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 const H = 170;
 const day = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())}`;
@@ -88,7 +89,7 @@ export function PaceSheet({ pace, budget, total, start, end, left, daysAfter, pe
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
           <Text style={styles.title}>{t('This pay month')}</Text>
@@ -181,7 +182,7 @@ export function PaceSheet({ pace, budget, total, start, end, left, daysAfter, pe
             );
           })}
         </ScrollView>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }

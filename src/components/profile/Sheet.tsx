@@ -8,6 +8,7 @@ import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 export function Sheet({ open, onClose, title, sub, children }: { open: boolean; onClose: () => void; title: string; sub?: string; children: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -15,7 +16,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardSafe style={{ flex: 1 }}>
         <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
-        <View style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+        <DragSheet onClose={onClose} style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={sheet.grip} />
           <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
             <View style={{ alignItems: 'center', gap: 3 }}>
@@ -24,7 +25,7 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
             </View>
             {children}
           </ScrollView>
-        </View>
+        </DragSheet>
       </KeyboardSafe>
     </Modal>
   );

@@ -13,6 +13,7 @@ import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { isoDay, monthYear, parseDay } from '@/lib/setup/plan';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 export function AmountRow({ label, value, was, onChange }: { label: string; value: number | null; was: number | null; onChange: (v: number | null) => void }) {
   return (
@@ -82,7 +83,7 @@ export function DueRow({ value, onChange }: { value: string | null; onChange: (i
       </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.scrim} onPress={() => setOpen(false)} accessibilityLabel={t('Close')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <DragSheet onClose={() => setOpen(false)} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
           <Text style={styles.sheetTitle}>{t('By when')}</Text>
           <DateTimePicker value={picked} minimumDate={tomorrow} mode="date" display="inline" accentColor={colors.ink} themeVariant={dark ? 'dark' : 'light'} onChange={(_, x) => x && setPicked(x)} />
           <Button
@@ -92,7 +93,7 @@ export function DueRow({ value, onChange }: { value: string | null; onChange: (i
               setOpen(false);
             }}
           />
-        </View>
+        </DragSheet>
       </Modal>
     </>
   );

@@ -14,6 +14,7 @@ import { t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, themed, whiteA, blackA } from '@/theme';
+import { DragSheet } from '@/components/DragSheet';
 
 export type PlusFeature = 'styles' | 'talk' | 'customize' | 'automove' | 'goals';
 
@@ -43,7 +44,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('Close')} />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
+      <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
         <View style={styles.grip} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Kip mood="happy" size={58} />
@@ -71,7 +72,7 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
           <Text style={styles.notNow}>{t('Not now')}</Text>
         </Pressable>
-      </View>
+      </DragSheet>
     </Modal>
   );
 }
