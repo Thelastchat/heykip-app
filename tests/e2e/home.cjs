@@ -654,4 +654,54 @@ module.exports = async function homeTests(browser) {
     await check(page, 'A category opens its sheet', /Shoes/.test(cat), () => cat.slice(-400));
     await page.close();
   });
+
+  // ---------- Plus can't be faked ----------
+  // The database refuses plan writes from the app (guard_plan); the mock does the same and keeps each try as "refused …".
+  scenario('Plus · the free week is started by the server');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, path: '/talk' });
+    await check(page, 'Free: Talk to Kip is locked', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0].plan);
+    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 2500 });
+    await check(page, 'The trial is asked of the server (start_trial), not written by the app', db.writes.includes('rpc start_trial'), () => db.writes);
+    await check(page, 'The app never tried to write its own plan', !db.writes.some((w) => w.startsWith('refused')), () => db.writes);
+    await check(page, 'The trial ends in 7 days', Math.abs(new Date(db.profiles[0].trial_ends_at).getTime() - Date.now() - 7 * 86_400_000) < 60_000, () => db.profiles[0]);
+    await check(page, 'Talk to Kip opens', (await page.getByPlaceholder('Message Kip').count()) > 0, () => db.profiles[0].plan);
+    await page.close();
+  });
+
+  scenario('Plus · an ended trial is Free, and can’t start again');
+  await safely(async () => {
+    const { db } = person({ plan: 'trial' });
+    Object.assign(db.profiles[0], { trial_ends_at: new Date(Date.now() - 86_400_000).toISOString(), trial_used: true });
+    const page = await open(browser, { db, path: '/talk' });
+    await check(page, 'A trial that ended yesterday is locked again', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0]);
+    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 2000 });
+    const txt = await screenText(page);
+    await check(page, 'A second free week is refused, and it says so', /already used/.test(txt) && !db.writes.includes('rpc start_trial'), () => ({ writes: db.writes, txt: txt.slice(-300) }));
+    await check(page, 'Still Free after trying', db.profiles[0].trial_ends_at < new Date().toISOString(), () => db.profiles[0]);
+    await page.close();
+  });
+
+  scenario('Plus · cheating is refused');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db });
+    // What a cheater would send from the app: set their own plan.
+    const cheat = await page.evaluate(
+      async (url) => {
+        const r = await fetch(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'yearly', trial_ends_at: '2099-01-01' }) });
+        return r.status;
+      },
+      'https://qegkanosplyprrxuikia.supabase.co' + '/rest/v1/profiles?id=eq.' + db.profiles[0].id,
+    );
+    await check(page, 'Setting your own plan is refused', db.profiles[0].plan === 'free' && db.writes.includes('refused profiles plan,trial_ends_at'), () => ({
+      cheat,
+      p: db.profiles[0],
+      writes: db.writes,
+    }));
+    await go(page, '/talk');
+    await check(page, 'Kip stays locked after the cheat', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0].plan);
+    await page.close();
+  });
 };

@@ -280,13 +280,15 @@ export default function Talk() {
         error:
           res.reason === 'consent'
             ? t('Kip’s reading is turned off — turn it on in Profile → Privacy & data.')
-            : res.reason === 'nokey'
-              ? t('I’m not switched on yet — my AI key still needs to be added in Supabase.')
-              : res.reason === 'plus'
-                ? t('Talking to me is a Plus feature.')
-                : res.reason === 'offline'
-                  ? t('I can’t reach the internet right now. Try again in a moment?')
-                  : t('I got a bit muddled. Try saying it another way?'),
+            : res.reason === 'limit'
+              ? t('That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.')
+              : res.reason === 'nokey'
+                ? t('I’m not switched on yet — my AI key still needs to be added in Supabase.')
+                : res.reason === 'plus'
+                  ? t('Talking to me is a Plus feature.')
+                  : res.reason === 'offline'
+                    ? t('I can’t reach the internet right now. Try again in a moment?')
+                    : t('I got a bit muddled. Try saying it another way?'),
       });
     if (!res.ok && res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);

@@ -87,11 +87,11 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
       money_leaks: draft.leaks,
       budget_style: draft.budgetStyle,
       budget: monthFrom(plan.inputs, draft.budgetStyle, draft.goalPerMonth, draft.incomeType === 'regular' ? draft.payday : null, safetyNet(plan.inputs).target),
-      plan: choice,
-      trial_ends_at: choice === 'trial' ? new Date(stamp + 7 * 86_400_000).toISOString() : null,
       onboarded: true,
     })
     .eq('id', userId);
   if (profileError) throw new Error(t('Couldn’t finish setup: {reason}', { reason: profileError.message }));
+  // The free week is started by the server (once per person). If it's already used, setup still finishes on Free.
+  if (choice === 'trial') await supabase.rpc('start_trial');
   forgetMonth(); // the plan was just written here — screens load the new one
 }

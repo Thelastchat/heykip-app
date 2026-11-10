@@ -17,7 +17,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { PaySheet, RentSheet } from '@/components/profile/MoneySheets';
 import { Pill, SaveButton, Sheet, sheet } from '@/components/profile/Sheet';
-import { useAuth } from '@/lib/auth';
+import { planNow, useAuth } from '@/lib/auth';
 import { billsTotal, dailyOf, STYLES, type MonthBudget } from '@/lib/budget';
 import { useHome } from '@/lib/home';
 import { getLang, t, useLang, type Lang } from '@/lib/i18n';
@@ -160,7 +160,7 @@ export default function Profile() {
   const styleName = STYLES.find((s) => s.key === month?.style)?.name ?? t('Kip’s plan');
 
   // ---- Plus ----
-  const plan = row?.plan ?? 'free';
+  const plan = planNow(row?.plan, row?.trial_ends_at);
   const daysLeft = row?.trial_ends_at ? Math.max(0, Math.ceil((new Date(row.trial_ends_at).getTime() - Date.now()) / 86_400_000)) : 0;
 
   return (

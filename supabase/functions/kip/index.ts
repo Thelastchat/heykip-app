@@ -107,10 +107,13 @@ Deno.serve(async (req) => {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
     if (!u?.user) return json({ error: 'not signed in' }, 401);
-    const { data: p } = await sb.from('profiles').select('plan, display_name, ai_consent_at, ai_off').eq('id', u.user.id).single();
-    if (!p || p.plan === 'free') return json({ error: 'plus' }, 402);
-    // Nothing goes to the AI without the person's Allow (PDPA, App Store 5.1.2(i)) or after they turn it off.
-    if (!p.ai_consent_at || p.ai_off) return json({ error: 'consent' }, 403);
+    // Plus (a trial that has ended is Free), the person's Allow (PDPA, App Store 5.1.2(i)), and today's cap — all
+    // decided by the database (kip_allow), which also counts this call. The app can't set any of these itself.
+    const gate = await sb.rpc('kip_allow');
+    if (gate.error) return json({ error: 'busy' }, 503);
+    if (gate.data === 'plus') return json({ error: 'plus' }, 402);
+    if (gate.data === 'consent') return json({ error: 'consent' }, 403);
+    if (gate.data === 'limit') return json({ error: 'limit' }, 429);
 
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);

@@ -19,7 +19,7 @@ import { defaultVoiceLang, savedVoiceLang, useVoice, voiceModule } from '@/lib/v
 import { colors, fonts, inkA, themed } from '@/theme';
 
 export type KipTask = 'extra' | 'over' | 'month';
-type Reason = 'plus' | 'consent' | 'nokey' | 'busy' | 'offline';
+type Reason = 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit';
 
 /** Ask Kip to turn what was said into a change for this sheet. The app checks the answer before showing it. */
 export async function askKipDo<T>(task: KipTask, text: string, context: object): Promise<{ ok: true; out: T & { ok: boolean; reply: string } } | { ok: false; reason: Reason }> {
@@ -28,6 +28,7 @@ export async function askKipDo<T>(task: KipTask, text: string, context: object):
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
+    if (status === 429) return { ok: false, reason: 'limit' };
     if (status === 403) return { ok: false, reason: 'consent' };
     if (status === undefined) return { ok: false, reason: 'offline' };
     return { ok: false, reason: 'busy' };
@@ -160,6 +161,7 @@ export function kipProblem(reason: Reason): string {
   if (reason === 'offline') return t('I can’t reach the internet right now. Try again in a moment?');
   if (reason === 'plus') return t('Telling Kip what to do is a Plus feature.');
   if (reason === 'consent') return t('Kip’s reading is turned off — turn it on in Profile → Privacy & data.');
+  if (reason === 'limit') return t('That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.');
   return t('Kip is busy right now — try again in a moment, or pick one of the choices.');
 }
 

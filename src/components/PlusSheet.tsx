@@ -29,12 +29,11 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
     if (!session || busy) return;
     setBusy(true);
     setError(null);
-    const { error: e } = await supabase
-      .from('profiles')
-      .update({ plan: 'trial', trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString() })
-      .eq('id', session.user.id);
+    // The server starts it (once per person, on its own clock) — the app can't write the plan itself.
+    const { error: e } = await supabase.rpc('start_trial');
     setBusy(false);
-    if (e) return setError(t('Couldn’t start your trial: {msg}', { msg: e.message }));
+    if (e)
+      return setError(/trial already used/.test(e.message) ? t('Your free week is already used. Plus is coming to the App Store soon.') : t('Couldn’t start your trial: {msg}', { msg: e.message }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     await refreshProfile();
     onClose();

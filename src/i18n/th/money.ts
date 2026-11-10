@@ -222,6 +222,8 @@ const th: Record<string, string> = {
   'Money in · {name}': 'เงินเข้า · {name}',
   'Nothing logged this day': 'วันนั้นยังไม่ได้จดอะไร',
   'Add to this day': 'เพิ่มในวันนั้น',
+  'Your free week is already used. Plus is coming to the App Store soon.': 'คุณใช้สิทธิ์ทดลองฟรี 1 สัปดาห์ไปแล้ว Plus จะมาใน App Store เร็ว ๆ นี้',
+  'That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.': 'วันนี้คุยกับ Kip เยอะมากแล้ว พรุ่งนี้มาใหม่นะ ระหว่างนี้ยังจดเองได้ตามปกติ',
 };
 
 export default th;

@@ -10,9 +10,23 @@ const session = { access_token: JWT, refresh_token: 'r', expires_at: 9999999999,
 const SPEND = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const INCOME = ['pay', 'side_gigs', 'gifts', 'other'];
 
+/** A seeded trial is a live one (7 days from now) unless the test says when it ends. */
+function trialWeek(p) {
+  return p.plan === 'trial' && !('trial_ends_at' in p) ? { ...p, trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString(), trial_used: true } : p;
+}
+
+// Like the database's guard_plan trigger: the app can't set these on profiles. A try is kept as "refused …".
+const LOCKED = ['plan', 'trial_ends_at', 'trial_used', 'ai_day', 'ai_count'];
+function locked(db, table, body) {
+  if (table !== 'profiles') return body;
+  const tried = Object.keys(body).filter((k) => LOCKED.includes(k));
+  if (tried.length) db.writes.push('refused profiles ' + tried.join(','));
+  return Object.fromEntries(Object.entries(body).filter(([k]) => !LOCKED.includes(k)));
+}
+
 function makeDb(extra = {}) {
   return {
-    profiles: [{ id: UID, display_name: 'Koy', avatar_url: null, onboarded: true, plan: 'free', split_when_paid: false, budget: null, safety_saved: 0, ...extra.profile }],
+    profiles: [trialWeek({ id: UID, display_name: 'Koy', avatar_url: null, onboarded: true, plan: 'free', split_when_paid: false, budget: null, safety_saved: 0, ...extra.profile })],
     categories: [...SPEND.map((key) => ({ id: 'spend-' + key, kind: 'spend', key, user_id: null })), ...INCOME.map((key) => ({ id: 'income-' + key, kind: 'income', key, user_id: null }))],
     goals: extra.goals ?? [],
     promises: extra.promises ?? [],
@@ -108,6 +122,12 @@ async function install(page, db) {
         db.writes.push('rpc put_in_safety ' + moved);
         return json(200, p.safety_saved);
       }
+      if (table === 'start_trial') {
+        if (p.trial_used) return json(400, { message: 'trial already used' });
+        Object.assign(p, { plan: 'trial', trial_ends_at: new Date(Date.now() + 7 * 86_400_000).toISOString(), trial_used: true });
+        db.writes.push('rpc start_trial');
+        return json(200, p.trial_ends_at);
+      }
       const g = db.goals.find((x) => x.id === a.p_goal);
       if (!g) return json(400, { message: 'goal not found' });
       if (table === 'put_in_goal') {
@@ -136,7 +156,7 @@ async function install(page, db) {
     let rows = (db[table] ??= []);
     if (m === 'POST') {
       const body = JSON.parse(req.postData());
-      const arr = Array.isArray(body) ? body : [body];
+      const arr = (Array.isArray(body) ? body : [body]).map((x) => locked(db, table, x));
       const upsert = (req.headers()['prefer'] || '').includes('merge-duplicates');
       const out = arr.map((x) => {
         const hit = upsert && x.id ? rows.find((y) => y.id === x.id) : null;
@@ -149,7 +169,7 @@ async function install(page, db) {
       return json(201, single ? out[0] : out);
     }
     if (m === 'PATCH') {
-      const body = JSON.parse(req.postData());
+      const body = locked(db, table, JSON.parse(req.postData()));
       const hit = filt(rows, url);
       hit.forEach((x) => Object.assign(x, body));
       db.writes.push(`update ${table} ${Object.keys(body).join(',')}`);

@@ -146,12 +146,13 @@ export async function askKip(
   text: string,
   context: object,
   history: { me: string; kip: string }[] = [],
-): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
+): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
   const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
     if (status === 403) return { ok: false, reason: 'consent' };
+    if (status === 429) return { ok: false, reason: 'limit' };
     if (status === 503) return { ok: false, reason: 'nokey' };
     if (status === undefined) return { ok: false, reason: 'offline' };
     return { ok: false, reason: 'busy' };

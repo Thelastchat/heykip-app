@@ -103,7 +103,7 @@ export default function Slips() {
         const i = next++;
         const p = payload(assets[i]);
         const res = p ? await readSlip(p.image, p.type) : null;
-        if (res && !res.ok && (res.reason === 'plus' || res.reason === 'consent' || res.reason === 'nokey' || res.reason === 'offline')) stop = res.reason;
+        if (res && !res.ok && (res.reason === 'plus' || res.reason === 'consent' || res.reason === 'nokey' || res.reason === 'offline' || res.reason === 'limit')) stop = res.reason;
         results[i] = cleanSlip(`s${i}`, assets[i].uri, res && res.ok ? res.read : null);
         setSlips([...results]);
       }
@@ -123,9 +123,11 @@ export default function Slips() {
       setProblem(
         stop === 'offline'
           ? t('I can’t reach the internet right now. Try again in a moment?')
-          : stop === 'plus'
-            ? t('Reading slips is a Plus feature.')
-            : t('I’m not switched on yet — my AI key still needs to be added in Supabase.'),
+          : stop === 'limit'
+            ? t('That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.')
+            : stop === 'plus'
+              ? t('Reading slips is a Plus feature.')
+              : t('I’m not switched on yet — my AI key still needs to be added in Supabase.'),
       );
       setPhase('review');
       return;

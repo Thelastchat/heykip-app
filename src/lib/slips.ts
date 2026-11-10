@@ -77,7 +77,7 @@ export async function savedKeys(userId: string, keys: string[]): Promise<Set<str
   return new Set((data ?? []).map((r) => r.slip_ref as string));
 }
 
-export async function readSlip(image: string, mediaType: string): Promise<{ ok: true; read: SlipRead } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' }> {
+export async function readSlip(image: string, mediaType: string): Promise<{ ok: true; read: SlipRead } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10); // Thai date
   // A slip takes a few seconds; if the network stalls, give up on this one instead of "Reading…" forever.
   const timeout = new Promise<{ data: null; error: { context: { status: number } } }>((res) => setTimeout(() => res({ data: null, error: { context: { status: 504 } } }), 60_000));
@@ -85,6 +85,7 @@ export async function readSlip(image: string, mediaType: string): Promise<{ ok: 
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
+    if (status === 429) return { ok: false, reason: 'limit' };
     if (status === 403) return { ok: false, reason: 'consent' };
     // 503 is also what the gateway says when a request hangs; only "no key" from our server means the key is missing.
     if (status === 503) {

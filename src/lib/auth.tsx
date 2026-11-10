@@ -8,7 +8,7 @@ export type Profile = {
   display_name: string | null;
   avatar_url: string | null;
   onboarded: boolean;
-  plan: 'free' | 'trial' | 'yearly' | 'monthly' | 'student';
+  plan: Plan;
   split_when_paid: boolean; // Plus: Kip moves the saving on payday
   safety_saved: number; // what's in the safety net pot
   ai_consent_at: string | null; // when they tapped Allow on "Before Kip reads for you"
@@ -36,8 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     // The profiles row is created by a database trigger on sign-up (see the migration).
-    const { data } = await supabase.from('profiles').select('id, display_name, avatar_url, onboarded, plan, split_when_paid, ai_consent_at, ai_off, safety_saved').eq('id', s.user.id).maybeSingle();
-    setProfile((data as Profile | null) ?? null);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url, onboarded, plan, trial_ends_at, split_when_paid, ai_consent_at, ai_off, safety_saved')
+      .eq('id', s.user.id)
+      .maybeSingle();
+    setProfile(data ? ({ ...data, plan: planNow(data.plan, data.trial_ends_at) } as Profile) : null);
   }, []);
 
   useEffect(() => {
@@ -79,4 +83,12 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
+}
+
+export type Plan = 'free' | 'trial' | 'yearly' | 'monthly' | 'student';
+
+/** The plan as it is right now: a trial whose week is over is Free (the server's is_plus() decides the same way). */
+export function planNow(plan: Plan | null | undefined, trialEndsAt: string | null | undefined): Plan {
+  if (plan === 'trial') return trialEndsAt && new Date(trialEndsAt).getTime() > Date.now() ? 'trial' : 'free';
+  return plan ?? 'free';
 }

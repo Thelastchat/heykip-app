@@ -166,6 +166,7 @@ module.exports = async function setupTests(browser) {
       promises: page.db.promises,
       writes: page.db.writes,
     }));
+    await check(page, 'Setup never writes its own plan (only the server can)', !page.db.writes.some((w) => w.startsWith('refused')), () => page.db.writes);
     // Home shows the saved plan's numbers.
     await page.waitForTimeout(1500);
     const home = await sane(page, 'Home after setup');
