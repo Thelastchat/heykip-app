@@ -8,6 +8,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, 
 import Animated, { FadeInLeft } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
@@ -485,7 +486,9 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
         <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t('Close')} />
         <DragSheet onClose={onClose} style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 10 }]}>
           <View style={styles.grabber} />
-          {children}
+          <FormScroll style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
+            {children}
+          </FormScroll>
         </DragSheet>
       </KeyboardSafe>
     </Modal>
@@ -881,7 +884,20 @@ const styles = themed(() =>
     },
 
     scrim: { flex: 1, backgroundColor: inkA(0.38) },
-    sheet: { backgroundColor: colors.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20, gap: 14, boxShadow: '0 -8px 30px rgba(0,0,0,0.12)' },
+    sheet: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      maxHeight: '92%',
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingTop: 10,
+      paddingHorizontal: 20,
+      gap: 14,
+      boxShadow: '0 -8px 30px rgba(0,0,0,0.12)',
+    },
     grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.pill, backgroundColor: inkA(0.15) },
     option: {
       borderRadius: 18,

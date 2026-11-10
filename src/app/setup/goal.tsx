@@ -12,6 +12,7 @@ import { Polaroid } from '@/components/board';
 import { DateTile } from '@/components/setup/DateTile';
 import { picked, SetupScreen, SmallTile, smallValueStyle } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
+import type { FormScroll } from '@/components/FormScroll';
 import { room, verdict } from '@/lib/brain';
 import { rich, t } from '@/lib/i18n';
 import { ICON3D, goalTypeIcon3D } from '@/lib/icons3d';
@@ -32,7 +33,7 @@ const QUICK = [1000, 2000, 3000, 5000];
 export default function SetupGoal() {
   const { draft, update } = useSetup();
   const editing = Boolean(useLocalSearchParams<{ edit?: string }>().edit);
-  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const scroll = useRef<ComponentRef<typeof FormScroll>>(null);
   const formY = useRef(0);
   const { width } = useWindowDimensions();
 

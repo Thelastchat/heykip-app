@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +28,7 @@ import { pickSlips } from '@/lib/slips';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { useAiConsent } from '@/components/AiConsent';
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money, inkA, themed } from '@/theme';
@@ -340,7 +341,7 @@ export default function Add() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <FormScroll contentContainerStyle={{ paddingTop: 16, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 20 }}>
           <Switch kind={kind} onChange={switchKind} />
         </View>
@@ -413,7 +414,7 @@ export default function Add() {
             </Glass>
           </Pressable>
         </View>
-      </ScrollView>
+      </FormScroll>
 
       <View style={{ paddingHorizontal: 20, gap: 12 }}>
         <View style={{ gap: 8 }}>

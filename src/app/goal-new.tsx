@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -283,7 +284,7 @@ export default function GoalNew() {
       </View>
 
       {step === 'what' ? (
-        <ScrollView contentContainerStyle={{ paddingTop: 16, gap: 16, paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScroll contentContainerStyle={{ paddingTop: 16, gap: 16, paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
             {TYPES.map((x) => {
               const on = x.key === type;
@@ -337,7 +338,7 @@ export default function GoalNew() {
             </Glass>
             <Text style={styles.note}>{t('Already saved some? Add it with “Put money in” after')}</Text>
           </View>
-        </ScrollView>
+        </FormScroll>
       ) : (
         a && (
           <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 16, gap: 12, paddingBottom: 120 + insets.bottom }} showsVerticalScrollIndicator={false}>

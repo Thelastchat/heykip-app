@@ -8,9 +8,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, CaretRight } from 'phosphor-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -229,7 +230,7 @@ export default function GoalEdit() {
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20 }}>
         <ScreenHeader title={t('Edit goal')} close />
       </View>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 16, gap: 16, paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <FormScroll contentContainerStyle={{ padding: 20, paddingTop: 16, gap: 16, paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* photo */}
         <Pressable onPress={pickPhoto} style={[styles.cover, { backgroundColor: type.color }]} accessibilityRole="button" accessibilityLabel={t('Change photo')}>
           {coverUri ? (
@@ -366,7 +367,7 @@ export default function GoalEdit() {
           </View>
         )}
         {error && <Text style={styles.warn}>{error}</Text>}
-      </ScrollView>
+      </FormScroll>
 
       <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
         <Button label={busy ? t('Saving…') : plan ? t('Save changes') : t('Save')} disabled={!dirty || !ok || busy} loading={busy} onPress={saveAll} />

@@ -3,9 +3,10 @@
 import { router } from 'expo-router';
 import { CaretLeft, Lock } from 'phosphor-react-native';
 import { useRef, type ComponentRef, type ReactNode, type RefObject } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { CatIcon } from '@/components/CatIcon';
 import { Glass } from '@/components/glow/Glass';
@@ -23,19 +24,19 @@ export const STEPS = 4;
 export const nth = (n: number) => (getLang() === 'th' ? t('day {n}', { n }) : ordinal(n));
 
 /** A Setup page: header, scrolling content, and the main button pinned at the bottom. */
-export function SetupScreen({ step, footer, children, scrollRef }: { step?: number; footer: ReactNode; children: ReactNode; scrollRef?: RefObject<ComponentRef<typeof ScrollView> | null> }) {
+export function SetupScreen({ step, footer, children, scrollRef }: { step?: number; footer: ReactNode; children: ReactNode; scrollRef?: RefObject<ComponentRef<typeof FormScroll> | null> }) {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardSafe style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView
+      <FormScroll
         ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 12, paddingHorizontal: 18, paddingBottom: 16, gap: 14 }}
         showsVerticalScrollIndicator={false}>
         {step !== undefined && <StepHeader step={step} />}
         {children}
-      </ScrollView>
+      </FormScroll>
       <View style={{ paddingHorizontal: 18, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 16) + 8, gap: 10 }}>{footer}</View>
     </KeyboardSafe>
   );

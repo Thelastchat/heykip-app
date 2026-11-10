@@ -1,8 +1,9 @@
 // The bottom sheet every Profile edit uses: the same frosted cream sheet as "Put money in".
 import type { ReactNode } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
@@ -18,13 +19,13 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
         <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <DragSheet onClose={onClose} style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={sheet.grip} />
-          <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
+          <FormScroll style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
             <View style={{ alignItems: 'center', gap: 3 }}>
               <Text style={sheet.title}>{title}</Text>
               {sub ? <Text style={[sheet.sub, { textAlign: 'center' }]}>{sub}</Text> : null}
             </View>
             {children}
-          </ScrollView>
+          </FormScroll>
         </DragSheet>
       </KeyboardSafe>
     </Modal>

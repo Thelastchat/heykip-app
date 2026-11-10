@@ -1,8 +1,9 @@
 // The bottom card every sheet sits in. Drag it down to close it: from the grip and title anywhere, and from the rest of
 // the card when nothing inside it wants the drag (a list that scrolls, a slider, the graph). Let go early and it
-// springs back. It also rides up with the keyboard, so a text box in a sheet is never hidden behind it.
+// springs back. A card pinned to the bottom (position: absolute) also rides up with the keyboard — a pinned view
+// ignores the keyboard padding around it — and is never taller than the space above the keyboard (its list scrolls).
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Animated, PanResponder, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, PanResponder, StyleSheet, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import { KeyboardController, useKeyboardAnimation, useKeyboardState } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,7 +16,9 @@ export function DragSheet({ onClose, style, children }: { onClose: () => void; s
   const { height: screen } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardAnimation().height; // 0 when the keyboard is down, minus its height when up
-  const kbHeight = useKeyboardState((s) => (s.isVisible ? s.height : 0));
+  // Only a pinned card is lifted here; a card in the normal flow is already lifted by the KeyboardSafe around it.
+  const pinned = StyleSheet.flatten(style)?.position === 'absolute';
+  const kbHeight = useKeyboardState((s) => (pinned && s.isVisible ? s.height : 0));
   const drag = useRef(new Animated.Value(0)).current;
   const layoutTop = useRef(0);
   const kbNow = useRef(0);
@@ -58,7 +61,7 @@ export function DragSheet({ onClose, style, children }: { onClose: () => void; s
         style,
         // With the keyboard up the card moves up by its height, so it can be at most the space above it.
         kbHeight ? { maxHeight: screen - kbHeight - insets.top - 8 } : null,
-        { transform: [{ translateY: Animated.add(kb, drag) }] },
+        { transform: [{ translateY: pinned ? Animated.add(kb, drag) : drag }] },
       ]}>
       {children}
     </Animated.View>
