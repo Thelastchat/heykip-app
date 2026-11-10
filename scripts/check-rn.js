@@ -8,7 +8,7 @@ const files = [];
   for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const p = path.join(d, e.name);
     if (e.isDirectory()) walk(p);
-    else if (/\.tsx?$/.test(e.name) && !/(rn\.ts|thaiText\.tsx|\.d\.ts)$/.test(e.name)) files.push(p);
+    else if (/\.tsx?$/.test(e.name) && !/(rn\.ts|thaiText\.tsx|scrollView\.tsx|\.d\.ts)$/.test(e.name)) files.push(p);
   }
 })(path.join(__dirname, '..', 'src'));
 
@@ -23,7 +23,7 @@ for (const f of files) {
   }
 }
 const rn = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'rn.ts'), 'utf8');
-const listed = new Set([...rn.match(/export \{([^}]*)\} from '@real\/react-native'/)[1].split(',').map((x) => x.trim()).filter(Boolean), 'Text', 'TextInput']);
+const listed = new Set([...rn.match(/export \{([^}]*)\} from '@real\/react-native'/)[1].split(',').map((x) => x.trim()).filter(Boolean), 'Text', 'TextInput', 'ScrollView']);
 const missing = [...used].filter((n) => !listed.has(n));
 if (missing.length) {
   console.error('Add to src/lib/rn.ts:', missing.join(', '));
