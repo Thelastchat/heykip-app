@@ -21,7 +21,17 @@ const day = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())}`;
 type Props = { notice: Notice; index: number; count: number; busy: boolean; onDo: () => void; onLater: () => void };
 
 export function KipNotice({ notice: n, index, count, busy, onDo, onLater }: Props) {
-  const title = n.kind === 'runout' ? t('{category} won’t last to payday', { category: t(CATEGORY[n.key].name) }) : t('{amount} left over last month', { amount: baht(n.amount) });
+  const billName = n.kind === 'billdue' ? (n.key === 'rent' ? t('Rent') : n.name) : '';
+  const title =
+    n.kind === 'runout'
+      ? t('{category} won’t last to payday', { category: t(CATEGORY[n.key].name) })
+      : n.kind === 'billdue'
+        ? n.late === 0
+          ? t('{name} is due today', { name: billName })
+          : t('{name} was due {date}', { name: billName, date: day(n.date) })
+        : t('{amount} left over last month', { amount: baht(n.amount) });
+  const yes = n.kind === 'billdue' ? t('Paid') : t('Do it');
+  const no = n.kind === 'leftover' ? t('Keep it') : n.kind === 'billdue' ? t('Not yet') : t('Not now');
   const label = `${t('Kip noticed')}: ${title}`;
   return (
     <View style={styles.card} accessibilityLabel={label}>
@@ -54,6 +64,8 @@ export function KipNotice({ notice: n, index, count, busy, onDo, onLater }: Prop
           </View>
           <Text style={styles.after}>{t('Then {category} lasts to payday at about {perDay} a day.', { category: t(CATEGORY[n.key].name), perDay: baht(n.perDayAfter) })}</Text>
         </>
+      ) : n.kind === 'billdue' ? (
+        <Text style={styles.body}>{rich('**{amount}** is set aside for it. Paid already?', { amount: baht(n.amount) }, B)}</Text>
       ) : (
         <Text style={styles.body}>
           {n.will && n.was && n.will.getTime() !== n.was.getTime()
@@ -66,11 +78,11 @@ export function KipNotice({ notice: n, index, count, busy, onDo, onLater }: Prop
         </Text>
       )}
       <View style={styles.btns}>
-        <Squish style={[styles.do, busy && { opacity: 0.5 }]} disabled={busy} onPress={onDo} accessibilityRole="button" accessibilityLabel={t('Do it')}>
-          <Text style={styles.doT}>{busy ? t('Saving…') : t('Do it')}</Text>
+        <Squish style={[styles.do, busy && { opacity: 0.5 }]} disabled={busy} onPress={onDo} accessibilityRole="button" accessibilityLabel={yes}>
+          <Text style={styles.doT}>{busy ? t('Saving…') : yes}</Text>
         </Squish>
-        <Squish style={styles.no} disabled={busy} onPress={onLater} accessibilityRole="button" accessibilityLabel={n.kind === 'leftover' ? t('Keep it') : t('Not now')}>
-          <Text style={styles.noT}>{n.kind === 'leftover' ? t('Keep it') : t('Not now')}</Text>
+        <Squish style={styles.no} disabled={busy} onPress={onLater} accessibilityRole="button" accessibilityLabel={no}>
+          <Text style={styles.noT}>{no}</Text>
         </Squish>
       </View>
     </View>

@@ -62,7 +62,8 @@
             "photo"
           ]
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

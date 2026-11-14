@@ -157,7 +157,10 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
 export type BillType = 'rent' | 'utilities' | 'phone' | 'internet' | 'streaming' | 'fitness' | 'insurance' | 'loan' | 'family' | 'other';
 /** Something paid every month — a bill, a subscription, money for family. A yearly one (insurance) is set aside monthly:
  *  `amount` is what this month sets aside; `yearly` says how much is due and when (see everymonth.ts). */
-export type BillItem = { name: string; amount: number; type?: BillType; yearly?: { total: number; due: string; since: string } };
+/** A bill's reminder: 9:00 the day before, on the day, or none. */
+export type Remind = 'before' | 'day' | 'off';
+/** day: due on this day of the month (31 = the last day); remind: when the phone reminds you. */
+export type BillItem = { name: string; amount: number; type?: BillType; yearly?: { total: number; due: string; since: string }; day?: number; remind?: Remind };
 
 export type MonthBudget = {
   v: 2;
@@ -180,6 +183,8 @@ export type MonthBudget = {
   covers?: { period: string; goal: number; safety: number; today?: { day: string; amount: number } };
   /** More goals (Plus): how the goal saving is split, in pin order. Missing = all to the first goal. */
   goals?: { id: string; amount: number }[];
+  /** Rent's due day and reminder (without one, rent is due on payday and has no reminder). */
+  rentDue?: { day: number; remind: Remind };
 };
 
 /** Living costs + fun (+ learning and giving) as categories. */
@@ -233,6 +238,7 @@ export const keepOnReplan = (m: MonthBudget) => ({
   ...(m.payMoved ? { payMoved: m.payMoved } : {}),
   ...(m.covers ? { covers: m.covers } : {}),
   ...(m.goals ? { goals: m.goals } : {}),
+  ...(m.rentDue ? { rentDue: m.rentDue } : {}),
 });
 
 const round10 = (n: number) => Math.round(n / 10) * 10;

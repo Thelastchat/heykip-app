@@ -37,6 +37,7 @@ import { liteOf } from '@/components/goals/bits';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
+import { dueBills, nextDue } from '@/lib/billdue';
 import { LATER_MS, noticesFor, type Notice } from '@/lib/notice';
 import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
@@ -191,6 +192,15 @@ export default function Home() {
       });
       return;
     }
+    if (n.kind === 'billdue') {
+      const before = month;
+      setPaid(n.key, true, true);
+      showDone(t('{name} marked paid', { name: n.key === 'rent' ? t('Rent') : n.name }), async () => {
+        save(before); // exactly as it was, a yearly bill's next year included
+        return null;
+      });
+      return;
+    }
     setNoticeBusy(true);
     const { error } = await supabase.rpc('put_in_goal', { p_goal: n.goalId, p_amount: n.amount, p_source: 'extra', p_from: 'leftover', p_note: t('Kip: left over last month') });
     setNoticeBusy(false);
@@ -294,8 +304,10 @@ export default function Home() {
     { f: 'talk', icon: 'phone', title: t('Talk to Kip'), teaser: t('“Can I afford hotpot on Friday?”') },
   ];
 
-  // ---- bills (paid marks reset each pay period) ----
+  // ---- bills (paid marks reset each pay period); a bill with a due day shows when it's due next ----
   const pk = periodKey(month?.payday ?? null, now);
+  const withDue = month ? dueBills(month, now) : [];
+  const dueNext = new Map(withDue.map((b) => [b.key, nextDue(b, month?.payday ?? null, now)] as const));
   const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
   const bills: Bill[] = month
     ? [
@@ -314,9 +326,9 @@ export default function Home() {
             : { sub: t('{type} · monthly', { type: typeName(typeOf(b)) }) }),
         })),
         ...(month.bills.guess > 0 ? [{ key: 'guess', name: t('Other bills'), amount: month.bills.guess, estimate: true }] : []),
-      ].map((b) => ({ ...b, paid: paidKeys.includes(b.key) }))
+      ].map((b) => ({ ...b, paid: paidKeys.includes(b.key), due: dueNext.get(b.key) ?? null }))
     : [];
-  function setPaid(key: string, paid: boolean) {
+  function setPaid(key: string, paid: boolean, quiet = false) {
     if (!month) return;
     const keys = new Set(paidKeys);
     if (paid) keys.add(key);
@@ -325,7 +337,7 @@ export default function Home() {
     const item = (month.bills.items ?? []).find((b) => `item:${b.name}` === key);
     const base = paid && item?.yearly && monthsToDue(item.yearly.due, now) <= 1 ? rollYearly(month, item.name, now) : month;
     save({ ...base, paid: { period: pk, keys: [...keys] } } as MonthBudget);
-    if (paid) flash(t('{name} marked paid', { name: bills.find((b) => b.key === key)?.name ?? t('Bill') }));
+    if (paid && !quiet) flash(t('{name} marked paid', { name: bills.find((b) => b.key === key)?.name ?? t('Bill') }));
   }
 
   // Left to spend: whatever is going faster than plan comes first, so it's never hidden off-screen.
@@ -467,7 +479,7 @@ export default function Home() {
           {kipDone ? (
             <KipDone text={kipDone.text} busy={noticeBusy} onUndo={undoNotice} />
           ) : notice ? (
-            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, Date.now() + LATER_MS)} />
+            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, notice.kind === 'billdue' ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() : Date.now() + LATER_MS)} />
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />

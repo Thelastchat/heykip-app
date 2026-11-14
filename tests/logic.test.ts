@@ -15,7 +15,8 @@ import { paceOf } from '../src/lib/pace';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
-import { leftoverNotice, noticesFor, runoutNotice } from '../src/lib/notice';
+import { billNotice, leftoverNotice, noticesFor, runoutNotice } from '../src/lib/notice';
+import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
 
 // ---------- tiny test kit ----------
 let seed = 20261103;
@@ -771,6 +772,79 @@ for (let n = 0; n < 2000; n++) {
     check('Left over: after the first week — no card', leftoverNotice(m, { total: budget - 3000, days: 25, extra: 0, startedBefore: true }, P, lites, now) === null, () => 0);
     check('Left over: spent it all — no card', leftoverNotice(m, { total: budget, days: 25, extra: 0, startedBefore: true }, Pe, lites, early) === null, () => 0);
     check('Left over: the goal arrives no later', !good || !good.will || !good.was || good.will.getTime() <= good.was.getTime(), () => good);
+  }
+}
+
+
+// ---------- bills: due days and reminders ----------
+{
+  let n = 0;
+  for (let i = 0; i < 3000; i++) {
+    const inp = person();
+    if (!inp) continue;
+    const base = month(inp);
+    const now = new Date(2026, int(0, 11), int(1, 28), int(0, 23));
+    const day = int(1, 31);
+    const remind = pick(['before', 'day', 'off'] as const);
+    let m = addBill(base, 'Netflix', 179, { type: 'streaming', day, remind }).month;
+    if (rand() < 0.5) m = { ...m, rentDue: { day: int(1, 31), remind: pick(['before', 'day'] as const) } };
+    const P = period(m.payday, now);
+    const pk = P.start.toDateString();
+    const paid = rand() < 0.4;
+    if (paid) m = { ...m, paid: { period: pk, keys: ['item:Netflix'] } };
+    const b = dueBills(m, now).find((x) => x.key === 'item:Netflix')!;
+    const d = nextBillDue(b, m.payday, now)!;
+    n++;
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    check('Due day: falls on the bill’s day, or the month’s last day when shorter', d.date.getDate() === Math.min(day, new Date(d.date.getFullYear(), d.date.getMonth() + 1, 0).getDate()), () => ({ day, date: d.date }));
+    // A pay month can miss a day (a 29th–31st near a short February): then the next one is the first after it.
+    check('Due day: unpaid → this pay month’s date; paid → next pay month’s', paid ? d.date >= P.end : d.date >= P.start && (d.date < P.end || d.date.getTime() - P.end.getTime() < 4 * 86_400_000), () => ({ paid, date: d.date, P }));
+    check('Due day: “days” counts from today (late is below 0)', d.days === Math.round((d.date.getTime() - today.getTime()) / 86_400_000), () => d);
+    check('Due day: a paid bill is never late', !paid || d.days > 0 || (d.days >= 0 && d.date >= P.end), () => d);
+    const rs = remindersFor(m, now);
+    check('Reminders: never in the past, 9:00, the day before or on the day', rs.every((r) => r.at > now && r.at.getHours() === 9 && r.at.getMinutes() === 0), () => rs);
+    check('Reminders: none for a bill set to Off', remind !== 'off' || rs.every((r) => r.key !== 'item:Netflix'), () => rs);
+    check('Reminders: a paid bill skips this pay month', !paid || rs.filter((r) => r.key === 'item:Netflix').every((r) => r.at >= new Date(P.end.getTime() - 86_400_000)), () => ({ rs, P }));
+    check('Reminders: each one once', new Set(rs.map((r) => r.id)).size === rs.length, () => rs.map((r) => r.id));
+    if (remind !== 'off') {
+      const mine = rs.filter((r) => r.key === 'item:Netflix');
+      const shift = remind === 'before' ? 1 : 0;
+      check('Reminders: on the right day for its due date', mine.every((r) => { const due = new Date(r.id.slice(-10)); const x = new Date(due.getFullYear(), due.getMonth(), due.getDate() - shift, 9); return Math.abs(x.getTime() - r.at.getTime()) < 26 * 3_600_000; }), () => mine);
+    }
+    const card = billNotice(m, now);
+    const all = billNotice(m, now, (id) => !id.includes('item:Netflix'));
+    check('Bill card: only when due today or late and not ticked', all ? !paid && d.days <= 0 : paid || d.days > 0, () => ({ all, d, paid }));
+    if (card) check('Bill card: Not yet puts it away until tomorrow', billNotice(m, now, (id) => id === card.id)?.id !== card.id, () => card);
+    // Re-plans keep due days: a style switch re-adds bills with their day; rent's day is kept.
+    const re = withStyle(m, pick(['kip', 'savefirst', '503020', 'jars'] as const));
+    check('Due day: a style switch keeps every bill’s day and rent’s day', re.bills.items?.find((x) => x.name === 'Netflix')?.day === day && JSON.stringify(re.rentDue) === JSON.stringify(m.rentDue), () => re.bills.items);
+  }
+  check('Due day: the random runs were real', n > 1000, () => n);
+  // Known cases.
+  check('Due day: the 31st in February is the 28th', dateIn(2027, 1, 31).getDate() === 28 && dateIn(2028, 1, 31).getDate() === 29, () => 0);
+  const inp = person('trip');
+  if (inp) {
+    const m0 = month(inp, 'kip', 25);
+    const m = addBill(m0, 'Netflix', 179, { type: 'streaming', day: 5, remind: 'before' }).month;
+    const now = new Date(2026, 11, 2, 12); // 2 Dec, pay month 25 Nov – 25 Dec
+    const b = dueBills(m, now)[0];
+    const d = nextBillDue(b, 25, now)!;
+    check('Due day: Netflix on the 5th is due 5 Dec, in 3 days', d.date.getDate() === 5 && d.date.getMonth() === 11 && d.days === 3, () => d);
+    const r = remindersFor(m, now)[0];
+    check('Reminders: the day before at 9:00 (4 Dec)', !!r && r.at.getDate() === 4 && r.at.getMonth() === 11 && r.at.getHours() === 9 && r.when === 'tomorrow', () => r);
+    const onDay = new Date(2026, 11, 5, 10);
+    check('Bill card: on the 5th, Netflix is due today', billNotice(m, onDay)?.late === 0, () => billNotice(m, onDay));
+    const late = new Date(2026, 11, 7, 10);
+    check('Bill card: two days on, it says it was due', billNotice(m, late)?.late === 2, () => billNotice(m, late));
+    const paidM = { ...m, paid: { period: period(25, onDay).start.toDateString(), keys: ['item:Netflix'] } };
+    check('Bill card: ticked — no card', billNotice(paidM, onDay) === null, () => 0);
+    const ed = editBill(m, 0, { perMonth: 179, due: { day: 12, remind: 'day' } });
+    check('Edit bill: a new due day and reminder are saved', ed?.month.bills.items?.[0].day === 12 && ed?.month.bills.items?.[0].remind === 'day', () => ed?.month.bills.items);
+    const cleared = editBill(m, 0, { perMonth: 179, due: null });
+    check('Edit bill: clearing the day removes it and its reminder', cleared?.month.bills.items?.[0].day === undefined && cleared?.month.bills.items?.[0].remind === undefined, () => cleared?.month.bills.items);
+    const rent = editBill(m, 'rent', { perMonth: m.bills.rent, due: { day: 1, remind: 'before' } });
+    check('Edit rent: its due day is saved on the month', rent?.month.rentDue?.day === 1, () => rent?.month.rentDue);
+    check('Rent: no due day set — no date is guessed', dueBills(m, now).every((x) => x.key !== 'rent'), () => 0);
   }
 }
 

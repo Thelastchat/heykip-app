@@ -6,11 +6,13 @@
 //   runout   — a budget will run out before payday at the way it's going. Kip moves money in from budgets that
 //              have room to spare (what's left after their own days to payday), never from rent, bills, saving or
 //              the safety net. If nothing has room, Kip says nothing — no card that can't help.
+//   billdue  — a bill with a due day is due today (or late) and isn't ticked: Kip asks if it's paid.
 //   leftover — the pay month that just ended had money left over by what you logged. Kip asks (it can't see your
 //              bank) whether to put it toward your goal. Only when last month was logged well, early in the new month.
 import { CATEGORY, type CatKey, type MonthBudget } from '@/lib/budget';
 import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
 import { periodAt, periodKey, type Spent } from '@/lib/home';
+import { dueBills, nextDue } from '@/lib/billdue';
 import { applyOps } from '@/lib/monthops';
 
 /** Days of the pay month that must have passed before a pace means anything. */
@@ -37,6 +39,16 @@ export type Notice =
       /** a day, after the move, until payday */
       perDayAfter: number;
       next: MonthBudget;
+    }
+  | {
+      id: string;
+      kind: 'billdue';
+      key: string;
+      name: string;
+      amount: number;
+      date: Date;
+      /** 0 = today, above 0 = days late */
+      late: number;
     }
   | {
       id: string;
@@ -150,6 +162,21 @@ export function leftoverNotice(m: MonthBudget, last: LastCycle, P: Period, goals
   return { id: `leftover:${prev.start.toDateString()}`, kind: 'leftover', amount, goalId: goal.id, goalName: goal.title, was, will };
 }
 
+/** A bill due today or late that isn't ticked — the latest-due first. */
+export function billNotice(m: MonthBudget, now = new Date(), skip: (id: string) => boolean = () => false): Extract<Notice, { kind: 'billdue' }> | null {
+  const due = dueBills(m, now)
+    .filter((b) => !b.paid)
+    .map((b) => ({ b, d: nextDue(b, m.payday, now) }))
+    .filter((x) => x.d && x.d.days <= 0)
+    .sort((a, c) => a.d!.days - c.d!.days);
+  for (const { b, d } of due) {
+    const id = `billdue:${b.key}:${d!.date.toDateString()}`;
+    if (skip(id)) continue;
+    return { id, kind: 'billdue', key: b.key, name: b.name, amount: b.amount, date: d!.date, late: -d!.days };
+  }
+  return null;
+}
+
 /** Everything Kip would say now, most urgent first, minus what was put off ("Not now") or done. */
 export function noticesFor(
   m: MonthBudget | null,
@@ -165,6 +192,8 @@ export function noticesFor(
   const off = (id: string) => hidden[id] > now.getTime();
   const r = runoutNotice(m, spent, P, now, off);
   if (r) out.push(r);
+  const b = billNotice(m, now, off);
+  if (b) out.push(b);
   const l = last ? leftoverNotice(m, last, P, goals, now) : null;
   if (l) out.push(l);
   return out.filter((n) => !off(n.id));

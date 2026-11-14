@@ -5,7 +5,7 @@
 // fun money, then the goal. Food, transport and the safety net are never touched.
 // A yearly item sets aside what still has to be ready, spread over the months left until it's due (catch-up), then
 // total ÷ 12 once it's paid and starts again.
-import { addBill, type BillItem, type BillType, type MonthBudget } from '@/lib/budget';
+import { addBill, type BillItem, type BillType, type MonthBudget, type Remind } from '@/lib/budget';
 import { monthShort, t } from '@/lib/i18n';
 import { isoDay } from '@/lib/setup/plan';
 
@@ -98,7 +98,11 @@ export type BillEdit = { month: MonthBudget; fromGuess: number; fromFun: number;
  * places as a new bill (Kip's guess, then fun money, then the goal); less goes back to the goal, like removing a bill.
  * Null when the extra doesn't fit the month — never an overspent plan.
  */
-export function editBill(m: MonthBudget, which: number | 'rent', next: { perMonth: number; name?: string; type?: BillType; yearly?: BillItem['yearly'] | null }): BillEdit | null {
+export function editBill(
+  m: MonthBudget,
+  which: number | 'rent',
+  next: { perMonth: number; name?: string; type?: BillType; yearly?: BillItem['yearly'] | null; due?: { day: number; remind: Remind } | null },
+): BillEdit | null {
   const items = [...(m.bills.items ?? [])];
   const was = which === 'rent' ? m.bills.rent : items[which]?.amount;
   if (was === undefined) return null;
@@ -113,13 +117,27 @@ export function editBill(m: MonthBudget, which: number | 'rent', next: { perMont
     month = { ...r.month, bills: { ...r.month.bills, items: (r.month.bills.items ?? []).filter((b) => b.name !== '\u0000edit') } };
     took = { fromGuess: r.fromGuess, fromFun: r.fromFun, fromGoal: r.fromGoal };
   } else if (d < 0) month = { ...m, goalExtra: m.goalExtra - d };
-  if (which === 'rent') month = { ...month, bills: { ...month.bills, rent: now } };
+  if (which === 'rent') {
+    month = { ...month, bills: { ...month.bills, rent: now } };
+    if (next.due) month = { ...month, rentDue: next.due };
+    else if (next.due === null) {
+      const { rentDue: _drop, ...rest } = month;
+      month = rest;
+    }
+  }
   else {
     const old = items[which];
     const name = (next.name ?? old.name).trim().slice(0, 40) || old.name;
     const item: BillItem = { ...old, name, amount: now, ...(next.type ? { type: next.type } : {}) };
     if (next.yearly === null) delete item.yearly;
     else if (next.yearly) item.yearly = next.yearly;
+    if (next.due === null) {
+      delete item.day;
+      delete item.remind;
+    } else if (next.due) {
+      item.day = next.due.day;
+      item.remind = next.due.remind;
+    }
     const list = [...(month.bills.items ?? [])];
     list[which] = item;
     month = { ...month, bills: { ...month.bills, items: list } };

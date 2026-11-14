@@ -32,6 +32,7 @@ import {
   spendingTotal,
   takePlan,
   type BillItem,
+  type Remind,
   type BillType,
   type CatKey,
   type FreedTo,
@@ -43,6 +44,8 @@ import { baht } from '@/lib/money';
 import { isoDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 import { DragSheet } from '@/components/DragSheet';
+import { DuePicker } from '@/components/DuePicker';
+import { askReminders } from '@/lib/reminders';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -626,6 +629,13 @@ function AddBill({
   const [yearly, setYearly] = useState(!!old?.yearly);
   const [amount, setAmount] = useState<number | null>(isRent ? month.bills.rent : old ? (old.yearly ? old.yearly.total : old.amount) : null);
   const [sure, setSure] = useState(false);
+  // Due day and reminder (approved mockup): none until you pick one.
+  const [day, setDay] = useState<number | null>(isRent ? (month.rentDue?.day ?? null) : (old?.day ?? null));
+  const [remind, setRemind] = useState<Remind>(isRent ? (month.rentDue?.remind ?? 'before') : (old?.remind ?? 'before'));
+  const due0 = isRent ? (month.rentDue ? `${month.rentDue.day}|${month.rentDue.remind}` : '') : old?.day ? `${old.day}|${old.remind ?? 'before'}` : '';
+  const dueNow = day ? `${day}|${remind}` : '';
+  const dueChanged = editing && dueNow !== due0;
+  const dueOut = day ? { day, remind } : null;
   const now = new Date();
   const [dueMonth, setDueMonth] = useState(old?.yearly ? Number(old.yearly.due.slice(5)) - 1 : (now.getMonth() + 3) % 12);
   const due = nextDue(dueMonth, now);
@@ -636,7 +646,13 @@ function AddBill({
   const perMonth = amount ? (yearly ? (sameYearly ? old!.amount : yearlySetAside(amount, due, 0, now)) : amount) : 0;
   const edit =
     editing && amount !== null
-      ? editBill(month, which!, { perMonth, name: name.trim(), type: isRent ? undefined : kind, yearly: yearly ? (sameYearly ? old!.yearly : { total: amount, due, since: isoDay(now) }) : null })
+      ? editBill(month, which!, {
+          perMonth,
+          name: name.trim(),
+          type: isRent ? undefined : kind,
+          yearly: isRent ? undefined : yearly ? (sameYearly ? old!.yearly : { total: amount, due, since: isoDay(now) }) : null,
+          due: dueChanged ? dueOut : undefined,
+        })
       : null;
   const preview = editing
     ? edit
@@ -649,9 +665,14 @@ function AddBill({
       : null;
   const changed =
     editing &&
-    (isRent
+    (dueChanged ||
+    isRent
       ? amount !== month.bills.rent
       : !!old && (name.trim() !== old.name || kind !== (old.type ?? guessType(old.name)) || yearly !== !!old.yearly || perMonth !== old.amount || (yearly && !sameYearly)));
+  /** A reminder needs the phone's permission: asked once, when it's first set. */
+  const ask = () => {
+    if (day && remind !== 'off') askReminders();
+  };
   const goalName = month.goal.isSafetyNet ? t('your safety net') : month.goal.title;
   const months = monthsToDue(due, now);
   const after = amount ? yearlySetAside(amount, `${Number(due.slice(0, 4)) + 1}${due.slice(4)}`, 0, new Date(Number(due.slice(0, 4)), Number(due.slice(5)) - 1, 2)) : 0;
@@ -735,6 +756,7 @@ function AddBill({
           ))}
         </ScrollView>
       )}
+      <DuePicker day={day} remind={remind} yearlyMonth={yearly ? dueMonth : null} onDay={setDay} onRemind={setRemind} />
       {editing && edit && edit.freed > 0 && (
         <View style={styles.takeBox}>
           <Text style={[styles.impact, { paddingVertical: 8 }]}>{t('✓ {amt} a month goes back to {goal}.', { amt: baht(edit.freed), goal: goalName })}</Text>
@@ -766,7 +788,15 @@ function AddBill({
       )}
       {editing ? (
         <>
-          <Button label={t('Save changes')} disabled={!changed || !edit || (!isRent && !name.trim())} onPress={() => edit && onEdit?.(edit, isRent ? t('Rent') : name.trim())} />
+          <Button
+            label={t('Save changes')}
+            disabled={!changed || !edit || (!isRent && !name.trim())}
+            onPress={() => {
+              if (!edit) return;
+              ask();
+              onEdit?.(edit, isRent ? t('Rent') : name.trim());
+            }}
+          />
           {!isRent && old && (
             <Pressable onPress={() => (sure ? onDelete?.(which as number, old.name) : setSure(true))} style={{ alignItems: 'center', paddingVertical: 12 }} accessibilityRole="button">
               <Text style={{ fontFamily: fonts.medium, fontSize: 15, color: colors.orangeText }}>{sure ? t('Delete {name}? Tap again', { name: old.name }) : t('Delete this bill')}</Text>
@@ -783,7 +813,11 @@ function AddBill({
               : t('Add')
           }
           disabled={!amount || !name.trim()}
-          onPress={() => amount && onAdd(name.trim(), perMonth, { type: kind, ...(yearly ? { yearly: { total: amount, due, since: isoDay(now) } } : {}) })}
+          onPress={() => {
+            if (!amount) return;
+            ask();
+            onAdd(name.trim(), perMonth, { type: kind, ...(yearly ? { yearly: { total: amount, due, since: isoDay(now) } } : {}), ...(dueOut ?? {}) });
+          }}
         />
       )}
     </>

@@ -24,6 +24,7 @@ import { getLang, t, useLang, type Lang } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
+import { remindersOn, setRemindersOn } from '@/lib/reminders';
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
 import { useLook } from '@/lib/look';
@@ -61,6 +62,11 @@ export default function Profile() {
   const insets = useSafeAreaInsets();
   const { session, signOut, refreshProfile } = useAuth();
   const { month, save } = useMonth();
+  // Bill reminders on this phone (approved mockup): one switch for all of them.
+  const [reminders, setReminders] = useState(true);
+  useEffect(() => {
+    remindersOn().then(setReminders);
+  }, []);
   const { goals } = useHome(month);
   const [row, setRow] = useState<Row | null>(null);
   const [open, setOpen] = useState<Open>(null);
@@ -241,6 +247,29 @@ export default function Profile() {
         <RiseIn delay={360}>
           <Glass radius={24} innerStyle={styles.group}>
             <SetRow first title={t('Evening check-in')} sub={t('Kip asks what you spent')} value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
+            <View style={[styles.row, styles.rowLine]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{t('Bill reminders')}</Text>
+                <Text style={styles.small}>{t('9:00 AM, for bills with a due day')}</Text>
+              </View>
+              <View style={styles.seg}>
+                {([true, false] as const).map((on) => (
+                  <Pressable
+                    key={String(on)}
+                    onPress={() => {
+                      if (on === reminders) return;
+                      setReminders(on);
+                      setRemindersOn(on, month);
+                    }}
+                    style={[styles.segBtn, reminders === on && styles.segOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: reminders === on }}
+                    accessibilityLabel={on ? t('Bill reminders on') : t('Bill reminders off')}>
+                    <Text style={[styles.segText, reminders === on && { color: colors.paper }]}>{on ? t('On') : t('Off')}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             <View style={[styles.row, styles.rowLine]}>
               <Text style={[styles.rowTitle, { flex: 1 }]}>{t('Language')}</Text>
               <View style={styles.seg}>

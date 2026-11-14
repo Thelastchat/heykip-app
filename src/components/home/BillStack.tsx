@@ -9,14 +9,36 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTi
 import Svg, { Path } from 'react-native-svg';
 
 import { Glass } from '@/components/glow/Glass';
-import { t } from '@/lib/i18n';
+import { monthShort, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import type { BillType } from '@/lib/budget';
 import { colors, fonts, glow, glassA, inkA, themed } from '@/theme';
 
 /** One thing in Every month. `sub` replaces "Monthly" (e.g. "Streaming · monthly"); a yearly item shows its monthly
  *  set-aside (`perMonth`) and how much is ready (`note`). */
-export type Bill = { key: string; name: string; amount: number; estimate?: boolean; paid: boolean; type?: BillType; sub?: string; note?: string; perMonth?: boolean };
+export type Bill = {
+  key: string;
+  name: string;
+  amount: number;
+  estimate?: boolean;
+  paid: boolean;
+  type?: BillType;
+  sub?: string;
+  note?: string;
+  perMonth?: boolean;
+  /** When it's due next (bills with a due day): days 0 = today, below 0 = late. */
+  due?: { date: Date; days: number } | null;
+};
+
+/** "in 3 days", "today", "2 days late" — said the way a person says it. */
+export function whenText(days: number) {
+  if (days === 0) return t('today');
+  if (days === 1) return t('tomorrow');
+  if (days === -1) return t('1 day late');
+  if (days < 0) return t('{n} days late', { n: -days });
+  return t('in {n} days', { n: days });
+}
+const dueText = (d: { date: Date; days: number }) => t('Due {date} · {when}', { date: `${d.date.getDate()} ${monthShort(d.date.getMonth())}`, when: whenText(d.days) });
 type Glyph = 'house' | 'bolt' | 'drop' | 'phone' | 'wifi' | 'play' | 'receipt' | 'shield' | 'heart' | 'dumbbell' | 'card';
 
 /** The glyph for each kind of thing paid every month. */
@@ -94,7 +116,9 @@ function GlyphIcon({ g, color = '#2A2A2A', size = 20 }: { g: Glyph; color?: stri
 }
 
 export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: string, paid: boolean) => void }) {
-  const unpaid = bills.filter((b) => !b.paid);
+  // What's due next comes first (approved mockup); bills without a day keep their place after them, estimates last.
+  const rank = (b: Bill) => (b.estimate ? 1e6 : b.due && !b.paid ? b.due.days : 1e5);
+  const unpaid = bills.filter((b) => !b.paid).sort((a, b) => rank(a) - rank(b));
   const [openKey, setOpenKey] = useState<string | null>(unpaid[0]?.key ?? null);
   const order = [...unpaid, ...bills.filter((b) => b.paid)];
   // A new pay cycle brings every bill back unpaid: open the first one again so "slide to mark paid" is right there.
@@ -106,12 +130,23 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
   const total = bills.reduce((a, b) => a + b.amount, 0);
   const left = unpaid.reduce((a, b) => a + b.amount, 0);
   const open = order.find((b) => b.key === openKey && !b.paid) ? openKey : null;
+  const next = unpaid.find((b) => b.due);
 
   return (
     <View>
       <View style={styles.sum}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text style={styles.sumText}>{t('{amount} set aside', { amount: baht(total) })}</Text>
+          <Text style={[styles.sumText, { flexShrink: 1 }]} numberOfLines={1}>
+            {next?.due ? (
+              <>
+                {t('Next:')} <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>{t('{name} {when}', { name: next.name, when: whenText(next.due.days) })}</Text>
+                {' · '}
+                {t('{amount} set aside', { amount: baht(total) })}
+              </>
+            ) : (
+              t('{amount} set aside', { amount: baht(total) })
+            )}
+          </Text>
           <Text style={styles.sumText}>{left === 0 ? t('All paid') : t('{amount} to go', { amount: baht(left) })}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 3, height: 8 }}>
@@ -147,8 +182,8 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
                       {b.name}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.sub} numberOfLines={1}>
-                        {b.paid ? t('Paid') : b.estimate ? t('Estimate') : (b.sub ?? t('Monthly'))}
+                      <Text style={[styles.sub, !b.paid && b.due && b.due.days <= 3 && styles.soon]} numberOfLines={1}>
+                        {b.paid ? t('Paid') : b.estimate ? t('Estimate') : b.due ? dueText(b.due) : (b.sub ?? t('Monthly'))}
                       </Text>
                     </View>
                   </View>
@@ -240,6 +275,7 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
 
 const styles = themed(() =>
   StyleSheet.create({
+    soon: { fontFamily: fonts.semibold, color: colors.ink },
     editPill: { borderRadius: 999, backgroundColor: inkA(0.06), paddingHorizontal: 10, paddingVertical: 4 },
     editText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     sum: { marginBottom: 14 },

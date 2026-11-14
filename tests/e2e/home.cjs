@@ -737,6 +737,62 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  // ---------- Bills: due days and reminders ----------
+  scenario('Bills · a due day when adding, shown on Home');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, path: '/month?add=1' });
+    await tap(page, visible(page.getByRole('radio', { name: 'Streaming' })), { wait: 200 });
+    await type(page, 'Bill name', 'Netflix');
+    await type(page, 'Amount a month', 179);
+    const before = await screenText(page);
+    await check(page, 'The day row is there; no reminder row until a day is picked', /Due every month on/.test(before) && !/Remind me/.test(before) && /Pick a day to get a reminder/.test(before), () => before.slice(-500));
+    const d = new Date(Date.now() + 3 * 86_400_000).getDate();
+    await tap(page, visible(page.getByRole('radio', { name: d === 31 ? 'Last day of the month' : `Day ${d}` })), { wait: 300 });
+    const after = await screenText(page);
+    await check(page, 'Picking a day shows Remind me (Day before by default) and when it goes off', /Remind me/.test(after) && /9:00 on \d+ [A-Z][a-z]{2}, then every month/.test(after), () => after.slice(-500));
+    await tap(page, visible(page.getByRole('button').filter({ hasText: /^Add Netflix · ฿179 a month$/ })), { wait: 2000 });
+    const it = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Netflix');
+    await check(page, 'Saved with its day and a day-before reminder', it && it.day === d && it.remind === 'before', () => it);
+    await go(page, '/');
+    const home = await screenText(page);
+    const label = d === new Date(Date.now() + 3 * 86_400_000).getDate() ? 'in 3 days' : '';
+    await check(page, 'Home: “Due … · in 3 days”, and Netflix is next', new RegExp(`Netflix \\| Due \\d+ [A-Z][a-z]{2} · ${label}`).test(home) && /Next: \| Netflix in 3 days/.test(home), () => home.slice(-700));
+    await page.close();
+  });
+
+  scenario('Bills · due today and not ticked: Kip asks');
+  await safely(async () => {
+    const { db } = person();
+    const m = db.profiles[0].budget;
+    const today = new Date().getDate();
+    m.bills.items = [{ name: 'AIS Fibre', amount: 599, type: 'internet', day: today, remind: 'before' }];
+    m.bills.guess -= 599;
+    const page = await open(browser, { db });
+    const txt = await screenText(page);
+    await check(page, 'Kip’s card: AIS Fibre is due today, ฿599 set aside', /AIS Fibre is due today/.test(txt) && /฿599 \| is set aside for it\. Paid already\?/.test(txt), () => txt.slice(0, 900));
+    await tap(page, visible(page.getByRole('button', { name: 'Paid' })), { wait: 1500 });
+    const paid = db.profiles[0].budget.paid;
+    await check(page, 'Paid ticks it off on Home', paid && paid.keys.includes('item:AIS Fibre'), () => paid);
+    await check(page, 'A Done line with Undo', /AIS Fibre marked paid/.test(await screenText(page)), () => '');
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1500 });
+    await check(page, 'Undo unticks it, and the card is back', !(db.profiles[0].budget.paid?.keys ?? []).includes('item:AIS Fibre') && /AIS Fibre is due today/.test(await screenText(page)), () => db.profiles[0].budget.paid);
+    await tap(page, visible(page.getByRole('button', { name: 'Not yet' })), { wait: 1200 });
+    await check(page, 'Not yet puts it away for today', !/is due today/.test(await screenText(page)), () => '');
+    await page.close();
+  });
+
+  scenario('Bills · reminders switch in You');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, path: '/profile' });
+    const txt = await screenText(page);
+    await check(page, 'You has Bill reminders, on by default', /Bill reminders/.test(txt) && (await page.getByRole('button', { name: 'Bill reminders on' }).locator('div').first().evaluate((e) => getComputedStyle(e).color)) === 'rgb(255, 255, 255)', () => txt.slice(0, 600));
+    await tap(page, visible(page.getByRole('button', { name: 'Bill reminders off' })), { wait: 600 });
+    await check(page, 'Turned off, and remembered', (await page.evaluate(() => localStorage.getItem('heykip.billReminders'))) === 'off', () => 0);
+    await page.close();
+  });
+
   // ---------- Sheets close with a drag ----------
   scenario('Sheets · drag down to close');
   await safely(async () => {

@@ -10,6 +10,7 @@ import { t } from '@/lib/i18n';
 import { EMPTY_DRAFT, type BudgetStyle, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
 import { inputsFrom } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { syncReminders } from '@/lib/reminders';
 
 async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
   const [{ data: p }, { data: g }] = await Promise.all([
@@ -123,6 +124,8 @@ export function useMonth() {
       shared.month = next;
       shared.at = Date.now();
       shared.subs.forEach((f) => f(next));
+      // Bill reminders follow the month (due days, paid marks): only redone when they changed.
+      syncReminders(next);
       if (!userId) return;
       const { error: e } = await supabase.from('profiles').update({ budget: next, budget_style: next.style }).eq('id', userId);
       setError(e ? t('Couldn’t save: {msg}', { msg: e.message }) : null);
