@@ -39,6 +39,34 @@ const tool = {
   },
 };
 
+// "Show Kip your subscriptions" (approved mockup): a screenshot of the phone's subscriptions list (iPhone Settings →
+// your name → Subscriptions, or Google Play → Payments & subscriptions). Same reader, a different question.
+const subsTool = {
+  name: 'subs',
+  description: 'The active subscriptions on this screenshot. If it is not a subscriptions list, set is_list=false and leave items empty.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      is_list: { type: 'boolean' },
+      items: {
+        type: 'array',
+        description: 'Active subscriptions only — skip the Expired / Inactive section.',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'the app or service name as shown, e.g. "YouTube Premium", "iCloud+"' },
+            amount: { type: 'number', description: 'the price in baht for one billing period (e.g. 179 for ฿179.00/month). Never guess a price you cannot see.' },
+            period: { type: 'string', enum: ['month', 'year', 'week'] },
+            renews: { type: 'string', description: 'next renewal date as YYYY-MM-DD (Gregorian; Thai years minus 543), or empty if not shown' },
+          },
+          required: ['name', 'amount', 'period'],
+        },
+      },
+    },
+    required: ['is_list'],
+  },
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
@@ -56,7 +84,8 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);
 
-    const { image, mediaType, today } = await req.json();
+    const { image, mediaType, today, kind } = await req.json();
+    const subs = kind === 'subs';
     if (typeof image !== 'string' || image.length < 100) return json({ error: 'no image' }, 400);
     if (image.length > 7_000_000) return json({ error: 'too big' }, 413);
     const type = ['image/jpeg', 'image/png', 'image/webp'].includes(mediaType) ? mediaType : 'image/jpeg';
@@ -68,16 +97,18 @@ Deno.serve(async (req) => {
       signal: AbortSignal.timeout(45_000),
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 400,
-        system: `You read Thai bank transfer slips and payment receipts exactly. Never guess numbers you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand. ${owner}`,
-        tools: [tool],
-        tool_choice: { type: 'tool', name: 'slip' },
+        max_tokens: subs ? 900 : 400,
+        system: subs
+          ? `You read phone subscription lists (App Store / Google Play) exactly. Never guess a name, price or date you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand.`
+          : `You read Thai bank transfer slips and payment receipts exactly. Never guess numbers you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand. ${owner}`,
+        tools: [subs ? subsTool : tool],
+        tool_choice: { type: 'tool', name: subs ? 'subs' : 'slip' },
         messages: [
           {
             role: 'user',
             content: [
               { type: 'image', source: { type: 'base64', media_type: type, data: image } },
-              { type: 'text', text: 'Read this slip.' },
+              { type: 'text', text: subs ? 'Read the subscriptions on this screenshot.' : 'Read this slip.' },
             ],
           },
         ],

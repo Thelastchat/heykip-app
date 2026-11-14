@@ -38,7 +38,7 @@ import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dueBills, nextDue } from '@/lib/billdue';
-import { LATER_MS, noticesFor, type Notice } from '@/lib/notice';
+import { laterFor, noticesFor, type Notice } from '@/lib/notice';
 import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
@@ -61,7 +61,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
-  const { goals, spent, streak, reload, spendsIn, dayOf, last } = useHome(month);
+  const { goals, spent, streak, reload, spendsIn, dayOf, last, tx } = useHome(month);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
@@ -170,7 +170,7 @@ export default function Home() {
     });
   }
   const noticeGoals = goals.map((g) => ({ ...liteOf(g), title: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never) }));
-  const notices = noticesFor(month, spent, P, last, noticeGoals, hidden, now);
+  const notices = noticesFor(month, spent, P, last, noticeGoals, hidden, now, tx);
   const notice = kipDone ? null : notices[0];
   function showDone(text: string, undo: () => Promise<string | null>) {
     if (doneTimer.current) clearTimeout(doneTimer.current);
@@ -199,6 +199,28 @@ export default function Home() {
         save(before); // exactly as it was, a yearly bill's next year included
         return null;
       });
+      return;
+    }
+    if (n.kind === 'sub' || n.kind === 'subprice' || n.kind === 'substop') {
+      // A plan change, made with the app's own bill rules: the card already showed what it does.
+      const before = month;
+      save(n.next);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      showDone(
+        n.kind === 'sub'
+          ? t('{name} added · {amount} a month', { name: n.name, amount: baht(n.amount) })
+          : n.kind === 'subprice'
+            ? t('{name} now {amount}', { name: n.name, amount: baht(n.now) })
+            : t('{name} removed', { name: n.name }),
+        async () => {
+          save(before);
+          return null;
+        },
+      );
+      return;
+    }
+    if (n.kind === 'substream') {
+      hide(n.id, laterFor(n, new Date()));
       return;
     }
     setNoticeBusy(true);
@@ -479,7 +501,7 @@ export default function Home() {
           {kipDone ? (
             <KipDone text={kipDone.text} busy={noticeBusy} onUndo={undoNotice} />
           ) : notice ? (
-            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, notice.kind === 'billdue' ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() : Date.now() + LATER_MS)} />
+            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, laterFor(notice, new Date()))} />
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />

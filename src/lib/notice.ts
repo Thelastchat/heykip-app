@@ -7,9 +7,13 @@
 //              have room to spare (what's left after their own days to payday), never from rent, bills, saving or
 //              the safety net. If nothing has room, Kip says nothing — no card that can't help.
 //   billdue  — a bill with a due day is due today (or late) and isn't ticked: Kip asks if it's paid.
+//   sub / subprice / substop / substream — the subscription detective (subs.ts): a payment that repeats and isn't a
+//              bill yet, a bill that went up, one that stopped, and what streaming comes to in a year.
 //   leftover — the pay month that just ended had money left over by what you logged. Kip asks (it can't see your
 //              bank) whether to put it toward your goal. Only when last month was logged well, early in the new month.
-import { CATEGORY, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, removeBill, type CatKey, type MonthBudget } from '@/lib/budget';
+import { editBill, guessType } from '@/lib/everymonth';
+import { findPriceChanges, findRepeats, findStopped, streamingTotal, type LoggedTx } from '@/lib/subs';
 import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
 import { periodAt, periodKey, type Spent } from '@/lib/home';
 import { dueBills, nextDue } from '@/lib/billdue';
@@ -50,6 +54,20 @@ export type Notice =
       /** 0 = today, above 0 = days late */
       late: number;
     }
+  | {
+      id: string;
+      kind: 'sub';
+      name: string;
+      amount: number;
+      day: number;
+      dates: Date[];
+      /** where the money comes from: Kip's bill guess, fun money, the goal's saving */
+      from: { guess: number; fun: number; goal: number };
+      next: MonthBudget;
+    }
+  | { id: string; kind: 'subprice'; name: string; was: number; now: number; next: MonthBudget }
+  | { id: string; kind: 'substop'; name: string; amount: number; next: MonthBudget }
+  | { id: string; kind: 'substream'; names: { name: string; amount: number }[]; perYear: number }
   | {
       id: string;
       kind: 'leftover';
@@ -177,6 +195,27 @@ export function billNotice(m: MonthBudget, now = new Date(), skip: (id: string) 
   return null;
 }
 
+/** The subscription detective's cards, in order: new ones first, then changes to ones you have. */
+export function subNotices(m: MonthBudget, tx: LoggedTx[], now = new Date()): Notice[] {
+  const out: Notice[] = [];
+  for (const r of findRepeats(tx, m, now)) {
+    const res = addBill(m, r.name, r.amount, { type: guessType(r.name), day: r.day, remind: 'before' });
+    if (res.short > 0) continue; // doesn't fit this month: never an overspent plan
+    out.push({ id: `sub:${r.key}`, kind: 'sub', name: r.name, amount: r.amount, day: r.day, dates: r.dates, from: { guess: res.fromGuess, fun: res.fromFun, goal: res.fromGoal }, next: res.month });
+  }
+  for (const p of findPriceChanges(tx, m)) {
+    const e = editBill(m, p.index, { perMonth: p.now });
+    if (e) out.push({ id: `subprice:${p.name}:${p.now}`, kind: 'subprice', name: p.name, was: p.was, now: p.now, next: e.month });
+  }
+  for (const st of findStopped(tx, m, now)) out.push({ id: `substop:${st.name}`, kind: 'substop', name: st.name, amount: st.amount, next: removeBill(m, st.index) });
+  const s = streamingTotal(m);
+  if (s) {
+    const names = (m.bills.items ?? []).filter((b) => s.names.includes(b.name)).map((b) => ({ name: b.name, amount: b.amount }));
+    out.push({ id: `substream:${[...s.names].sort().join('+')}`, kind: 'substream', names, perYear: s.perYear });
+  }
+  return out;
+}
+
 /** Everything Kip would say now, most urgent first, minus what was put off ("Not now") or done. */
 export function noticesFor(
   m: MonthBudget | null,
@@ -186,6 +225,7 @@ export function noticesFor(
   goals: (GoalLite & { title: string })[],
   hidden: Record<string, number>,
   now = new Date(),
+  tx: LoggedTx[] = [],
 ): Notice[] {
   if (!m) return [];
   const out: Notice[] = [];
@@ -194,12 +234,26 @@ export function noticesFor(
   if (r) out.push(r);
   const b = billNotice(m, now, off);
   if (b) out.push(b);
+  const subs = subNotices(m, tx, now).filter((n) => !off(n.id));
+  out.push(...subs.filter((n) => n.kind !== 'substream'));
   const l = last ? leftoverNotice(m, last, P, goals, now) : null;
   if (l) out.push(l);
+  out.push(...subs.filter((n) => n.kind === 'substream')); // just so you see it: last
   return out.filter((n) => !off(n.id));
 }
 
 /** "Not now" puts a card off for 3 days. */
 export const LATER_MS = 3 * 86_400_000;
+
+/** How long each "no" puts a card away: Not a bill — a year; Keep it — 2 months; Got it — half a year. */
+export function laterFor(n: Notice, now = new Date()): number {
+  const day = 86_400_000;
+  if (n.kind === 'billdue') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  if (n.kind === 'sub') return now.getTime() + 365 * day;
+  if (n.kind === 'substop') return now.getTime() + 60 * day;
+  if (n.kind === 'substream') return now.getTime() + 182 * day;
+  if (n.kind === 'subprice') return now.getTime() + 30 * day;
+  return now.getTime() + LATER_MS;
+}
 
 export const catName = (k: CatKey) => CATEGORY[k].name;

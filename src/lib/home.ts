@@ -147,14 +147,17 @@ async function signed(path: string | null | undefined): Promise<string | null> {
 
 type TxRow = { id: string; amount: number; kind: string; occurred_at: string; job: unknown; cat: string; note: string | null };
 type Raw = { key: string; at: number; goals: HomeGoal[]; tx: TxRow[] };
+export type { TxRow };
+const NO_TX: TxRow[] = [];
 
 const FRESH_MS = 10_000;
 const store: { raw: Raw | null; inflight: { key: string; p: Promise<Raw> } | null; subs: Set<(r: Raw) => void> } = { raw: null, inflight: null, subs: new Set() };
 
 async function fetchRaw(key: string, userId: string, payday: number | null): Promise<Raw> {
   const p = period(payday);
-  // One spending query covers both this pay cycle and the 60 days the streak needs.
-  const since = new Date(Math.min(p.start.getTime(), Date.now() - 60 * 86_400_000)).toISOString();
+  // One spending query covers this pay cycle, the streak, last pay month, and the ~4 months Kip needs to see a
+  // subscription repeat (3 months running) or stop.
+  const since = new Date(Math.min(p.start.getTime(), Date.now() - 120 * 86_400_000)).toISOString();
   const [{ data: g }, { data: pr }, { data: tx }] = await Promise.all([
     supabase
       .from('goals')
@@ -303,7 +306,7 @@ export function useHome(month: MonthBudget | null) {
   /** The pay month that just ended, as logged (for Kip's "left over" card): no extra request. */
   const last = useMemo(() => (raw ? lastCycleOf(raw.tx, month, payday) : null), [raw, monthShape, payday]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn, dayOf, last };
+  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn, dayOf, last, tx: raw?.tx ?? NO_TX };
 }
 
 /** Last pay month from the loaded rows: spending (not bills), the days something was logged, extra kept for spending. */

@@ -15,7 +15,8 @@ import { paceOf } from '../src/lib/pace';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
-import { billNotice, leftoverNotice, noticesFor, runoutNotice } from '../src/lib/notice';
+import { billNotice, leftoverNotice, noticesFor, runoutNotice, subNotices } from '../src/lib/notice';
+import { cleanName, findPriceChanges, findRepeats, findStopped, foundSubs, streamingTotal } from '../src/lib/subs';
 import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
 
 // ---------- tiny test kit ----------
@@ -845,6 +846,68 @@ for (let n = 0; n < 2000; n++) {
     const rent = editBill(m, 'rent', { perMonth: m.bills.rent, due: { day: 1, remind: 'before' } });
     check('Edit rent: its due day is saved on the month', rent?.month.rentDue?.day === 1, () => rent?.month.rentDue);
     check('Rent: no due day set — no date is guessed', dueBills(m, now).every((x) => x.key !== 'rent'), () => 0);
+  }
+}
+
+
+// ---------- subscription detective ----------
+{
+  const NOWS = new Date(2026, 10, 14, 12);
+  const at = (mo: number, d: number) => new Date(2026, mo, d, 10).toISOString();
+  const spend = (note: string, amount: number, iso: string) => ({ amount, kind: 'spend', occurred_at: iso, note });
+  check('Detective: names are cleaned (codes and numbers go)', cleanName('SPOTIFY P1A2B3 BKK').name === 'Spotify' && cleanName('APPLE.COM/BILL ICLOUD 50GB').name === 'iCloud+' && cleanName('Gym Jetts 2245').name === 'Jetts Fitness', () => [cleanName('SPOTIFY P1A2B3 BKK'), cleanName('APPLE.COM/BILL ICLOUD 50GB')]);
+  const inp = person('trip');
+  if (inp) {
+    const m = month(inp, 'kip', 25);
+    const three = [spend('SPOTIFY P1A2B3 BKK', 129, at(8, 12)), spend('SPOTIFY P9Z BKK', 129, at(9, 12)), spend('Spotify', 129, at(10, 13))];
+    const r = findRepeats(three, m, NOWS);
+    check('Detective: 3 months running at about the same day and amount is a subscription', r.length === 1 && r[0].name === 'Spotify' && r[0].amount === 129 && r[0].day === 12, () => r);
+    check('Detective: 2 months is not enough', findRepeats(three.slice(1), m, NOWS).length === 0, () => 0);
+    check('Detective: a month skipped is not a run', findRepeats([three[0], three[2], spend('Spotify', 129, at(6, 12))], m, NOWS).length === 0, () => 0);
+    check('Detective: more than 10% apart is not the same thing', findRepeats([spend('Shopee', 129, at(8, 12)), spend('Shopee', 400, at(9, 12)), spend('Shopee', 129, at(10, 12))], m, NOWS).length === 0, () => 0);
+    check('Detective: days far apart are not monthly', findRepeats([spend('Grab', 129, at(8, 2)), spend('Grab', 129, at(9, 20)), spend('Grab', 129, at(10, 12))], m, NOWS).length === 0, () => 0);
+    check('Detective: around the month end counts (31st, 1st, 30th)', findRepeats([spend('Netflix', 299, at(7, 31)), spend('Netflix', 299, at(9, 1)), spend('Netflix', 299, at(9, 30))], m, new Date(2026, 10, 2)).length === 1, () => 0);
+    const withBill = addBill(m, 'Spotify', 129, { type: 'streaming', day: 12 }).month;
+    check('Detective: already a bill — no card', findRepeats(three, withBill, NOWS).length === 0, () => 0);
+    check('Detective: stale (last one over 6 weeks ago) — no card', findRepeats(three, m, new Date(2027, 0, 20)).length === 0, () => 0);
+    const cards = subNotices(m, three, NOWS);
+    const sub = cards.find((c) => c.kind === 'sub');
+    check('Detective: the card’s plan adds it with its day and a reminder, and every baht keeps its job', !!sub && sub.kind === 'sub' && (sub.next.bills.items ?? []).some((b) => b.name === 'Spotify' && b.day === 12 && b.remind === 'before') && Math.abs(jobs(sub.next) - sub.next.income) <= 10, () => sub);
+    // Price went up: two payments running at a new price.
+    const yt = addBill(m, 'YouTube Premium', 159, { type: 'streaming', day: 18 }).month;
+    const up = findPriceChanges([spend('YOUTUBE PREMIUM', 179, at(9, 18)), spend('YouTube', 179, at(10, 18))], yt);
+    check('Detective: a bill paid twice at a new price is noticed', up.length === 1 && up[0].was === 159 && up[0].now === 179, () => up);
+    check('Detective: one payment at a new price is not enough', findPriceChanges([spend('YouTube', 179, at(10, 18)), spend('YouTube', 159, at(9, 18))], yt).length === 0, () => 0);
+    const upCard = subNotices(yt, [spend('YouTube', 179, at(9, 18)), spend('YouTube', 179, at(10, 18))], NOWS).find((c) => c.kind === 'subprice');
+    check('Detective: “Make it ฿179” keeps every baht’s job', !!upCard && upCard.kind === 'subprice' && upCard.next.bills.items!.find((b) => b.name === 'YouTube Premium')!.amount === 179 && Math.abs(jobs(upCard.next) - upCard.next.income) <= 10, () => upCard);
+    // Stopped: paid before in what was logged, then nothing for 2 due dates.
+    const viu = addBill(m, 'Viu', 119, { type: 'streaming', day: 5 }).month;
+    check('Detective: no charge for 2 due dates after being paid — noticed', findStopped([spend('VIU', 119, at(7, 5))], viu, NOWS).length === 1, () => 0);
+    check('Detective: never logged — Kip can’t tell, says nothing', findStopped([], viu, NOWS).length === 0, () => 0);
+    check('Detective: paid last month — not stopped', findStopped([spend('VIU', 119, at(7, 5)), spend('VIU', 119, at(10, 5))], viu, NOWS).length === 0, () => 0);
+    const stopCard = subNotices(viu, [spend('VIU', 119, at(7, 5))], NOWS).find((c) => c.kind === 'substop');
+    check('Detective: removing it gives its money back to saving', !!stopCard && stopCard.kind === 'substop' && !(stopCard.next.bills.items ?? []).some((b) => b.name === 'Viu') && stopCard.next.goalExtra === viu.goalExtra + 119, () => stopCard);
+    // Streaming: 2 or more.
+    const two = addBill(addBill(m, 'Netflix', 179, { type: 'streaming' }).month, 'Disney+', 299, { type: 'streaming' }).month;
+    const st = streamingTotal(two);
+    check('Detective: 2 streaming apps — the year’s total', !!st && st.perYear === (179 + 299) * 12, () => st);
+    check('Detective: 1 streaming app — nothing to say', streamingTotal(addBill(m, 'Netflix', 179, { type: 'streaming' }).month) === null, () => 0);
+    // Reading the subscriptions screen.
+    const found = foundSubs(
+      [
+        { name: 'YouTube Premium', amount: 179, period: 'month', renews: '2026-12-18' },
+        { name: 'iCloud+ 50 GB', amount: 35, period: 'month', renews: '2026-12-03' },
+        { name: 'Duolingo', amount: 1290, period: 'year', renews: '2027-03-09' },
+        { name: 'Spotify', amount: 129, period: 'month', renews: '2026-12-12' },
+        { name: 'YouTube Premium', amount: 179, period: 'month', renews: '2026-12-18' },
+      ],
+      withBill,
+      (total, due) => yearlySetAside(total, due, 0, NOWS),
+    );
+    check('Screenshot: each subscription once, ones you have marked', found.length === 4 && found.find((f) => f.name === 'Spotify')?.already === true, () => found);
+    check('Screenshot: renewal day and a yearly one’s month kept', found.find((f) => f.name === 'YouTube Premium')?.day === 18 && found.find((f) => f.name === 'Duolingo')?.due === '2027-03', () => found);
+    const duo = found.find((f) => f.name === 'Duolingo')!;
+    check('Screenshot: a yearly one sets aside enough by its renewal', duo.perMonth * monthsToDue('2027-03', NOWS) >= 1290, () => duo);
   }
 }
 

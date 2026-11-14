@@ -96,6 +96,11 @@ async function install(page, db) {
       (db.kipSent ??= []).push(JSON.parse(r.request().postData() || '{}'));
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.kip.shift()) });
     }
+    // …and the reader: db.readSlip = [reply, …] answers "read-slip" in order (slips or subscription screenshots).
+    if (name === 'read-slip' && db.readSlip && db.readSlip.length) {
+      (db.readSent ??= []).push(JSON.parse(r.request().postData() || '{}'));
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.readSlip.shift()) });
+    }
     return r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'offline in tests' }) });
   });
   await page.route('**/storage/v1/**', (r) => {

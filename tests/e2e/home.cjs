@@ -793,6 +793,61 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  // ---------- Subscription detective ----------
+  scenario('Detective · Spotify 3 months running, not a bill yet');
+  await safely(async () => {
+    const spends = [2, 32, 62].map((d) => ['other', 129, d, 'SPOTIFY P1A2B3 BKK']);
+    const { db } = person({ spends });
+    const before = JSON.stringify(db.profiles[0].budget.bills);
+    const page = await open(browser, { db });
+    const txt = await screenText(page);
+    await check(page, 'Kip’s card: Spotify looks like a subscription, with the 3 payments', /Spotify looks like a subscription/.test(txt) && (txt.match(/฿129/g) ?? []).length >= 4, () => txt.slice(0, 900));
+    await tap(page, visible(page.getByRole('button', { name: 'Add it', exact: true })), { wait: 1500 });
+    const it = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Spotify');
+    const day = new Date(Date.now() - 32 * 86_400_000).getDate();
+    await check(page, 'Add it: Spotify ฿129 in Every month, with its day and a reminder', it && it.amount === 129 && Math.abs(it.day - day) <= 3 && it.remind === 'before', () => it);
+    await check(page, 'Done line says so', /Spotify added · ฿129 a month/.test(await screenText(page)), () => '');
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1500 });
+    await check(page, 'Undo puts Every month back exactly', JSON.stringify(db.profiles[0].budget.bills) === before, () => db.profiles[0].budget.bills);
+    await tap(page, visible(page.getByRole('button', { name: 'Not a bill' })), { wait: 1200 });
+    await check(page, 'Not a bill: the card goes away', !/looks like a subscription/.test(await screenText(page)), () => '');
+    await page.close();
+  });
+
+  scenario('Detective · show Kip your subscriptions screen');
+  await safely(async () => {
+    const { db } = person({ plan: 'trial' });
+    db.readSlip = [
+      {
+        is_list: true,
+        items: [
+          { name: 'YouTube Premium', amount: 179, period: 'month', renews: '2026-12-18' },
+          { name: 'iCloud+', amount: 35, period: 'month', renews: '2026-12-03' },
+          { name: 'Duolingo', amount: 1290, period: 'year', renews: '2027-03-09' },
+        ],
+      },
+    ];
+    const page = await open(browser, { db, path: '/month?subs=1' });
+    const how = await screenText(page);
+    await check(page, 'The sheet says where to find the list and what Kip reads', /Show Kip your subscriptions/.test(how) && /Settings → tap your name → Subscriptions/.test(how), () => how.slice(-700));
+    const png = require('path').join(__dirname, 'out', 'shot.png');
+    await page.screenshot({ path: png, clip: { x: 0, y: 0, width: 200, height: 300 } });
+    const chooser = page.waitForEvent('filechooser', { timeout: 8000 });
+    await tap(page, visible(page.getByRole('button', { name: /^Choose screenshots/ })), { wait: 100 });
+    await (await chooser).setFiles(png);
+    await page.waitForTimeout(4000);
+    const found = await screenText(page);
+    await check(page, 'Kip lists what it read, ticked', /Kip found 3 subscriptions/.test(found) && /YouTube Premium/.test(found) && /Duolingo/.test(found), () => found.slice(-900));
+    await check(page, 'It says what adding them does', /Adds ฿[\d,]+ a month to Every month/.test(found), () => found.slice(-500));
+    await tap(page, visible(page.getByRole('button', { name: /^Add 3 subscriptions$/ })), { wait: 1500 });
+    const items = db.profiles[0].budget.bills.items ?? [];
+    const yt = items.find((b) => b.name === 'YouTube Premium');
+    const duo = items.find((b) => b.name === 'Duolingo');
+    await check(page, 'All 3 added: days, reminders, Duolingo as a yearly bill', yt && yt.day === 18 && yt.remind === 'before' && duo && duo.yearly && duo.yearly.total === 1290 && duo.yearly.due === '2027-03', () => items);
+    await check(page, 'The read asked for a subscriptions list', db.readSent && db.readSent[0].kind === 'subs', () => db.readSent);
+    await page.close();
+  });
+
   // ---------- Sheets close with a drag ----------
   scenario('Sheets · drag down to close');
   await safely(async () => {

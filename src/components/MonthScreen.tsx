@@ -46,6 +46,8 @@ import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, black
 import { DragSheet } from '@/components/DragSheet';
 import { DuePicker } from '@/components/DuePicker';
 import { askReminders } from '@/lib/reminders';
+import { SubsFinder } from '@/components/SubsFinder';
+import { KipStill } from '@/components/KipStill';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -61,6 +63,7 @@ function period(payday: number | null, now = new Date()) {
 type Sheet =
   | null
   | { stage: 'addBill' }
+  | { stage: 'subs' }
   | { stage: 'editBill'; which: number | 'rent' }
   | { stage: 'edit'; key: CatKey }
   | { stage: 'freed'; key: CatKey; to: number }
@@ -75,6 +78,7 @@ export function MonthScreen({
   isPlus = true,
   onLocked,
   openAdd = false,
+  openSubs = false,
   openEdit,
 }: {
   month: MonthBudget | null;
@@ -88,12 +92,14 @@ export function MonthScreen({
   onLocked?: (f: 'styles' | 'customize') => void;
   /** Opened from Home's "Add to every month": the add sheet is open straight away. */
   openAdd?: boolean;
+  /** Opened from Home's "Show Kip your subscriptions". */
+  openSubs?: boolean;
   /** Opened from a bill on Home: that bill's edit sheet is open straight away ('rent' or the bill's name). */
   openEdit?: string;
 }) {
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
-  const [sheet, setSheet] = useState<Sheet>(openAdd ? { stage: 'addBill' } : startEdit === 'rent' || startEdit >= 0 ? { stage: 'editBill', which: startEdit } : null);
+  const [sheet, setSheet] = useState<Sheet>(openSubs ? { stage: 'subs' } : openAdd ? { stage: 'addBill' } : startEdit === 'rent' || startEdit >= 0 ? { stage: 'editBill', which: startEdit } : null);
   const [notice, setNotice] = useState<string | null>(null);
   // Opened from a bill on Home before the plan had loaded: open its sheet once it has.
   const editOpened = useRef(startEdit === 'rent' || startEdit >= 0);
@@ -223,6 +229,11 @@ export function MonthScreen({
               </View>
               <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>{t('Add a bill · Netflix, phone, gym…')}</Text>
             </Pressable>
+            <Pressable onPress={() => setSheet({ stage: 'subs' })} style={styles.addRow} accessibilityRole="button" accessibilityLabel={t('Show Kip your subscriptions')}>
+              <KipStill size={20} />
+              <Text style={{ flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>{t('Show Kip your subscriptions')}</Text>
+              <CaretRight size={14} color={colors.faint} />
+            </Pressable>
           </Glass>
         </RiseIn>
         {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
@@ -313,6 +324,22 @@ export function MonthScreen({
                         .join(', '),
                     }),
               );
+              setSheet(null);
+            }}
+          />
+        )}
+        {sheet?.stage === 'subs' && (
+          <SubsFinder
+            month={month}
+            isPlus={isPlus}
+            onLocked={() => {
+              setSheet(null);
+              onLocked?.('customize');
+            }}
+            onAdd={(next, names) => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              save(next);
+              setNotice(names.length === 1 ? t('{name} added to Every month.', { name: names[0] }) : t('{n} subscriptions added to Every month.', { n: names.length }));
               setSheet(null);
             }}
           />

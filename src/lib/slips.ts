@@ -99,6 +99,40 @@ export async function readSlip(image: string, mediaType: string): Promise<{ ok: 
   return { ok: true, read: data as SlipRead };
 }
 
+/** "Show Kip your subscriptions": one screenshot of the phone's subscriptions list, read by the same reader. */
+export type SubsRead = { is_list: boolean; items?: { name: string; amount: number; period: 'month' | 'year' | 'week'; renews?: string }[] };
+export async function readSubs(image: string, mediaType: string): Promise<{ ok: true; read: SubsRead } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
+  const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+  const timeout = new Promise<{ data: null; error: { context: { status: number } } }>((res) => setTimeout(() => res({ data: null, error: { context: { status: 504 } } }), 60_000));
+  const { data, error } = await Promise.race([supabase.functions.invoke('read-slip', { body: { image, mediaType, today, kind: 'subs' } }), timeout]);
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    if (status === 402) return { ok: false, reason: 'plus' };
+    if (status === 429) return { ok: false, reason: 'limit' };
+    if (status === 403) return { ok: false, reason: 'consent' };
+    if (status === 503) {
+      const body = await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.().catch(() => null);
+      return { ok: false, reason: body?.error === 'no key' ? 'nokey' : 'busy' };
+    }
+    if (status === undefined) return { ok: false, reason: 'offline' };
+    return { ok: false, reason: 'busy' };
+  }
+  if (!data || typeof data !== 'object' || !('is_list' in data)) return { ok: false, reason: 'busy' };
+  return { ok: true, read: data as SubsRead };
+}
+
+/** Open Photos for subscription screenshots (up to 5), ready for Kip. Empty if nothing was picked. */
+export async function pickSubsShots(): Promise<PickedSlip[]> {
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 5, quality: 1 }).catch(() => null);
+  if (!r || r.canceled || !r.assets?.length) return [];
+  const out: PickedSlip[] = [];
+  for (const a of r.assets.slice(0, 5)) {
+    const s = await shrinkSlip(a.uri, a.width);
+    if (s) out.push(s);
+  }
+  return out;
+}
+
 // ---------- picking ----------
 // Photos opens from the + screen (never while a screen is still sliding in — on iPhone that can close
 // the new screen together with Photos), then the picked slips are handed to the Slips screen.

@@ -9,6 +9,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTi
 import Svg, { Path } from 'react-native-svg';
 
 import { Glass } from '@/components/glow/Glass';
+import { KipStill } from '@/components/KipStill';
 import { monthShort, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import type { BillType } from '@/lib/budget';
@@ -218,6 +219,12 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         </View>
         <Text style={styles.addText}>{t('Add to every month')}</Text>
       </Pressable>
+      {/* Subscriptions that never make a bank slip (approved mockup): Kip reads the phone's list */}
+      <Pressable onPress={() => router.push('/month?subs=1')} style={styles.subs} accessibilityRole="button" accessibilityLabel={t('Show Kip your subscriptions')}>
+        <KipStill size={22} />
+        <Text style={[styles.addText, { flex: 1 }]}>{t('Show Kip your subscriptions')}</Text>
+        <Text style={{ color: colors.faint, fontSize: 16 }}>›</Text>
+      </Pressable>
     </View>
   );
 }
@@ -276,6 +283,7 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
 const styles = themed(() =>
   StyleSheet.create({
     soon: { fontFamily: fonts.semibold, color: colors.ink },
+    subs: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: glassA(0.5) },
     editPill: { borderRadius: 999, backgroundColor: inkA(0.06), paddingHorizontal: 10, paddingVertical: 4 },
     editText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
     sum: { marginBottom: 14 },
