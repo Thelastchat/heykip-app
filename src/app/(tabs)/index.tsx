@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
 import { CalendarBlank, CaretRight, Flame, LockSimple, Plus } from 'phosphor-react-native';
-import { useCallback, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +23,7 @@ import { PaceChart } from '@/components/home/PaceChart';
 import { PaceSheet } from '@/components/home/PaceSheet';
 import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
+import { KipDone, KipNotice } from '@/components/home/KipNotice';
 import { DaySheet } from '@/components/DaySheet';
 import { plan as splitMonth, type Style } from '@/lib/brain';
 import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
@@ -35,6 +37,7 @@ import { liteOf } from '@/components/goals/bits';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
+import { LATER_MS, noticesFor, type Notice } from '@/lib/notice';
 import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
@@ -57,7 +60,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
-  const { goals, spent, streak, reload, spendsIn, dayOf } = useHome(month);
+  const { goals, spent, streak, reload, spendsIn, dayOf, last } = useHome(month);
   const [sheet, setSheet] = useState<PlusFeature | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
@@ -137,6 +140,81 @@ export default function Home() {
     refreshProfile();
     reload();
     return null;
+  }
+
+  // ---- Kip notices first (approved mockup): the app's own maths, one card at a time ----
+  const hideKey = session ? `heykip.notices.${session.user.id}` : '';
+  const [hidden, setHidden] = useState<Record<string, number>>({});
+  const [kipDone, setKipDone] = useState<{ text: string; undo: () => Promise<string | null> } | null>(null);
+  const [noticeBusy, setNoticeBusy] = useState(false);
+  const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!hideKey) return;
+    AsyncStorage.getItem(hideKey)
+      .then((v) => {
+        const all = JSON.parse(v ?? '{}') as Record<string, number>;
+        // Forget what's no longer hidden, so the list never grows.
+        setHidden(Object.fromEntries(Object.entries(all).filter(([, until]) => until > Date.now())));
+      })
+      .catch(() => {});
+  }, [hideKey]);
+  useEffect(() => () => void (doneTimer.current && clearTimeout(doneTimer.current)), []);
+  function hide(id: string, until: number | null) {
+    setHidden((h) => {
+      const next = { ...h };
+      if (until) next[id] = until;
+      else delete next[id];
+      if (hideKey) AsyncStorage.setItem(hideKey, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }
+  const noticeGoals = goals.map((g) => ({ ...liteOf(g), title: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never) }));
+  const notices = noticesFor(month, spent, P, last, noticeGoals, hidden, now);
+  const notice = kipDone ? null : notices[0];
+  function showDone(text: string, undo: () => Promise<string | null>) {
+    if (doneTimer.current) clearTimeout(doneTimer.current);
+    setKipDone({ text, undo });
+    // Undo stays for a while, then Kip's line (or the next card) is back.
+    doneTimer.current = setTimeout(() => setKipDone(null), 12_000);
+  }
+  async function doNotice(n: Notice) {
+    if (!month || noticeBusy) return;
+    if (n.kind === 'runout') {
+      const before = month;
+      save(n.next);
+      hide(n.id, P.end.getTime());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      showDone(n.moves.map((m) => `${t(CATEGORY[m.key].name)} ${baht(m.now)}`).join(', '), async () => {
+        save(before);
+        hide(n.id, null);
+        return null;
+      });
+      return;
+    }
+    setNoticeBusy(true);
+    const { error } = await supabase.rpc('put_in_goal', { p_goal: n.goalId, p_amount: n.amount, p_source: 'extra', p_from: 'leftover', p_note: t('Kip: left over last month') });
+    setNoticeBusy(false);
+    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
+    hide(n.id, Date.now() + 40 * 86_400_000);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    reload();
+    showDone(t('{amount} put toward {goal}', { amount: baht(n.amount), goal: n.goalName }), async () => {
+      const { error: e } = await supabase.rpc('take_from_goal', { p_goal: n.goalId, p_amount: n.amount, p_note: t('Undo') });
+      if (e) return t('Couldn’t undo: {msg}', { msg: e.message });
+      hide(n.id, null);
+      reload();
+      return null;
+    });
+  }
+  async function undoNotice() {
+    if (!kipDone || noticeBusy) return;
+    setNoticeBusy(true);
+    const err = await kipDone.undo();
+    setNoticeBusy(false);
+    if (err) return flash(err);
+    if (doneTimer.current) clearTimeout(doneTimer.current);
+    setKipDone(null);
+    flash(t('Undone — back how it was.'));
   }
 
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
@@ -384,19 +462,25 @@ export default function Home() {
         {/* Kip finding slips: only when there's something to set up or something new */}
         <SlipFinder isPlus={isPlus} />
 
-        {/* Kip: one line on Home; tap to read the whole thing */}
+        {/* Kip: one line on Home; tap to read the whole thing. When Kip notices something, the line becomes a card. */}
         <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 16 }}>
-          <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
-            <KipStill size={32} />
-            <Text style={styles.kipText} numberOfLines={1}>
-              <Text style={styles.kipName}>Kip </Text>
-              {say}
-            </Text>
-            <View style={styles.readBtn}>
-              <Text style={styles.readText}>{t('Read')}</Text>
-              <CaretRight size={12} color={colors.muted} weight="bold" />
-            </View>
-          </Squish>
+          {kipDone ? (
+            <KipDone text={kipDone.text} busy={noticeBusy} onUndo={undoNotice} />
+          ) : notice ? (
+            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, Date.now() + LATER_MS)} />
+          ) : (
+            <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
+              <KipStill size={32} />
+              <Text style={styles.kipText} numberOfLines={1}>
+                <Text style={styles.kipName}>Kip </Text>
+                {say}
+              </Text>
+              <View style={styles.readBtn}>
+                <Text style={styles.readText}>{t('Read')}</Text>
+                <CaretRight size={12} color={colors.muted} weight="bold" />
+              </View>
+            </Squish>
+          )}
         </RiseIn>
 
         {/* goal */}

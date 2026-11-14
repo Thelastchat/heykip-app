@@ -364,6 +364,18 @@ const th: Record<string, string> = {
   '{amount} left': 'เหลือ {amount}',
   '{amount} short': 'ขาด {amount}',
   '{amount} spent': 'ใช้ไป {amount}',
+  'Kip: left over last month': 'Kip: เงินเหลือจากเดือนที่แล้ว',
+  '{amount} put toward {goal}': 'ใส่ {amount} เข้า {goal} แล้ว',
+  '{category} won’t last to payday': '{category}ไม่พอใช้ถึงวันเงินเดือนออก',
+  '{amount} left over last month': 'เดือนที่แล้วเหลือ {amount}',
+  'Kip noticed': 'Kip เห็นว่า',
+  'You have **{left}** for {category} and spend about **{perDay} a day**. At this pace it runs out on **{date}**, {n} days before payday.':
+    'งบ{category}เหลือ **{left}** แต่ใช้ไปวันละประมาณ **{perDay}** ถ้าใช้แบบนี้ต่อจะหมดวันที่ **{date}** ก่อนเงินเดือนออก {n} วัน',
+  'Then {category} lasts to payday at about {perDay} a day.': 'แล้ว{category}จะพอถึงวันเงินเดือนออก ถ้าใช้วันละประมาณ {perDay}',
+  'By what you logged, last pay month had **{amount}** left. If it’s still in your account, put it toward {goal}? It arrives **{will}** instead of {was}.':
+    'จากที่จดไว้ รอบเงินเดือนที่แล้วเหลือ **{amount}** ถ้ายังอยู่ในบัญชี ใส่เข้า {goal} ไหม? จะถึงเป้า **{will}** แทน {was}',
+  'By what you logged, last pay month had **{amount}** left. If it’s still in your account, put it toward {goal}?':
+    'จากที่จดไว้ รอบเงินเดือนที่แล้วเหลือ **{amount}** ถ้ายังอยู่ในบัญชี ใส่เข้า {goal} ไหม?',
 };
 
 export default th;

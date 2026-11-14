@@ -655,6 +655,88 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  // ---------- Kip notices first ----------
+  // Pay months that started 15 days ago (for "runs out") and 3 days ago (for "left over"), whatever today is.
+  const dayAgo = (n) => Math.min(28, new Date(Date.now() - n * 86_400_000).getDate());
+  scenario('Kip notices · food won’t last to payday');
+  await safely(async () => {
+    const first = person({ payday: dayAgo(15) });
+    const food = first.budget.spend.find((x) => x.key === 'food').amount;
+    const days = (() => {
+      const t = new Date();
+      const pd = dayAgo(15);
+      const start = new Date(t.getFullYear(), t.getMonth() - (t.getDate() >= pd ? 0 : 1), pd);
+      return Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - start) / 86_400_000);
+    })();
+    // Food spent at a pace that runs out well before payday: 85% of the month's food in the first half.
+    const per = Math.round((food * 0.85) / days);
+    const spends = Array.from({ length: days }, (_, i) => ['food', per, i + 1, 'Lunch']);
+    const { db } = person({ payday: dayAgo(15), spends });
+    const before = JSON.parse(JSON.stringify(db.profiles[0].budget));
+    const page = await open(browser, { db });
+    const txt = await screenText(page);
+    await check(page, 'Kip’s line becomes a card: Food won’t last to payday', /Food & drinks won’t last to payday/.test(txt) && /Kip noticed/.test(txt), () => txt.slice(0, 600));
+    await check(page, 'The card says when it runs out and shows the change', /runs out on/.test(txt) && /Then Food & drinks lasts to payday/.test(txt), () => txt.slice(0, 600));
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })), { wait: 1500 });
+    const after = db.profiles[0].budget;
+    const sum = (b) => b.spend.reduce((a, x) => a + x.amount, 0);
+    const amt = (b, k) => b.spend.find((x) => x.key === k)?.amount ?? 0;
+    await check(page, 'Do it moves money into Food from budgets with room', amt(after, 'food') > amt(before, 'food'), () => ({ before: before.spend, after: after.spend }));
+    await check(page, 'Only budgets move: spending money, bills and saving stay the same', sum(after) === sum(before) && after.goal.amount === before.goal.amount && after.bills.rent === before.bills.rent, () => after);
+    const done = await screenText(page);
+    await check(page, 'A Done line with Undo replaces the card', /Done/.test(done) && (await page.getByRole('button', { name: 'Undo' }).count()) > 0 && !/won’t last to payday/.test(done), () => done.slice(0, 500));
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1500 });
+    await check(page, 'Undo puts the plan back exactly', JSON.stringify(db.profiles[0].budget.spend) === JSON.stringify(before.spend), () => db.profiles[0].budget.spend);
+    await check(page, 'After Undo the card is back', /won’t last to payday/.test(await screenText(page)), () => '');
+    await tap(page, visible(page.getByRole('button', { name: 'Not now' })), { wait: 1200 });
+    const later = await screenText(page);
+    await check(page, 'Not now puts it away; Kip’s line is back', !/won’t last to payday/.test(later) && (await page.getByRole('button', { name: /^Kip says:/ }).count()) > 0, () => later.slice(0, 500));
+    await go(page, '/goals');
+    await go(page, '/');
+    await check(page, 'Still put away after coming back to Home', !/won’t last to payday/.test(await screenText(page)), () => '');
+    await page.close();
+  });
+
+  scenario('Kip notices · on pace, Kip just talks');
+  await safely(async () => {
+    const { db } = person({ payday: dayAgo(15), spends: Array.from({ length: 10 }, (_, i) => ['food', 60, i + 1, 'Coffee']) });
+    const page = await open(browser, { db });
+    await check(page, 'No card when nothing needs a decision', !/Kip noticed/.test(await screenText(page)) && (await page.getByRole('button', { name: /^Kip says:/ }).count()) > 0, () => '');
+    await page.close();
+  });
+
+  scenario('Kip notices · money left over last month');
+  await safely(async () => {
+    // Last pay month logged from its first days on, little spent; the new month started 3 days ago.
+    const spends = Array.from({ length: 29 }, (_, i) => ['food', 120, i + 4, 'Lunch']);
+    const { db } = person({ payday: dayAgo(3), spends });
+    const saved = db.goals[0].saved_amount;
+    const page = await open(browser, { db });
+    const txt = await screenText(page);
+    await check(page, 'Kip asks about last month’s leftover money', /left over last month/.test(txt) && /If it’s still in your account/.test(txt), () => txt.slice(0, 600));
+    const amount = Number((txt.match(/฿([\d,]+) left over last month/) ?? [])[1]?.replace(/,/g, '') ?? 0);
+    await check(page, 'In whole hundreds', amount > 0 && amount % 100 === 0, () => amount);
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })), { wait: 1800 });
+    await check(page, 'Do it puts it toward the goal', db.goals[0].saved_amount === saved + amount && db.writes.includes('rpc put_in_goal ' + amount), () => ({ saved: db.goals[0].saved_amount, writes: db.writes.slice(-3) }));
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1800 });
+    await check(page, 'Undo takes it back out', db.goals[0].saved_amount === saved, () => db.goals[0].saved_amount);
+    await tap(page, visible(page.getByRole('button', { name: 'Keep it' })), { wait: 1200 });
+    await check(page, 'Keep it puts the card away', !/left over last month/.test(await screenText(page)), () => '');
+    await page.close();
+  });
+
+  scenario('Kip notices · Thai');
+  await safely(async () => {
+    const first = person({ payday: dayAgo(15) });
+    const food = first.budget.spend.find((x) => x.key === 'food').amount;
+    const spends = Array.from({ length: 14 }, (_, i) => ['food', Math.round((food * 0.85) / 14), i + 1, 'ข้าว']);
+    const { db } = person({ payday: dayAgo(15), spends });
+    const page = await open(browser, { db, lang: 'th' });
+    const txt = await screenText(page);
+    await check(page, 'The card reads in Thai', /ไม่พอใช้ถึงวันเงินเดือนออก/.test(txt) && /Kip เห็นว่า/.test(txt), () => txt.slice(0, 500));
+    await page.close();
+  });
+
   // ---------- Sheets close with a drag ----------
   scenario('Sheets · drag down to close');
   await safely(async () => {

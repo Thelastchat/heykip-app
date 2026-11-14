@@ -300,7 +300,33 @@ export function useHome(month: MonthBudget | null) {
     [raw],
   );
 
-  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn, dayOf };
+  /** The pay month that just ended, as logged (for Kip's "left over" card): no extra request. */
+  const last = useMemo(() => (raw ? lastCycleOf(raw.tx, month, payday) : null), [raw, monthShape, payday]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { goals: raw?.goals ?? [], spent, streak, loading: raw === null, reload, spendsIn, dayOf, last };
+}
+
+/** Last pay month from the loaded rows: spending (not bills), the days something was logged, extra kept for spending. */
+export function lastCycleOf(tx: { amount: number; kind: string; occurred_at: string; job: unknown; cat: string }[], month: MonthBudget | null, payday: number | null, now = new Date()) {
+  const p = periodAt(payday, -1, now);
+  const from = p.start.getTime();
+  const to = p.end.getTime();
+  let total = 0;
+  let extra = 0;
+  let first = Infinity;
+  const days = new Set<string>();
+  for (const t of tx) {
+    const at = new Date(t.occurred_at).getTime();
+    first = Math.min(first, at);
+    if (at < from || at >= to) continue;
+    days.add(new Date(at).toDateString());
+    if (t.kind === 'income') {
+      const job = (t.job ?? null) as { spend?: number; cats?: Record<string, number> } | null;
+      extra += Number(job?.spend ?? 0) + Object.values(job?.cats ?? {}).reduce((a, n) => a + Number(n ?? 0), 0);
+    } else if (t.kind === 'spend' && budgetKey(t.cat, month) !== 'bills') total += t.amount;
+  }
+  // Logged from the start of that month (by the end of its 3rd day): otherwise its "left over" is just days before HeyKip.
+  return { total, days: days.size, extra, startedBefore: first < from + 4 * 86_400_000 };
 }
 
 /** Consecutive days with at least one log, ending today (or yesterday, so the streak doesn't break before you log today). */

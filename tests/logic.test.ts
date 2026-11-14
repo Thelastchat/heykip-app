@@ -15,6 +15,7 @@ import { paceOf } from '../src/lib/pace';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
+import { leftoverNotice, noticesFor, runoutNotice } from '../src/lib/notice';
 
 // ---------- tiny test kit ----------
 let seed = 20261103;
@@ -708,6 +709,69 @@ for (let n = 0; n < 2000; n++) {
     );
   }
   check('Edit bill: the random runs did real edits', n > 1000, () => n);
+}
+
+
+// ---------- Kip notices first ----------
+{
+  let cards = 0;
+  for (let i = 0; i < 4000; i++) {
+    const inp = person();
+    if (!inp) continue;
+    const m = month(inp);
+    const now = new Date(2026, 10, int(1, 28), 12);
+    const P = period(m.payday, now);
+    // Random spending so far: some budgets fast, some slow, some untouched.
+    const byCat: Spent['byCat'] = {};
+    for (const s of m.spend) if (rand() < 0.8) byCat[s.key] = Math.round(s.amount * (P.dayIndex / P.total) * (rand() * 2.2));
+    const spent: Spent = { total: Object.values(byCat).reduce((a, n) => a + (n ?? 0), 0), today: 0, bills: 0, byCat, byDay: {} };
+    const n = runoutNotice(m, spent, P, now);
+    if (!n) continue;
+    cards++;
+    const left = (k: CatKey) => (n.next.spend.find((x) => x.key === k)?.amount ?? 0) - (byCat[k] ?? 0);
+    check('Kip notices: a move keeps every baht’s job (rent, bills, saving untouched)', Math.abs(jobs(n.next) - n.next.income) <= 10 && billsTotal(n.next) === billsTotal(m) && savingTotal(n.next) === savingTotal(m), () => n.moves);
+    check('Kip notices: only budgets move — the total spending money stays the same', spendingTotal(n.next) === spendingTotal(m), () => n.moves);
+    check('Kip notices: the short budget really runs out before payday at its pace', n.runsOut.getTime() < P.end.getTime() - 86_400_000 && n.daysEarly >= 2, () => n);
+    check('Kip notices: a giver keeps enough for its own days to payday', n.moves.slice(1).every((g) => left(g.key) >= Math.max(0, (byCat[g.key] ?? 0) / Math.max(1, P.dayIndex), amt(m, g.key) / P.total) * P.daysLeft - 50), () => n.moves);
+    check('Kip notices: a giver never goes below what’s already spent on it', n.moves.slice(1).every((g) => left(g.key) >= 0), () => n.moves);
+    check('Kip notices: the card’s numbers are the real ones after the move', n.moves.every((mv) => mv.now === left(mv.key)), () => n.moves);
+    check('Kip notices: worth a card (at least ฿200)', n.moves[0].now - n.moves[0].was >= 200, () => n.moves);
+    // Once done, the same card is put away until payday (Home hides it); Undo brings it back.
+    const after = noticesFor(n.next, spent, P, null, [], { [n.id]: P.end.getTime() }, now);
+    check('Kip notices: after Do it, the same budget isn’t raised again this month', after.every((x) => x.kind !== 'runout' || x.key !== n.key), () => after);
+    const later = noticesFor(m, spent, P, null, [], { [n.id]: now.getTime() + 1 }, now);
+    check('Kip notices: Not now hides it', later.every((x) => x.id !== n.id), () => 0);
+    if (later[0]?.kind === 'runout') check('Kip notices: with one put off, the next budget gets its turn', later[0].key !== n.key, () => later[0]);
+  }
+  check('Kip notices: the random runs made real cards', cards > 300, () => cards);
+
+  // A known case (the mockup): food ฿530 left of ฿4,500, ~฿200 a day, 11 days to payday.
+  const inp = person('trip');
+  if (inp) {
+    const m0 = month(inp, 'kip', 25);
+    const m = { ...m0, spend: m0.spend.map((x) => (x.key === 'food' ? { ...x, amount: 4500 } : x.key === 'transport' ? { ...x, amount: 1500 } : x)) };
+    const now = new Date(2026, 10, 14, 12);
+    const P = period(25, now);
+    const spent: Spent = { total: 4570, today: 0, bills: 0, byCat: { food: 3970, transport: 600 }, byDay: {} };
+    const n = runoutNotice(m, spent, P, now);
+    check('Kip notices: food running out mid-month makes a card', !!n && n.key === 'food' && n.left === 530, () => n);
+    const calm: Spent = { total: 2000, today: 0, bills: 0, byCat: { food: 2000 }, byDay: {} };
+    check('Kip notices: on pace, Kip says nothing', runoutNotice(m, calm, P, now) === null, () => 0);
+    check('Kip notices: too early in the month to judge', runoutNotice(m, spent, period(25, new Date(2026, 9, 27, 12)), new Date(2026, 9, 27, 12)) === null, () => 0);
+
+    // Left over: only early in the new month, only when last month was logged well, from its start.
+    const lites = [{ ...lite('g1', 'trip', 60000, 5000, null), title: 'Japan' }];
+    const early = new Date(2026, 9, 27, 12);
+    const Pe = period(25, early);
+    const budget = spendingTotal(m);
+    const good = leftoverNotice(m, { total: budget - 950, days: 25, extra: 0, startedBefore: true }, Pe, lites, early);
+    check('Left over: a well-logged month with money left makes a card (whole ฿100s)', !!good && good.amount === 900, () => good);
+    check('Left over: too few days logged — no card', leftoverNotice(m, { total: budget - 3000, days: 6, extra: 0, startedBefore: true }, Pe, lites, early) === null, () => 0);
+    check('Left over: started mid-month — no card', leftoverNotice(m, { total: budget - 3000, days: 25, extra: 0, startedBefore: false }, Pe, lites, early) === null, () => 0);
+    check('Left over: after the first week — no card', leftoverNotice(m, { total: budget - 3000, days: 25, extra: 0, startedBefore: true }, P, lites, now) === null, () => 0);
+    check('Left over: spent it all — no card', leftoverNotice(m, { total: budget, days: 25, extra: 0, startedBefore: true }, Pe, lites, early) === null, () => 0);
+    check('Left over: the goal arrives no later', !good || !good.will || !good.was || good.will.getTime() <= good.was.getTime(), () => good);
+  }
 }
 
 // ---------- report ----------
