@@ -101,7 +101,8 @@ export const sheet = themed(() =>
       maxHeight: '92%',
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
-      backgroundColor: colors.sheet,
+      // Solid, like every other sheet: text behind a see-through sheet shows through and reads as a mess.
+      backgroundColor: colors.sheet.replace(/,\s*[\d.]+\)$/, ',1)'),
       paddingTop: 10,
       paddingHorizontal: 18,
       gap: 12,

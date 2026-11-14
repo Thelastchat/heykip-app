@@ -707,9 +707,10 @@ module.exports = async function homeTests(browser) {
 
   scenario('Kip notices · money left over last month');
   await safely(async () => {
-    // Last pay month logged from its first days on, little spent; the new month started 3 days ago.
-    const spends = Array.from({ length: 29 }, (_, i) => ['food', 120, i + 4, 'Lunch']);
-    const { db } = person({ payday: dayAgo(3), spends });
+    // Last pay month logged from its first days on, little spent; the new month started 6 days ago (after the
+    // payday recap's days, which carry this card while they last).
+    const spends = Array.from({ length: 29 }, (_, i) => ['food', 120, i + 7, 'Lunch']);
+    const { db } = person({ payday: dayAgo(6), spends });
     const saved = db.goals[0].saved_amount;
     const page = await open(browser, { db });
     const txt = await screenText(page);
@@ -845,6 +846,61 @@ module.exports = async function homeTests(browser) {
     const duo = items.find((b) => b.name === 'Duolingo');
     await check(page, 'All 3 added: days, reminders, Duolingo as a yearly bill', yt && yt.day === 18 && yt.remind === 'before' && duo && duo.yearly && duo.yearly.total === 1290 && duo.yearly.due === '2027-03', () => items);
     await check(page, 'The read asked for a subscriptions list', db.readSent && db.readSent[0].kind === 'subs', () => db.readSent);
+    await page.close();
+  });
+
+  // ---------- Payday recap ----------
+  // The new pay month started 2 days ago; last month logged on most days, food well over, shopping barely used.
+  const recapSeed = (plan) => {
+    const pd = dayAgo(2);
+    const first = person({ payday: pd, plan });
+    const food = first.budget.spend.find((x) => x.key === 'food').amount;
+    const spends = [];
+    for (let d = 3; d < 31; d++) spends.push(['food', Math.round((food * 1.25) / 28), d, 'Lunch']);
+    spends.push(['shopping', 200, 10, 'Shopee']);
+    return person({ payday: pd, plan, spends });
+  };
+  scenario('Recap · payday, Plus');
+  await safely(async () => {
+    const { db } = recapSeed('trial');
+    const before = JSON.parse(JSON.stringify(db.profiles[0].budget.spend));
+    db.kipDo = [{ ok: true, reply: 'Most of the food money went on weekday lunches. Shopping hardly moved.', picks: [] }];
+    const page = await open(browser, { db });
+    const card = await screenText(page);
+    await check(page, 'The recap card leads Home on payday', /Payday recap/.test(card) && /in a minute/.test(card) && /Kip suggests/.test(card), () => card.slice(0, 900));
+    await tap(page, visible(page.getByRole('button', { name: 'Read the recap' })), { wait: 2500 });
+    const sheet = await screenText(page);
+    await check(page, 'The recap: how it went, saving, what Kip noticed', /How it went/.test(sheet) && /Food & drinks/.test(sheet) && /weekday lunches/.test(sheet), () => sheet.slice(-1200));
+    await check(page, 'Kip was asked once, with numbers and suggestion ids', db.kipDoSent?.length === 1 && db.kipDoSent[0].task === 'recap' && db.kipDoSent[0].context.suggestions.length > 0, () => db.kipDoSent);
+    await check(page, 'It suggests moving money to Food from a budget that stayed under', /Move ฿[\d,]+ from [A-Za-z &]+ to Food & drinks/.test(sheet), () => sheet.slice(-900));
+    await tap(page, visible(page.getByRole('button', { name: /^Do it: Move/ })), { wait: 1200 });
+    const after = db.profiles[0].budget.spend;
+    const amt = (sp, k) => sp.find((x) => x.key === k).amount;
+    await check(page, 'Do it: Food up, another budget down by the same amount', amt(after, 'food') > amt(before, 'food') && after.reduce((a, x) => a + x.amount, 0) === before.reduce((a, x) => a + x.amount, 0), () => ({ before, after }));
+    await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1200 });
+    await check(page, 'Undo puts the month back', JSON.stringify(db.profiles[0].budget.spend) === JSON.stringify(before), () => db.profiles[0].budget.spend);
+    await page.close();
+  });
+
+  scenario('Recap · Free sees the numbers');
+  await safely(async () => {
+    const { db } = recapSeed('free');
+    const page = await open(browser, { db });
+    const card = await screenText(page);
+    await check(page, 'Free: the numbers and what went most over, Kip’s part is Plus', /in a minute/.test(card) && /Most over: /.test(card) && /What Kip noticed \+ changes/.test(card), () => card.slice(0, 900));
+    await check(page, 'Free: Kip is not asked', !(db.writes ?? []).some((w) => /kip-do/.test(w)), () => db.writes);
+    await page.close();
+  });
+
+  scenario('Recap · stays in History');
+  await safely(async () => {
+    const { db } = recapSeed('trial');
+    db.kipDo = [{ ok: true, reply: 'Lunches again.', picks: [] }];
+    const page = await open(browser, { db, path: '/history' });
+    const txt = await screenText(page);
+    await check(page, 'History has last month’s recap at the top', / recap/.test(txt), () => txt.slice(0, 500));
+    await tap(page, visible(page.getByRole('button', { name: / recap$/ })), { wait: 3000 });
+    await check(page, 'Opening it shows the recap', /How it went/.test(await screenText(page)), () => '');
     await page.close();
   });
 

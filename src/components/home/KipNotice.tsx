@@ -7,10 +7,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { KipStill } from '@/components/KipStill';
 import { Squish } from '@/components/glow/motion';
 import { CATEGORY } from '@/lib/budget';
-import { monthShort, rich, t } from '@/lib/i18n';
+import { monthLong, monthShort, rich, t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import type { Notice } from '@/lib/notice';
+import type { Recap } from '@/lib/recap';
 import { monthYear, ordinal } from '@/lib/setup/plan';
 import { colors, fonts, inkA, themed } from '@/theme';
 
@@ -18,9 +19,10 @@ const B = (s: string) => <Text style={{ fontFamily: fonts.semibold, color: color
 const O = (s: string) => <Text style={{ fontFamily: fonts.semibold, color: colors.orangeText }}>{s}</Text>;
 const day = (d: Date) => `${d.getDate()} ${monthShort(d.getMonth())}`;
 
-type Props = { notice: Notice; index: number; count: number; busy: boolean; onDo: () => void; onLater: () => void };
+type Props = { notice: Notice; index: number; count: number; busy: boolean; isPlus?: boolean; onDo: () => void; onLater: () => void; onLocked?: () => void };
 
-export function KipNotice({ notice: n, index, count, busy, onDo, onLater }: Props) {
+export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo, onLater, onLocked }: Props) {
+  if (n.kind === 'recap') return <RecapCard r={n.recap} isPlus={isPlus} onRead={onDo} onLater={onLater} onLocked={onLocked} />;
   const billName = n.kind === 'billdue' ? (n.key === 'rent' ? t('Rent') : n.name) : '';
   const title =
     n.kind === 'runout'
@@ -151,6 +153,74 @@ export function KipNotice({ notice: n, index, count, busy, onDo, onLater }: Prop
   );
 }
 
+/** Payday (approved mockup): last month in a minute. Plus reads the full recap; Free sees the numbers. */
+function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus: boolean; onRead: () => void; onLater: () => void; onLocked?: () => void }) {
+  const name = monthLong(r.month.getMonth());
+  const over = r.left < 0;
+  return (
+    <View style={styles.card} accessibilityLabel={t('Payday recap: your {month}', { month: name })}>
+      <View style={styles.top}>
+        <KipStill size={26} />
+        <Text style={styles.kicker}>{t('Payday recap')}</Text>
+      </View>
+      <Text style={styles.title}>{t('Your {month}, in a minute', { month: name })}</Text>
+      <Text style={styles.body}>
+        {over
+          ? rich('You went **{amount}** over your plan.', { amount: baht(-r.left) }, O)
+          : rich('You stayed inside your plan, with **{amount} left**.', { amount: baht(r.left) }, B)}
+        {r.goal ? ' ' : ''}
+        {r.goal
+          ? r.goal.arrives
+            ? rich('{goal} gets **{amount}** a month and is on track for **{date}**.', { goal: r.goal.name, amount: baht(r.goal.perMonth), date: monthYear(r.goal.arrives) }, B)
+            : rich('{goal} gets **{amount}** a month.', { goal: r.goal.name, amount: baht(r.goal.perMonth) }, B)
+          : null}
+      </Text>
+      <View style={styles.two}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.k}>{t('Spent')}</Text>
+          <Text style={styles.v}>
+            {baht(r.spent)} <Text style={styles.k}>{t('of {amount}', { amount: baht(r.plan) })}</Text>
+          </Text>
+        </View>
+        <View style={styles.twoR}>
+          {isPlus && r.suggestions.length ? (
+            <>
+              <Text style={styles.k}>{t('Kip suggests')}</Text>
+              <Text style={styles.v}>{r.suggestions.length === 1 ? t('1 change') : t('{n} changes', { n: r.suggestions.length })}</Text>
+            </>
+          ) : r.mostOver ? (
+            <>
+              <Text style={styles.k} numberOfLines={1}>
+                {t('Most over: {category}', { category: t(CATEGORY[r.mostOver.key].name) })}
+              </Text>
+              <Text style={[styles.v, { color: colors.orangeText }]}>+{baht(r.mostOver.spent - r.mostOver.plan)}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.k}>{t('Days logged')}</Text>
+              <Text style={styles.v}>{r.facts.days}</Text>
+            </>
+          )}
+        </View>
+      </View>
+      {!isPlus && (
+        <Squish style={styles.lock} onPress={() => onLocked?.()} accessibilityRole="button">
+          <Text style={styles.lockT}>{t('What Kip noticed + changes')}</Text>
+          <Text style={styles.kicker}>Plus</Text>
+        </Squish>
+      )}
+      <View style={styles.btns}>
+        <Squish style={styles.do} onPress={onRead} accessibilityRole="button" accessibilityLabel={t('Read the recap')}>
+          <Text style={styles.doT}>{t('Read the recap')}</Text>
+        </Squish>
+        <Squish style={styles.no} onPress={onLater} accessibilityRole="button" accessibilityLabel={t('Later')}>
+          <Text style={styles.noT}>{t('Later')}</Text>
+        </Squish>
+      </View>
+    </View>
+  );
+}
+
 /** After Do it: what changed, with Undo. */
 export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => void; busy: boolean }) {
   return (
@@ -169,6 +239,12 @@ export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => vo
 const shadow = '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)';
 const styles = themed(() =>
   StyleSheet.create({
+    two: { flexDirection: 'row', marginTop: 12, borderRadius: 16, backgroundColor: inkA(0.04), paddingHorizontal: 12, paddingVertical: 10 },
+    twoR: { flex: 1, borderLeftWidth: 1, borderLeftColor: inkA(0.08), paddingLeft: 12 },
+    k: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+    v: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
+    lock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 44, marginTop: 10, borderRadius: 999, backgroundColor: inkA(0.05), paddingHorizontal: 16 },
+    lockT: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
     card: { borderRadius: 26, backgroundColor: colors.paper, padding: 16, boxShadow: shadow },
     top: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     kicker: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted },

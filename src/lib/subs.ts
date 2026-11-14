@@ -10,7 +10,7 @@ import type { BillItem, MonthBudget } from '@/lib/budget';
 import { dateIn } from '@/lib/billdue';
 import { guessType } from '@/lib/everymonth';
 
-export type LoggedTx = { amount: number; kind: string; occurred_at: string; note: string | null };
+export type LoggedTx = { amount: number; kind: string; occurred_at: string; note: string | null; cat?: string };
 
 /** Names people know, from what bank slips and app stores print ("SPOTIFY P1A2B3 BKK" → Spotify). */
 const KNOWN: [RegExp, string][] = [

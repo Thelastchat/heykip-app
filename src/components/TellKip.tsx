@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, savedVoiceLang, useVoice, voiceModule } from '@/lib/voice';
 import { colors, fonts, inkA, themed } from '@/theme';
 
-export type KipTask = 'extra' | 'over' | 'month';
+export type KipTask = 'extra' | 'over' | 'month' | 'recap';
 type Reason = 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit';
 
 /** Ask Kip to turn what was said into a change for this sheet. The app checks the answer before showing it. */

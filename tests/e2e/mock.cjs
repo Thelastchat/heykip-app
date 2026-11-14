@@ -96,6 +96,11 @@ async function install(page, db) {
       (db.kipSent ??= []).push(JSON.parse(r.request().postData() || '{}'));
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.kip.shift()) });
     }
+    // …and Kip's sheets and the recap: db.kipDo = [reply, …] answers "kip-do" in order.
+    if (name === 'kip-do' && db.kipDo && db.kipDo.length) {
+      (db.kipDoSent ??= []).push(JSON.parse(r.request().postData() || '{}'));
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.kipDo.shift()) });
+    }
     // …and the reader: db.readSlip = [reply, …] answers "read-slip" in order (slips or subscription screenshots).
     if (name === 'read-slip' && db.readSlip && db.readSlip.length) {
       (db.readSent ??= []).push(JSON.parse(r.request().postData() || '{}'));

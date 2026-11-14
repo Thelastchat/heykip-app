@@ -3,7 +3,7 @@
 // that; tap an entry to change its category; swipe left to delete. Home updates when you come back.
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CaretLeft, CaretRight } from 'phosphor-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -26,6 +26,9 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, inkA, themed } from '@/theme';
+import { liteOf } from '@/components/goals/bits';
+import { recapFor } from '@/lib/recap';
+import { shortName } from '@/lib/setup/plan';
 
 type Entry = { id: string; kind: 'spend' | 'income'; amount: number; note: string | null; occurred_at: string; source: string; cat: string };
 
@@ -49,7 +52,16 @@ export default function History() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { month } = useMonth();
-  const { spent } = useHome(month);
+  const { spent, tx, last, goals } = useHome(month);
+  // Last pay month's recap (approved mockup) stays here, at the top, for the whole of this pay month.
+  const recap = recapFor(
+    month,
+    tx,
+    last,
+    goals.map((g) => ({ ...liteOf(g), title: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never) })),
+    new Date(),
+    40,
+  );
   const payday = month?.payday ?? null;
   const [offset, setOffset] = useState(0); // 0 = this pay cycle, -1 = the one before…
   const [rows, setRows] = useState<Entry[] | null>(null);
@@ -183,6 +195,15 @@ export default function History() {
       <GlowBackground />
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingHorizontal: 18, paddingBottom: insets.bottom + 40, gap: 10 }}>
         <ScreenHeader title={t('History')} />
+        {recap && offset === 0 ? (
+          <Squish onPress={() => router.push('/?recap=1' as never)} accessibilityRole="button" accessibilityLabel={t('{month} recap', { month: monthLong(recap.month.getMonth()) })}>
+            <Glass radius={20} innerStyle={styles.recapRow}>
+              <Text style={styles.recapT}>{t('{month} recap', { month: monthLong(recap.month.getMonth()) })}</Text>
+              <Text style={styles.range}>{t('{spent} of {plan} spent', { spent: baht(recap.spent), plan: baht(recap.plan) })}</Text>
+              <CaretRight size={14} color={colors.faint} />
+            </Glass>
+          </Squish>
+        ) : null}
 
         {/* which month */}
         <View style={styles.switcher}>
@@ -368,6 +389,8 @@ function Row({ entry, first, onDelete, onPress }: { entry: Entry; first: boolean
 
 const styles = themed(() =>
   StyleSheet.create({
+    recapRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, height: 52 },
+    recapT: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     switcher: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
     arrow: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     month: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.5, color: colors.ink },

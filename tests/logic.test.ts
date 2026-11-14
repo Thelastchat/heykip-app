@@ -16,6 +16,7 @@ import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
 import { billNotice, leftoverNotice, noticesFor, runoutNotice, subNotices } from '../src/lib/notice';
+import { recapContext, recapFor } from '../src/lib/recap';
 import { cleanName, findPriceChanges, findRepeats, findStopped, foundSubs, streamingTotal } from '../src/lib/subs';
 import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
 
@@ -909,6 +910,45 @@ for (let n = 0; n < 2000; n++) {
     const duo = found.find((f) => f.name === 'Duolingo')!;
     check('Screenshot: a yearly one sets aside enough by its renewal', duo.perMonth * monthsToDue('2027-03', NOWS) >= 1290, () => duo);
   }
+}
+
+
+// ---------- payday recap ----------
+{
+  let made = 0;
+  for (let i = 0; i < 1500; i++) {
+    const inp = person();
+    if (!inp) continue;
+    const m = month(inp, pick(['kip', '503020', 'jars'] as const), pick([1, 15, 25, 28]));
+    const now = new Date(2026, int(0, 11), int(1, 28), 12);
+    const P = period(m.payday, now);
+    const prev = periodAt(m.payday, -1, now);
+    const tx: { amount: number; kind: string; occurred_at: string; note: string | null; cat: string }[] = [];
+    for (let d = new Date(prev.start); d < prev.end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+      if (rand() < 0.3) continue;
+      for (const s of m.spend) if (rand() < 0.4) tx.push({ amount: Math.round((s.amount / prev.total) * (s.key === 'food' ? 3 + rand() * 2 : 0.2 + rand() * 1.4)), kind: 'spend', occurred_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).toISOString(), note: 'x', cat: s.key });
+    }
+    const days = new Set(tx.map((x) => new Date(x.occurred_at).toDateString())).size;
+    const last = { total: tx.reduce((a, x) => a + x.amount, 0), days, extra: 0, startedBefore: true };
+    const r = recapFor(m, tx, last, [{ ...lite('g1', 'trip', 60000, 5000, null), title: 'Japan' }], now);
+    const should = P.dayIndex < 5 && days >= Math.ceil(prev.total / 2);
+    check('Recap: only in the first days of a new pay month, and only when last month was logged on half its days', !!r === should, () => ({ dayIndex: P.dayIndex, days, total: prev.total }));
+    if (!r) continue;
+    made++;
+    check('Recap: spent is what was logged last pay month', r.spent === last.total, () => ({ spent: r.spent, logged: last.total }));
+    check('Recap: left = plan − spent', r.left === r.plan - r.spent, () => r);
+    check('Recap: at most 3 suggestions, each once', r.suggestions.length <= 3 && new Set(r.suggestions.map((x) => x.id)).size === r.suggestions.length, () => r.suggestions.map((x) => x.id));
+    for (const sg of r.suggestions)
+      if (sg.kind === 'move') {
+        const to = r.cats.find((c) => c.key === sg.to)!;
+        const from = r.cats.find((c) => c.key === sg.from)!;
+        check('Recap: a move goes from a budget that stayed under to one that ran over, no more than either', to.spent > to.plan && from.plan - from.spent >= sg.amount && to.spent - to.plan >= sg.amount && sg.amount % 100 === 0, () => ({ sg: { ...sg, next: 0 }, to, from }));
+        check('Recap: a move keeps every baht’s job', Math.abs(jobs(sg.next) - sg.next.income) <= 10 && spendingTotal(sg.next) === spendingTotal(m), () => sg.id);
+      }
+    const ctx = recapContext(r);
+    check('Recap: Kip is told the suggestions by id, and only numbers', ctx.suggestions.length === r.suggestions.length && ctx.suggestions.every((x, k) => x.id === r.suggestions[k].id), () => ctx.suggestions);
+  }
+  check('Recap: the random runs made real recaps', made > 100, () => made);
 }
 
 // ---------- report ----------

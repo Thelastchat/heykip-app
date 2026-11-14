@@ -58,6 +58,35 @@ const TOOLS: Record<string, object> = {
       required: ['ok', 'reply'],
     },
   },
+  recap: {
+    name: 'recap',
+    description: 'The payday recap: what you noticed, and which of the given suggestions to show.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ok,
+        reply: {
+          type: 'string',
+          description:
+            '“Kip noticed”: 2–3 short, warm sentences in their language about a pattern in last month — e.g. weekdays vs weekends, what they bought most often, which budget had room. Only numbers from the context. Do not repeat the totals already shown (spent, plan, left).',
+        },
+        picks: {
+          type: 'array',
+          description: 'Up to 3 of context.suggestions, most useful first. Use their ids exactly; never make one up.',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string', description: 'a short friendly title, max 40 characters, e.g. “Give lunches what they really cost”' },
+              why: { type: 'string', description: 'one short reason, max 80 characters, numbers only from the context' },
+            },
+            required: ['id', 'title', 'why'],
+          },
+        },
+      },
+      required: ['ok', 'reply'],
+    },
+  },
   month: {
     name: 'change',
     description: 'Changes to this month’s plan. Only categories and bills in the context.',
@@ -92,6 +121,8 @@ const TOOLS: Record<string, object> = {
 };
 
 const JOB: Record<string, string> = {
+  recap:
+    'It is payday. You are writing the person’s recap of the pay month that just ended (context: their real numbers, already worked out by the app). Notice one or two useful patterns and pick which suggestions to show. You cannot change anything yourself; the app shows each suggestion with its exact numbers and a Do it button.',
   extra:
     'The person just got extra money (context.extra baht) and is telling you what to do with it. You can ONLY split it between: their goals (context.goals), the safety net (if context.safety is true), this month’s spending money, or one spending category this month. You cannot buy, invest, transfer, pay anyone, or do anything else — for that, ok=false and say what you can do.',
   over: 'The person spent more than today’s money (context.over baht over). They tell you how to pay for it. You can ONLY: spread it over the days left (days), take it from this month’s goal saving (goal, at most context.goal_saving), or from the safety net (safety, at most context.safety_saved). "Take it from fun/shopping" is not possible because today’s money already includes those — say so kindly and suggest spreading it or the goal saving (ok=false).',

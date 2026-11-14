@@ -2,10 +2,10 @@
 // Today's money first, then the week, Kip, your goal, what's left per category, Plus, and the bills.
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CalendarBlank, CaretRight, Flame, LockSimple, Plus } from 'phosphor-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,19 +26,22 @@ import { KipSheet } from '@/components/home/KipSheet';
 import { KipDone, KipNotice } from '@/components/home/KipNotice';
 import { DaySheet } from '@/components/DaySheet';
 import { plan as splitMonth, type Style } from '@/lib/brain';
-import { CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
-import { monthNumbers, overCover, periodKey, useHome, type HomeGoal } from '@/lib/home';
+import { monthNumbers, overCover, period, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
 import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
-import { dueLabel, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
+import { dueLabel, guessType, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
 import { liteOf } from '@/components/goals/bits';
 import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dueBills, nextDue } from '@/lib/billdue';
+import { applyOps } from '@/lib/monthops';
 import { laterFor, noticesFor, type Notice } from '@/lib/notice';
+import { recapFor, type Recap, type Suggestion } from '@/lib/recap';
+import { RecapSheet } from '@/components/home/RecapSheet';
 import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
@@ -169,8 +172,26 @@ export default function Home() {
       return next;
     });
   }
-  const noticeGoals = goals.map((g) => ({ ...liteOf(g), title: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never) }));
-  const notices = noticesFor(month, spent, P, last, noticeGoals, hidden, now, tx);
+  const noticeGoals = useMemo(() => goals.map((g) => ({ ...liteOf(g), title: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never) })), [goals]);
+  // Payday recap (approved mockup): the first days of a new pay month, once it's been opened it moves to History.
+  const today = now.toDateString();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const recap = useMemo(() => recapFor(month, tx, last, noticeGoals, new Date()), [month, tx, last, noticeGoals, today]);
+  // From History: last month's recap, any day of this pay month.
+  const { recap: recapParam } = useLocalSearchParams<{ recap?: string }>();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const recapAny = useMemo(() => (recapParam === '1' ? recapFor(month, tx, last, noticeGoals, new Date(), 40) : recap), [recapParam, recap, month, tx, last, noticeGoals]);
+  const [recapOpen, setRecapOpenRaw] = useState<Recap | null>(null);
+  const setRecapOpen = (on: boolean) => setRecapOpenRaw(on ? recapAny : null);
+  useEffect(() => {
+    if (recapParam === '1' && recapAny) {
+      setRecapOpenRaw(recapAny);
+      router.setParams({ recap: undefined } as never);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recapParam, !!recapAny]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const notices = useMemo(() => noticesFor(month, spent, period(month?.payday ?? null), last, noticeGoals, hidden, new Date(), tx, recap), [month, spent, last, noticeGoals, hidden, tx, recap, today]);
   const notice = kipDone ? null : notices[0];
   function showDone(text: string, undo: () => Promise<string | null>) {
     if (doneTimer.current) clearTimeout(doneTimer.current);
@@ -223,20 +244,57 @@ export default function Home() {
       hide(n.id, laterFor(n, new Date()));
       return;
     }
+    if (n.kind === 'recap') {
+      // Opened: the card's done for this pay month; the recap stays in History.
+      hide(n.id, P.end.getTime());
+      setRecapOpen(true);
+      return;
+    }
     setNoticeBusy(true);
-    const { error } = await supabase.rpc('put_in_goal', { p_goal: n.goalId, p_amount: n.amount, p_source: 'extra', p_from: 'leftover', p_note: t('Kip: left over last month') });
+    const r = await putLeftover(n);
     setNoticeBusy(false);
-    if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
+    if (typeof r === 'string') return flash(r);
+    showDone(r.text, r.undo);
+  }
+  /** Left over → the goal (put_in_goal; Undo takes it back out). */
+  async function putLeftover(n: Extract<Notice, { kind: 'leftover' }>): Promise<{ text: string; undo: () => Promise<string | null> } | string> {
+    const { error } = await supabase.rpc('put_in_goal', { p_goal: n.goalId, p_amount: n.amount, p_source: 'extra', p_from: 'leftover', p_note: t('Kip: left over last month') });
+    if (error) return t('Couldn’t save: {msg}', { msg: error.message });
     hide(n.id, Date.now() + 40 * 86_400_000);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     reload();
-    showDone(t('{amount} put toward {goal}', { amount: baht(n.amount), goal: n.goalName }), async () => {
-      const { error: e } = await supabase.rpc('take_from_goal', { p_goal: n.goalId, p_amount: n.amount, p_note: t('Undo') });
-      if (e) return t('Couldn’t undo: {msg}', { msg: e.message });
-      hide(n.id, null);
-      reload();
-      return null;
-    });
+    return {
+      text: t('{amount} put toward {goal}', { amount: baht(n.amount), goal: n.goalName }),
+      undo: async () => {
+        const { error: e } = await supabase.rpc('take_from_goal', { p_goal: n.goalId, p_amount: n.amount, p_note: t('Undo') });
+        if (e) return t('Couldn’t undo: {msg}', { msg: e.message });
+        hide(n.id, null);
+        reload();
+        return null;
+      },
+    };
+  }
+  /** A recap suggestion, made on the month as it is now (an earlier one may have changed it). */
+  async function applySuggestion(sg: Suggestion): Promise<{ text: string; undo: () => Promise<string | null> } | string> {
+    if (!month) return t('Your plan isn’t loaded yet — try again in a moment.');
+    if (sg.kind === 'leftover') return putLeftover(sg.notice);
+    const before = month;
+    const next = sg.kind === 'move' ? applyOps(month, [{ op: 'move', from: sg.from, to: sg.to, amount: sg.amount }]) : (() => {
+      const r = addBill(month, sg.notice.name, sg.notice.amount, { type: guessType(sg.notice.name), day: sg.notice.day, remind: 'before' });
+      return r.short > 0 ? null : r.month;
+    })();
+    if (!next) return t('That doesn’t fit your month any more.');
+    save(next);
+    if (sg.kind === 'sub') hide(sg.id, Date.now() + 365 * 86_400_000);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    return {
+      text: '',
+      undo: async () => {
+        save(before);
+        if (sg.kind === 'sub') hide(sg.id, null);
+        return null;
+      },
+    };
   }
   async function undoNotice() {
     if (!kipDone || noticeBusy) return;
@@ -501,7 +559,14 @@ export default function Home() {
           {kipDone ? (
             <KipDone text={kipDone.text} busy={noticeBusy} onUndo={undoNotice} />
           ) : notice ? (
-            <KipNotice notice={notice} index={0} count={notices.length} busy={noticeBusy} onDo={() => doNotice(notice)} onLater={() => hide(notice.id, laterFor(notice, new Date()))} />
+            <KipNotice
+              notice={notice}
+              index={0}
+              count={notices.length}
+              busy={noticeBusy}
+              isPlus={isPlus}
+              onLocked={() => setSheet('talk')}
+              onDo={() => doNotice(notice)} onLater={() => hide(notice.id, laterFor(notice, new Date()))} />
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />
@@ -622,6 +687,21 @@ export default function Home() {
             .slice(0, 3)}
           onCat={(k) => setCatOpen(k)}
           onClose={() => setPaceOpen(false)}
+        />
+      )}
+      {recapOpen && month && (
+        <RecapSheet
+          recap={recapOpen}
+          month={month}
+          isPlus={isPlus}
+          goalSaved={goal?.saved ?? 0}
+          onApply={applySuggestion}
+          onSkip={(sg) => hide(sg.id, sg.kind === 'sub' ? Date.now() + 365 * 86_400_000 : Date.now() + 40 * 86_400_000)}
+          onLocked={() => {
+            setRecapOpen(false);
+            setSheet('talk');
+          }}
+          onClose={() => setRecapOpen(false)}
         />
       )}
       {dayOpen && <DaySheet day={dayOpen} {...dayOf(dayOpen)} daily={dailyPlan} onClose={() => setDayOpen(null)} />}
