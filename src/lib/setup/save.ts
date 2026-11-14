@@ -44,7 +44,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   const monthly = draft.goalKind === 'monthly';
   const goal = {
     user_id: userId,
-    title: draft.goalTitle.trim(),
+    title: draft.goalTitle.trim() || (draft.goalKind === 'monthly' ? t('My savings') : ''),
     kind: draft.goalKind,
     goal_type: draft.goalType,
     target_amount: monthly ? (draft.goalMonthly ?? 0) * 12 : draft.goalTarget,

@@ -904,6 +904,26 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  // ---------- Saving first: a calmer goal card ----------
+  scenario('Saving first · no day counts, the photo card stays');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db });
+    const home = await screenText(page);
+    await check(page, 'A real goal shows its name and “on track for <month>”, never a day count', /Japan \| My promise/.test(home) && /On track for [A-Z][a-z]{2} 20\d\d/.test(home) && !/\d+ days \|/.test(home.split('Your goal')[1] ?? ''), () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400));
+    await go(page, '/goals');
+    const tab = await screenText(page);
+    await check(page, 'The tab is called Saving and offers + Add a goal', /^Saving \| and why/.test(tab) && /Add a goal/.test(tab), () => tab.slice(0, 300));
+    await page.close();
+  });
+  await safely(async () => {
+    const { db } = person({ goal: { title: 'Rainy day', kind: 'monthly', monthly: 3000, saved: 9300 } });
+    const page = await open(browser, { db });
+    const home = await screenText(page);
+    await check(page, 'A monthly saver’s card: name, “Why I save”, this month and saved so far', /Your saving \| Rainy day \| Why I save/.test(home) && /฿3,000 this month/.test(home) && /฿9,300 saved so far/.test(home), () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400));
+    await page.close();
+  });
+
   // ---------- Sheets close with a drag ----------
   scenario('Sheets · drag down to close');
   await safely(async () => {

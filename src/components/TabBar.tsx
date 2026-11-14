@@ -34,7 +34,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? colors.paper : colors.ink} />
         </TabIcon>
-        <TabIcon label={t('Goals')} active={current === 'goals'} onPress={() => go('goals')}>
+        <TabIcon label={t('Saving')} active={current === 'goals'} onPress={() => go('goals')}>
           <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? colors.paper : colors.ink} />
         </TabIcon>
 

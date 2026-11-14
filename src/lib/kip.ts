@@ -1,5 +1,6 @@
 // Talk to Kip: what we send to the server (the person's month as plain numbers) and the money maths the app
 // does itself — the AI only understands words; every baht figure comes from here.
+import { plan as splitMonth } from '@/lib/brain';
 import { CATEGORY, spendingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
 import { budgetKey, monthNumbers, type Spent } from '@/lib/home';
 import { getLang, t } from '@/lib/i18n';
@@ -138,6 +139,9 @@ export function kipContext(
     rent: month.bills.rent,
     bills: (month.bills.items ?? []).map((b) => ({ name: b.name, perMonth: b.amount, ...(b.yearly ? { yearly: b.yearly.total, due: b.yearly.due } : {}) })),
     moneyStyle: month.style,
+    // Kip advises by the plan (approved): what the style did with this person's numbers, in the app's own words.
+    styleNotes: planNotes(month),
+    saving: { goal: month.goal.amount + month.goalExtra, safetyNet: month.safety.amount, goalKind: goal && goal.arrives === null ? 'monthly' : 'dated' },
     ...extra,
   };
 }
@@ -228,4 +232,13 @@ export function applyBuy(month: MonthBudget, plan: BuyPlan): MonthBudget {
   const next = { ...month, spend };
   if (spendingTotal(next) !== spendingTotal(month)) return month; // never change the month's total
   return next;
+}
+
+/** The notes the money style wrote for this person ("The saving jar holds ฿3,000, not ฿4,500") — so Kip and Your month agree. */
+function planNotes(m: MonthBudget): string[] {
+  try {
+    return splitMonth(m.inputs, m.style, m.goalPerMonth).notes.slice(0, 4);
+  } catch {
+    return [];
+  }
 }

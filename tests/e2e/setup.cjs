@@ -89,14 +89,21 @@ async function runSetup(page, s) {
   await tap(page, visible(page.getByRole('button').filter({ hasText: th ? /^ต่อไป$/ : /^Next$/ })), { wait: 2000 });
   // 3 · Goal
   if (s.goal.idea) {
-    // Kip's pick is the first idea card.
+    // Kip's pick is the first idea card (ideas belong to "For something").
+    await tap(page, visible(page.getByRole('radio', { name: th ? 'เก็บเพื่อบางอย่าง' : 'For something', exact: true })), { wait: 500 });
     await page.locator('[role=button][aria-label^="Pick "], [role=button][aria-label^="เลือก "]').first().click();
     await page.waitForTimeout(800);
+  } else if (s.goal.type === 'Monthly') {
+    // Saving first (approved mockup): "A bit every month" is pre-picked, with Kip's comfortable amount already in.
+    const goalTxt = await screenText(page);
+    await check(page, 'The goal step opens on “A bit every month”, already picked', /A bit every month/.test(goalTxt) && /How much each month\?/.test(goalTxt) && !/What kind of goal/.test(goalTxt), () => goalTxt.slice(0, 600));
+    await type(page, 'Each month', s.goal.monthly);
+    await type(page, 'Name your saving', s.goal.name);
   } else {
+    await tap(page, visible(page.getByRole('radio', { name: 'For something', exact: true })), { wait: 500 });
     await tap(page, visible(page.getByRole('radio', { name: s.goal.type, exact: true })), { wait: 500 });
     await type(page, 'Name your goal', s.goal.name);
-    if (s.goal.monthly) await type(page, 'Each month', s.goal.monthly);
-    else {
+    {
       await type(page, 'How much?', s.goal.amount);
       await type(page, 'Saved so far', s.goal.saved);
       await type(page, 'By when?', s.goal.due);

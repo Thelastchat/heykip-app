@@ -63,11 +63,11 @@ export const EMPTY_DRAFT: SetupDraft = {
   moneyStyle: null,
   leaks: [],
   goalTitle: '',
-  goalKind: 'trip',
+  goalKind: 'monthly', // saving first (approved mockup): a bit every month unless they pick a goal
   goalTarget: null,
   goalSaved: null,
   goalDue: null,
-  goalType: null,
+  goalType: 'monthly',
   goalPhoto: null,
   goalMonthly: null,
   budgetStyle: 'kip',
@@ -165,5 +165,5 @@ export const basicsDone = (d: SetupDraft) => (d.incomeType === 'regular' ? Boole
 
 export const goalDone = (d: SetupDraft) =>
   d.goalKind === 'monthly'
-    ? Boolean(d.goalTitle.trim() && d.goalMonthly)
+    ? Boolean(d.goalMonthly)
     : Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.goalKind === 'safety_net') && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));

@@ -280,7 +280,7 @@ function inputsNoSide(d: SetupDraft, income: number, now: Date): Inputs {
     bills: d.bills ?? billsGuess(income),
     goal: {
       type: GOAL_TYPE[d.goalKind],
-      title: d.goalTitle.trim(),
+      title: d.goalTitle.trim() || (d.goalKind === 'monthly' ? t('My savings') : ''),
       target: d.goalKind === 'monthly' ? 0 : (d.goalTarget ?? 0),
       saved: d.goalSaved ?? 0,
       months: d.goalKind === 'monthly' || !d.goalDue ? null : monthsUntil(d.goalDue, now),

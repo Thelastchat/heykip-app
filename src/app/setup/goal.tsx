@@ -2,7 +2,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { Check } from 'phosphor-react-native';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { CatIcon } from '@/components/CatIcon';
@@ -28,6 +29,49 @@ const PIN = [colors.orange, colors.sky, colors.lavender, colors.orange, colors.l
 const CARD_W = 272;
 const GAP = 14;
 const QUICK = [1000, 2000, 3000, 5000];
+/** "What's it for?" for a monthly saver (approved mockup): names the card; optional. */
+const REASONS: { key: string; icon: keyof typeof ICON3D; get title(): string; get sub(): string }[] = [
+  {
+    key: 'rainy',
+    icon: 'shield',
+    get title() {
+      return t('Rainy day');
+    },
+    get sub() {
+      return t('just in case');
+    },
+  },
+  {
+    key: 'peace',
+    icon: 'heart',
+    get title() {
+      return t('Peace of mind');
+    },
+    get sub() {
+      return t('less stress at month end');
+    },
+  },
+  {
+    key: 'someday',
+    icon: 'plane',
+    get title() {
+      return t('Someday trip');
+    },
+    get sub() {
+      return t('no date yet');
+    },
+  },
+  {
+    key: 'family',
+    icon: 'house',
+    get title() {
+      return t('For family');
+    },
+    get sub() {
+      return t('a bit every month');
+    },
+  },
+];
 
 // Setup 3/6 · What are you saving for? Kip's ideas (sized to your pay) — or make your own.
 export default function SetupGoal() {
@@ -89,6 +133,33 @@ export default function SetupGoal() {
       });
   }
 
+  /** Saving first (approved mockup): "A bit every month" (no target, no deadline) or "For something" (a dated goal). */
+  function pickMode(mode: 'monthly' | 'goal') {
+    Haptics.selectionAsync().catch(() => {});
+    if (mode === 'monthly') {
+      if (monthly) return;
+      const R = room({ ...inputs, goal: { ...inputs.goal, type: 'monthly' } });
+      update({
+        goalType: 'monthly',
+        goalKind: 'monthly',
+        goalTitle: t('My savings'),
+        goalMonthly: draft.goalMonthly ?? Math.max(500, Math.min(3000, Math.floor(R.comfortable / 500) * 500)),
+        goalPerMonth: null,
+        goalTarget: null,
+        goalDue: null,
+      });
+    } else if (monthly) {
+      const g = GOAL_TYPES.find((x) => x.kind === 'trip') ?? GOAL_TYPES[0];
+      update({ goalType: null, goalKind: g.kind, goalTitle: '', goalPerMonth: null, goalTarget: null, goalDue: null });
+    }
+  }
+  const comfy = room({ ...inputs, goal: { ...inputs.goal, type: 'monthly' } }).comfortable;
+  // A fresh setup starts on "a bit every month" with Kip's comfortable amount already in.
+  useEffect(() => {
+    if (monthly && draft.goalMonthly == null) update({ goalMonthly: Math.max(500, Math.min(3000, Math.floor(comfy / 500) * 500)) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthly]);
+
   async function pickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.7 });
     if (!result.canceled && result.assets[0]) update({ goalPhoto: result.assets[0].uri });
@@ -105,13 +176,123 @@ export default function SetupGoal() {
     <SetupScreen step={3} scrollRef={scroll} footer={<Button label={editing ? t('Update my plan') : t('Next')} disabled={!goalDone(draft)} onPress={next} />}>
       <View style={styles.titleRow}>
         <Text style={styles.h1} accessibilityRole="header">
-          {t('What are you\nsaving for?')}
+          {t('How do you want\nto save?')}
         </Text>
         <Kip mood="idle" size={70} />
       </View>
 
+      {/* Saving first (approved mockup): every month with no target or deadline, or for something with a date. */}
+      <View style={{ gap: 8 }} accessibilityRole="radiogroup">
+        {(
+          [
+            { mode: 'monthly' as const, icon: 'piggy' as const, title: t('A bit every month'), sub: t('No target, no deadline. Kip sets it aside on payday and it adds up.') },
+            { mode: 'goal' as const, icon: 'plane' as const, title: t('For something'), sub: t('A trip, a phone, a car — with a date that fits your pay.') },
+          ] as const
+        ).map((o) => {
+          const on = (o.mode === 'monthly') === monthly;
+          return (
+            <Pressable
+              key={o.mode}
+              onPress={() => pickMode(o.mode)}
+              style={[styles.mode, on && styles.modeOn]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={o.title}>
+              <Image source={ICON3D[o.icon]} style={{ width: 44, height: 44 }} contentFit="contain" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modeT}>{o.title}</Text>
+                <Text style={styles.modeS}>{o.sub}</Text>
+              </View>
+              <View style={[styles.modeCk, on && styles.modeCkOn]}>{on ? <Check size={14} color={colors.paper} weight="bold" /> : null}</View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {monthly ? (
+        <View style={styles.own}>
+          <Text style={styles.label}>{t('How much each month?')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+            <BahtField label={t('Each month')} value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
+            <SmallTile label={t('Kip: comfortable')} style={[styles.white, { flex: 1 }]}>
+              <Text style={smallValueStyle()}>{comfy >= 1000 ? `${baht(Math.floor(comfy / 500) * 500)}–${baht(Math.floor((comfy * 1.5) / 500) * 500)}` : t('up to {amount}', { amount: baht(Math.max(500, Math.floor(comfy / 100) * 100)) })}</Text>
+            </SmallTile>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {QUICK.map((a) => {
+              const on = draft.goalMonthly === a;
+              return (
+                <Pressable key={a} onPress={() => update({ goalMonthly: a })} style={[styles.quick, on && picked(colors.orange)]} accessibilityRole="button">
+                  <Text style={[styles.quickText, on && { fontFamily: fonts.semibold }]}>{baht(a)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>{t('What’s it for?')}</Text>
+            <Text style={styles.hint}>{t('optional')}</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -14 }} contentContainerStyle={{ paddingHorizontal: 14, gap: 8 }} keyboardShouldPersistTaps="handled">
+            {REASONS.map((r) => {
+              const on = draft.goalTitle === r.title;
+              return (
+                <Pressable
+                  key={r.key}
+                  onPress={() => update({ goalTitle: on ? t('My savings') : r.title })}
+                  style={[styles.reason, on && picked(colors.orange)]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={r.title}>
+                  <Image source={ICON3D[r.icon]} style={{ width: 36, height: 36 }} contentFit="contain" />
+                  <Text style={[styles.reasonT, on && { fontFamily: fonts.semibold }]}>{r.title}</Text>
+                  <Text style={styles.reasonS}>{r.sub}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 2 }}>
+            <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? t('Change photo') : t('Add a photo')}>
+              <Polaroid
+                photo={draft.goalPhoto}
+                width={Math.min(132, width * 0.34)}
+                photoHeight={Math.min(112, width * 0.29)}
+                padding={7}
+                bottom={26}
+                rotate={-3}
+                empty={{
+                  color: colors.grey,
+                  icon: (
+                    <View style={{ alignItems: 'center', gap: 6 }}>
+                      <CatIcon name="camera" size={26} />
+                      <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Add a photo')}</Text>
+                    </View>
+                  ),
+                }}>
+                <Text style={[styles.hand, styles.polaroidNote]}>{draft.goalPhoto ? t('why I save') : t('a photo, if you like')}</Text>
+              </Polaroid>
+            </Pressable>
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{t('Call it')}</Text>
+                <TextInput
+                  value={draft.goalTitle}
+                  onChangeText={(goalTitle) => update({ goalTitle })}
+                  placeholder={t('My savings')}
+                  placeholderTextColor={colors.faint}
+                  maxLength={40}
+                  style={[smallValueStyle(), { fontSize: 16 }]}
+                  accessibilityLabel={t('Name your saving')}
+                />
+              </View>
+              <Text style={styles.muted12}>{t('Add a photo and a note — it keeps you going on payday.')}</Text>
+            </View>
+          </View>
+          <FitCheck />
+        </View>
+      ) : null}
+
       {/* Kip's suggestions */}
-      {deck.length > 0 && (
+      {!monthly && deck.length > 0 && (
         <View style={styles.suggested}>
           <View style={styles.suggestedHead}>
             <View style={{ flex: 1, gap: 6 }}>
@@ -156,105 +337,88 @@ export default function SetupGoal() {
         </View>
       )}
 
-      {/* Make your own */}
-      <View
-        onLayout={(e) => {
-          formY.current = e.nativeEvent.layout.y;
-        }}
-        style={styles.sectionHead}>
-        <Text style={styles.h2}>{chosenIdea ? t('Your goal') : t('Or make your own')}</Text>
-        <Text style={styles.muted12}>{chosenIdea ? t('change anything') : t('nothing fits? build it')}</Text>
-      </View>
-
-      <View style={styles.own}>
-        <View style={styles.labelRow}>
-          <Text style={styles.label}>{t('1 · What kind of goal?')}</Text>
-          <Text style={styles.hint}>{t('swipe →')}</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -14 }} contentContainerStyle={{ paddingHorizontal: 14, gap: 6 }} accessibilityRole="radiogroup">
-          {GOAL_TYPES.map((g) => {
-            const on = draft.goalType ? draft.goalType === g.key : g.key === type.key && Boolean(draft.goalTitle);
-            return (
-              <Pressable key={g.key} onPress={() => pickType(g)} style={styles.sticker} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={g.label}>
-                <View style={[styles.stickerDot, g.key === 'other' && !on && styles.stickerOther, on && picked(g.color)]}>
-                  <CatIcon name={g.icon} size={g.key === 'other' ? 20 : 26} />
-                </View>
-                <Text style={[styles.stickerText, on && { fontFamily: fonts.semibold }]} numberOfLines={1}>
-                  {g.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <Text style={styles.label}>{t('2 · Make it yours')}</Text>
-        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 6 }}>
-          <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? t('Change photo') : t('Add a photo')}>
-            <Polaroid
-              photo={draft.goalPhoto}
-              width={Math.min(132, width * 0.34)}
-              photoHeight={Math.min(112, width * 0.29)}
-              padding={7}
-              bottom={26}
-              rotate={-3}
-              empty={{
-                color: colors.grey,
-                icon: (
-                  <View style={{ alignItems: 'center', gap: 6 }}>
-                    <CatIcon name="camera" size={26} />
-                    <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Add a photo')}</Text>
-                  </View>
-                ),
-              }}>
-              <Text style={[styles.hand, styles.polaroidNote]}>{draft.goalPhoto ? t('my dream') : t('your dream here')}</Text>
-            </Polaroid>
-          </Pressable>
-          <View style={{ flex: 1, gap: 8 }}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>{t('Name your goal')}</Text>
-              <TextInput
-                value={draft.goalTitle}
-                onChangeText={(goalTitle) => update({ goalTitle })}
-                placeholder={t('e.g. {example}', { example: type.example })}
-                placeholderTextColor={colors.faint}
-                maxLength={40}
-                style={[smallValueStyle(), { fontSize: 16 }]}
-                accessibilityLabel={t('Name your goal')}
-              />
-            </View>
-            <Text style={styles.muted12}>{t('A photo of the real thing keeps you going on payday.')}</Text>
+      {/* Make your own (a dated goal) */}
+      {!monthly && (
+        <>
+          <View
+            onLayout={(e) => {
+              formY.current = e.nativeEvent.layout.y;
+            }}
+            style={styles.sectionHead}>
+            <Text style={styles.h2}>{chosenIdea ? t('Your goal') : t('Or make your own')}</Text>
+            <Text style={styles.muted12}>{chosenIdea ? t('change anything') : t('nothing fits? build it')}</Text>
           </View>
-        </View>
 
-        {monthly ? (
-          <>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <BahtField label={t('Each month')} value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
-              <SmallTile label={t('For')} style={[styles.white, { flex: 1 }]}>
-                <Text style={smallValueStyle()}>{t('Ongoing')}</Text>
-              </SmallTile>
+          <View style={styles.own}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>{t('1 · What kind of goal?')}</Text>
+              <Text style={styles.hint}>{t('swipe →')}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {QUICK.map((a) => {
-                const on = draft.goalMonthly === a;
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -14 }} contentContainerStyle={{ paddingHorizontal: 14, gap: 6 }} accessibilityRole="radiogroup">
+              {GOAL_TYPES.filter((g) => g.kind !== 'monthly').map((g) => {
+                const on = draft.goalType ? draft.goalType === g.key : g.key === type.key && Boolean(draft.goalTitle);
                 return (
-                  <Pressable key={a} onPress={() => update({ goalMonthly: a })} style={[styles.quick, on && picked(type.color)]} accessibilityRole="button">
-                    <Text style={[styles.quickText, on && { fontFamily: fonts.semibold }]}>{baht(a)}</Text>
+                  <Pressable key={g.key} onPress={() => pickType(g)} style={styles.sticker} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={g.label}>
+                    <View style={[styles.stickerDot, g.key === 'other' && !on && styles.stickerOther, on && picked(g.color)]}>
+                      <CatIcon name={g.icon} size={g.key === 'other' ? 20 : 26} />
+                    </View>
+                    <Text style={[styles.stickerText, on && { fontFamily: fonts.semibold }]} numberOfLines={1}>
+                      {g.label}
+                    </Text>
                   </Pressable>
                 );
               })}
-            </View>
-          </>
-        ) : (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <BahtField label={t('How much?')} value={draft.goalTarget} onChange={(goalTarget) => update({ goalTarget })} placeholder="0" flex={1.2} />
-            <BahtField label={t('Saved so far')} value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" flex={1.2} />
-            <DateTile label={t('By when?')} value={draft.goalDue} onChange={(goalDue) => update({ goalDue })} style={[styles.white, { flex: 1 }]} emptyLabel={emergency ? t('No rush') : t('Pick')} />
-          </View>
-        )}
+            </ScrollView>
 
-        <FitCheck />
-      </View>
+            <Text style={styles.label}>{t('2 · Make it yours')}</Text>
+            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', paddingTop: 6 }}>
+              <Pressable onPress={pickPhoto} accessibilityRole="button" accessibilityLabel={draft.goalPhoto ? t('Change photo') : t('Add a photo')}>
+                <Polaroid
+                  photo={draft.goalPhoto}
+                  width={Math.min(132, width * 0.34)}
+                  photoHeight={Math.min(112, width * 0.29)}
+                  padding={7}
+                  bottom={26}
+                  rotate={-3}
+                  empty={{
+                    color: colors.grey,
+                    icon: (
+                      <View style={{ alignItems: 'center', gap: 6 }}>
+                        <CatIcon name="camera" size={26} />
+                        <Text style={{ fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }}>{t('Add a photo')}</Text>
+                      </View>
+                    ),
+                  }}>
+                  <Text style={[styles.hand, styles.polaroidNote]}>{draft.goalPhoto ? t('my dream') : t('your dream here')}</Text>
+                </Polaroid>
+              </Pressable>
+              <View style={{ flex: 1, gap: 8 }}>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>{t('Name your goal')}</Text>
+                  <TextInput
+                    value={draft.goalTitle}
+                    onChangeText={(goalTitle) => update({ goalTitle })}
+                    placeholder={t('e.g. {example}', { example: type.example })}
+                    placeholderTextColor={colors.faint}
+                    maxLength={40}
+                    style={[smallValueStyle(), { fontSize: 16 }]}
+                    accessibilityLabel={t('Name your goal')}
+                  />
+                </View>
+                <Text style={styles.muted12}>{t('A photo of the real thing keeps you going on payday.')}</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <BahtField label={t('How much?')} value={draft.goalTarget} onChange={(goalTarget) => update({ goalTarget })} placeholder="0" flex={1.2} />
+              <BahtField label={t('Saved so far')} value={draft.goalSaved} onChange={(goalSaved) => update({ goalSaved })} placeholder="0" flex={1.2} />
+              <DateTile label={t('By when?')} value={draft.goalDue} onChange={(goalDue) => update({ goalDue })} style={[styles.white, { flex: 1 }]} emptyLabel={emergency ? t('No rush') : t('Pick')} />
+            </View>
+
+            <FitCheck />
+          </View>
+        </>
+      )}
     </SetupScreen>
   );
 }
@@ -461,6 +625,15 @@ const styles = themed(() =>
     pickText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.paper },
 
     sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 10, paddingHorizontal: 2 },
+    mode: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), padding: 14 },
+    modeOn: { backgroundColor: colors.lime, borderColor: colors.lime },
+    modeT: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+    modeS: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
+    modeCk: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: inkA(0.25), alignItems: 'center', justifyContent: 'center' },
+    modeCkOn: { backgroundColor: colors.ink, borderColor: colors.ink },
+    reason: { width: 132, borderRadius: 18, backgroundColor: glassA(0.55), borderWidth: 1.5, borderColor: 'transparent', padding: 12, gap: 4 },
+    reasonT: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, marginTop: 4 },
+    reasonS: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     own: { borderRadius: 26, backgroundColor: glassA(0.55), borderWidth: 1, borderColor: glassA(0.95), paddingTop: 18, paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
     labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
     label: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, paddingHorizontal: 2 },

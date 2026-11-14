@@ -46,7 +46,7 @@ export default function SetupSign() {
 
       <View style={styles.note2}>
         <View style={styles.tape} />
-        <Text style={styles.kicker}>{t('My promise')}</Text>
+        <Text style={styles.kicker}>{draft.goalKind === 'monthly' ? t('Why I save') : t('My promise')}</Text>
         {editing ? (
           <>
             <TextInput value={main} onChangeText={(text) => update({ promiseMain: text })} multiline style={[styles.main, styles.input]} autoFocus accessibilityLabel={t('Your promise')} />

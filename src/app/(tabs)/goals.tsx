@@ -23,7 +23,7 @@ import { useHome, type HomeGoal } from '@/lib/home';
 import { goalIcon3D, goalTypeIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { dayInMonth, monthYear, ordinal, parseDay, shortName } from '@/lib/setup/plan';
+import { dayInMonth, monthYear, ordinal, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
 
@@ -130,8 +130,8 @@ export default function Goals() {
       <View style={{ flex: 1 }}>
         <GlowBackground />
         <View style={{ paddingTop: insets.top + 76, paddingHorizontal: 20 }}>
-          <Text style={styles.h1}>{t('Your goals')}</Text>
-          <Text style={[styles.sub, { marginTop: 10 }]}>{t('Finish setup to pin your first goal.')}</Text>
+          <Text style={styles.h1}>{t('Saving')}</Text>
+          <Text style={[styles.sub, { marginTop: 10 }]}>{t('Finish setup to start saving.')}</Text>
         </View>
       </View>
     );
@@ -143,9 +143,9 @@ export default function Goals() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
         <RiseIn style={styles.head}>
           <Text style={styles.h1}>
-            {t('Your goals')}
+            {t('Saving')}
             {'\n'}
-            <Text style={{ color: colors.soft }}>{t('and why you save')}</Text>
+            <Text style={{ color: colors.soft }}>{t('and why')}</Text>
           </Text>
         </RiseIn>
 
@@ -188,9 +188,10 @@ export default function Goals() {
                 onPress={() => (isPlus ? router.push('/goal-new') : setPlus(true))}
                 style={[styles.slot, goals.length === 1 && { flex: 2 }]}
                 accessibilityRole="button"
-                accessibilityLabel={isPlus ? (i === 0 ? t('Pin a 2nd goal') : t('Pin a 3rd goal')) : t('{title} — Plus', { title: t('Pin 2 more goals') })}>
+                accessibilityLabel={isPlus ? t('Add a goal') : t('{title} — Plus', { title: t('Add a goal') })}>
                 <View style={styles.plusDot}>{isPlus ? <Plus size={16} color={colors.muted} /> : <LockSimple size={16} color={colors.muted} />}</View>
-                <Text style={styles.slotText}>{isPlus ? (i === 0 ? t('Pin a 2nd goal') : t('Pin a 3rd goal')) : t('Pin 2 more goals')}</Text>
+                <Text style={[styles.slotText, { fontFamily: fonts.medium, color: colors.ink }]}>{t('Add a goal')}</Text>
+                <Text style={styles.slotText}>{goals[0].kind === 'monthly' ? t('Something to save for, with a date that fits') : t('Up to 3, each with its own saving')}</Text>
                 {!isPlus && <Text style={styles.slotSub}>Plus</Text>}
               </Squish>
             ) : null,
@@ -405,7 +406,6 @@ function Hero({
   const target = goal.target;
   const pct = target > 0 ? Math.min(100, Math.round((goal.saved / target) * 100)) : 0;
   const left = Math.max(0, target - goal.saved);
-  const days = goal.due ? Math.max(0, Math.round((parseDay(goal.due).getTime() - Date.now()) / 86_400_000)) : null;
   const line = (goal.promise ?? '').split('\n')[0];
   const type = typeInfo(goal.goalType, goal.kind as never);
   return (
@@ -423,13 +423,13 @@ function Hero({
         <View style={styles.chip}>
           <Image source={ICON3D[icon]} style={{ width: 26, height: 26 }} contentFit="contain" />
           <Text style={styles.chipText} numberOfLines={1}>
-            {days !== null ? t('{goal} · {n} days', { goal: short, n: days }) : short}
+            {short}
           </Text>
         </View>
         {line ? (
           <View style={styles.note}>
             <View style={styles.tape} />
-            <Text style={styles.noteHead}>{t('My promise')}</Text>
+            <Text style={styles.noteHead}>{monthly ? t('Why I save') : t('My promise')}</Text>
             <Text style={styles.noteText} numberOfLines={3}>
               {line}
             </Text>

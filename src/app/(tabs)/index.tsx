@@ -279,10 +279,13 @@ export default function Home() {
     if (!month) return t('Your plan isn’t loaded yet — try again in a moment.');
     if (sg.kind === 'leftover') return putLeftover(sg.notice);
     const before = month;
-    const next = sg.kind === 'move' ? applyOps(month, [{ op: 'move', from: sg.from, to: sg.to, amount: sg.amount }]) : (() => {
-      const r = addBill(month, sg.notice.name, sg.notice.amount, { type: guessType(sg.notice.name), day: sg.notice.day, remind: 'before' });
-      return r.short > 0 ? null : r.month;
-    })();
+    const next =
+      sg.kind === 'move'
+        ? applyOps(month, [{ op: 'move', from: sg.from, to: sg.to, amount: sg.amount }])
+        : (() => {
+            const r = addBill(month, sg.notice.name, sg.notice.amount, { type: guessType(sg.notice.name), day: sg.notice.day, remind: 'before' });
+            return r.short > 0 ? null : r.month;
+          })();
     if (!next) return t('That doesn’t fit your month any more.');
     save(next);
     if (sg.kind === 'sub') hide(sg.id, Date.now() + 365 * 86_400_000);
@@ -310,7 +313,7 @@ export default function Home() {
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
     overMonth > 0
-      ? t('This month’s spending money is used up — {amount} over. It comes out of your saving, so rent and bills are safe. Must-haves only until payday.', { amount: baht(overMonth) })
+      ? t('This month’s spending money is used up — {amount} over. That happens. It comes out of your saving, so rent and bills are safe, and payday resets everything.', { amount: baht(overMonth) })
       : overToday > 0 && daysAfter > 0
         ? goalDate
           ? t('A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on {date}.', { amount: baht(overToday), n: daysAfter, goal: short, date: monthYear(goalDate) })
@@ -511,7 +514,7 @@ export default function Home() {
               accessibilityLabel={t('{amount} spent today — see history', { amount: baht(spent.today) })}>
               <CountUp value={spent.today} format={Small} style={styles.n2} fit />
               <Text style={styles.l1}>{t('Spent today')}</Text>
-              <Text style={styles.l2}>{t('Must-haves until payday')}</Text>
+              <Text style={styles.l2}>{t('Payday resets it')}</Text>
             </Pressable>
           ) : (
             <Pressable
@@ -566,7 +569,9 @@ export default function Home() {
               busy={noticeBusy}
               isPlus={isPlus}
               onLocked={() => setSheet('talk')}
-              onDo={() => doNotice(notice)} onLater={() => hide(notice.id, laterFor(notice, new Date()))} />
+              onDo={() => doNotice(notice)}
+              onLater={() => hide(notice.id, laterFor(notice, new Date()))}
+            />
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />
@@ -584,7 +589,7 @@ export default function Home() {
 
         {/* goal */}
         <RiseIn delay={300}>
-          <Section title={goals.length > 1 ? t('Your goals') : t('Your goal')} />
+          <Section title={goals.length > 1 ? t('Your goals') : goal?.kind === 'monthly' ? t('Your saving') : t('Your goal')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {goals.map((g) => (
               <GoalCard key={g.id} g={g} perMonth={split.get(g.id) ?? 0} arrives={arrive.get(g.id) ?? null} width={Math.min(312, width - 60)} />
@@ -778,16 +783,17 @@ function Section({ title, right, onRight, caret, inset = true }: { title: string
 
 function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: number; arrives: Date | null; width: number }) {
   const type = typeInfo(g.goalType, g.kind as never);
-  const short = g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never);
+  const monthly = g.kind === 'monthly';
+  const short = monthly ? g.title : shortName(g.title, g.kind as never);
   const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
-  const days = arrives ? Math.max(0, Math.round((arrives.getTime() - Date.now()) / 86_400_000)) : null;
   const line = (g.promise ?? '').split('\n')[0];
+  // Calm by design (approved mockup): the name, never a day count. A real goal says the month it arrives.
   return (
     <Squish
       onPress={() => router.push('/goals')}
       style={[styles.goal, { width, backgroundColor: type.color }]}
       accessibilityRole="button"
-      accessibilityLabel={t('{goal}, {pct}% saved', { goal: g.title, pct })}>
+      accessibilityLabel={monthly ? t('{goal}, {amount} a month', { goal: g.title, amount: baht(perMonth) }) : t('{goal}, {pct}% saved', { goal: g.title, pct })}>
       {g.photo ? (
         <Image source={{ uri: g.photo, cacheKey: g.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
@@ -800,13 +806,13 @@ function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: numb
       <View style={styles.gchip}>
         <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 26, height: 26 }} contentFit="contain" />
         <Text style={styles.gchipText} numberOfLines={1}>
-          {days !== null ? t('{goal} · {n} days', { goal: short, n: days }) : short}
+          {short}
         </Text>
       </View>
       {line ? (
         <View style={styles.note}>
           <View style={styles.tape} />
-          <Text style={styles.noteHead}>{t('My promise')}</Text>
+          <Text style={styles.noteHead}>{monthly ? t('Why I save') : t('My promise')}</Text>
           <Text style={styles.noteText} numberOfLines={3}>
             {line}
           </Text>
@@ -816,10 +822,10 @@ function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: numb
         <Glass radius={22} shadow={false} light tint="rgba(255,255,255,0.72)">
           <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Text style={styles.stripBig}>{g.target > 0 ? t('{amount} saved', { amount: baht(g.saved) }) : t('{amount} a month', { amount: baht(perMonth) })}</Text>
+              <Text style={styles.stripBig}>{g.target > 0 ? t('{amount} saved', { amount: baht(g.saved) }) : t('{amount} this month', { amount: baht(perMonth) })}</Text>
               {g.target > 0 && <Text style={styles.stripSmall}>{pct}%</Text>}
             </View>
-            {g.target > 0 && (
+            {g.target > 0 ? (
               <>
                 <View style={styles.track}>
                   <View style={[styles.trackFill, { width: `${Math.max(pct, 2)}%` }]} />
@@ -828,7 +834,12 @@ function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: numb
                   <Text style={styles.stripSmall}>{t('{amount} a month', { amount: baht(perMonth) })}</Text>
                   <Text style={styles.stripSmall}>{t('of {amount}', { amount: baht(g.target) })}</Text>
                 </View>
+                {arrives ? <Text style={[styles.stripSmall, { marginTop: 2 }]}>{t('On track for {date}', { date: monthYear(arrives) })}</Text> : null}
               </>
+            ) : (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                <Text style={styles.stripSmall}>{g.saved > 0 ? t('{amount} saved so far', { amount: baht(g.saved) }) : t('adds up every payday')}</Text>
+              </View>
             )}
           </View>
         </Glass>
