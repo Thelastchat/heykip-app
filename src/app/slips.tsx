@@ -405,7 +405,9 @@ function Thumb({ slip }: { slip: Slip }) {
   useEffect(() => {
     y.value = slip.state === 'reading' ? withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.quad) }), -1, false) : withTiming(0);
   }, [slip.state, y]);
-  const scan = useAnimatedStyle(() => ({ transform: [{ translateY: -46 + y.value * 236 }], opacity: slip.state === 'reading' ? 1 : 0 }));
+  // Only a boolean goes into the worklet: the whole slip (with its Date) can't be copied across to the UI thread.
+  const reading = slip.state === 'reading';
+  const scan = useAnimatedStyle(() => ({ transform: [{ translateY: -46 + y.value * 236 }], opacity: reading ? 1 : 0 }), [reading]);
   return (
     <View style={styles.thumb}>
       <Image source={{ uri: slip.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
