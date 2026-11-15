@@ -913,7 +913,7 @@ module.exports = async function homeTests(browser) {
     await check(page, 'A real goal shows its name and “on track for <month>”, never a day count', /Japan \| My promise/.test(home) && /On track for [A-Z][a-z]{2} 20\d\d/.test(home) && !/\d+ days \|/.test(home.split('Your goal')[1] ?? ''), () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400));
     await go(page, '/goals');
     const tab = await screenText(page);
-    await check(page, 'The tab is called Saving and offers + Add a goal', /^Saving \| and why/.test(tab) && /Add a goal/.test(tab), () => tab.slice(0, 300));
+    await check(page, 'The tab is called Your goals and offers + Add a goal', /^Your goals \| and why you save/.test(tab) && /Add a goal/.test(tab), () => tab.slice(0, 300));
     await page.close();
   });
   await safely(async () => {

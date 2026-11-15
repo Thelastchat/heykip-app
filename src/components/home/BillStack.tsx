@@ -13,7 +13,7 @@ import { KipStill } from '@/components/KipStill';
 import { monthShort, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import type { BillType } from '@/lib/budget';
-import { colors, fonts, glow, glassA, inkA, themed, whiteA } from '@/theme';
+import { colors, fonts, glassA, inkA, themed, whiteA } from '@/theme';
 
 /** One thing in Every month. `sub` replaces "Monthly" (e.g. "Streaming · monthly"); a yearly item shows its monthly
  *  set-aside (`perMonth`) and how much is ready (`note`). */
@@ -163,6 +163,8 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         const last = i === order.length - 1;
         const g = b.type ? TYPE_GLYPH[b.type] : glyphFor(b.name);
         const late = !b.paid && Boolean(b.due && b.due.days < 0);
+        const color = PALETTE()[bills.findIndex((x) => x.key === b.key) % 8]; // by the bill, so it keeps its colour when the stack reorders
+        const dark = !b.paid && DARK_CARD().has(color);
         return (
           <Pressable
             key={b.key}
@@ -176,35 +178,43 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
               } else setOpenKey(isOpen ? null : b.key);
             }}
             style={{ marginTop: i === 0 ? 0 : order[i - 1].key === open ? -14 : -62, zIndex: i }}>
-            {/* The card says where it stands (approved mockup): lime = coming up, black = late, quiet grey = paid. */}
-            <Card late={late} tint={b.paid ? glassA(0.2) : isOpen ? limeA(0.72) : limeA(0.55)} style={[styles.cardShadow, isOpen && styles.openShadow]}>
+            <Card color={color} paid={b.paid} style={[styles.cardShadow, isOpen && styles.openShadow]}>
               <View style={[styles.card, { height: isOpen ? 152 : last ? 72 : 132 }]}>
                 <View style={styles.strip}>
-                  <View style={[styles.ic, { backgroundColor: b.paid ? colors.ink : KIND[g] }]}>{b.paid ? <Check /> : <GlyphIcon g={g} color={LIGHT_GLYPH[g] ? '#FFFFFF' : undefined} />}</View>
+                  <View style={[styles.ic, { backgroundColor: b.paid ? colors.ink : '#FFFFFF' }]}>{b.paid ? <Check /> : <GlyphIcon g={g} color="#111111" size={24} />}</View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[styles.name, b.paid && styles.done, late && styles.onLate]} numberOfLines={1}>
+                    <Text style={[styles.name, b.paid && styles.done, dark && styles.onDark]} numberOfLines={1}>
                       {b.name}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.sub, !b.paid && b.due && b.due.days <= 3 && styles.soon, late && styles.lateDue]} numberOfLines={1}>
+                      <Text
+                        style={[
+                          styles.sub,
+                          !b.paid && b.due && b.due.days <= 3 && styles.soon,
+                          !b.paid && styles.onColor,
+                          dark && styles.onDarkSub,
+                          late && styles.late,
+                          late && dark && styles.lateDark,
+                        ]}
+                        numberOfLines={1}>
                         {b.paid ? t('Paid') : b.estimate ? t('Estimate') : b.due ? dueText(b.due) : (b.sub ?? t('Monthly'))}
                       </Text>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.amt, b.paid && styles.done, late && styles.onLate]}>
+                    <Text style={[styles.amt, b.paid && styles.done, dark && styles.onDark]}>
                       {b.estimate && !b.paid ? t('about {amount}', { amount: baht(b.amount) }) : b.perMonth ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
                     </Text>
-                    {b.note && !b.paid && !isOpen ? <Text style={[styles.sub, late && styles.lateSub]}>{b.note}</Text> : null}
+                    {b.note && !b.paid && !isOpen ? <Text style={[styles.sub, styles.onColor, dark && styles.onDarkSub]}>{b.note}</Text> : null}
                     {/* An open bill can be edited (approved mockup): rename, amount, how often — in Your month's sheet */}
                     {isOpen && !b.estimate && (b.key === 'rent' || b.key.startsWith('item:')) && (
                       <Pressable
                         onPress={() => router.push(`/month?edit=${encodeURIComponent(b.key === 'rent' ? 'rent' : b.key.slice(5))}` as never)}
                         hitSlop={8}
-                        style={[styles.editPill, { marginTop: 4 }, late && { backgroundColor: whiteA(0.16) }]}
+                        style={[styles.editPill, { marginTop: 4 }, dark ? { backgroundColor: whiteA(0.18) } : { backgroundColor: whiteA(0.55) }]}
                         accessibilityRole="button"
                         accessibilityLabel={t('Edit {name}', { name: b.name })}>
-                        <Text style={[styles.editText, late && styles.onLate]}>{t('Edit')}</Text>
+                        <Text style={[styles.editText, dark && styles.onDark]}>{t('Edit')}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -232,14 +242,16 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
   );
 }
 
-/** Brand lime, see-through, so the glow shows through the card. */
-const limeA = (a: number) => `rgba(255,252,154,${a})`;
+// Every card its own brand colour (approved sketch), round the palette by position so two neighbours never match.
+// The icon is a white circle with a dark glyph on all of them. Dark cards (black, orange, teal) get light text.
+const PALETTE = () => [colors.lime, colors.lavender, colors.solid, colors.orange, colors.peach, colors.sky, colors.sage, '#7FC4B8'];
+const DARK_CARD = () => new Set([colors.solid, colors.orange, '#7FC4B8']);
 
-/** Frosted lime (or grey once paid) — and plain black when it's late, so it can't be missed. */
-function Card({ late, tint, style, children }: { late: boolean; tint: string; style: StyleProp<ViewStyle>; children: ReactNode }) {
-  if (late) return <View style={[{ borderRadius: 26, backgroundColor: colors.solid }, style]}>{children}</View>;
+/** A solid brand-colour card — or frosted grey once it's paid. */
+function Card({ color, paid, style, children }: { color: string; paid: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
+  if (!paid) return <View style={[{ borderRadius: 26, backgroundColor: color }, style]}>{children}</View>;
   return (
-    <Glass radius={26} tint={tint} shadow={false} style={style}>
+    <Glass radius={26} tint={glassA(0.2)} shadow={false} style={style}>
       {children}
     </Glass>
   );
@@ -299,9 +311,11 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
 const styles = themed(() =>
   StyleSheet.create({
     soon: { fontFamily: fonts.semibold, color: colors.ink },
-    onLate: { color: colors.onSolid },
-    lateSub: { color: whiteA(0.6) },
-    lateDue: { fontFamily: fonts.semibold, color: colors.lime },
+    onColor: { color: '#111111', opacity: 0.68 }, // the second line on a coloured card: dark, never grey
+    onDark: { color: '#FFFFFF' },
+    onDarkSub: { color: '#FFFFFF', opacity: 0.78 },
+    late: { fontFamily: fonts.semibold, opacity: 1 },
+    lateDark: { color: colors.lime },
     subs: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: glassA(0.5) },
     editPill: { borderRadius: 999, backgroundColor: inkA(0.06), paddingHorizontal: 10, paddingVertical: 4 },
     editText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },
@@ -316,7 +330,7 @@ const styles = themed(() =>
     sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     amt: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, fontVariant: ['tabular-nums'] },
     done: { textDecorationLine: 'line-through', opacity: 0.45 },
-    slide: { marginTop: 16, height: 50, borderRadius: 999, backgroundColor: glow.control, borderWidth: 1, borderColor: inkA(0.06), justifyContent: 'center', overflow: 'hidden' },
+    slide: { marginTop: 16, height: 50, borderRadius: 999, backgroundColor: whiteA(0.6), borderWidth: 1, borderColor: inkA(0.06), justifyContent: 'center', overflow: 'hidden' },
     fill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999, backgroundColor: colors.limeDeep },
     slideText: { textAlign: 'center', paddingLeft: 34, fontFamily: fonts.medium, fontSize: 14, color: colors.ink, opacity: 0.75 },
     knob: {
