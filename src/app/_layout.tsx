@@ -13,6 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { LangProvider, takeReturnTo } from '@/lib/i18n';
 import { LookProvider, useLook } from '@/lib/look';
+import { useImagesReady } from '@/lib/preload';
 import { SetupProvider, useSetup } from '@/lib/setup/draft';
 import { colors } from '@/theme';
 
@@ -21,9 +22,10 @@ SplashScreen.preventAutoHideAsync();
 function RootStack() {
   const { session, profile, loading } = useAuth();
   const { ready } = useSetup();
+  const images = useImagesReady();
   const signedIn = Boolean(session);
   const onboarded = Boolean(profile?.onboarded);
-  const waiting = loading || !ready || (signedIn && !profile);
+  const waiting = loading || !ready || !images || (signedIn && !profile);
 
   useEffect(() => {
     if (!waiting) SplashScreen.hideAsync();

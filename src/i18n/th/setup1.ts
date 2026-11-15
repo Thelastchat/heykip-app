@@ -16,7 +16,7 @@ const th: Record<string, string> = {
   'Let’s start': 'เริ่มกันเลย',
   'Takes about 3 minutes': 'ใช้เวลาแค่ประมาณ 3 นาที',
   'Log in': 'ล็อกอิน',
-  'Hi, I’m Kip.': 'หวัดดี Kip เองนะ',
+  'Hi, I’m Kip.': 'สวัสดี Kip เองนะ',
   'I help you save for the things you actually want — not just track where your money went.': 'Kip ช่วยเก็บเงินไว้ซื้อของที่อยากได้จริงๆ ไม่ใช่แค่จดว่าเงินหายไปไหน',
   'Just tell me what you spent': 'แค่บอกว่าใช้อะไรไป',
   'I’ll sort it. No spreadsheets.': 'เดี๋ยว Kip จัดให้เอง ไม่ต้องทำตาราง',

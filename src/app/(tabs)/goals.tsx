@@ -143,9 +143,9 @@ export default function Goals() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
         <RiseIn style={styles.head}>
           <Text style={styles.h1}>
-            {t('Saving')}
+            {t('Your goals')}
             {'\n'}
-            <Text style={{ color: colors.soft }}>{t('and why')}</Text>
+            <Text style={{ color: colors.soft }}>{t('and why you save')}</Text>
           </Text>
         </RiseIn>
 

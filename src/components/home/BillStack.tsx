@@ -140,9 +140,10 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
           <Text style={[styles.sumText, { flexShrink: 1 }]} numberOfLines={1}>
             {next?.due ? (
               <>
-                {t('Next:')} <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>{t('{name} {when}', { name: next.name, when: whenText(next.due.days) })}</Text>
-                {' · '}
-                {t('{amount} set aside', { amount: baht(total) })}
+                {t('Next:')}{' '}
+                <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>
+                  {t('{name} {when}', { name: next.name.length > 18 ? `${next.name.slice(0, 17)}…` : next.name, when: whenText(next.due.days) })}
+                </Text>
               </>
             ) : (
               t('{amount} set aside', { amount: baht(total) })

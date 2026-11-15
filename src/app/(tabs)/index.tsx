@@ -653,10 +653,14 @@ export default function Home() {
               {plusCards.map((c, i) => (
                 <Squish key={c.f} onPress={() => openFeature(c.f)} style={styles.plus} accessibilityRole="button" accessibilityLabel={t('{title} — Plus', { title: c.title })}>
                   <Float delay={i * 700} style={styles.plusIcon}>
-                    <Image source={ICON3D[c.icon]} style={{ width: 96, height: 96 }} contentFit="contain" />
+                    <Image source={ICON3D[c.icon]} style={{ width: 84, height: 84 }} contentFit="contain" />
                   </Float>
-                  <Text style={styles.plusTitle}>{c.title}</Text>
-                  <Text style={styles.plusTeaser}>{c.teaser}</Text>
+                  <Text style={styles.plusTitle} numberOfLines={2}>
+                    {c.title}
+                  </Text>
+                  <Text style={styles.plusTeaser} numberOfLines={2}>
+                    {c.teaser}
+                  </Text>
                   <View style={styles.tryc}>
                     <Text style={styles.trycText}>{t('Try free')}</Text>
                   </View>
@@ -979,9 +983,9 @@ const styles = themed(() =>
     catBig: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.8, color: colors.ink, marginTop: 1, fontVariant: ['tabular-nums'] },
     catOf: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     plus: { width: 236, height: 136, borderRadius: 24, padding: 16, backgroundColor: colors.solid, boxShadow: '0 1px 2px rgba(17,17,17,0.04), 0 14px 28px rgba(17,17,17,0.12)' },
-    plusIcon: { position: 'absolute', right: -4, top: -34 },
-    plusTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 20, color: colors.onSolid, maxWidth: 130 },
-    plusTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: whiteA(0.62), marginTop: 4, maxWidth: 150 },
+    plusIcon: { position: 'absolute', right: 2, top: -30 },
+    plusTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 20, color: colors.onSolid, maxWidth: 124 },
+    plusTeaser: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: whiteA(0.62), marginTop: 4, maxWidth: 124 },
     tryc: { position: 'absolute', left: 16, bottom: 16, height: 28, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.limeDeep, justifyContent: 'center' },
     trycText: { fontFamily: fonts.medium, fontSize: 12, color: colors.onAccent },
     fab: {

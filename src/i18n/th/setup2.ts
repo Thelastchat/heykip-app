@@ -371,7 +371,7 @@ const th: Record<string, string> = {
   'Sale days (11.11)': 'วันเซล (11.11)',
   'A year of saving': 'เก็บเงินครบ 1 ปี',
   'The habit is the win.': 'นิสัยนี้แหละคือชัยชนะ',
-  'Hello, {short}!': 'หวัดดี {short}!',
+  'Hello, {short}!': 'สวัสดี {short}!',
   'Paid in full. No credit card.': 'จ่ายครบ ไม่รูดบัตร',
   'Your emergency fund is full': 'เงินฉุกเฉินเต็มแล้ว',
   'Ready for a rainy day.': 'พร้อมรับมือยามฉุกเฉิน',
