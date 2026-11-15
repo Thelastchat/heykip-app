@@ -606,7 +606,7 @@ export default function Home() {
 
         {/* left to spend */}
         <RiseIn delay={360}>
-          <Section title={t('Left to spend')} right={t('Your month')} onRight={() => router.push('/month')} caret />
+          <Section title={t('Left to spend')} right={t('Your saving plan')} onRight={() => router.push('/month')} caret />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {spendTiles.map(({ s, left, going }, i) => {
               return (

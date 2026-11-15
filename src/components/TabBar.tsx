@@ -2,7 +2,7 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { CalendarBlank, House, Target, UserCircle } from 'phosphor-react-native';
+import { ChartPieSlice, House, Target, UserCircle } from 'phosphor-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,9 +12,10 @@ import { Glass } from '@/components/glow/Glass';
 import { t } from '@/lib/i18n';
 import { colors, themed } from '@/theme';
 
-// Floating 5-spot bar (approved mockup): Home · Goals · Kip (centre, opens Talk) · Calendar · You.
+// Floating 5-spot bar (approved mockup): Home · Your saving plan · Kip (centre, opens Talk) · Your goals · You.
+// The full calendar opens from Home (next to the week).
 // Two on each side keeps Kip in the middle. "You" is the person's photo: Profile and settings.
-type TabName = 'index' | 'goals' | 'calendar' | 'profile';
+type TabName = 'index' | 'plan' | 'goals' | 'profile';
 
 export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -34,8 +35,8 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? colors.paper : colors.ink} />
         </TabIcon>
-        <TabIcon label={t('Saving')} active={current === 'goals'} onPress={() => go('goals')}>
-          <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? colors.paper : colors.ink} />
+        <TabIcon label={t('Your saving plan')} active={current === 'plan'} onPress={() => go('plan')}>
+          <ChartPieSlice size={22} weight={current === 'plan' ? 'fill' : 'regular'} color={current === 'plan' ? colors.paper : colors.ink} />
         </TabIcon>
 
         <Pressable
@@ -49,8 +50,8 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
           <Kip size={63} />
         </Pressable>
 
-        <TabIcon label={t('Calendar')} active={current === 'calendar'} onPress={() => go('calendar')}>
-          <CalendarBlank size={22} weight={current === 'calendar' ? 'fill' : 'regular'} color={current === 'calendar' ? colors.paper : colors.ink} />
+        <TabIcon label={t('Your goals')} active={current === 'goals'} onPress={() => go('goals')}>
+          <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? colors.paper : colors.ink} />
         </TabIcon>
         {/* You: the photo itself, with a black ring when it's the open tab */}
         <TabIcon label={t('You')} active={false} onPress={() => go('profile')} selected={current === 'profile'}>

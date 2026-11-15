@@ -56,6 +56,7 @@ function RootStack() {
       <Stack.Protected guard={signedIn && onboarded}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="month" />
+        <Stack.Screen name="calendar" />
         <Stack.Screen name="styles" />
         <Stack.Screen name="kip-moods" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />

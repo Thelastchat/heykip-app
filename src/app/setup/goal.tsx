@@ -215,7 +215,11 @@ export default function SetupGoal() {
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
             <BahtField label={t('Each month')} value={draft.goalMonthly} onChange={(goalMonthly) => update({ goalMonthly })} placeholder="0" flex={1.3} />
             <SmallTile label={t('Kip: comfortable')} style={[styles.white, { flex: 1 }]}>
-              <Text style={smallValueStyle()}>{comfy >= 1000 ? `${baht(Math.floor(comfy / 500) * 500)}–${baht(Math.floor((comfy * 1.5) / 500) * 500)}` : t('up to {amount}', { amount: baht(Math.max(500, Math.floor(comfy / 100) * 100)) })}</Text>
+              <Text style={smallValueStyle()}>
+                {comfy >= 1000
+                  ? `${baht(Math.floor(comfy / 500) * 500)}–${baht(Math.floor((comfy * 1.5) / 500) * 500)}`
+                  : t('up to {amount}', { amount: baht(Math.max(500, Math.floor(comfy / 100) * 100)) })}
+              </Text>
             </SmallTile>
           </View>
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -345,7 +349,7 @@ export default function SetupGoal() {
               formY.current = e.nativeEvent.layout.y;
             }}
             style={styles.sectionHead}>
-            <Text style={styles.h2}>{chosenIdea ? t('Your goal') : t('Or make your own')}</Text>
+            <Text style={styles.h2}>{chosenIdea ? chosenIdea.title : t('Or make your own')}</Text>
             <Text style={styles.muted12}>{chosenIdea ? t('change anything') : t('nothing fits? build it')}</Text>
           </View>
 
@@ -462,7 +466,7 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
           {idea.why}
         </Text>
         <Pressable onPress={onPick} style={[styles.pickBtn, on && { backgroundColor: colors.paper }]} accessibilityRole="button" accessibilityLabel={t('Pick {title}', { title: idea.title })}>
-          <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? t('Picked ✓ — edit it below') : t('Pick this goal')}</Text>
+          <Text style={[styles.pickText, on && { color: colors.ink }]}>{on ? t('✎ Edit amount, date or name') : t('Pick this goal')}</Text>
         </Pressable>
       </View>
       <Float delay={i * 500} amount={5} style={styles.big3d}>

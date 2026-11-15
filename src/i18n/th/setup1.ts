@@ -91,7 +91,7 @@ const th: Record<string, string> = {
   Suggested: 'แนะนำ',
   '/mo': '/เดือน',
   'Pick {title}': 'เลือก {title}',
-  'Picked ✓ — edit it below': 'เลือกแล้ว ✓ แก้ต่อข้างล่างได้',
+  '✎ Edit amount, date or name': '✎ แก้ยอด วันที่ หรือชื่อ',
   'Pick this goal': 'เลือกเป้าหมายนี้',
   'Pick an amount for each month and I’ll check it fits.': 'เลือกยอดต่อเดือนมาเลย เดี๋ยว Kip เช็กให้ว่าไหวมั้ย',
   '**Fits your month.** {amount} a month = **{year}** in a year, and fun money stays {fun}.': '**ไหวสบาย** เดือนละ {amount} = ปีละ **{year}** แถมยังมีเงินเที่ยวเล่น {fun}',
@@ -106,8 +106,7 @@ const th: Record<string, string> = {
   '**Fits your month.** {amount} a month gets you there in {n} months.': '**ไหวสบาย** เก็บเดือนละ {amount} ได้ครบใน {n} เดือน',
   '**Possible, but tight.** {amount} a month leaves {fun} for fun. {date} is comfortable.': '**ได้อยู่ แต่ตึงนิดนึง** เก็บเดือนละ {amount} เหลือเงินเที่ยวเล่น {fun} ถ้าเป็น {date} จะสบายกว่า',
   '**Possible, but tight.** {amount} a month leaves {fun} for fun.': '**ได้อยู่ แต่ตึงนิดนึง** เก็บเดือนละ {amount} เหลือเงินเที่ยวเล่น {fun}',
-  '**That date needs {need} a month** — more than fits. Comfortable: {date}. I’ll show you options next.':
-    '**วันนั้นต้องเก็บเดือนละ {need}** — เกินที่ไหว แบบสบายๆ คือ {date} เดี๋ยวหน้าถัดไป Kip มีทางเลือกให้',
+  '**That date needs {need} a month** — more than fits. Comfortable: {date}. I’ll show you options next.': '**วันนั้นต้องเก็บเดือนละ {need}** — เกินที่ไหว แบบสบายๆ คือ {date} เดี๋ยวหน้าถัดไป Kip มีทางเลือกให้',
   '**That date needs {need} a month** — more than fits. I’ll show you options next.': '**วันนั้นต้องเก็บเดือนละ {need}** — เกินที่ไหว เดี๋ยวหน้าถัดไป Kip มีทางเลือกให้',
 
   // ---------- thinking · Making your plan ----------

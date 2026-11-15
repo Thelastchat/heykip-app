@@ -2,8 +2,8 @@
 // Paid bills sink to the bottom (tap to undo). Kip's guesses say "Estimate" and "about ฿…".
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -13,7 +13,7 @@ import { KipStill } from '@/components/KipStill';
 import { monthShort, t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import type { BillType } from '@/lib/budget';
-import { colors, fonts, glow, glassA, inkA, themed } from '@/theme';
+import { colors, fonts, glow, glassA, inkA, themed, whiteA } from '@/theme';
 
 /** One thing in Every month. `sub` replaces "Monthly" (e.g. "Streaming · monthly"); a yearly item shows its monthly
  *  set-aside (`perMonth`) and how much is ready (`note`). */
@@ -162,6 +162,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         const isOpen = open === b.key;
         const last = i === order.length - 1;
         const g = b.type ? TYPE_GLYPH[b.type] : glyphFor(b.name);
+        const late = !b.paid && Boolean(b.due && b.due.days < 0);
         return (
           <Pressable
             key={b.key}
@@ -175,41 +176,42 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
               } else setOpenKey(isOpen ? null : b.key);
             }}
             style={{ marginTop: i === 0 ? 0 : order[i - 1].key === open ? -14 : -62, zIndex: i }}>
-            <Glass radius={26} tint={b.paid ? glassA(0.2) : isOpen ? glassA(0.5) : glassA(0.34)} shadow={false} style={[styles.cardShadow, isOpen && styles.openShadow]}>
+            {/* The card says where it stands (approved mockup): lime = coming up, black = late, quiet grey = paid. */}
+            <Card late={late} tint={b.paid ? glassA(0.2) : isOpen ? limeA(0.72) : limeA(0.55)} style={[styles.cardShadow, isOpen && styles.openShadow]}>
               <View style={[styles.card, { height: isOpen ? 152 : last ? 72 : 132 }]}>
                 <View style={styles.strip}>
                   <View style={[styles.ic, { backgroundColor: b.paid ? colors.ink : KIND[g] }]}>{b.paid ? <Check /> : <GlyphIcon g={g} color={LIGHT_GLYPH[g] ? '#FFFFFF' : undefined} />}</View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[styles.name, b.paid && styles.done]} numberOfLines={1}>
+                    <Text style={[styles.name, b.paid && styles.done, late && styles.onLate]} numberOfLines={1}>
                       {b.name}
                     </Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.sub, !b.paid && b.due && b.due.days <= 3 && styles.soon]} numberOfLines={1}>
+                      <Text style={[styles.sub, !b.paid && b.due && b.due.days <= 3 && styles.soon, late && styles.lateDue]} numberOfLines={1}>
                         {b.paid ? t('Paid') : b.estimate ? t('Estimate') : b.due ? dueText(b.due) : (b.sub ?? t('Monthly'))}
                       </Text>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.amt, b.paid && styles.done]}>
+                    <Text style={[styles.amt, b.paid && styles.done, late && styles.onLate]}>
                       {b.estimate && !b.paid ? t('about {amount}', { amount: baht(b.amount) }) : b.perMonth ? t('{amount}/mo', { amount: baht(b.amount) }) : baht(b.amount)}
                     </Text>
-                    {b.note && !b.paid && !isOpen ? <Text style={styles.sub}>{b.note}</Text> : null}
+                    {b.note && !b.paid && !isOpen ? <Text style={[styles.sub, late && styles.lateSub]}>{b.note}</Text> : null}
                     {/* An open bill can be edited (approved mockup): rename, amount, how often — in Your month's sheet */}
                     {isOpen && !b.estimate && (b.key === 'rent' || b.key.startsWith('item:')) && (
                       <Pressable
                         onPress={() => router.push(`/month?edit=${encodeURIComponent(b.key === 'rent' ? 'rent' : b.key.slice(5))}` as never)}
                         hitSlop={8}
-                        style={[styles.editPill, { marginTop: 4 }]}
+                        style={[styles.editPill, { marginTop: 4 }, late && { backgroundColor: whiteA(0.16) }]}
                         accessibilityRole="button"
                         accessibilityLabel={t('Edit {name}', { name: b.name })}>
-                        <Text style={styles.editText}>{t('Edit')}</Text>
+                        <Text style={[styles.editText, late && styles.onLate]}>{t('Edit')}</Text>
                       </Pressable>
                     )}
                   </View>
                 </View>
                 {isOpen && <SlideToPay onDone={() => onPaid(b.key, true)} />}
               </View>
-            </Glass>
+            </Card>
           </Pressable>
         );
       })}
@@ -227,6 +229,19 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         <Text style={{ color: colors.faint, fontSize: 16 }}>›</Text>
       </Pressable>
     </View>
+  );
+}
+
+/** Brand lime, see-through, so the glow shows through the card. */
+const limeA = (a: number) => `rgba(255,252,154,${a})`;
+
+/** Frosted lime (or grey once paid) — and plain black when it's late, so it can't be missed. */
+function Card({ late, tint, style, children }: { late: boolean; tint: string; style: StyleProp<ViewStyle>; children: ReactNode }) {
+  if (late) return <View style={[{ borderRadius: 26, backgroundColor: colors.solid }, style]}>{children}</View>;
+  return (
+    <Glass radius={26} tint={tint} shadow={false} style={style}>
+      {children}
+    </Glass>
   );
 }
 
@@ -284,6 +299,9 @@ function SlideToPay({ onDone }: { onDone: () => void }) {
 const styles = themed(() =>
   StyleSheet.create({
     soon: { fontFamily: fonts.semibold, color: colors.ink },
+    onLate: { color: colors.onSolid },
+    lateSub: { color: whiteA(0.6) },
+    lateDue: { fontFamily: fonts.semibold, color: colors.lime },
     subs: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: glassA(0.5) },
     editPill: { borderRadius: 999, backgroundColor: inkA(0.06), paddingHorizontal: 10, paddingVertical: 4 },
     editText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ink },

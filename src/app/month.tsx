@@ -9,9 +9,14 @@ import { useHome } from '@/lib/home';
 import { t } from '@/lib/i18n';
 import { useMonth } from '@/lib/month';
 
-// Your month — where this month's money goes: saving first, then bills, then everyday spending.
+// Your saving plan — where this month's money goes: saving first, then bills, then everyday spending.
 // Changing amounts and money styles is Plus; adding a bill stays free.
 export default function YourMonth() {
+  return <PlanScreen />;
+}
+
+/** The plan: saving first, then bills, then everyday spending. As a tab (back=false) and as /month with ?add, ?subs, ?edit. */
+export function PlanScreen({ back = true }: { back?: boolean }) {
   const { month, loading, error, save } = useMonth();
   const { add, edit, subs } = useLocalSearchParams<{ add?: string; edit?: string; subs?: string }>();
   const { spent } = useHome(month);
@@ -23,7 +28,20 @@ export default function YourMonth() {
   const pitch = plusPitch(month, goal.split(' ')[0] === 'Safety' ? t('your safety net') : goal.replace(/ trip$/i, ''), funLeft);
   return (
     <>
-      <MonthScreen month={month} loading={loading} error={error} save={save} spent={spent.byCat} isPlus={isPlus} onLocked={setLocked} openAdd={add === '1'} openSubs={subs === '1'} openEdit={edit} key={edit ?? 'month'} />
+      <MonthScreen
+        month={month}
+        loading={loading}
+        error={error}
+        save={save}
+        spent={spent.byCat}
+        isPlus={isPlus}
+        onLocked={setLocked}
+        openAdd={add === '1'}
+        openSubs={subs === '1'}
+        openEdit={edit}
+        back={back}
+        key={edit ?? 'month'}
+      />
       {locked && (
         <PlusSheet open onClose={() => setLocked(null)} onUnlocked={() => setLocked(null)} title={pitch[locked].title} sub={pitch[locked].sub}>
           {pitch[locked].body}

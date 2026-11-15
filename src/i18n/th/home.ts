@@ -46,6 +46,7 @@ const th: Record<string, string> = {
   // ---------- Home: left to spend ----------
   'Left to spend': 'เหลือให้ใช้',
   'Your month': 'แผนเดือนนี้',
+  'Your saving plan': 'แผนเก็บเงินของคุณ',
   '{category}: {left} left of {total}': '{category}: เหลือ {left} จาก {total}',
   '{pct}% left': 'เหลือ {pct}%',
   'Going fast': 'ใช้เร็วไปนิด',
@@ -234,8 +235,7 @@ const th: Record<string, string> = {
   'Food, transport and bills stay the same': 'ค่ากิน ค่าเดินทาง และบิลเท่าเดิม',
   'I found {amount} a month for {goal} without touching food, transport or bills.': 'Kip หาได้เดือนละ {amount} ให้ {goal} โดยไม่แตะค่ากิน ค่าเดินทาง หรือบิล',
   'I found {amount} a month for {goal}. Which one should arrive first?': 'Kip หาได้เดือนละ {amount} ให้ {goal} อยากให้เป้าไหนถึงก่อน?',
-  'Shopping and fun are already at their minimum, so {goal} starts when {first} is done — or it can go first.':
-    'เงินช้อปกับเงินเที่ยวเหลือน้อยสุดแล้ว {goal} เลยเริ่มเก็บหลัง {first} ถึงเป้า — หรือจะให้ไปก่อนก็ได้',
+  'Shopping and fun are already at their minimum, so {goal} starts when {first} is done — or it can go first.': 'เงินช้อปกับเงินเที่ยวเหลือน้อยสุดแล้ว {goal} เลยเริ่มเก็บหลัง {first} ถึงเป้า — หรือจะให้ไปก่อนก็ได้',
   '{goal} by {date} needs {amount} a month, so {first} slows down for now.': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เลยต้องเก็บ {first} ช้าลงสักพัก',
   '{goal} needs {amount} a month — I found it in shopping and fun.': '{goal} ต้องเก็บเดือนละ {amount} — Kip หาได้จากเงินช้อปกับเงินเที่ยว',
   '{goal} first': '{goal} ก่อน',
@@ -274,8 +274,7 @@ const th: Record<string, string> = {
     'นี่คือ {pct}% ของเงินเดือนที่ไปเป็นเงินเก็บ คนส่วนใหญ่ทำได้จริงแค่ราวครึ่งของที่ตั้งใจ ไม่เกิน 30% จะทำต่อเนื่องได้ง่ายกว่า',
   '{amount} every {day}': '{amount} ทุกวันที่ {n}',
   '{amount} now, more once {first} is done': 'ตอนนี้ {amount} แล้วเพิ่มขึ้นเมื่อ {first} ถึงเป้า',
-  '{goal} by {date} needs {amount} a month. Your pay can’t fit that next to {first}. Here’s what can work:':
-    '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหวถ้าเก็บ {first} ด้วย ลองแบบนี้ดู:',
+  '{goal} by {date} needs {amount} a month. Your pay can’t fit that next to {first}. Here’s what can work:': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหวถ้าเก็บ {first} ด้วย ลองแบบนี้ดู:',
   '{goal} by {date} needs {amount} a month. Your pay can’t fit that right now. Here’s what can work:': '{goal} ให้ทัน {date} ต้องเก็บเดือนละ {amount} เงินเดือนตอนนี้ยังรับไม่ไหว ลองแบบนี้ดู:',
   // category sheet
   '**All used.** More {cat} now comes out of the rest of your month': '**ใช้ครบแล้ว** ถ้าใช้{cat}เพิ่ม จะหักจากเงินส่วนอื่นของเดือนนี้',
@@ -374,8 +373,7 @@ const th: Record<string, string> = {
   'Then {category} lasts to payday at about {perDay} a day.': 'แล้ว{category}จะพอถึงวันเงินเดือนออก ถ้าใช้วันละประมาณ {perDay}',
   'By what you logged, last pay month had **{amount}** left. If it’s still in your account, put it toward {goal}? It arrives **{will}** instead of {was}.':
     'จากที่จดไว้ รอบเงินเดือนที่แล้วเหลือ **{amount}** ถ้ายังอยู่ในบัญชี ใส่เข้า {goal} ไหม? จะถึงเป้า **{will}** แทน {was}',
-  'By what you logged, last pay month had **{amount}** left. If it’s still in your account, put it toward {goal}?':
-    'จากที่จดไว้ รอบเงินเดือนที่แล้วเหลือ **{amount}** ถ้ายังอยู่ในบัญชี ใส่เข้า {goal} ไหม?',
+  'By what you logged, last pay month had **{amount}** left. If it’s still in your account, put it toward {goal}?': 'จากที่จดไว้ รอบเงินเดือนที่แล้วเหลือ **{amount}** ถ้ายังอยู่ในบัญชี ใส่เข้า {goal} ไหม?',
   // payday recap
   '1 change': '1 อย่าง',
   '{n} changes': '{n} อย่าง',

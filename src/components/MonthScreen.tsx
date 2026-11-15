@@ -80,6 +80,7 @@ export function MonthScreen({
   openAdd = false,
   openSubs = false,
   openEdit,
+  back = true,
 }: {
   month: MonthBudget | null;
   loading: boolean;
@@ -96,6 +97,8 @@ export function MonthScreen({
   openSubs?: boolean;
   /** Opened from a bill on Home: that bill's edit sheet is open straight away ('rent' or the bill's name). */
   openEdit?: string;
+  /** As the tab (false): no back arrow, no Looks good, and room for the bar. */
+  back?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
@@ -146,7 +149,8 @@ export function MonthScreen({
       <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 100 }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 18 }}>
           <ScreenHeader
-            title={t('Your month')}
+            title={t('Your saving plan')}
+            back={back}
             right={
               <Squish onPress={() => (isPlus ? router.push('/styles') : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
                 <Glass radius={999} innerStyle={styles.stylePill}>
@@ -298,9 +302,9 @@ export function MonthScreen({
         {error ? <Text style={[styles.note, { color: colors.orange }]}>{error}</Text> : null}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + (back ? 8 : 84) }]}>
         {isPlus && <MonthTellKip month={month} save={save} />}
-        <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+        {back && <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />}
       </View>
       <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>
         {sheet?.stage === 'addBill' && (
@@ -692,8 +696,7 @@ function AddBill({
       : null;
   const changed =
     editing &&
-    (dueChanged ||
-    isRent
+    (dueChanged || isRent
       ? amount !== month.bills.rent
       : !!old && (name.trim() !== old.name || kind !== (old.type ?? guessType(old.name)) || yearly !== !!old.yearly || perMonth !== old.amount || (yearly && !sameYearly)));
   /** A reminder needs the phone's permission: asked once, when it's first set. */
