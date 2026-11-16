@@ -163,7 +163,7 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         const last = i === order.length - 1;
         const g = b.type ? TYPE_GLYPH[b.type] : glyphFor(b.name);
         const late = !b.paid && Boolean(b.due && b.due.days < 0);
-        const color = PALETTE()[bills.findIndex((x) => x.key === b.key) % 8]; // by the bill, so it keeps its colour when the stack reorders
+        const color = PALETTE()[bills.findIndex((x) => x.key === b.key) % 7]; // by the bill, so it keeps its colour when the stack reorders
         const dark = !b.paid && DARK_CARD().has(color);
         return (
           <Pressable
@@ -243,9 +243,9 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
 }
 
 // Every card its own brand colour (approved sketch), round the palette by position so two neighbours never match.
-// The icon is a white circle with a dark glyph on all of them. Dark cards (black, orange, teal) get light text.
-const PALETTE = () => [colors.lime, colors.lavender, colors.solid, colors.orange, colors.peach, colors.sky, colors.sage, '#7FC4B8'];
-const DARK_CARD = () => new Set([colors.solid, colors.orange, '#7FC4B8']);
+// The icon is a white circle with a dark glyph on all of them. Dark cards (black, orange) get light text.
+const PALETTE = () => [colors.lime, colors.lavender, colors.solid, colors.orange, colors.peach, colors.sky, colors.sage];
+const DARK_CARD = () => new Set([colors.solid, colors.orange]);
 
 /** A solid brand-colour card — or frosted grey once it's paid. */
 function Card({ color, paid, style, children }: { color: string; paid: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
