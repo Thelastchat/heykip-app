@@ -5,7 +5,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimension
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
-import { nth } from '@/components/setup/kit';
+import { BackButton, nth } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
 import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
@@ -61,6 +61,10 @@ export default function SetupCongrats() {
     <View style={[styles.screen, { paddingTop: insets.top + 40, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
       <GlowBackground mood="fast" />
       <Confetti />
+      {/* Back to the check-in, in case a number was wrong (the thinking screen replaced itself, so it's skipped). */}
+      <View style={{ position: 'absolute', left: 20, top: insets.top + 8 }}>
+        <BackButton size={46} />
+      </View>
       <View style={{ alignItems: 'center' }}>
         <Kip mood="celebrate" size={140} />
       </View>
