@@ -9,6 +9,7 @@ import { CAT_ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import type { AgentOp, FixOp } from '@/lib/agent';
+import type { KipKnows } from '@/lib/kipknows';
 
 /** Every category key the server can return (the database's categories). */
 export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other';
@@ -121,7 +122,7 @@ export function kipContext(
   spent: Spent,
   goal: { name: string; arrives: string | null } | null,
   name?: string | null,
-  extra: { goalSaved?: number; recent?: { ref: string; name: string; amount: number; category: string; day: string }[] } = {},
+  extra: { goalSaved?: number; recent?: { ref: string; name: string; amount: number; category: string; day: string }[] } & Partial<KipKnows> = {},
 ) {
   if (!month) return { language: getLang() };
   const n = monthNumbers(month, spent);

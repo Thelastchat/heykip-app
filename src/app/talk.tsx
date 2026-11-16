@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { CATEGORY } from '@/lib/budget';
 import { budgetKey, monthNumbers, useHome } from '@/lib/home';
+import { kipKnows } from '@/lib/kipknows';
 import { CAT_ICON3D, goalIcon3D, goalTypeIcon3D, ICON3D } from '@/lib/icons3d';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
 import { planChange, planFix, type ChangePlan, type FixPlan, type RecentTx } from '@/lib/agent';
@@ -103,7 +104,7 @@ export default function Talk() {
   const insets = useSafeAreaInsets();
   const { profile, session } = useAuth();
   const { month, save } = useMonth();
-  const { spent, goals, reload } = useHome(month);
+  const { spent, goals, reload, tx } = useHome(month);
   const isPlus = profile ? profile.plan !== 'free' : false;
   const [locked, setLocked] = useState(!isPlus);
   const [text, setText] = useState('');
@@ -250,6 +251,8 @@ export default function Talk() {
       kipContext(month, spent, goal ? { name: short, arrives } : null, first, {
         goalSaved: goal?.saved,
         recent: rec.map((r) => ({ ref: r.ref, name: r.name, amount: r.amount, category: r.category, day: (r.at ?? '').slice(0, 10) })),
+        // Step 3: due days, the last 3 months, what the detective found — so Kip answers from what the app knows.
+        ...(month ? kipKnows(month, tx) : {}),
       }),
       history(),
     );

@@ -19,6 +19,7 @@ import { billNotice, leftoverNotice, noticesFor, runoutNotice, subNotices } from
 import { recapContext, recapFor } from '../src/lib/recap';
 import { cleanName, findPriceChanges, findRepeats, findStopped, foundSubs, streamingTotal } from '../src/lib/subs';
 import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
+import { kipKnows } from '../src/lib/kipknows';
 
 // ---------- tiny test kit ----------
 let seed = 20261103;
@@ -714,7 +715,6 @@ for (let n = 0; n < 2000; n++) {
   check('Edit bill: the random runs did real edits', n > 1000, () => n);
 }
 
-
 // ---------- Kip notices first ----------
 {
   let cards = 0;
@@ -732,18 +732,42 @@ for (let n = 0; n < 2000; n++) {
     if (!n) continue;
     cards++;
     const left = (k: CatKey) => (n.next.spend.find((x) => x.key === k)?.amount ?? 0) - (byCat[k] ?? 0);
-    check('Kip notices: a move keeps every baht’s job (rent, bills, saving untouched)', Math.abs(jobs(n.next) - n.next.income) <= 10 && billsTotal(n.next) === billsTotal(m) && savingTotal(n.next) === savingTotal(m), () => n.moves);
+    check(
+      'Kip notices: a move keeps every baht’s job (rent, bills, saving untouched)',
+      Math.abs(jobs(n.next) - n.next.income) <= 10 && billsTotal(n.next) === billsTotal(m) && savingTotal(n.next) === savingTotal(m),
+      () => n.moves,
+    );
     check('Kip notices: only budgets move — the total spending money stays the same', spendingTotal(n.next) === spendingTotal(m), () => n.moves);
     check('Kip notices: the short budget really runs out before payday at its pace', n.runsOut.getTime() < P.end.getTime() - 86_400_000 && n.daysEarly >= 2, () => n);
-    check('Kip notices: a giver keeps enough for its own days to payday', n.moves.slice(1).every((g) => left(g.key) >= Math.max(0, (byCat[g.key] ?? 0) / Math.max(1, P.dayIndex), amt(m, g.key) / P.total) * P.daysLeft - 50), () => n.moves);
-    check('Kip notices: a giver never goes below what’s already spent on it', n.moves.slice(1).every((g) => left(g.key) >= 0), () => n.moves);
-    check('Kip notices: the card’s numbers are the real ones after the move', n.moves.every((mv) => mv.now === left(mv.key)), () => n.moves);
+    check(
+      'Kip notices: a giver keeps enough for its own days to payday',
+      n.moves.slice(1).every((g) => left(g.key) >= Math.max(0, (byCat[g.key] ?? 0) / Math.max(1, P.dayIndex), amt(m, g.key) / P.total) * P.daysLeft - 50),
+      () => n.moves,
+    );
+    check(
+      'Kip notices: a giver never goes below what’s already spent on it',
+      n.moves.slice(1).every((g) => left(g.key) >= 0),
+      () => n.moves,
+    );
+    check(
+      'Kip notices: the card’s numbers are the real ones after the move',
+      n.moves.every((mv) => mv.now === left(mv.key)),
+      () => n.moves,
+    );
     check('Kip notices: worth a card (at least ฿200)', n.moves[0].now - n.moves[0].was >= 200, () => n.moves);
     // Once done, the same card is put away until payday (Home hides it); Undo brings it back.
     const after = noticesFor(n.next, spent, P, null, [], { [n.id]: P.end.getTime() }, now);
-    check('Kip notices: after Do it, the same budget isn’t raised again this month', after.every((x) => x.kind !== 'runout' || x.key !== n.key), () => after);
+    check(
+      'Kip notices: after Do it, the same budget isn’t raised again this month',
+      after.every((x) => x.kind !== 'runout' || x.key !== n.key),
+      () => after,
+    );
     const later = noticesFor(m, spent, P, null, [], { [n.id]: now.getTime() + 1 }, now);
-    check('Kip notices: Not now hides it', later.every((x) => x.id !== n.id), () => 0);
+    check(
+      'Kip notices: Not now hides it',
+      later.every((x) => x.id !== n.id),
+      () => 0,
+    );
     if (later[0]?.kind === 'runout') check('Kip notices: with one put off, the next budget gets its turn', later[0].key !== n.key, () => later[0]);
   }
   check('Kip notices: the random runs made real cards', cards > 300, () => cards);
@@ -777,7 +801,6 @@ for (let n = 0; n < 2000; n++) {
   }
 }
 
-
 // ---------- bills: due days and reminders ----------
 {
   let n = 0;
@@ -798,20 +821,39 @@ for (let n = 0; n < 2000; n++) {
     const d = nextBillDue(b, m.payday, now)!;
     n++;
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    check('Due day: falls on the bill’s day, or the month’s last day when shorter', d.date.getDate() === Math.min(day, new Date(d.date.getFullYear(), d.date.getMonth() + 1, 0).getDate()), () => ({ day, date: d.date }));
+    check('Due day: falls on the bill’s day, or the month’s last day when shorter', d.date.getDate() === Math.min(day, new Date(d.date.getFullYear(), d.date.getMonth() + 1, 0).getDate()), () => ({
+      day,
+      date: d.date,
+    }));
     // A pay month can miss a day (a 29th–31st near a short February): then the next one is the first after it.
-    check('Due day: unpaid → this pay month’s date; paid → next pay month’s', paid ? d.date >= P.end : d.date >= P.start && (d.date < P.end || d.date.getTime() - P.end.getTime() < 4 * 86_400_000), () => ({ paid, date: d.date, P }));
+    check(
+      'Due day: unpaid → this pay month’s date; paid → next pay month’s',
+      paid ? d.date >= P.end : d.date >= P.start && (d.date < P.end || d.date.getTime() - P.end.getTime() < 4 * 86_400_000),
+      () => ({ paid, date: d.date, P }),
+    );
     check('Due day: “days” counts from today (late is below 0)', d.days === Math.round((d.date.getTime() - today.getTime()) / 86_400_000), () => d);
     check('Due day: a paid bill is never late', !paid || d.days > 0 || (d.days >= 0 && d.date >= P.end), () => d);
     const rs = remindersFor(m, now);
-    check('Reminders: never in the past, 9:00, the day before or on the day', rs.every((r) => r.at > now && r.at.getHours() === 9 && r.at.getMinutes() === 0), () => rs);
+    check(
+      'Reminders: never in the past, 9:00, the day before or on the day',
+      rs.every((r) => r.at > now && r.at.getHours() === 9 && r.at.getMinutes() === 0),
+      () => rs,
+    );
     check('Reminders: none for a bill set to Off', remind !== 'off' || rs.every((r) => r.key !== 'item:Netflix'), () => rs);
     check('Reminders: a paid bill skips this pay month', !paid || rs.filter((r) => r.key === 'item:Netflix').every((r) => r.at >= new Date(P.end.getTime() - 86_400_000)), () => ({ rs, P }));
     check('Reminders: each one once', new Set(rs.map((r) => r.id)).size === rs.length, () => rs.map((r) => r.id));
     if (remind !== 'off') {
       const mine = rs.filter((r) => r.key === 'item:Netflix');
       const shift = remind === 'before' ? 1 : 0;
-      check('Reminders: on the right day for its due date', mine.every((r) => { const due = new Date(r.id.slice(-10)); const x = new Date(due.getFullYear(), due.getMonth(), due.getDate() - shift, 9); return Math.abs(x.getTime() - r.at.getTime()) < 26 * 3_600_000; }), () => mine);
+      check(
+        'Reminders: on the right day for its due date',
+        mine.every((r) => {
+          const due = new Date(r.id.slice(-10));
+          const x = new Date(due.getFullYear(), due.getMonth(), due.getDate() - shift, 9);
+          return Math.abs(x.getTime() - r.at.getTime()) < 26 * 3_600_000;
+        }),
+        () => mine,
+      );
     }
     const card = billNotice(m, now);
     const all = billNotice(m, now, (id) => !id.includes('item:Netflix'));
@@ -819,7 +861,11 @@ for (let n = 0; n < 2000; n++) {
     if (card) check('Bill card: Not yet puts it away until tomorrow', billNotice(m, now, (id) => id === card.id)?.id !== card.id, () => card);
     // Re-plans keep due days: a style switch re-adds bills with their day; rent's day is kept.
     const re = withStyle(m, pick(['kip', 'savefirst', '503020', 'jars'] as const));
-    check('Due day: a style switch keeps every bill’s day and rent’s day', re.bills.items?.find((x) => x.name === 'Netflix')?.day === day && JSON.stringify(re.rentDue) === JSON.stringify(m.rentDue), () => re.bills.items);
+    check(
+      'Due day: a style switch keeps every bill’s day and rent’s day',
+      re.bills.items?.find((x) => x.name === 'Netflix')?.day === day && JSON.stringify(re.rentDue) === JSON.stringify(m.rentDue),
+      () => re.bills.items,
+    );
   }
   check('Due day: the random runs were real', n > 1000, () => n);
   // Known cases.
@@ -843,20 +889,31 @@ for (let n = 0; n < 2000; n++) {
     const ed = editBill(m, 0, { perMonth: 179, due: { day: 12, remind: 'day' } });
     check('Edit bill: a new due day and reminder are saved', ed?.month.bills.items?.[0].day === 12 && ed?.month.bills.items?.[0].remind === 'day', () => ed?.month.bills.items);
     const cleared = editBill(m, 0, { perMonth: 179, due: null });
-    check('Edit bill: clearing the day removes it and its reminder', cleared?.month.bills.items?.[0].day === undefined && cleared?.month.bills.items?.[0].remind === undefined, () => cleared?.month.bills.items);
+    check(
+      'Edit bill: clearing the day removes it and its reminder',
+      cleared?.month.bills.items?.[0].day === undefined && cleared?.month.bills.items?.[0].remind === undefined,
+      () => cleared?.month.bills.items,
+    );
     const rent = editBill(m, 'rent', { perMonth: m.bills.rent, due: { day: 1, remind: 'before' } });
     check('Edit rent: its due day is saved on the month', rent?.month.rentDue?.day === 1, () => rent?.month.rentDue);
-    check('Rent: no due day set — no date is guessed', dueBills(m, now).every((x) => x.key !== 'rent'), () => 0);
+    check(
+      'Rent: no due day set — no date is guessed',
+      dueBills(m, now).every((x) => x.key !== 'rent'),
+      () => 0,
+    );
   }
 }
-
 
 // ---------- subscription detective ----------
 {
   const NOWS = new Date(2026, 10, 14, 12);
   const at = (mo: number, d: number) => new Date(2026, mo, d, 10).toISOString();
   const spend = (note: string, amount: number, iso: string) => ({ amount, kind: 'spend', occurred_at: iso, note });
-  check('Detective: names are cleaned (codes and numbers go)', cleanName('SPOTIFY P1A2B3 BKK').name === 'Spotify' && cleanName('APPLE.COM/BILL ICLOUD 50GB').name === 'iCloud+' && cleanName('Gym Jetts 2245').name === 'Jetts Fitness', () => [cleanName('SPOTIFY P1A2B3 BKK'), cleanName('APPLE.COM/BILL ICLOUD 50GB')]);
+  check(
+    'Detective: names are cleaned (codes and numbers go)',
+    cleanName('SPOTIFY P1A2B3 BKK').name === 'Spotify' && cleanName('APPLE.COM/BILL ICLOUD 50GB').name === 'iCloud+' && cleanName('Gym Jetts 2245').name === 'Jetts Fitness',
+    () => [cleanName('SPOTIFY P1A2B3 BKK'), cleanName('APPLE.COM/BILL ICLOUD 50GB')],
+  );
   const inp = person('trip');
   if (inp) {
     const m = month(inp, 'kip', 25);
@@ -864,30 +921,99 @@ for (let n = 0; n < 2000; n++) {
     const r = findRepeats(three, m, NOWS);
     check('Detective: 3 months running at about the same day and amount is a subscription', r.length === 1 && r[0].name === 'Spotify' && r[0].amount === 129 && r[0].day === 12, () => r);
     check('Detective: 2 months is not enough', findRepeats(three.slice(1), m, NOWS).length === 0, () => 0);
+
+    // ---------- what Kip knows (Talk to Kip, step 3) ----------
+    {
+      const withNet = addBill(m, 'Netflix', 419, { type: 'streaming', day: 18, remind: 'before' }).month;
+      const food = [spend('ข้าวมันไก่', 60, at(9, 1)), spend('ข้าวมันไก่', 60, at(9, 3)), spend('Shabu', 450, at(9, 10)), spend('BTS', 44, at(9, 5))].map((x) => ({
+        ...x,
+        cat: x.note === 'BTS' ? 'transport' : 'food',
+      }));
+      const k = kipKnows(withNet, [...three, ...food], NOWS);
+      const net = k.dueDays.find((d) => d.name === 'Netflix');
+      check('Kip knows: Netflix is due on the 18th, in 4 days', !!net && net.day === 18 && net.dueIn === 4 && !net.paid, () => k.dueDays);
+      check('Kip knows: a bill without a day has no due date (never a guessed one)', k.dueDays.every((d) => d.day > 0) && k.dueDays.length === 1, () => k.dueDays);
+      const oct = k.lastMonths.find((x) => x.month === '2026-10');
+      check(
+        'Kip knows: last month by category, and what was logged most often',
+        !!oct && oct.byCategory['Food & drinks'] === 570 && oct.byCategory.Transport === 44 && oct.mostOften[0].name === 'ข้าวมันไก่' && oct.mostOften[0].times === 2,
+        () => k.lastMonths,
+      );
+      check(
+        'Kip knows: a month with nothing logged is left out, not a row of zeros',
+        k.lastMonths.every((x) => x.spent > 0),
+        () => k.lastMonths,
+      );
+      check(
+        'Kip knows: the detective’s Spotify is in noticed.subscriptions',
+        k.noticed.subscriptions.some((x) => x.name === 'Spotify' && x.amount === 129 && x.day === 12),
+        () => k.noticed,
+      );
+      const lite: GoalLite = { id: 'g1', kind: 'trip', target: 200000, saved: 12400, due: null, monthly: null };
+      const due = planChange(withNet, [lite], [{ op: 'set_due', name: 'netflix', day: 5 }], NOWS);
+      check(
+        'Agent: "Netflix is on the 5th" sets its due day and shows 18th → 5th',
+        !!due && due.next.bills.items?.find((b) => b.name === 'Netflix')?.day === 5 && due.rows.some((r) => r.title === 'Netflix' && r.from === '18th' && r.to === '5th'),
+        () => due?.rows,
+      );
+      check(
+        'Agent: a due day for a bill that isn’t there is refused',
+        planChange(withNet, [lite], [{ op: 'set_due', name: 'Disney', day: 5 }], NOWS) === null && planChange(withNet, [lite], [{ op: 'set_due', name: 'Netflix', day: 32 }], NOWS) === null,
+        () => 0,
+      );
+      const rentDue = planChange(withNet, [lite], [{ op: 'set_due', name: 'rent', day: 1 }], NOWS);
+      check('Agent: "rent is on the 1st" sets rent’s day (when there is rent)', withNet.bills.rent > 0 ? rentDue?.next.rentDue?.day === 1 : rentDue === null, () => rentDue?.next.rentDue);
+      const sub = planChange(withNet, [lite], [{ op: 'add_bill', name: 'Spotify', amount: 129, bill_type: 'streaming', day: 12 }], NOWS);
+      check(
+        'Agent: adding the found subscription carries its day, so it gets a reminder',
+        sub?.next.bills.items?.find((b) => b.name === 'Spotify')?.day === 12 && dueBills(sub!.next, NOWS).some((d) => d.name === 'Spotify'),
+        () => sub?.next.bills.items,
+      );
+    }
     check('Detective: a month skipped is not a run', findRepeats([three[0], three[2], spend('Spotify', 129, at(6, 12))], m, NOWS).length === 0, () => 0);
-    check('Detective: more than 10% apart is not the same thing', findRepeats([spend('Shopee', 129, at(8, 12)), spend('Shopee', 400, at(9, 12)), spend('Shopee', 129, at(10, 12))], m, NOWS).length === 0, () => 0);
+    check(
+      'Detective: more than 10% apart is not the same thing',
+      findRepeats([spend('Shopee', 129, at(8, 12)), spend('Shopee', 400, at(9, 12)), spend('Shopee', 129, at(10, 12))], m, NOWS).length === 0,
+      () => 0,
+    );
     check('Detective: days far apart are not monthly', findRepeats([spend('Grab', 129, at(8, 2)), spend('Grab', 129, at(9, 20)), spend('Grab', 129, at(10, 12))], m, NOWS).length === 0, () => 0);
-    check('Detective: around the month end counts (31st, 1st, 30th)', findRepeats([spend('Netflix', 299, at(7, 31)), spend('Netflix', 299, at(9, 1)), spend('Netflix', 299, at(9, 30))], m, new Date(2026, 10, 2)).length === 1, () => 0);
+    check(
+      'Detective: around the month end counts (31st, 1st, 30th)',
+      findRepeats([spend('Netflix', 299, at(7, 31)), spend('Netflix', 299, at(9, 1)), spend('Netflix', 299, at(9, 30))], m, new Date(2026, 10, 2)).length === 1,
+      () => 0,
+    );
     const withBill = addBill(m, 'Spotify', 129, { type: 'streaming', day: 12 }).month;
     check('Detective: already a bill — no card', findRepeats(three, withBill, NOWS).length === 0, () => 0);
     check('Detective: stale (last one over 6 weeks ago) — no card', findRepeats(three, m, new Date(2027, 0, 20)).length === 0, () => 0);
     const cards = subNotices(m, three, NOWS);
     const sub = cards.find((c) => c.kind === 'sub');
-    check('Detective: the card’s plan adds it with its day and a reminder, and every baht keeps its job', !!sub && sub.kind === 'sub' && (sub.next.bills.items ?? []).some((b) => b.name === 'Spotify' && b.day === 12 && b.remind === 'before') && Math.abs(jobs(sub.next) - sub.next.income) <= 10, () => sub);
+    check(
+      'Detective: the card’s plan adds it with its day and a reminder, and every baht keeps its job',
+      !!sub && sub.kind === 'sub' && (sub.next.bills.items ?? []).some((b) => b.name === 'Spotify' && b.day === 12 && b.remind === 'before') && Math.abs(jobs(sub.next) - sub.next.income) <= 10,
+      () => sub,
+    );
     // Price went up: two payments running at a new price.
     const yt = addBill(m, 'YouTube Premium', 159, { type: 'streaming', day: 18 }).month;
     const up = findPriceChanges([spend('YOUTUBE PREMIUM', 179, at(9, 18)), spend('YouTube', 179, at(10, 18))], yt);
     check('Detective: a bill paid twice at a new price is noticed', up.length === 1 && up[0].was === 159 && up[0].now === 179, () => up);
     check('Detective: one payment at a new price is not enough', findPriceChanges([spend('YouTube', 179, at(10, 18)), spend('YouTube', 159, at(9, 18))], yt).length === 0, () => 0);
     const upCard = subNotices(yt, [spend('YouTube', 179, at(9, 18)), spend('YouTube', 179, at(10, 18))], NOWS).find((c) => c.kind === 'subprice');
-    check('Detective: “Make it ฿179” keeps every baht’s job', !!upCard && upCard.kind === 'subprice' && upCard.next.bills.items!.find((b) => b.name === 'YouTube Premium')!.amount === 179 && Math.abs(jobs(upCard.next) - upCard.next.income) <= 10, () => upCard);
+    check(
+      'Detective: “Make it ฿179” keeps every baht’s job',
+      !!upCard && upCard.kind === 'subprice' && upCard.next.bills.items!.find((b) => b.name === 'YouTube Premium')!.amount === 179 && Math.abs(jobs(upCard.next) - upCard.next.income) <= 10,
+      () => upCard,
+    );
     // Stopped: paid before in what was logged, then nothing for 2 due dates.
     const viu = addBill(m, 'Viu', 119, { type: 'streaming', day: 5 }).month;
     check('Detective: no charge for 2 due dates after being paid — noticed', findStopped([spend('VIU', 119, at(7, 5))], viu, NOWS).length === 1, () => 0);
     check('Detective: never logged — Kip can’t tell, says nothing', findStopped([], viu, NOWS).length === 0, () => 0);
     check('Detective: paid last month — not stopped', findStopped([spend('VIU', 119, at(7, 5)), spend('VIU', 119, at(10, 5))], viu, NOWS).length === 0, () => 0);
     const stopCard = subNotices(viu, [spend('VIU', 119, at(7, 5))], NOWS).find((c) => c.kind === 'substop');
-    check('Detective: removing it gives its money back to saving', !!stopCard && stopCard.kind === 'substop' && !(stopCard.next.bills.items ?? []).some((b) => b.name === 'Viu') && stopCard.next.goalExtra === viu.goalExtra + 119, () => stopCard);
+    check(
+      'Detective: removing it gives its money back to saving',
+      !!stopCard && stopCard.kind === 'substop' && !(stopCard.next.bills.items ?? []).some((b) => b.name === 'Viu') && stopCard.next.goalExtra === viu.goalExtra + 119,
+      () => stopCard,
+    );
     // Streaming: 2 or more.
     const two = addBill(addBill(m, 'Netflix', 179, { type: 'streaming' }).month, 'Disney+', 299, { type: 'streaming' }).month;
     const st = streamingTotal(two);
@@ -906,12 +1032,15 @@ for (let n = 0; n < 2000; n++) {
       (total, due) => yearlySetAside(total, due, 0, NOWS),
     );
     check('Screenshot: each subscription once, ones you have marked', found.length === 4 && found.find((f) => f.name === 'Spotify')?.already === true, () => found);
-    check('Screenshot: renewal day and a yearly one’s month kept', found.find((f) => f.name === 'YouTube Premium')?.day === 18 && found.find((f) => f.name === 'Duolingo')?.due === '2027-03', () => found);
+    check(
+      'Screenshot: renewal day and a yearly one’s month kept',
+      found.find((f) => f.name === 'YouTube Premium')?.day === 18 && found.find((f) => f.name === 'Duolingo')?.due === '2027-03',
+      () => found,
+    );
     const duo = found.find((f) => f.name === 'Duolingo')!;
     check('Screenshot: a yearly one sets aside enough by its renewal', duo.perMonth * monthsToDue('2027-03', NOWS) >= 1290, () => duo);
   }
 }
-
 
 // ---------- payday recap ----------
 {
@@ -926,7 +1055,15 @@ for (let n = 0; n < 2000; n++) {
     const tx: { amount: number; kind: string; occurred_at: string; note: string | null; cat: string }[] = [];
     for (let d = new Date(prev.start); d < prev.end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
       if (rand() < 0.3) continue;
-      for (const s of m.spend) if (rand() < 0.4) tx.push({ amount: Math.round((s.amount / prev.total) * (s.key === 'food' ? 3 + rand() * 2 : 0.2 + rand() * 1.4)), kind: 'spend', occurred_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).toISOString(), note: 'x', cat: s.key });
+      for (const s of m.spend)
+        if (rand() < 0.4)
+          tx.push({
+            amount: Math.round((s.amount / prev.total) * (s.key === 'food' ? 3 + rand() * 2 : 0.2 + rand() * 1.4)),
+            kind: 'spend',
+            occurred_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).toISOString(),
+            note: 'x',
+            cat: s.key,
+          });
     }
     const days = new Set(tx.map((x) => new Date(x.occurred_at).toDateString())).size;
     const last = { total: tx.reduce((a, x) => a + x.amount, 0), days, extra: 0, startedBefore: true };
@@ -942,11 +1079,19 @@ for (let n = 0; n < 2000; n++) {
       if (sg.kind === 'move') {
         const to = r.cats.find((c) => c.key === sg.to)!;
         const from = r.cats.find((c) => c.key === sg.from)!;
-        check('Recap: a move goes from a budget that stayed under to one that ran over, no more than either', to.spent > to.plan && from.plan - from.spent >= sg.amount && to.spent - to.plan >= sg.amount && sg.amount % 100 === 0, () => ({ sg: { ...sg, next: 0 }, to, from }));
+        check(
+          'Recap: a move goes from a budget that stayed under to one that ran over, no more than either',
+          to.spent > to.plan && from.plan - from.spent >= sg.amount && to.spent - to.plan >= sg.amount && sg.amount % 100 === 0,
+          () => ({ sg: { ...sg, next: 0 }, to, from }),
+        );
         check('Recap: a move keeps every baht’s job', Math.abs(jobs(sg.next) - sg.next.income) <= 10 && spendingTotal(sg.next) === spendingTotal(m), () => sg.id);
       }
     const ctx = recapContext(r);
-    check('Recap: Kip is told the suggestions by id, and only numbers', ctx.suggestions.length === r.suggestions.length && ctx.suggestions.every((x, k) => x.id === r.suggestions[k].id), () => ctx.suggestions);
+    check(
+      'Recap: Kip is told the suggestions by id, and only numbers',
+      ctx.suggestions.length === r.suggestions.length && ctx.suggestions.every((x, k) => x.id === r.suggestions[k].id),
+      () => ctx.suggestions,
+    );
   }
   check('Recap: the random runs made real recaps', made > 100, () => made);
 }

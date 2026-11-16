@@ -13,14 +13,14 @@ import { addBill, CATEGORY, lowerBudget, STYLES, withStyle, type BillType, type 
 import { BILL_TYPES, guessType, nextDue, yearlySetAside } from '@/lib/everymonth';
 import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
 import { periodKey } from '@/lib/home';
-import { t } from '@/lib/i18n';
+import { getLang, t } from '@/lib/i18n';
 import { DB_CAT_NAME, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
-import { monthYear } from '@/lib/setup/plan';
+import { monthYear, ordinal } from '@/lib/setup/plan';
 import type { BudgetStyle } from '@/lib/setup/draft';
 
 export type AgentOp = {
-  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'style';
+  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'style' | 'set_due';
   from?: string;
   to?: string;
   category?: string;
@@ -29,6 +29,8 @@ export type AgentOp = {
   bill_type?: string;
   /** add_bill: a yearly bill — `amount` is the whole year, due in this month (1–12). */
   due_month?: number;
+  /** add_bill / set_due: the day of the month it's due (1–31). */
+  day?: number;
   style?: string;
 };
 export type FixOp = { ref: string; op: 'delete' | 'category' | 'amount'; category?: string; amount?: number };
@@ -39,6 +41,15 @@ export type FixPlan = { edits: { tx: RecentTx; op: FixOp['op']; category?: DbCat
 
 const STYLE_KEYS: BudgetStyle[] = ['kip', '503020', 'jars', 'savefirst'];
 const DB_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
+
+/** "18th" (Thai: วันที่ 18). */
+const nth = (n: number) => (getLang() === 'th' ? t('day {n}', { n }) : ordinal(n));
+
+/** A day of the month, 1–31, or 0 when there isn't one. */
+const dayOf = (v: unknown) => {
+  const d = Math.round(Number(v) || 0);
+  return d >= 1 && d <= 31 ? d : 0;
+};
 
 /** Make the plan changes. Null = something doesn't fit (a bill that isn't there, more than the goal has…). */
 export function planChange(m: MonthBudget, goals: GoalLite[], ops: AgentOp[], now = new Date()): ChangePlan | null {
@@ -56,21 +67,36 @@ export function planChange(m: MonthBudget, goals: GoalLite[], ops: AgentOp[], no
       if (!name || amount <= 0) return null;
       const type = BILL_TYPES.includes(o.bill_type as BillType) ? (o.bill_type as BillType) : guessType(name);
       const mo = Math.round(Number(o.due_month) || 0);
+      const day = dayOf(o.day);
+      const withDay = day ? { day, remind: 'before' as const } : {};
       if (mo >= 1 && mo <= 12) {
         const due = nextDue(mo - 1, now);
-        const r = addBill(next, name, yearlySetAside(amount, due, 0, now), { type, yearly: { total: amount, due, since: now.toISOString().slice(0, 10) } });
+        const r = addBill(next, name, yearlySetAside(amount, due, 0, now), { type, yearly: { total: amount, due, since: now.toISOString().slice(0, 10) }, ...withDay });
         if (r.short > 0) return null;
         next = r.month;
       } else {
         // A bill bigger than what can bend this month doesn't fit: refused, never an overspent plan.
-        const r = addBill(next, name, amount, { type });
+        const r = addBill(next, name, amount, { type, ...withDay });
         if (r.short > 0) return null;
         next = r.month;
       }
+    } else if (o.op === 'set_due') {
+      // "Netflix is on the 18th": the due day of a bill that's there (or rent), with a reminder the day before.
+      const day = dayOf(o.day);
+      const want = (o.name ?? '').trim().toLowerCase();
+      if (!day || !want) return null;
+      if (/^(rent|ค่าเช่า|ค่าห้อง)$/.test(want)) {
+        if (next.bills.rent <= 0) return null;
+        next = { ...next, rentDue: { day, remind: next.rentDue?.remind ?? 'before' } };
+      } else {
+        const i = (next.bills.items ?? []).findIndex((b) => b.name.toLowerCase() === want || b.name.toLowerCase().includes(want));
+        if (i < 0) return null;
+        const items = (next.bills.items ?? []).map((b, k) => (k === i ? { ...b, day, remind: b.remind ?? ('before' as const) } : b));
+        next = { ...next, bills: { ...next.bills, items } };
+      }
     } else if (o.op === 'pay_bill') {
       const want = (o.name ?? '').trim().toLowerCase();
-      const key =
-        /^(rent|ค่าเช่า|ค่าห้อง)$/.test(want) && next.bills.rent > 0 ? 'rent' : (next.bills.items ?? []).find((b) => b.name.toLowerCase() === want || b.name.toLowerCase().includes(want))?.name;
+      const key = /^(rent|ค่าเช่า|ค่าห้อง)$/.test(want) && next.bills.rent > 0 ? 'rent' : (next.bills.items ?? []).find((b) => b.name.toLowerCase() === want || b.name.toLowerCase().includes(want))?.name;
       if (!key) return null;
       const k = key === 'rent' ? 'rent' : `item:${key}`;
       const pk = periodKey(next.payday, now);
@@ -113,6 +139,13 @@ export function changeRows(a: MonthBudget, b: MonthBudget, goals: GoalLite[], ta
   // A new bill comes out of Kip's guess for other bills first: show it, so nothing looks free.
   if (a.bills.guess !== b.bills.guess)
     rows.push({ icon: null, title: t('Other bills'), sub: t('Kip’s guess shrinks as you add real ones'), from: `~${baht(a.bills.guess)}`, to: `~${baht(b.bills.guess)}` });
+  for (const bill of b.bills.items ?? []) {
+    const was = aBills.find((x) => x.name === bill.name);
+    if (was && bill.day && was.day !== bill.day)
+      rows.push({ icon: 'bill', title: bill.name, sub: t('Due day · reminder the day before'), from: was.day ? nth(was.day) : undefined, to: nth(bill.day) });
+  }
+  if (b.rentDue && a.rentDue?.day !== b.rentDue.day)
+    rows.push({ icon: 'bill', title: t('Rent'), sub: t('Due day · reminder the day before'), from: a.rentDue ? nth(a.rentDue.day) : undefined, to: nth(b.rentDue.day) });
   const paidA = a.paid?.keys ?? [];
   for (const k of b.paid?.keys ?? []) if (!paidA.includes(k)) rows.push({ icon: 'bill', title: k === 'rent' ? t('Rent') : k.slice(5), sub: t('Marked paid'), to: '✓' });
   if (a.style !== b.style) rows.push({ icon: null, title: t('Money style'), from: STYLES.find((s) => s.key === a.style)?.name, to: STYLES.find((s) => s.key === b.style)?.name ?? '' });

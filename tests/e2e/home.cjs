@@ -487,6 +487,8 @@ module.exports = async function homeTests(browser) {
       { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'remove_bill', name: 'Spotify' }] },
       { kind: 'log', reply: 'Logged.', items: [{ name: 'ข้าวผัด', amount: 70, money: 'out', category: 'food' }] },
       { kind: 'log', reply: 'Logged.', items: [{ name: 'ข้าวผัด', amount: 70, money: 'out', category: 'food' }] },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'add_bill', name: 'Netflix', amount: 419, bill_type: 'streaming', day: 18 }] },
+      { kind: 'change', reply: 'Here’s what changes:', ops: [{ op: 'set_due', name: 'Netflix', day: 5 }] },
     ];
     const page = await open(browser, { db, path: '/talk' });
     const say = async (text) => {
@@ -560,6 +562,24 @@ module.exports = async function homeTests(browser) {
       n: db.transactions.length - n0,
       txt: txt.slice(-300),
     }));
+
+    // Step 3: what Kip is told, and the due day it can set.
+    const told = db.kipSent[db.kipSent.length - 1].context;
+    await check(
+      page,
+      'Kip is told the last months, due days and what the detective found',
+      Array.isArray(told.lastMonths) && Array.isArray(told.dueDays) && told.noticed && Array.isArray(told.noticed.subscriptions),
+      () => Object.keys(told),
+    );
+    await say('add Netflix 419 on the 18th');
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })).last(), { wait: 1500 });
+    const nd = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Netflix');
+    await check(page, 'A bill added with its day gets the day and a reminder the day before', !!nd && nd.day === 18 && nd.remind === 'before', () => nd);
+    await say('actually Netflix is on the 5th');
+    txt = await sane(page, 'Due day preview');
+    await check(page, 'Changing a due day previews 18th → 5th', /18th/.test(txt) && /5th/.test(txt), () => txt.slice(-300));
+    await tap(page, visible(page.getByRole('button', { name: 'Do it' })).last(), { wait: 1500 });
+    await check(page, '…and Do it moves it to the 5th', (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Netflix')?.day === 5, () => db.profiles[0].budget.bills.items);
     await tap(page, visible(page.getByRole('button', { name: 'Save anyway' })), { wait: 1500 });
     await check(page, '“Save anyway” saves it', db.transactions.length === n0 + 2, () => db.transactions.length - n0);
     await page.close();
@@ -682,15 +702,24 @@ module.exports = async function homeTests(browser) {
     const sum = (b) => b.spend.reduce((a, x) => a + x.amount, 0);
     const amt = (b, k) => b.spend.find((x) => x.key === k)?.amount ?? 0;
     await check(page, 'Do it moves money into Food from budgets with room', amt(after, 'food') > amt(before, 'food'), () => ({ before: before.spend, after: after.spend }));
-    await check(page, 'Only budgets move: spending money, bills and saving stay the same', sum(after) === sum(before) && after.goal.amount === before.goal.amount && after.bills.rent === before.bills.rent, () => after);
+    await check(
+      page,
+      'Only budgets move: spending money, bills and saving stay the same',
+      sum(after) === sum(before) && after.goal.amount === before.goal.amount && after.bills.rent === before.bills.rent,
+      () => after,
+    );
     const done = await screenText(page);
-    await check(page, 'A Done line with Undo replaces the card', /Done/.test(done) && (await page.getByRole('button', { name: 'Undo' }).count()) > 0 && !/won’t last to payday/.test(done), () => done.slice(0, 500));
+    await check(page, 'A Done line with Undo replaces the card', /Done/.test(done) && (await page.getByRole('button', { name: 'Undo' }).count()) > 0 && !/won’t last to payday/.test(done), () =>
+      done.slice(0, 500),
+    );
     await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1500 });
     await check(page, 'Undo puts the plan back exactly', JSON.stringify(db.profiles[0].budget.spend) === JSON.stringify(before.spend), () => db.profiles[0].budget.spend);
     await check(page, 'After Undo the card is back', /won’t last to payday/.test(await screenText(page)), () => '');
     await tap(page, visible(page.getByRole('button', { name: 'Not now' })), { wait: 1200 });
     const later = await screenText(page);
-    await check(page, 'Not now puts it away; Kip’s line is back', !/won’t last to payday/.test(later) && (await page.getByRole('button', { name: /^Kip says:/ }).count()) > 0, () => later.slice(0, 500));
+    await check(page, 'Not now puts it away; Kip’s line is back', !/won’t last to payday/.test(later) && (await page.getByRole('button', { name: /^Kip says:/ }).count()) > 0, () =>
+      later.slice(0, 500),
+    );
     await go(page, '/goals');
     await go(page, '/');
     await check(page, 'Still put away after coming back to Home', !/won’t last to payday/.test(await screenText(page)), () => '');
@@ -718,7 +747,10 @@ module.exports = async function homeTests(browser) {
     const amount = Number((txt.match(/฿([\d,]+) left over last month/) ?? [])[1]?.replace(/,/g, '') ?? 0);
     await check(page, 'In whole hundreds', amount > 0 && amount % 100 === 0, () => amount);
     await tap(page, visible(page.getByRole('button', { name: 'Do it' })), { wait: 1800 });
-    await check(page, 'Do it puts it toward the goal', db.goals[0].saved_amount === saved + amount && db.writes.includes('rpc put_in_goal ' + amount), () => ({ saved: db.goals[0].saved_amount, writes: db.writes.slice(-3) }));
+    await check(page, 'Do it puts it toward the goal', db.goals[0].saved_amount === saved + amount && db.writes.includes('rpc put_in_goal ' + amount), () => ({
+      saved: db.goals[0].saved_amount,
+      writes: db.writes.slice(-3),
+    }));
     await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1800 });
     await check(page, 'Undo takes it back out', db.goals[0].saved_amount === saved, () => db.goals[0].saved_amount);
     await tap(page, visible(page.getByRole('button', { name: 'Keep it' })), { wait: 1200 });
@@ -747,18 +779,27 @@ module.exports = async function homeTests(browser) {
     await type(page, 'Bill name', 'Netflix');
     await type(page, 'Amount a month', 179);
     const before = await screenText(page);
-    await check(page, 'The day row is there; no reminder row until a day is picked', /Due every month on/.test(before) && !/Remind me/.test(before) && /Pick a day to get a reminder/.test(before), () => before.slice(-500));
+    await check(
+      page,
+      'The day row is there; no reminder row until a day is picked',
+      /Due every month on/.test(before) && !/Remind me/.test(before) && /Pick a day to get a reminder/.test(before),
+      () => before.slice(-500),
+    );
     const d = new Date(Date.now() + 3 * 86_400_000).getDate();
     await tap(page, visible(page.getByRole('radio', { name: d === 31 ? 'Last day of the month' : `Day ${d}` })), { wait: 300 });
     const after = await screenText(page);
-    await check(page, 'Picking a day shows Remind me (Day before by default) and when it goes off', /Remind me/.test(after) && /9:00 on \d+ [A-Z][a-z]{2}, then every month/.test(after), () => after.slice(-500));
+    await check(page, 'Picking a day shows Remind me (Day before by default) and when it goes off', /Remind me/.test(after) && /9:00 on \d+ [A-Z][a-z]{2}, then every month/.test(after), () =>
+      after.slice(-500),
+    );
     await tap(page, visible(page.getByRole('button').filter({ hasText: /^Add Netflix · ฿179 a month$/ })), { wait: 2000 });
     const it = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Netflix');
     await check(page, 'Saved with its day and a day-before reminder', it && it.day === d && it.remind === 'before', () => it);
     await go(page, '/');
     const home = await screenText(page);
     const label = d === new Date(Date.now() + 3 * 86_400_000).getDate() ? 'in 3 days' : '';
-    await check(page, 'Home: “Due … · in 3 days”, and Netflix is next', new RegExp(`Netflix \\| Due \\d+ [A-Z][a-z]{2} · ${label}`).test(home) && /Next: \| Netflix in 3 days/.test(home), () => home.slice(-700));
+    await check(page, 'Home: “Due … · in 3 days”, and Netflix is next', new RegExp(`Netflix \\| Due \\d+ [A-Z][a-z]{2} · ${label}`).test(home) && /Next: \| Netflix in 3 days/.test(home), () =>
+      home.slice(-700),
+    );
     await page.close();
   });
 
@@ -777,7 +818,12 @@ module.exports = async function homeTests(browser) {
     await check(page, 'Paid ticks it off on Home', paid && paid.keys.includes('item:AIS Fibre'), () => paid);
     await check(page, 'A Done line with Undo', /AIS Fibre marked paid/.test(await screenText(page)), () => '');
     await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1500 });
-    await check(page, 'Undo unticks it, and the card is back', !(db.profiles[0].budget.paid?.keys ?? []).includes('item:AIS Fibre') && /AIS Fibre is due today/.test(await screenText(page)), () => db.profiles[0].budget.paid);
+    await check(
+      page,
+      'Undo unticks it, and the card is back',
+      !(db.profiles[0].budget.paid?.keys ?? []).includes('item:AIS Fibre') && /AIS Fibre is due today/.test(await screenText(page)),
+      () => db.profiles[0].budget.paid,
+    );
     await tap(page, visible(page.getByRole('button', { name: 'Not yet' })), { wait: 1200 });
     await check(page, 'Not yet puts it away for today', !/is due today/.test(await screenText(page)), () => '');
     await page.close();
@@ -788,7 +834,17 @@ module.exports = async function homeTests(browser) {
     const { db } = person();
     const page = await open(browser, { db, path: '/profile' });
     const txt = await screenText(page);
-    await check(page, 'You has Bill reminders, on by default', /Bill reminders/.test(txt) && (await page.getByRole('button', { name: 'Bill reminders on' }).locator('div').first().evaluate((e) => getComputedStyle(e).color)) === 'rgb(255, 255, 255)', () => txt.slice(0, 600));
+    await check(
+      page,
+      'You has Bill reminders, on by default',
+      /Bill reminders/.test(txt) &&
+        (await page
+          .getByRole('button', { name: 'Bill reminders on' })
+          .locator('div')
+          .first()
+          .evaluate((e) => getComputedStyle(e).color)) === 'rgb(255, 255, 255)',
+      () => txt.slice(0, 600),
+    );
     await tap(page, visible(page.getByRole('button', { name: 'Bill reminders off' })), { wait: 600 });
     await check(page, 'Turned off, and remembered', (await page.evaluate(() => localStorage.getItem('heykip.billReminders'))) === 'off', () => 0);
     await page.close();
@@ -802,7 +858,9 @@ module.exports = async function homeTests(browser) {
     const before = JSON.stringify(db.profiles[0].budget.bills);
     const page = await open(browser, { db });
     const txt = await screenText(page);
-    await check(page, 'Kip’s card: Spotify looks like a subscription, with the 3 payments', /Spotify looks like a subscription/.test(txt) && (txt.match(/฿129/g) ?? []).length >= 4, () => txt.slice(0, 900));
+    await check(page, 'Kip’s card: Spotify looks like a subscription, with the 3 payments', /Spotify looks like a subscription/.test(txt) && (txt.match(/฿129/g) ?? []).length >= 4, () =>
+      txt.slice(0, 900),
+    );
     await tap(page, visible(page.getByRole('button', { name: 'Add it', exact: true })), { wait: 1500 });
     const it = (db.profiles[0].budget.bills.items ?? []).find((b) => b.name === 'Spotify');
     const day = new Date(Date.now() - 32 * 86_400_000).getDate();
@@ -830,7 +888,9 @@ module.exports = async function homeTests(browser) {
     ];
     const page = await open(browser, { db, path: '/month?subs=1' });
     const how = await screenText(page);
-    await check(page, 'The sheet says where to find the list and what Kip reads', /Show Kip your subscriptions/.test(how) && /Settings → tap your name → Subscriptions/.test(how), () => how.slice(-700));
+    await check(page, 'The sheet says where to find the list and what Kip reads', /Show Kip your subscriptions/.test(how) && /Settings → tap your name → Subscriptions/.test(how), () =>
+      how.slice(-700),
+    );
     const png = require('path').join(__dirname, 'out', 'shot.png');
     await page.screenshot({ path: png, clip: { x: 0, y: 0, width: 200, height: 300 } });
     const chooser = page.waitForEvent('filechooser', { timeout: 8000 });
@@ -844,7 +904,12 @@ module.exports = async function homeTests(browser) {
     const items = db.profiles[0].budget.bills.items ?? [];
     const yt = items.find((b) => b.name === 'YouTube Premium');
     const duo = items.find((b) => b.name === 'Duolingo');
-    await check(page, 'All 3 added: days, reminders, Duolingo as a yearly bill', yt && yt.day === 18 && yt.remind === 'before' && duo && duo.yearly && duo.yearly.total === 1290 && duo.yearly.due === '2027-03', () => items);
+    await check(
+      page,
+      'All 3 added: days, reminders, Duolingo as a yearly bill',
+      yt && yt.day === 18 && yt.remind === 'before' && duo && duo.yearly && duo.yearly.total === 1290 && duo.yearly.due === '2027-03',
+      () => items,
+    );
     await check(page, 'The read asked for a subscriptions list', db.readSent && db.readSent[0].kind === 'subs', () => db.readSent);
     await page.close();
   });
@@ -871,12 +936,22 @@ module.exports = async function homeTests(browser) {
     await tap(page, visible(page.getByRole('button', { name: 'Read the recap' })), { wait: 2500 });
     const sheet = await screenText(page);
     await check(page, 'The recap: how it went, saving, what Kip noticed', /How it went/.test(sheet) && /Food & drinks/.test(sheet) && /weekday lunches/.test(sheet), () => sheet.slice(-1200));
-    await check(page, 'Kip was asked once, with numbers and suggestion ids', db.kipDoSent?.length === 1 && db.kipDoSent[0].task === 'recap' && db.kipDoSent[0].context.suggestions.length > 0, () => db.kipDoSent);
+    await check(
+      page,
+      'Kip was asked once, with numbers and suggestion ids',
+      db.kipDoSent?.length === 1 && db.kipDoSent[0].task === 'recap' && db.kipDoSent[0].context.suggestions.length > 0,
+      () => db.kipDoSent,
+    );
     await check(page, 'It suggests moving money to Food from a budget that stayed under', /Move ฿[\d,]+ from [A-Za-z &]+ to Food & drinks/.test(sheet), () => sheet.slice(-900));
     await tap(page, visible(page.getByRole('button', { name: /^Do it: Move/ })), { wait: 1200 });
     const after = db.profiles[0].budget.spend;
     const amt = (sp, k) => sp.find((x) => x.key === k).amount;
-    await check(page, 'Do it: Food up, another budget down by the same amount', amt(after, 'food') > amt(before, 'food') && after.reduce((a, x) => a + x.amount, 0) === before.reduce((a, x) => a + x.amount, 0), () => ({ before, after }));
+    await check(
+      page,
+      'Do it: Food up, another budget down by the same amount',
+      amt(after, 'food') > amt(before, 'food') && after.reduce((a, x) => a + x.amount, 0) === before.reduce((a, x) => a + x.amount, 0),
+      () => ({ before, after }),
+    );
     await tap(page, visible(page.getByRole('button', { name: 'Undo' })), { wait: 1200 });
     await check(page, 'Undo puts the month back', JSON.stringify(db.profiles[0].budget.spend) === JSON.stringify(before), () => db.profiles[0].budget.spend);
     await page.close();
@@ -887,7 +962,9 @@ module.exports = async function homeTests(browser) {
     const { db } = recapSeed('free');
     const page = await open(browser, { db });
     const card = await screenText(page);
-    await check(page, 'Free: the numbers and what went most over, Kip’s part is Plus', /in a minute/.test(card) && /Most over: /.test(card) && /What Kip noticed \+ changes/.test(card), () => card.slice(0, 900));
+    await check(page, 'Free: the numbers and what went most over, Kip’s part is Plus', /in a minute/.test(card) && /Most over: /.test(card) && /What Kip noticed \+ changes/.test(card), () =>
+      card.slice(0, 900),
+    );
     await check(page, 'Free: Kip is not asked', !(db.writes ?? []).some((w) => /kip-do/.test(w)), () => db.writes);
     await page.close();
   });
@@ -910,7 +987,12 @@ module.exports = async function homeTests(browser) {
     const { db } = person();
     const page = await open(browser, { db });
     const home = await screenText(page);
-    await check(page, 'A real goal shows its name and “on track for <month>”, never a day count', /Japan \| My promise/.test(home) && /On track for [A-Z][a-z]{2} 20\d\d/.test(home) && !/\d+ days \|/.test(home.split('Your goal')[1] ?? ''), () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400));
+    await check(
+      page,
+      'A real goal shows its name and “on track for <month>”, never a day count',
+      /Japan \| My promise/.test(home) && /On track for [A-Z][a-z]{2} 20\d\d/.test(home) && !/\d+ days \|/.test(home.split('Your goal')[1] ?? ''),
+      () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400),
+    );
     await go(page, '/goals');
     const tab = await screenText(page);
     await check(page, 'The tab is called Your goals and offers + Add a goal', /^Your goals \| and why you save/.test(tab) && /Add a goal/.test(tab), () => tab.slice(0, 300));
@@ -920,7 +1002,12 @@ module.exports = async function homeTests(browser) {
     const { db } = person({ goal: { title: 'Rainy day', kind: 'monthly', monthly: 3000, saved: 9300 } });
     const page = await open(browser, { db });
     const home = await screenText(page);
-    await check(page, 'A monthly saver’s card: name, “Why I save”, this month and saved so far', /Your saving \| Rainy day \| Why I save/.test(home) && /฿3,000 this month/.test(home) && /฿9,300 saved so far/.test(home), () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400));
+    await check(
+      page,
+      'A monthly saver’s card: name, “Why I save”, this month and saved so far',
+      /Your saving \| Rainy day \| Why I save/.test(home) && /฿3,000 this month/.test(home) && /฿9,300 saved so far/.test(home),
+      () => home.slice(home.indexOf('Your goal'), home.indexOf('Your goal') + 400),
+    );
     await page.close();
   });
 

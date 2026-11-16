@@ -63,6 +63,7 @@ const th: Record<string, string> = {
   'Change your month': 'ปรับแผนเดือนนี้',
   'Hmm, that doesn’t fit this month’s plan. Try saying it another way?': 'อืม แบบนี้ไม่เข้ากับแผนเดือนนี้ ลองพูดอีกแบบได้ไหม?',
   'New bill · every month': 'บิลใหม่ · ทุกเดือน',
+  'Due day · reminder the day before': 'วันครบกำหนด · เตือนก่อน 1 วัน',
   'Bill removed': 'ลบบิลแล้ว',
   'Kip’s guess shrinks as you add real ones': 'ยอดที่ Kip กะไว้จะลดลงเมื่อเพิ่มบิลจริง',
   '{goal} saving': 'เงินออม {goal}',
