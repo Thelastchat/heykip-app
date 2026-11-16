@@ -2,10 +2,15 @@
 // the card when nothing inside it wants the drag (a list that scrolls, a slider, the graph). Let go early and it
 // springs back. A card pinned to the bottom (position: absolute) also rides up with the keyboard — a pinned view
 // ignores the keyboard padding around it — and is never taller than the space above the keyboard (its list scrolls).
+// Every sheet also has a Close (×) in its top corner (asked: anywhere you edit, there's a way back, not only Save).
+import { X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Animated, PanResponder, StyleSheet, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, PanResponder, Pressable, StyleSheet, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import { KeyboardController, useKeyboardAnimation, useKeyboardState } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { t } from '@/lib/i18n';
+import { colors, inkA, themed } from '@/theme';
 
 /** The top of the card (grip and title) always takes a downward drag, even over a list. */
 const GRAB = 72;
@@ -64,6 +69,15 @@ export function DragSheet({ onClose, style, children }: { onClose: () => void; s
         { transform: [{ translateY: pinned ? Animated.add(kb, drag) : drag }] },
       ]}>
       {children}
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Close')} hitSlop={10} onPress={onClose} style={({ pressed }) => [styles.close, pressed && { opacity: 0.6 }]}>
+        <X size={16} weight="bold" color={colors.ink} />
+      </Pressable>
     </Animated.View>
   );
 }
+
+const styles = themed(() =>
+  StyleSheet.create({
+    close: { position: 'absolute', top: 14, right: 14, width: 32, height: 32, borderRadius: 16, backgroundColor: inkA(0.06), alignItems: 'center', justifyContent: 'center' },
+  }),
+);
