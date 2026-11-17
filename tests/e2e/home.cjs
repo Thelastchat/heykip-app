@@ -84,9 +84,11 @@ module.exports = async function homeTests(browser) {
   await safely(async () => {
     const { db } = person();
     const page = await open(browser, { db });
-    await addSpend(page, 1500, 'Fun', 'Concert');
-    await go(page, '/');
     const m = db.profiles[0].budget;
+    // More than today's money, whatever day of the pay month the test runs on (late in the month a day is bigger).
+    const big = Math.ceil((X.monthNumbers(m, { total: spentSoFar(db), today: spentToday(db), bills: 0, byCat: {}, byDay: {} }, new Date()).dailyToday + 500) / 100) * 100;
+    await addSpend(page, big, 'Fun', 'Concert');
+    await go(page, '/');
     const N = X.monthNumbers(m, { total: spentSoFar(db), today: spentToday(db), bills: 0, byCat: {}, byDay: {} }, new Date());
     const home = await sane(page, 'Home after a big day');
     await check(page, `Home shows ${fmt(N.overToday)} over today`, N.overToday > 0 && home.includes(fmt(N.overToday)), () => ({ over: N.overToday, home: home.slice(0, 300) }));

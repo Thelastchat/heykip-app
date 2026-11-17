@@ -40,12 +40,19 @@ function hasThai(node: ReactNode): boolean {
 const thaiFor = (family: string | undefined) => (family ? (TO_THAI[family] ?? family) : fonts.thai);
 
 /**
- * Thai headlines read bolder (asked): a title of 26pt or more set in Regular or Medium is shown in SemiBold, so
- * every screen's headline matches "อยากเก็บเงินแบบไหน". Smaller text and handwriting keep their weight.
+ * Thai headlines (asked, approved samples): a title of 26–29pt set in Regular or Medium shows in SemiBold so it
+ * stands out; the big page titles (30pt and up — สวัสดี, เป้าหมายของคุณ) show in Medium, a little tighter (sample B).
+ * Smaller text and handwriting keep their weight.
  */
 const HEADLINE = 26;
-const thaiHeadline = (shown: string | undefined, flat: TextStyle | undefined) =>
-  (flat?.fontSize ?? 14) >= HEADLINE && (shown === fonts.thai || shown === fonts.thaiMedium) ? fonts.thaiSemibold : shown;
+const PAGE_TITLE = 30;
+const thaiHeadline = (shown: string | undefined, flat: TextStyle | undefined) => {
+  const size = flat?.fontSize ?? 14;
+  if (size < HEADLINE || (shown !== fonts.thai && shown !== fonts.thaiMedium)) return shown;
+  return size >= PAGE_TITLE ? fonts.thaiMedium : fonts.thaiSemibold;
+};
+/** Page titles: about −0.4 at 30pt, −0.5 at 34pt — tight enough to feel like a title, not so tight marks touch. */
+const titleTracking = (size: number) => -Math.round(size * 0.014 * 10) / 10;
 
 /**
  * Thai needs more height than English: tone marks (เป้า) sit above the letters and vowels hang below, so a line set
@@ -75,7 +82,8 @@ export function Text(props: ComponentProps<typeof RNText>) {
   const c = flat?.color;
   const accentColor = accent && (c === undefined || c === colors.ink || c === colors.muted) ? (c === colors.muted ? colors.onAccentMuted : colors.onAccent) : undefined;
   const hand = thai ? handSize(flat) : null;
-  const room = thai ? (hand ?? thaiRoom(flat)) : null;
+  const title = thai && !hand && (size ?? 0) >= PAGE_TITLE && shown === fonts.thaiMedium;
+  const room = thai ? (hand ?? (title ? { ...thaiRoom(flat), letterSpacing: titleTracking(size!) } : thaiRoom(flat))) : null;
   const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
   return (
     <Inherited.Provider value={{ family, size }}>
