@@ -22,7 +22,7 @@ export const homeTour = (): TourStop[] => [
   { spot: 'plus', title: t('Log what you spent'), body: t('Tap + and type it — or just tell Kip. Slips work too.'), round: true },
   { spot: 'kip', title: t('Ask Kip anything'), body: t('“Can I buy this?” “When’s Netflix due?” Kip answers from your own numbers.'), round: true },
   { spot: 'plan', title: t('Your saving plan'), body: t('Where every baht goes each month: saving first, then bills, then spending. Change any part there.'), round: true },
-  { spot: 'goals', title: t('Your goals'), body: t('What you’re saving for, how far you are, and when you’ll get there.'), round: true },
+  { spot: 'goals', title: t('Your goals'), body: t('What you’re saving for, how far you’ve come, and how much is left to reach it.'), round: true },
   { spot: 'you', title: t('You'), body: t('Your account, language, reminders, and what Kip may read.'), round: true },
 ];
 

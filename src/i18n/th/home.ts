@@ -458,7 +458,7 @@ const th: Record<string, string> = {
   'Your week': 'สัปดาห์นี้ของคุณ',
   'Tap a day to see what you spent. Full calendar shows the whole month.': 'แตะวันไหนก็ดูได้ว่าใช้อะไรไปบ้าง ปฏิทินเต็มดูได้ทั้งเดือน',
   'Where every baht goes each month: saving first, then bills, then spending. Change any part there.': 'เงินทุกบาทแต่ละเดือนไปไหน เก็บก่อน แล้วจ่ายบิล แล้วค่อยใช้ แก้ส่วนไหนก็ได้ในหน้านี้',
-  'What you’re saving for, how far you are, and when you’ll get there.': 'เก็บเงินเพื่ออะไร ไปถึงไหนแล้ว และจะถึงเมื่อไหร่',
+  'What you’re saving for, how far you’ve come, and how much is left to reach it.': 'คุณเก็บเงินเพื่ออะไร มาไกลแค่ไหนแล้ว และอีกเท่าไหร่จะถึงเป้าหมาย',
   'Your account, language, reminders, and what Kip may read.': 'บัญชี ภาษา การแจ้งเตือน และสิ่งที่ Kip อ่านได้',
   'Everything you’ve put away, and what goes in on its own every payday.': 'เงินที่เก็บไว้ทั้งหมด และยอดที่เข้าเองทุกวันเงินเดือนออก',
   'Got extra? Put it in here and you get there sooner. Edit changes the amount, date, name or photo.': 'มีเงินพิเศษ ใส่ตรงนี้แล้วจะถึงเป้าเร็วขึ้น ปุ่มแก้ไขเปลี่ยนยอด วันที่ ชื่อ หรือรูปได้',
