@@ -44,6 +44,7 @@ import { baht } from '@/lib/money';
 import { isoDay, shortDate } from '@/lib/setup/plan';
 import { colors, fonts, glow, money, radius, glassA, inkA, themed, whiteA, blackA } from '@/theme';
 import { DragSheet } from '@/components/DragSheet';
+import { GuessSheet } from '@/components/home/GuessSheet';
 import { DuePicker } from '@/components/DuePicker';
 import { askReminders } from '@/lib/reminders';
 import { SubsFinder } from '@/components/SubsFinder';
@@ -64,6 +65,7 @@ type Sheet =
   | null
   | { stage: 'addBill' }
   | { stage: 'subs' }
+  | { stage: 'guess' }
   | { stage: 'editBill'; which: number | 'rent' }
   | { stage: 'edit'; key: CatKey }
   | { stage: 'freed'; key: CatKey; to: number }
@@ -102,7 +104,17 @@ export function MonthScreen({
 }) {
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
-  const [sheet, setSheet] = useState<Sheet>(openSubs ? { stage: 'subs' } : openAdd ? { stage: 'addBill' } : startEdit === 'rent' || startEdit >= 0 ? { stage: 'editBill', which: startEdit } : null);
+  const [sheet, setSheet] = useState<Sheet>(
+    openEdit === '\u0000guess'
+      ? { stage: 'guess' }
+      : openSubs
+        ? { stage: 'subs' }
+        : openAdd
+          ? { stage: 'addBill' }
+          : startEdit === 'rent' || startEdit >= 0
+            ? { stage: 'editBill', which: startEdit }
+            : null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   // Opened from a bill on Home before the plan had loaded: open its sheet once it has.
   const editOpened = useRef(startEdit === 'rent' || startEdit >= 0);
@@ -226,7 +238,16 @@ export function MonthScreen({
                 />
               </Pressable>
             ))}
-            <Row glyph={{ name: 'Other bills', tint: colors.sand }} title={t('Other bills')} sub={t('Kip’s guess — shrinks as you add real ones')} amount={`~${baht(month.bills.guess)}`} divider />
+            <Pressable onPress={() => setSheet({ stage: 'guess' })} accessibilityRole="button" accessibilityLabel={t('Change Kip’s bill guess')}>
+              <Row
+                glyph={{ name: 'Other bills', tint: colors.sand }}
+                title={t('Other bills')}
+                sub={t('Kip’s guess — shrinks as you add real ones')}
+                amount={`~${baht(month.bills.guess)}`}
+                divider
+                right={<CaretRight size={14} color={colors.faint} />}
+              />
+            </Pressable>
             <Pressable onPress={() => setSheet({ stage: 'addBill' })} style={styles.addRow} accessibilityRole="button">
               <View style={styles.addDot}>
                 <Plus size={13} color={colors.paper} weight="bold" />
@@ -329,6 +350,17 @@ export function MonthScreen({
                     }),
               );
               setSheet(null);
+            }}
+          />
+        )}
+        {sheet?.stage === 'guess' && (
+          <GuessSheet
+            month={month}
+            onClose={() => setSheet(null)}
+            onSave={(next, note) => {
+              setSheet(null);
+              save(next);
+              setNotice(note);
             }}
           />
         )}

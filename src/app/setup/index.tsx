@@ -7,15 +7,16 @@ import { Glass } from '@/components/glow/Glass';
 import { SetupScreen } from '@/components/setup/kit';
 import { Button, T } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { t } from '@/lib/i18n';
+import { t, useLang } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { useSetup } from '@/lib/setup/draft';
-import { colors, fonts, themed } from '@/theme';
+import { colors, fonts, inkA, themed } from '@/theme';
 
 // Setup 0 · "Hi, I'm Kip." The first screen anyone sees.
 export default function SetupIntro() {
   const { session } = useAuth();
   const { draft, ready } = useSetup();
+  const { lang, setLang } = useLang();
 
   // Just created an account after signing the promise → straight to the last step.
   if (ready && session && draft.signature) return <Redirect href="/setup/finish" />;
@@ -24,16 +25,33 @@ export default function SetupIntro() {
     <SetupScreen
       footer={
         <>
-          <Button label={t('Let’s start')} onPress={() => router.push('/setup/basics')} />
+          <Button label={t('Let’s start')} onPress={() => router.push('/setup/kip')} />
           <Text style={styles.note}>{t('Takes about 3 minutes')}</Text>
         </>
       }>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', minHeight: 20 }}>
-        {!session && (
+      {/* EN / ไทย from the very first screen (approved mockup), next to Log in. */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 32 }}>
+        {!session ? (
           <Pressable accessibilityRole="link" hitSlop={10} onPress={() => router.push('/sign-in')}>
             <Text style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.muted }}>{t('Log in')}</Text>
           </Pressable>
+        ) : (
+          <View />
         )}
+        <View style={styles.lang} accessibilityRole="radiogroup">
+          {(['en', 'th'] as const).map((l) => (
+            <Pressable
+              key={l}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: lang === l }}
+              accessibilityLabel={l === 'en' ? 'English' : 'ไทย'}
+              hitSlop={6}
+              onPress={() => lang !== l && setLang(l, '/setup')}
+              style={[styles.langOpt, lang === l && styles.langOn]}>
+              <Text style={[styles.langT, lang === l && { color: colors.paper }]}>{l === 'en' ? 'EN' : 'ไทย'}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={{ alignSelf: 'center', width: 170, height: 170, marginTop: 4, alignItems: 'center', justifyContent: 'center' }}>
@@ -42,7 +60,7 @@ export default function SetupIntro() {
 
       <View style={{ gap: 8, paddingHorizontal: 6 }}>
         <T style={{ textAlign: 'center', fontFamily: fonts.regular, fontSize: 38, lineHeight: 44, letterSpacing: -1.2 }}>{t('Hi, I’m Kip.')}</T>
-        <Text style={styles.lead}>{t('I help you save for the things you actually want — not just track where your money went.')}</Text>
+        <Text style={styles.lead}>{t('I help you save with a goal in mind — not just write down where the money went.')}</Text>
       </View>
 
       <Glass radius={26} style={{ marginTop: 10 }} innerStyle={styles.card}>
@@ -71,5 +89,9 @@ const styles = themed(() =>
     lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.muted, textAlign: 'center' },
     card: { gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
     note: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+    lang: { flexDirection: 'row', backgroundColor: inkA(0.06), borderRadius: 999, padding: 3 },
+    langOpt: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999 },
+    langOn: { backgroundColor: colors.ink },
+    langT: { fontFamily: fonts.medium, fontSize: 12.5, color: colors.ink },
   }),
 );

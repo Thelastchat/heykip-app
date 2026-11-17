@@ -1,6 +1,8 @@
 import { t } from '@/lib/i18n';
 import { forgetMonth } from '@/lib/month';
 import { smallPhoto } from '@/lib/photos';
+import { loadAuto, saveAuto } from '@/lib/autoslips';
+import { setRemindersOn } from '@/lib/reminders';
 import { supabase } from '@/lib/supabase';
 import { pinColors } from '@/theme';
 
@@ -91,6 +93,12 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
     })
     .eq('id', userId);
   if (profileError) throw new Error(t('Couldn’t finish setup: {reason}', { reason: profileError.message }));
+  // 6. "What Kip can do" (asked after the intro): Kip's AI permission goes on the account; the other two are
+  // this phone's settings. An off switch means Kip never offers it on its own (it stays in Profile to turn on).
+  const allow = draft.allow ?? { ai: true, slips: true, reminders: true };
+  if (allow.ai) await supabase.from('profiles').update({ ai_consent_at: new Date().toISOString(), ai_off: false }).eq('id', userId);
+  if (!allow.slips && !(await loadAuto())) await saveAuto({ on: false, albums: [], since: Date.now(), dismissed: true });
+  if (!allow.reminders) await setRemindersOn(false, null);
   // The free week is started by the server (once per person). If it's already used, setup still finishes on Free.
   if (choice === 'trial') await supabase.rpc('start_trial');
   forgetMonth(); // the plan was just written here — screens load the new one

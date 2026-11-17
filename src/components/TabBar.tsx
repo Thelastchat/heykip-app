@@ -10,6 +10,7 @@ import { Kip } from '@/components/Kip';
 import { useAuth } from '@/lib/auth';
 import { Glass } from '@/components/glow/Glass';
 import { t } from '@/lib/i18n';
+import { tourSpot } from '@/lib/tour';
 import { colors, themed } from '@/theme';
 
 // Floating 5-spot bar (approved mockup): Home · Your saving plan · Kip (centre, opens Talk) · Your goals · You.
@@ -30,7 +31,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <View style={styles.bar}>
+      <View style={styles.bar} ref={tourSpot('bar')}>
         <Glass radius={999} style={StyleSheet.absoluteFill} innerStyle={{ flex: 1 }} />
         <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? colors.paper : colors.ink} />
@@ -40,6 +41,7 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
         </TabIcon>
 
         <Pressable
+          ref={tourSpot('kip')}
           accessibilityRole="button"
           accessibilityLabel={t('Tell Kip')}
           onPress={() => {

@@ -1,0 +1,132 @@
+// The first-use tour (approved mockup): coach marks, not a card. The screen dims, one spot stays bright (cut out of
+// the dim, exactly where the real button is), a short line sits next to it, and Next moves on. Four stops on Home,
+// Skip always there, shown once.
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
+
+import { useAuth } from '@/lib/auth';
+import { t } from '@/lib/i18n';
+import { markTourSeen, measureSpot, tourSeen, type Rect, type TourSpot } from '@/lib/tour';
+import { colors, fonts, themed } from '@/theme';
+
+type Stop = { spot: TourSpot; title: string; body: string; round: boolean };
+const stops = (): Stop[] => [
+  { spot: 'today', title: t('Your number for today'), body: t('What you can spend today and still stay on plan. It updates as you log.'), round: false },
+  { spot: 'plus', title: t('Log what you spent'), body: t('Tap + and type it — or just tell Kip. Slips work too.'), round: true },
+  { spot: 'kip', title: t('Ask Kip anything'), body: t('“Can I buy this?” “When’s Netflix due?” Kip answers from your own numbers.'), round: true },
+  { spot: 'bar', title: t('Your plan, your goals, you'), body: t('Where your money goes each month, what you’re saving for, and your settings.'), round: false },
+];
+
+const PAD = 8;
+const TIP_W = 264;
+
+/** Mount on Home; starts on its own (once) when `ready`. */
+export function Tour({ ready }: { ready: boolean }) {
+  const { session } = useAuth();
+  const uid = session?.user.id;
+  const { width: W, height: H } = useWindowDimensions();
+  const [i, setI] = useState<number | null>(null);
+  const [rect, setRect] = useState<Rect | null>(null);
+  const list = stops();
+
+  useEffect(() => {
+    if (!ready || !uid) return;
+    let on = true;
+    // A moment after Home has settled, so every spot is laid out.
+    const id = setTimeout(async () => {
+      if (on && !(await tourSeen(uid))) setI(0);
+    }, 1200);
+    return () => {
+      on = false;
+      clearTimeout(id);
+    };
+  }, [ready, uid]);
+
+  // Measure the spot for this stop; a spot that isn't on screen is skipped.
+  useEffect(() => {
+    if (i === null) return;
+    let on = true;
+    measureSpot(list[i].spot).then((r) => {
+      if (!on) return;
+      if (r) setRect(r);
+      else next();
+    });
+    return () => {
+      on = false;
+    };
+  }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function finish() {
+    setI(null);
+    setRect(null);
+    if (uid) markTourSeen(uid);
+  }
+  function next() {
+    if (i === null) return;
+    if (i + 1 >= list.length) return finish();
+    setRect(null);
+    setI(i + 1);
+  }
+
+  if (i === null) return null;
+  const stop = list[i];
+  const last = i === list.length - 1;
+
+  let hole = '';
+  let tip: { left: number; top?: number; bottom?: number; arrowX: number; up: boolean } | null = null;
+  if (rect) {
+    const x = rect.x - PAD;
+    const y = rect.y - PAD;
+    const w = rect.width + PAD * 2;
+    const h = rect.height + PAD * 2;
+    const r = stop.round ? Math.min(w, h) / 2 : 22;
+    hole = `M${x + r},${y} H${x + w - r} A${r},${r} 0 0 1 ${x + w},${y + r} V${y + h - r} A${r},${r} 0 0 1 ${x + w - r},${y + h} H${x + r} A${r},${r} 0 0 1 ${x},${y + h - r} V${y + r} A${r},${r} 0 0 1 ${x + r},${y} Z`;
+    const cx = rect.x + rect.width / 2;
+    const left = Math.max(16, Math.min(W - TIP_W - 16, cx - TIP_W / 2));
+    const below = rect.y + rect.height / 2 < H / 2;
+    tip = below ? { left, top: y + h + 14, arrowX: cx - left, up: true } : { left, bottom: H - y + 14, arrowX: cx - left, up: false };
+  }
+
+  return (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={finish}>
+      <Svg width={W} height={H} style={StyleSheet.absoluteFill} pointerEvents="none">
+        <Path d={`M0,0 H${W} V${H} H0 Z ${hole}`} fill="rgba(17,17,17,0.62)" fillRule="evenodd" />
+      </Svg>
+      <Pressable style={styles.skip} onPress={finish} accessibilityRole="button" hitSlop={10}>
+        <Text style={styles.skipT}>{t('Skip')}</Text>
+      </Pressable>
+      {tip && (
+        <Animated.View key={i} entering={FadeIn.duration(220)} style={[styles.tip, { left: tip.left, top: tip.top, bottom: tip.bottom }]} accessibilityLiveRegion="polite">
+          <View style={[styles.arrow, tip.up ? styles.arrowUp : styles.arrowDown, { left: Math.max(18, Math.min(TIP_W - 30, tip.arrowX - 10)) }]} />
+          <Text style={styles.title}>{stop.title}</Text>
+          <Text style={styles.body}>{stop.body}</Text>
+          <View style={styles.foot}>
+            <Text style={styles.count}>{t('{n} of {total}', { n: i + 1, total: list.length })}</Text>
+            <Pressable onPress={last ? finish : next} style={styles.next} accessibilityRole="button">
+              <Text style={styles.nextT}>{last ? t('Got it') : t('Next')}</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
+    </Modal>
+  );
+}
+
+const styles = themed(() =>
+  StyleSheet.create({
+    skip: { position: 'absolute', top: 58, right: 20, paddingVertical: 6, paddingHorizontal: 10 },
+    skipT: { fontFamily: fonts.medium, fontSize: 14, color: '#FFFFFF' },
+    tip: { position: 'absolute', width: TIP_W, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, boxShadow: '0 12px 30px rgba(0,0,0,0.25)' },
+    arrow: { position: 'absolute', width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderLeftColor: 'transparent', borderRightColor: 'transparent' },
+    arrowUp: { top: -11, borderBottomWidth: 12, borderBottomColor: '#FFFFFF' },
+    arrowDown: { bottom: -11, borderTopWidth: 12, borderTopColor: '#FFFFFF' },
+    title: { fontFamily: fonts.semibold, fontSize: 15, color: '#111111', marginBottom: 3 },
+    body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: '#111111' },
+    foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+    count: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted },
+    next: { backgroundColor: '#111111', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 16 },
+    nextT: { fontFamily: fonts.medium, fontSize: 13, color: '#FFFFFF' },
+  }),
+);

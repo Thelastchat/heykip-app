@@ -18,6 +18,8 @@ import { BillStack, type Bill } from '@/components/home/BillStack';
 import { CatSheet, type CatInfo } from '@/components/home/CatSheet';
 import { OverSheet, type OverInfo } from '@/components/home/OverSheet';
 import { SlipFinder } from '@/components/home/SlipFinder';
+import { Tour } from '@/components/Tour';
+import { tourSpot } from '@/lib/tour';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { PaceChart } from '@/components/home/PaceChart';
 import { PaceSheet } from '@/components/home/PaceSheet';
@@ -489,6 +491,7 @@ export default function Home() {
             </Pressable>
           ) : (
             <Pressable
+              ref={tourSpot('today')}
               style={{ flexShrink: 1 }}
               disabled={!showOverToday}
               onPress={() => setOverOpen(true)}
@@ -751,6 +754,7 @@ export default function Home() {
       )}
 
       <Squish
+        ref={tourSpot('plus')}
         haptic={false}
         accessibilityRole="button"
         accessibilityLabel={t('Add it yourself')}
@@ -761,6 +765,9 @@ export default function Home() {
         style={[styles.fab, { bottom: 104 + Math.max(insets.bottom, 12) - 12 }]}>
         <Plus size={26} color={colors.paper} weight="bold" />
       </Squish>
+
+      {/* First-use tour (approved mockup): once, after Home has loaded */}
+      <Tour ready={Boolean(month) && !sheet} />
 
       {sheet && (
         <PlusSheet open onClose={() => setSheet(null)} onUnlocked={() => unlocked(sheet)} title={pitch[sheet].title} sub={pitch[sheet].sub}>

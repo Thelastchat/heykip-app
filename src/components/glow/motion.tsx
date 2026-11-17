@@ -19,7 +19,7 @@ export function RiseIn({ delay = 0, children, style }: { delay?: number; childre
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** A press that squishes a little and springs back. The style (size, position) is on the pressable itself, so the whole area is tappable. */
-export function Squish({ children, style, onPress, haptic = true, ...rest }: PressableProps & { children: ReactNode; style?: StyleProp<ViewStyle>; haptic?: boolean }) {
+export function Squish({ children, style, onPress, haptic = true, ...rest }: PressableProps & { children: ReactNode; style?: StyleProp<ViewStyle>; haptic?: boolean; ref?: (node: unknown) => void }) {
   const s = useSharedValue(1);
   const a = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (

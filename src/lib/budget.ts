@@ -332,6 +332,20 @@ export function addBill(m: MonthBudget, name: string, amount: number, extra: Omi
   };
 }
 
+/**
+ * Kip's bill guess, changed by hand (approved mockup). Raising it takes the extra like a real bill (fun money, then
+ * the goal — never the guess itself); lowering it gives the difference to the goal this month. Null = doesn't fit.
+ */
+export function setGuess(m: MonthBudget, to: number): { month: MonthBudget; fromFun: number; fromGoal: number; freed: number } | null {
+  const want = Math.max(0, Math.round(to));
+  const d = want - m.bills.guess;
+  if (d <= 0) return { month: { ...m, bills: { ...m.bills, guess: want }, goalExtra: m.goalExtra - d }, fromFun: 0, fromGoal: 0, freed: -d };
+  const r = addBill({ ...m, bills: { ...m.bills, guess: 0 } }, '\u0000guess', d);
+  if (r.short > 0) return null;
+  const items = (r.month.bills.items ?? []).filter((b) => b.name !== '\u0000guess');
+  return { month: { ...r.month, bills: { ...r.month.bills, items, guess: want } }, fromFun: r.fromFun, fromGoal: r.fromGoal, freed: 0 };
+}
+
 /** Remove a bill: the money goes back the way it came — goal first, then fun, then the guess. */
 export function removeBill(m: MonthBudget, index: number): MonthBudget {
   const items = [...(m.bills.items ?? [])];

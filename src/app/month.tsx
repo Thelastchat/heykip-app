@@ -15,10 +15,14 @@ export default function YourMonth() {
   return <PlanScreen />;
 }
 
-/** The plan: saving first, then bills, then everyday spending. As a tab (back=false) and as /month with ?add, ?subs, ?edit. */
+/** Opens Kip's bill guess sheet (not a bill name, so a bill called "guess" can't clash). */
+export const GUESS = '\u0000guess';
+
+/** The plan: saving first, then bills, then everyday spending. As a tab (back=false) and as /month with ?add, ?subs, ?edit, ?guess. */
 export function PlanScreen({ back = true }: { back?: boolean }) {
   const { month, loading, error, save } = useMonth();
-  const { add, edit, subs } = useLocalSearchParams<{ add?: string; edit?: string; subs?: string }>();
+  const { add, edit: editName, subs, guess } = useLocalSearchParams<{ add?: string; edit?: string; subs?: string; guess?: string }>();
+  const edit = guess ? GUESS : editName;
   const { spent } = useHome(month);
   const { profile } = useAuth();
   const [locked, setLocked] = useState<null | 'styles' | 'customize'>(null);

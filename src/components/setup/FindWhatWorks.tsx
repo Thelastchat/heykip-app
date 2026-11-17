@@ -21,7 +21,8 @@ import { typeInfo } from '@/lib/setup/goalTypes';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, monthsUntil, parseDay, shortName, sideTotal } from '@/lib/setup/plan';
 import { colors, fonts, radius, glassA, inkA, themed } from '@/theme';
 
-const ZONE = { too: colors.orange, tight: colors.peach, comfy: colors.lime } as const;
+// Too much = orange, tight = peach, comfortable = sky (asked: the best zone is our blue, not yellow).
+const ZONE = { too: colors.orange, tight: colors.peach, comfy: colors.sky } as const;
 type Zone = keyof typeof ZONE;
 type AddOn = 'saved' | 'delivery' | 'extra';
 type Mode = 'move' | 'keep' | 'nodate';

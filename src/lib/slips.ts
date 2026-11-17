@@ -138,7 +138,7 @@ export async function pickSubsShots(): Promise<PickedSlip[]> {
 // the new screen together with Photos), then the picked slips are handed to the Slips screen.
 export const MAX_SLIPS = 10;
 /** A slip picture ready for Kip: where it is (for the thumbnail) and its data. */
-export type PickedSlip = { uri: string; base64?: string | null; mimeType?: string };
+export type PickedSlip = { uri: string; base64?: string | null; mimeType?: string; width?: number; /** straight from Photos, not shrunk yet */ raw?: boolean };
 let pending: PickedSlip[] | null = null;
 
 /** Hand slips to the Slips screen (used by Kip finding slips). */
@@ -146,14 +146,22 @@ export function setPickedSlips(p: PickedSlip[]) {
   pending = p.slice(0, MAX_SLIPS);
 }
 
-/** Open Photos for slips. Returns false if nothing was picked. */
+/**
+ * Open Photos for slips. Returns false if nothing was picked. The photos are handed over as they are; the Slips
+ * screen shrinks them (an iCloud photo downloads first, which can take seconds) while showing "Getting your photos…"
+ * — before, that happened here with nothing on screen, so the button looked broken.
+ */
 export async function pickSlips(): Promise<boolean> {
   const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, quality: 1 }).catch(() => null);
   if (!r || r.canceled || !r.assets?.length) return false;
-  const picked: PickedSlip[] = [];
-  for (const a of r.assets.slice(0, MAX_SLIPS)) picked.push((await shrinkSlip(a.uri, a.width)) ?? { uri: a.uri });
-  pending = picked;
+  pending = r.assets.slice(0, MAX_SLIPS).map((a) => ({ uri: a.uri, width: a.width, raw: true }));
   return true;
+}
+
+/** A picked photo made small enough to send (done once, on the Slips screen). */
+export async function prepareSlip(p: PickedSlip): Promise<PickedSlip> {
+  if (!p.raw) return p;
+  return (await shrinkSlip(p.uri, p.width)) ?? { uri: p.uri };
 }
 
 /**

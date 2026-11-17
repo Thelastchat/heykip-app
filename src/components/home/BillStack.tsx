@@ -207,9 +207,10 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
                     </Text>
                     {b.note && !b.paid && !isOpen ? <Text style={[styles.sub, styles.onColor, dark && styles.onDarkSub]}>{b.note}</Text> : null}
                     {/* An open bill can be edited (approved mockup): rename, amount, how often — in Your month's sheet */}
-                    {isOpen && !b.estimate && (b.key === 'rent' || b.key.startsWith('item:')) && (
+                    {/* …and Kip's guess too (asked): its own sheet, the same rule as a bill */}
+                    {isOpen && (b.estimate || b.key === 'rent' || b.key.startsWith('item:')) && (
                       <Pressable
-                        onPress={() => router.push(`/month?edit=${encodeURIComponent(b.key === 'rent' ? 'rent' : b.key.slice(5))}` as never)}
+                        onPress={() => router.push((b.estimate ? '/month?guess=1' : `/month?edit=${encodeURIComponent(b.key === 'rent' ? 'rent' : b.key.slice(5))}`) as never)}
                         hitSlop={8}
                         style={[styles.editPill, { marginTop: 4 }, dark ? { backgroundColor: whiteA(0.18) } : { backgroundColor: whiteA(0.55) }]}
                         accessibilityRole="button"

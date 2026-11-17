@@ -78,6 +78,9 @@ const th: Record<string, string> = {
   'Leave it': 'ไม่ต้อง',
   'Leave it if that money came from somewhere else, like a bonus or savings outside HeyKip': 'เลือก “ไม่ต้อง” ถ้าเงินก้อนนั้นมาจากที่อื่น เช่น โบนัส หรือเงินเก็บนอก HeyKip',
   'Old slips: {months}': 'สลิปย้อนหลัง: {months}',
+  'Getting your photos…': 'กำลังดึงรูปมา…',
+  '{got} of {n}': '{got} จาก {n}',
+  'From Photos — iCloud ones take a moment': 'จากแอปรูปภาพ — รูปที่อยู่ใน iCloud ใช้เวลาแป๊บนึง',
 };
 
 export default th;

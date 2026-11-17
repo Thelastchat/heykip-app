@@ -28,7 +28,7 @@ function handSize(flat: TextStyle | undefined): TextStyle | null {
 }
 
 /** The font a nested Text inherits from the Text around it. */
-const Inherited = createContext<string | undefined>(undefined);
+const Inherited = createContext<{ family?: string; size?: number }>({});
 
 function hasThai(node: ReactNode): boolean {
   if (typeof node === 'string') return THAI.test(node);
@@ -38,6 +38,14 @@ function hasThai(node: ReactNode): boolean {
 
 /** The Thai version of a Geist font; anything else (handwriting, already Thai) stays as it is. */
 const thaiFor = (family: string | undefined) => (family ? (TO_THAI[family] ?? family) : fonts.thai);
+
+/**
+ * Thai headlines read bolder (asked): a title of 26pt or more set in Regular or Medium is shown in SemiBold, so
+ * every screen's headline matches "อยากเก็บเงินแบบไหน". Smaller text and handwriting keep their weight.
+ */
+const HEADLINE = 26;
+const thaiHeadline = (shown: string | undefined, flat: TextStyle | undefined) =>
+  (flat?.fontSize ?? 14) >= HEADLINE && (shown === fonts.thai || shown === fonts.thaiMedium) ? fonts.thaiSemibold : shown;
 
 /**
  * Thai needs more height than English: tone marks (เป้า) sit above the letters and vowels hang below, so a line set
@@ -58,9 +66,11 @@ export function Text(props: ComponentProps<typeof RNText>) {
   const accent = useContext(OnAccent);
   const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
   const own = flat?.fontFamily;
-  const family = own ?? parent;
+  const family = own ?? parent.family;
+  // A nested Text takes its size from the one around it (so the grey second line of a headline is a headline too).
+  const size = flat?.fontSize ?? parent.size;
   const thai = hasThai(props.children);
-  const shown = thai ? thaiFor(family) : family;
+  const shown = thai ? thaiHeadline(thaiFor(family), { ...flat, fontSize: size }) : family;
   // On lime / pastel / photo surfaces the text stays dark, in Light and in Dark.
   const c = flat?.color;
   const accentColor = accent && (c === undefined || c === colors.ink || c === colors.muted) ? (c === colors.muted ? colors.onAccentMuted : colors.onAccent) : undefined;
@@ -68,7 +78,7 @@ export function Text(props: ComponentProps<typeof RNText>) {
   const room = thai ? (hand ?? thaiRoom(flat)) : null;
   const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
   return (
-    <Inherited.Provider value={family}>
+    <Inherited.Provider value={{ family, size }}>
       <RNText {...props} style={style} />
     </Inherited.Provider>
   );

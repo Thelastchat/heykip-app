@@ -2,7 +2,7 @@
 // Each check is a rule that must ALWAYS hold — "every baht has a job", "food is never cut for a goal", … —
 // tried across random pay, rent, bills, payday, money style and 1–3 goals. A seeded random, so a failure repeats.
 import { funMinimum, livingFor, safetyNet, verdict, type Inputs, type Style } from '../src/lib/brain';
-import { addBill, billsTotal, lowerBudget, monthFrom, raiseBudget, removeBill, savingTotal, spendingTotal, withStyle, type CatKey, type MonthBudget } from '../src/lib/budget';
+import { addBill, billsTotal, lowerBudget, monthFrom, raiseBudget, removeBill, savingTotal, setGuess, spendingTotal, withStyle, type CatKey, type MonthBudget } from '../src/lib/budget';
 import { arrivals, assess, funRoom, goalTotal, planNew, replanOne, splitOf, withoutGoal, type GoalLite } from '../src/lib/goals';
 import { replanGoal } from '../src/lib/goalEdit';
 import { monthNumbers, overCover, period, periodAt, streakOf, type Spent } from '../src/lib/home';
@@ -963,6 +963,23 @@ for (let n = 0; n < 2000; n++) {
       );
       const rentDue = planChange(withNet, [lite], [{ op: 'set_due', name: 'rent', day: 1 }], NOWS);
       check('Agent: "rent is on the 1st" sets rent’s day (when there is rent)', withNet.bills.rent > 0 ? rentDue?.next.rentDue?.day === 1 : rentDue === null, () => rentDue?.next.rentDue);
+      {
+        const ok = (x: MonthBudget) => billsTotal(x) + savingTotal(x) + spendingTotal(x) === x.income;
+        const g0 = m.bills.guess;
+        const down = setGuess(m, Math.max(0, g0 - 500))!;
+        check(
+          'Bill guess lowered: the difference goes to the goal, the month still adds up',
+          ok(down.month) && down.freed === Math.min(500, g0) && down.month.goalExtra === m.goalExtra + down.freed,
+          () => down,
+        );
+        const up = setGuess(m, g0 + 300);
+        check(
+          'Bill guess raised: taken from fun then the goal (never itself), the month still adds up',
+          !!up && ok(up.month) && up.month.bills.guess === g0 + 300 && up.fromFun + up.fromGoal === 300 && (up.month.bills.items ?? []).length === (m.bills.items ?? []).length,
+          () => up,
+        );
+        check('Bill guess raised past everything is refused', setGuess(m, m.income * 2) === null, () => 0);
+      }
       const twice = addBill(addBill(m, 'Yes', 80).month, 'yes', 90).month;
       check('Two bills can’t share a name (the second is "yes 2"), so every card has its own key', twice.bills.items?.map((b) => b.name).join('|') === 'Yes|yes 2', () => twice.bills.items);
       const sub = planChange(withNet, [lite], [{ op: 'add_bill', name: 'Spotify', amount: 129, bill_type: 'streaming', day: 12 }], NOWS);

@@ -29,7 +29,7 @@ import { ICON3D } from '@/lib/icons3d';
 import { DB_CAT_NAME, dbCatIcon, IN_CAT_NAME, inCatIcon, type DbCat, type InCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { cleanSlip, markAlready, readSlip, savedKeys, slipKey, takePickedSlips, type PickedSlip, type Slip } from '@/lib/slips';
+import { cleanSlip, markAlready, prepareSlip, readSlip, savedKeys, slipKey, takePickedSlips, type PickedSlip, type Slip } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, glassA, inkA, themed } from '@/theme';
 
@@ -57,7 +57,8 @@ export default function Slips() {
   const { session } = useAuth();
   const { month, save: saveMonth } = useMonth();
   const { spent, goals, reload } = useHome(month);
-  const [phase, setPhase] = useState<'reading' | 'review'>('reading');
+  const [phase, setPhase] = useState<'getting' | 'reading' | 'review'>('getting');
+  const [got, setGot] = useState(0);
   const [slips, setSlips] = useState<Slip[]>([]);
   const [problem, setProblem] = useState<string | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
@@ -86,8 +87,16 @@ export default function Slips() {
       return;
     }
     setSlips(assets.map((a, i) => ({ ...cleanSlip(`s${i}`, a.uri, null), state: 'reading' })));
-    setPhase('reading');
-    readAll(assets).catch((e) => {
+    // First the photos themselves (iCloud ones download now), with a count on screen; then Kip reads them.
+    (async () => {
+      const ready: PickedSlip[] = [];
+      for (const a of assets) {
+        ready.push(await prepareSlip(a));
+        setGot(ready.length);
+      }
+      setPhase('reading');
+      await readAll(ready);
+    })().catch((e) => {
       // Never leave the person staring at "Reading…": show what we have and say what went wrong.
       setProblem(t('Something went wrong while reading — try again? ({msg})', { msg: String(e?.message ?? e).slice(0, 80) }));
       setPhase('review');
@@ -241,7 +250,7 @@ export default function Slips() {
         <ScreenHeader title={t('Slips')} />
       </View>
 
-      {phase === 'reading' && (
+      {phase !== 'review' && (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: insets.bottom + 24 }}>
           <View style={styles.grid}>
             {slips.map((s) => (
@@ -249,8 +258,10 @@ export default function Slips() {
             ))}
           </View>
           <RiseIn style={{ alignItems: 'center', gap: 4 }}>
-            <Text style={styles.big}>{slips.length === 1 ? t('Reading your slip…') : t('Reading {n} slips…', { n: slips.length })}</Text>
-            <Text style={styles.sub}>{t('Amount, who you paid, date and time')}</Text>
+            <Text style={styles.big}>{phase === 'getting' ? t('Getting your photos…') : slips.length === 1 ? t('Reading your slip…') : t('Reading {n} slips…', { n: slips.length })}</Text>
+            <Text style={styles.sub}>
+              {phase === 'getting' ? (slips.length > 1 ? t('{got} of {n}', { got, n: slips.length }) : t('From Photos — iCloud ones take a moment')) : t('Amount, who you paid, date and time')}
+            </Text>
           </RiseIn>
           <View style={{ alignItems: 'center' }}>
             <Kip mood="think" size={110} />

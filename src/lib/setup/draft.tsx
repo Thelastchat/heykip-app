@@ -48,6 +48,8 @@ export type SetupDraft = {
   promiseBackup: string | null;
   signature: string | null; // PNG, base64
   signedAt: string | null; // ISO time
+  /** "What Kip can do" (asked right after the intro): applied when the account is made. */
+  allow: { ai: boolean; slips: boolean; reminders: boolean };
 };
 
 export const EMPTY_DRAFT: SetupDraft = {
@@ -78,6 +80,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   promiseMain: null,
   promiseBackup: null,
   signature: null,
+  allow: { ai: true, slips: true, reminders: true },
   signedAt: null,
 };
 
@@ -164,6 +167,4 @@ export function plannedIncome(d: SetupDraft): number {
 export const basicsDone = (d: SetupDraft) => (d.incomeType === 'regular' ? Boolean(d.monthlyIncome && d.payday) : Boolean(d.slowMonth));
 
 export const goalDone = (d: SetupDraft) =>
-  d.goalKind === 'monthly'
-    ? Boolean(d.goalMonthly)
-    : Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.goalKind === 'safety_net') && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));
+  d.goalKind === 'monthly' ? Boolean(d.goalMonthly) : Boolean(d.goalTitle.trim() && d.goalTarget && (d.goalDue || d.goalKind === 'safety_net') && (d.goalSaved ?? 0) < (d.goalTarget ?? 0));

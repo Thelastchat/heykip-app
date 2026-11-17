@@ -29,6 +29,7 @@ const SCENARIOS = [
     habit: /Pay the bills/,
     leaks: ['Coffee'],
     goal: { type: 'Monthly', name: 'Mum', monthly: 2000 },
+    allowOff: ['Read your bank slips', 'Remind you about bills'],
     check: /Go with/, // a ฿15,000 slow month can't spare ฿2,000 — Kip offers what fits
   },
   {
@@ -61,6 +62,11 @@ const SCENARIOS = [
 async function runSetup(page, s) {
   const th = s.lang === 'th';
   await tap(page, th ? 'เริ่มกันเลย' : 'Let’s start', { wait: 1500 });
+  // 0 · What Kip can do: three switches, all on; one scenario turns slips and reminders off.
+  const can = await sane(page, 'What Kip can do');
+  await check(page, 'What Kip can do: three switches before anything is asked', (await page.getByRole('switch').count()) === 3 && /Anthropic|Claude/.test(can), () => can.slice(0, 400));
+  if (s.allowOff) for (const name of s.allowOff) await tap(page, visible(page.getByRole('switch', { name })));
+  await tap(page, th ? 'ต่อไป' : 'Continue', { wait: 1200 });
   // 1 · Basics
   if (s.basics.type === 'changes') {
     await tap(page, visible(page.getByRole('radio').nth(1)));
@@ -96,7 +102,12 @@ async function runSetup(page, s) {
   } else if (s.goal.type === 'Monthly') {
     // Saving first (approved mockup): "A bit every month" is pre-picked, with Kip's comfortable amount already in.
     const goalTxt = await screenText(page);
-    await check(page, 'The goal step opens on “A bit every month”, already picked', /A bit every month/.test(goalTxt) && /How much each month\?/.test(goalTxt) && !/What kind of goal/.test(goalTxt), () => goalTxt.slice(0, 600));
+    await check(
+      page,
+      'The goal step opens on “A bit every month”, already picked',
+      /A bit every month/.test(goalTxt) && /How much each month\?/.test(goalTxt) && !/What kind of goal/.test(goalTxt),
+      () => goalTxt.slice(0, 600),
+    );
     await type(page, 'Each month', s.goal.monthly);
     await type(page, 'Name your saving', s.goal.name);
   } else {
@@ -161,6 +172,11 @@ module.exports = async function setupTests(browser) {
       onboarded: p.onboarded,
     }));
     await check(page, 'The plan is saved', m && m.v === 2, () => p);
+    await check(page, 'What Kip can do is applied: Kip’s AI allowed on the account', !!p.ai_consent_at && !p.ai_off, () => ({ ai: p.ai_consent_at }));
+    if (s.allowOff) {
+      const local = await page.evaluate(() => ({ rem: localStorage.getItem('heykip.billReminders') }));
+      await check(page, 'Switched-off reminders stay off on this phone', local.rem === 'off', () => local);
+    }
     if (!m) {
       await page.close();
       continue;

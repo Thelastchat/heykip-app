@@ -26,7 +26,7 @@ const scenario = (name) => {
 };
 
 /** A fresh phone: chosen look and language, signed in or not, with this database behind it. */
-async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signedIn = true, path: p = '/', width = 390 } = {}) {
+async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signedIn = true, path: p = '/', width = 390, tour = false } = {}) {
   // Each test is its own phone: a private browser context, so storage never leaks between tests.
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -38,13 +38,15 @@ async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signe
   await install(page, db);
   await page.goto(BASE + '/');
   await page.evaluate(
-    ({ s, look, lang, signedIn }) => {
+    ({ s, look, lang, signedIn, tour, uid }) => {
       localStorage.clear();
+      // The first-use tour is its own test; everywhere else it's been seen already.
+      if (!tour) localStorage.setItem('heykip.tour.v1.' + uid, 'done');
       if (signedIn) localStorage.setItem('sb-qegkanosplyprrxuikia-auth-token', s);
       localStorage.setItem('heykip.look', look);
       localStorage.setItem('heykip.lang', lang);
     },
-    { s: JSON.stringify(session), look, lang, signedIn },
+    { s: JSON.stringify(session), look, lang, signedIn, tour, uid: session.user.id },
   );
   await page.goto(BASE + p);
   await page.waitForTimeout(2500);

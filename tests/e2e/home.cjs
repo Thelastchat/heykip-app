@@ -1093,4 +1093,50 @@ module.exports = async function homeTests(browser) {
     await check(page, 'Kip stays locked after the cheat', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0].plan);
     await page.close();
   });
+
+  scenario('First use · the tour points at each spot, once');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, tour: true });
+    await page.waitForTimeout(1500);
+    const seen = [];
+    for (let k = 0; k < 4; k++) {
+      const txt = await screenText(page);
+      seen.push((txt.match(/Your number for today|Log what you spent|Ask Kip anything|Your plan, your goals, you/) || ['?'])[0]);
+      const btn = page.getByRole('button', { name: k === 3 ? 'Got it' : 'Next' }).last();
+      if (!(await btn.count())) break;
+      await btn.click({ force: true });
+      await page.waitForTimeout(700);
+    }
+    await check(page, 'Four stops in order: today, +, Kip, the bar', seen.join('|') === 'Your number for today|Log what you spent|Ask Kip anything|Your plan, your goals, you', () => seen);
+    const left = await page.evaluate((uid) => localStorage.getItem('heykip.tour.v1.' + uid), db.profiles[0].id);
+    await check(page, 'Seen once — remembered on this phone', left === 'done', () => left);
+    await page.reload();
+    await page.waitForTimeout(3500);
+    await check(page, 'It doesn’t come back', !/Your number for today/.test(await screenText(page)), () => 0);
+    await page.close();
+  });
+
+  scenario('Kip’s bill guess · editable like a bill');
+  await safely(async () => {
+    const { db } = person();
+    const m0 = JSON.parse(JSON.stringify(db.profiles[0].budget));
+    const page = await open(browser, { db, path: '/month?guess=1' });
+    const txt = await sane(page, 'Guess sheet');
+    await check(page, 'Opens on Kip’s guess, with where the money goes', /Other bills · Kip’s guess/.test(txt) && /fun money/.test(txt), () => txt.slice(0, 400));
+    const to = m0.bills.guess > 500 ? 500 : m0.bills.guess + 500;
+    await tap(page, visible(page.getByRole('radio', { name: '฿' + to.toLocaleString('en-US') })));
+    await tap(page, visible(page.getByRole('button', { name: 'Save' })).last(), { wait: 1500 });
+    const m = db.profiles[0].budget;
+    const sum = (x) =>
+      x.bills.rent + x.bills.guess + (x.bills.items || []).reduce((a, b) => a + b.amount, 0) + x.goal.amount + x.goalExtra + (x.safety?.amount || 0) + x.spend.reduce((a, b) => a + b.amount, 0);
+    await check(page, `The guess is now ฿${to} and the month still adds up`, m.bills.guess === to && sum(m) === sum(m0), () => ({
+      guess: m.bills.guess,
+      was: m0.bills.guess,
+      sum: sum(m),
+      sum0: sum(m0),
+    }));
+    if (to < m0.bills.guess) await check(page, 'Lowering it gave the difference to the goal', m.goalExtra - m0.goalExtra === m0.bills.guess - to, () => ({ extra: m.goalExtra, was: m0.goalExtra }));
+    await page.close();
+  });
 };
