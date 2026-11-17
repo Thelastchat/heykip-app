@@ -460,6 +460,23 @@ const th: Record<string, string> = {
   'Where every baht goes each month: saving first, then bills, then spending. Change any part there.': 'เงินทุกบาทแต่ละเดือนไปไหน เก็บก่อน แล้วจ่ายบิล แล้วค่อยใช้ แก้ส่วนไหนก็ได้ในหน้านี้',
   'What you’re saving for, how far you are, and when you’ll get there.': 'เก็บเงินเพื่ออะไร ไปถึงไหนแล้ว และจะถึงเมื่อไหร่',
   'Your account, language, reminders, and what Kip may read.': 'บัญชี ภาษา การแจ้งเตือน และสิ่งที่ Kip อ่านได้',
+  'Everything you’ve put away, and what goes in on its own every payday.': 'เงินที่เก็บไว้ทั้งหมด และยอดที่เข้าเองทุกวันเงินเดือนออก',
+  'Got extra? Put it in here and you get there sooner. Edit changes the amount, date, name or photo.': 'มีเงินพิเศษ ใส่ตรงนี้แล้วจะถึงเป้าเร็วขึ้น ปุ่มแก้ไขเปลี่ยนยอด วันที่ ชื่อ หรือรูปได้',
+  'Saving for more than one thing? Add it — Kip splits the monthly saving between them.': 'เก็บเงินหลายอย่าง เพิ่มได้เลย Kip แบ่งเงินเก็บรายเดือนให้แต่ละเป้า',
+  'Spent or got paid': 'จ่ายออก หรือได้เงินเข้า',
+  'Money going out, or money coming in — switch here.': 'เงินออกหรือเงินเข้า สลับตรงนี้',
+  'Type it on the keypad below.': 'พิมพ์ยอดที่แป้นตัวเลขด้านล่าง',
+  'What it was': 'จ่ายค่าอะไร',
+  'Pick a category so Kip knows which budget it comes from.': 'เลือกหมวด Kip จะได้รู้ว่าหักจากงบไหน',
+  'Or use a slip': 'หรือใช้สลิป',
+  'Pick bank slips from Photos and Kip fills everything in for you.': 'เลือกสลิปจากแอปรูปภาพ แล้ว Kip กรอกให้หมดเลย',
+  'Every baht has a job': 'เงินทุกบาทมีหน้าที่',
+  'Your pay, split in three: saving goes first, then bills, then what’s yours to spend.': 'เงินเดือนแบ่งเป็น 3 ส่วน เก็บก่อน แล้วจ่ายบิล ที่เหลือคือเงินใช้ของคุณ',
+  'What goes to your goal and safety net every payday, before anything else is spent.': 'เงินที่เข้าเป้าหมายและเงินสำรองทุกวันเงินเดือนออก ก่อนใช้อย่างอื่น',
+  'Rent and bills': 'ค่าเช่าและบิล',
+  'Add your real bills here. Kip’s guess covers the ones you haven’t added yet — tap it to change.': 'เพิ่มบิลจริงของคุณที่นี่ ยอดที่ Kip กันไว้ครอบคลุมบิลที่ยังไม่ได้เพิ่ม แตะเพื่อแก้ได้',
+  'Split into categories. Tap one to raise or lower it, and Kip shows what it changes.': 'แบ่งเป็นหมวด แตะหมวดไหนก็เพิ่มหรือลดได้ แล้ว Kip จะบอกว่ามีอะไรเปลี่ยนบ้าง',
+  'Tap a bill to open it, slide to mark it paid, or Edit to change it. Kip reminds you the day before it’s due.': 'แตะบิลเพื่อเปิด เลื่อนเพื่อบอกว่าจ่ายแล้ว หรือกดแก้ไขเพื่อเปลี่ยน Kip เตือนก่อนครบกำหนด 1 วัน',
 };
 
 export default th;

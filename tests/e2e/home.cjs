@@ -1100,7 +1100,7 @@ module.exports = async function homeTests(browser) {
     const page = await open(browser, { db, tour: true });
     await page.waitForTimeout(1500);
     const seen = [];
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < 9; k++) {
       const txt = await screenText(page);
       const shown = await page.evaluate(
         () =>
@@ -1110,7 +1110,7 @@ module.exports = async function homeTests(browser) {
             .pop() || '?',
       );
       seen.push(shown);
-      const btn = page.getByRole('button', { name: k === 7 ? 'Got it' : 'Next' }).last();
+      const btn = page.getByRole('button', { name: /^(Next|Got it)$/ }).last();
       if (!(await btn.count())) break;
       await btn.click({ force: true });
       await page.waitForTimeout(700);
@@ -1118,16 +1118,51 @@ module.exports = async function homeTests(browser) {
     await check(
       page,
       'Eight stops in order: today, the month, the week, +, Kip, then each tab',
-      seen.join('|') === 'What you can spend today|Your whole pay month|Your week|Log what you spent|Ask Kip anything|Your saving plan|Your goals|You',
+      seen.filter((x) => x !== '?' && x !== 'Monthly bills').join('|') ===
+        'What you can spend today|Your whole pay month|Your week|Log what you spent|Ask Kip anything|Your saving plan|Your goals|You',
       () => seen,
     );
-    const left = await page.evaluate((uid) => localStorage.getItem('heykip.tour.v1.' + uid), db.profiles[0].id);
+    const left = await page.evaluate((uid) => localStorage.getItem('heykip.tour.home.v2.' + uid), db.profiles[0].id);
     await check(page, 'Seen once — remembered on this phone', left === 'done', () => left);
     await page.reload();
     await page.waitForTimeout(3500);
     await check(page, 'It doesn’t come back', !/What you can spend today/.test(await screenText(page)), () => 0);
     await page.close();
   });
+
+  for (const [path, name, want] of [
+    ['/plan', 'plan', 'Every baht has a job|Saving first|Rent and bills|Spending budget a month'],
+    ['/goals', 'goals', 'Saved so far|Put money in|Add a goal'],
+    ['/add', 'add', 'Spent or got paid|How much|What it was|Or use a slip'],
+  ]) {
+    scenario(`First visit · ${name} has its own tour`);
+    await safely(async () => {
+      const { db } = person();
+      const page = await open(browser, { db, tour: true, path });
+      await page.waitForTimeout(1500);
+      const seen = [];
+      for (let k = 0; k < 6; k++) {
+        const shown = await page.evaluate(
+          () =>
+            [...document.querySelectorAll('div')]
+              .filter((d) => d.getAttribute('aria-live') === 'polite')
+              .map((d) => d.innerText.split('\n')[0])
+              .pop() || null,
+        );
+        if (!shown) break;
+        seen.push(shown);
+        await page
+          .getByRole('button', { name: /^(Next|Got it)$/ })
+          .last()
+          .click({ force: true });
+        await page.waitForTimeout(1000);
+      }
+      await check(page, `${name}: every stop, in order, then done`, seen.join('|') === want, () => seen);
+      const left = await page.evaluate(([n, uid]) => localStorage.getItem('heykip.tour.' + n + '.v1.' + uid), [name, db.profiles[0].id]);
+      await check(page, `${name}: remembered`, left === 'done', () => left);
+      await page.close();
+    });
+  }
 
   scenario('Kip’s bill guess · editable like a bill');
   await safely(async () => {

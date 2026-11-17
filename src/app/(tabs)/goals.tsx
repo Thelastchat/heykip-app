@@ -25,6 +25,8 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dayInMonth, monthYear, ordinal, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { Tour, type TourStop } from '@/components/Tour';
+import { tourSpot, useTourScroll } from '@/lib/tour';
 import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
 
 type Move = { id: string; goal_id: string; amount: number; source: 'payday' | 'extra' | 'cover'; from_kind: MoneyFrom | 'other' | null; moved_at: string };
@@ -58,6 +60,12 @@ function arrives(left: number, perMonth: number, payday: number | null, now = ne
   const d = dayInMonth(now.getFullYear(), now.getMonth() + months, payday ?? 1);
   return monthYear(d);
 }
+
+const goalsTour = (): TourStop[] => [
+  { spot: 'goalTotals', title: t('Saved so far'), body: t('Everything you’ve put away, and what goes in on its own every payday.') },
+  { spot: 'goalPut', title: t('Put money in'), body: t('Got extra? Put it in here and you get there sooner. Edit changes the amount, date, name or photo.') },
+  { spot: 'goalAdd', title: t('Add a goal'), body: t('Saving for more than one thing? Add it — Kip splits the monthly saving between them.') },
+];
 
 export default function Goals() {
   const insets = useSafeAreaInsets();
@@ -125,6 +133,7 @@ export default function Goals() {
     setTimeout(() => setToast(null), 2600);
   }
 
+  const tourScroll = useTourScroll();
   if (!goal) {
     return (
       <View style={{ flex: 1 }}>
@@ -140,7 +149,7 @@ export default function Goals() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
+      <ScrollView {...tourScroll.props} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 180 }} showsVerticalScrollIndicator={false}>
         <RiseIn style={styles.head}>
           <Text style={styles.h1}>
             {t('Your goals')}
@@ -150,14 +159,16 @@ export default function Goals() {
         </RiseIn>
 
         <RiseIn delay={60} style={styles.totals}>
-          <View>
-            <CountUp value={savedAll} format={big} style={styles.n1} fit />
-            <Text style={styles.lbl}>{t('Saved so far')}</Text>
-          </View>
-          <View style={styles.vbar} />
-          <View style={{ flexShrink: 1 }}>
-            <CountUp value={everyPayday} format={big} style={styles.n2} fit />
-            <Text style={styles.lbl}>{t('Going in every payday')}</Text>
+          <View ref={tourSpot('goalTotals')} collapsable={false} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
+            <View>
+              <CountUp value={savedAll} format={big} style={styles.n1} fit />
+              <Text style={styles.lbl}>{t('Saved so far')}</Text>
+            </View>
+            <View style={styles.vbar} />
+            <View style={{ flexShrink: 1 }}>
+              <CountUp value={everyPayday} format={big} style={styles.n2} fit />
+              <Text style={styles.lbl}>{t('Going in every payday')}</Text>
+            </View>
           </View>
         </RiseIn>
 
@@ -185,6 +196,7 @@ export default function Goals() {
             ) : goals.length === i + 1 ? (
               <Squish
                 key="slot"
+                ref={tourSpot('goalAdd')}
                 onPress={() => (isPlus ? router.push('/goal-new') : setPlus(true))}
                 style={[styles.slot, goals.length === 1 && { flex: 2 }]}
                 accessibilityRole="button"
@@ -299,6 +311,8 @@ export default function Goals() {
         </View>
       )}
 
+      {/* First visit (approved coach marks) */}
+      <Tour name="goals" stops={goalsTour} ready={!putOpen} scrollBy={tourScroll.scrollBy} />
       {putOpen && (
         <PutMoneySheet
           open
@@ -461,7 +475,7 @@ function Hero({
           <Fact k={monthly ? t('Every month') : t('Arrives')} v={monthly ? baht(goal.monthly ?? perMonth) : arrives(left, perMonth, payday)} />
           {!monthly && <Fact k={t('Each month')} v={baht(perMonth)} />}
         </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+        <View ref={tourSpot('goalPut')} collapsable={false} style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
           <Squish onPress={onPut} style={[styles.btn, { flex: 1.4, backgroundColor: colors.ink }]} accessibilityRole="button" accessibilityLabel={t('Put money in')}>
             <Plus size={16} color={colors.paper} weight="bold" />
             <Text style={[styles.btnText, { color: colors.paper }]}>{t('Put money in')}</Text>

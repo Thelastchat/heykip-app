@@ -49,6 +49,8 @@ import { DuePicker } from '@/components/DuePicker';
 import { askReminders } from '@/lib/reminders';
 import { SubsFinder } from '@/components/SubsFinder';
 import { KipStill } from '@/components/KipStill';
+import { Tour, type TourStop } from '@/components/Tour';
+import { tourSpot, useTourScroll, type TourSpot } from '@/lib/tour';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -125,6 +127,8 @@ export function MonthScreen({
     if (w === 'rent' || w >= 0) setSheet({ stage: 'editBill', which: w });
   }, [month, openEdit]);
 
+  const tourScroll = useTourScroll();
+
   if (loading || !month) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
@@ -158,7 +162,7 @@ export function MonthScreen({
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView {...tourScroll.props} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 100 }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 18 }}>
           <ScreenHeader
             title={t('Your saving plan')}
@@ -183,39 +187,43 @@ export function MonthScreen({
         </RiseIn>
 
         {/* where every baht goes */}
-        <RiseIn delay={90} style={styles.flowBar}>
-          <FlowPart flex={saving} color={colors.limeDeep} label={t('Saving')} amount={saving} delay={0} kind="accent" />
-          <FlowPart flex={bills} color={colors.solid} label={t('Bills')} amount={bills} delay={100} kind="solid" />
-          <FlowPart flex={spending} color={glassA(0.78)} label={t('To spend')} amount={spending} delay={200} kind="plain" />
-        </RiseIn>
-        <Text style={styles.note}>{t('Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.')}</Text>
+        <View ref={tourSpot('planFlow')} collapsable={false}>
+          <RiseIn delay={90} style={styles.flowBar}>
+            <FlowPart flex={saving} color={colors.limeDeep} label={t('Saving')} amount={saving} delay={0} kind="accent" />
+            <FlowPart flex={bills} color={colors.solid} label={t('Bills')} amount={bills} delay={100} kind="solid" />
+            <FlowPart flex={spending} color={glassA(0.78)} label={t('To spend')} amount={spending} delay={200} kind="plain" />
+          </RiseIn>
+          <Text style={styles.note}>{t('Every baht has a job: saving goes first, then bills, then what’s left is yours to spend.')}</Text>
+        </View>
 
         {/* 1 · Saving first */}
-        <Section n={1} title={t('Saving first')} right={t('{amt} · on payday', { amt: baht(saving) })} />
-        <RiseIn delay={140} style={styles.cardWrap}>
-          <Glass radius={26} innerStyle={styles.card}>
-            <Row
-              icon={month.goal.isSafetyNet ? 'shield' : 'plane'}
-              title={month.goal.title}
-              sub={month.goalExtra > 0 ? t('Includes {amt} moved from your budgets', { amt: baht(month.goalExtra) }) : t('Goes out first, every payday')}
-              amount={baht(goalAmount)}
-              amountSub={t('a month')}
-            />
-            {!month.goal.isSafetyNet && (
+        <View ref={tourSpot('planSaving')} collapsable={false}>
+          <Section n={1} title={t('Saving first')} right={t('{amt} · on payday', { amt: baht(saving) })} />
+          <RiseIn delay={140} style={styles.cardWrap}>
+            <Glass radius={26} innerStyle={styles.card}>
               <Row
-                icon="shield"
-                title={t('Safety net')}
-                sub={t('Until you have {amt} — 3 months of basics', { amt: baht(month.safety.target) })}
-                amount={baht(month.safety.amount)}
+                icon={month.goal.isSafetyNet ? 'shield' : 'plane'}
+                title={month.goal.title}
+                sub={month.goalExtra > 0 ? t('Includes {amt} moved from your budgets', { amt: baht(month.goalExtra) }) : t('Goes out first, every payday')}
+                amount={baht(goalAmount)}
                 amountSub={t('a month')}
-                divider
               />
-            )}
-          </Glass>
-        </RiseIn>
+              {!month.goal.isSafetyNet && (
+                <Row
+                  icon="shield"
+                  title={t('Safety net')}
+                  sub={t('Until you have {amt} — 3 months of basics', { amt: baht(month.safety.target) })}
+                  amount={baht(month.safety.amount)}
+                  amountSub={t('a month')}
+                  divider
+                />
+              )}
+            </Glass>
+          </RiseIn>
+        </View>
 
         {/* 2 · Bills */}
-        <Section n={2} title={t('Bills')} right={baht(bills)} />
+        <Section n={2} spot="planBills" title={t('Bills')} right={baht(bills)} />
         <RiseIn delay={180} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             {/* every bill (rent too) opens its edit sheet: rename, type, amount, how often, delete */}
@@ -264,7 +272,7 @@ export function MonthScreen({
         {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
-        <Section n={3} title={t('Spending budget a month')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
+        <Section n={3} spot="planSpend" title={t('Spending budget a month')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
         <RiseIn delay={220} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             {month.spend.map((s, i) => {
@@ -327,7 +335,7 @@ export function MonthScreen({
         {isPlus && <MonthTellKip month={month} save={save} />}
         {back && <Button label={t('Looks good')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />}
       </View>
-      <BottomSheet open={sheet !== null} onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet !== null && sheet.stage !== 'guess'} onClose={() => setSheet(null)}>
         {sheet?.stage === 'addBill' && (
           <AddBill
             month={month}
@@ -350,17 +358,6 @@ export function MonthScreen({
                     }),
               );
               setSheet(null);
-            }}
-          />
-        )}
-        {sheet?.stage === 'guess' && (
-          <GuessSheet
-            month={month}
-            onClose={() => setSheet(null)}
-            onSave={(next, note) => {
-              setSheet(null);
-              save(next);
-              setNotice(note);
             }}
           />
         )}
@@ -441,6 +438,19 @@ export function MonthScreen({
           />
         )}
       </BottomSheet>
+      {sheet?.stage === 'guess' && (
+        <GuessSheet
+          month={month}
+          onClose={() => setSheet(null)}
+          onSave={(next, note) => {
+            setSheet(null);
+            save(next);
+            setNotice(note);
+          }}
+        />
+      )}
+      {/* First visit (approved coach marks): what each part of the plan is */}
+      <Tour name="plan" stops={planTour} ready={!sheet} scrollBy={tourScroll.scrollBy} />
     </View>
   );
 }
@@ -528,19 +538,30 @@ function MiniLock() {
   );
 }
 
-function Section({ n, title, right }: { n: number; title: string; right: string }) {
+function Section({ n, title, right, spot }: { n: number; title: string; right: string; spot?: TourSpot }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 28, paddingBottom: 10 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={styles.nDot}>
-          <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.paper }}>{n}</Text>
+    <View style={{ paddingTop: 28 }}>
+      <View
+        ref={spot ? tourSpot(spot) : undefined}
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 6, paddingBottom: 6, marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.nDot}>
+            <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.paper }}>{n}</Text>
+          </View>
+          <Text style={styles.sectionTitle}>{title}</Text>
         </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>
       </View>
-      <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>
     </View>
   );
 }
+
+const planTour = (): TourStop[] => [
+  { spot: 'planFlow', title: t('Every baht has a job'), body: t('Your pay, split in three: saving goes first, then bills, then what’s yours to spend.') },
+  { spot: 'planSaving', title: t('Saving first'), body: t('What goes to your goal and safety net every payday, before anything else is spent.') },
+  { spot: 'planBills', title: t('Rent and bills'), body: t('Add your real bills here. Kip’s guess covers the ones you haven’t added yet — tap it to change.') },
+  { spot: 'planSpend', title: t('Spending budget a month'), body: t('Split into categories. Tap one to raise or lower it, and Kip shows what it changes.') },
+];
 
 // ---------- sheets ----------
 

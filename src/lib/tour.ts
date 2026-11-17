@@ -2,8 +2,32 @@
 // each one in the window when it's its turn — so the bright cut-out sits exactly on the real button, wherever the
 // layout puts it. Shown once per person (remembered on this phone).
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRef } from 'react';
 
-export type TourSpot = 'today' | 'month' | 'week' | 'plus' | 'kip' | 'plan' | 'goals' | 'you';
+export type TourSpot =
+  | 'today'
+  | 'month'
+  | 'week'
+  | 'bills'
+  | 'plus'
+  | 'kip'
+  | 'plan'
+  | 'goals'
+  | 'you'
+  | 'planFlow'
+  | 'planSaving'
+  | 'planBills'
+  | 'planSpend'
+  | 'goalTotals'
+  | 'goalCard'
+  | 'goalPut'
+  | 'goalAdd'
+  | 'addKind'
+  | 'addAmount'
+  | 'addCats'
+  | 'addSlip';
+/** One tour per screen, each shown once. */
+export type TourName = 'home' | 'plan' | 'goals' | 'add';
 export type Rect = { x: number; y: number; width: number; height: number };
 
 type Measurable = { measureInWindow?: (cb: (x: number, y: number, width: number, height: number) => void) => void };
@@ -30,6 +54,28 @@ export function measureSpot(id: TourSpot): Promise<Rect | null> {
   });
 }
 
-const key = (uid: string) => `heykip.tour.v1.${uid}`;
-export const tourSeen = async (uid: string) => (await AsyncStorage.getItem(key(uid)).catch(() => null)) === 'done';
-export const markTourSeen = (uid: string) => AsyncStorage.setItem(key(uid), 'done').catch(() => {});
+// v2: Home's tour grew from 4 stops to 9, so everyone sees it once more.
+const VERSION: Record<TourName, number> = { home: 2, plan: 1, goals: 1, add: 1 };
+export const tourKey = (name: TourName, uid: string) => `heykip.tour.${name}.v${VERSION[name]}.${uid}`;
+export const tourSeen = async (name: TourName, uid: string) => (await AsyncStorage.getItem(tourKey(name, uid)).catch(() => null)) === 'done';
+export const markTourSeen = (name: TourName, uid: string) => AsyncStorage.setItem(tourKey(name, uid), 'done').catch(() => {});
+
+/**
+ * Lets the tour scroll a screen to a spot below the fold: spread `props` on the screen's ScrollView and pass
+ * `scrollBy` to the Tour.
+ */
+export function useTourScroll() {
+  const node = useRef<{ scrollTo?: (o: { y: number; animated?: boolean }) => void } | null>(null);
+  const off = useRef(0);
+  const props = {
+    ref: (n: unknown) => {
+      node.current = n as typeof node.current;
+    },
+    scrollEventThrottle: 16,
+    onScroll: (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      off.current = e.nativeEvent.contentOffset.y;
+    },
+  };
+  const scrollBy = (dy: number) => node.current?.scrollTo?.({ y: Math.max(0, off.current + dy), animated: true });
+  return { props, scrollBy };
+}

@@ -28,6 +28,8 @@ import { pickSlips } from '@/lib/slips';
 import { MoneyInSheet } from '@/components/MoneyInSheet';
 import type { MoneyIn } from '@/lib/moneyin';
 import { useAiConsent } from '@/components/AiConsent';
+import { Tour, type TourStop } from '@/components/Tour';
+import { tourSpot } from '@/lib/tour';
 import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { supabase } from '@/lib/supabase';
@@ -329,6 +331,7 @@ export default function Add() {
           title={t('Add it yourself')}
           right={
             <Squish
+              ref={tourSpot('addSlip')}
               onPress={async () => {
                 if (!isPlus) return setSlip(true);
                 if (opening) return;
@@ -352,12 +355,12 @@ export default function Add() {
       </View>
 
       <FormScroll contentContainerStyle={{ paddingTop: 16, gap: 16 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={{ paddingHorizontal: 20 }}>
+        <View ref={tourSpot('addKind')} collapsable={false} style={{ marginHorizontal: 20 }}>
           <Switch kind={kind} onChange={switchKind} />
         </View>
 
         <View style={{ alignItems: 'center', gap: 12, paddingTop: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View ref={tourSpot('addAmount')} collapsable={false} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 }}>
             <Text style={[styles.amount, !digits && { color: colors.faint }]} numberOfLines={1} adjustsFontSizeToFit>
               <Text style={{ fontSize: 34 }}>฿</Text>
               {shown}
@@ -373,7 +376,7 @@ export default function Add() {
         </View>
 
         {/* every choice in view, no hidden ones off the edge */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 8 }}>
+        <View ref={tourSpot('addCats')} collapsable={false} style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 20, gap: 8 }}>
           {chips.map((c) => {
             const on = c.key === cat.key;
             return (
@@ -477,6 +480,8 @@ export default function Add() {
       </Modal>
 
       {ai.sheet}
+      {/* First visit (approved coach marks) */}
+      <Tour name="add" stops={addTour} ready={!slip && !moneyIn && !pickWhen} />
       {moneyIn && (
         <MoneyInSheet
           items={moneyIn}
@@ -499,6 +504,13 @@ export default function Add() {
     </KeyboardSafe>
   );
 }
+
+const addTour = (): TourStop[] => [
+  { spot: 'addKind', title: t('Spent or got paid'), body: t('Money going out, or money coming in — switch here.') },
+  { spot: 'addAmount', title: t('How much'), body: t('Type it on the keypad below.') },
+  { spot: 'addCats', title: t('What it was'), body: t('Pick a category so Kip knows which budget it comes from.') },
+  { spot: 'addSlip', title: t('Or use a slip'), body: t('Pick bank slips from Photos and Kip fills everything in for you.'), round: true },
+];
 
 /** Spent / Got paid — a black knob slides between them. */
 function Switch({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => void }) {

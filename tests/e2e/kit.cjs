@@ -41,7 +41,7 @@ async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signe
     ({ s, look, lang, signedIn, tour, uid }) => {
       localStorage.clear();
       // The first-use tour is its own test; everywhere else it's been seen already.
-      if (!tour) localStorage.setItem('heykip.tour.v1.' + uid, 'done');
+      if (!tour) for (const k of ['home.v2', 'plan.v1', 'goals.v1', 'add.v1']) localStorage.setItem('heykip.tour.' + k + '.' + uid, 'done');
       if (signedIn) localStorage.setItem('sb-qegkanosplyprrxuikia-auth-token', s);
       localStorage.setItem('heykip.look', look);
       localStorage.setItem('heykip.lang', lang);

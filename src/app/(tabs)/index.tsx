@@ -18,8 +18,8 @@ import { BillStack, type Bill } from '@/components/home/BillStack';
 import { CatSheet, type CatInfo } from '@/components/home/CatSheet';
 import { OverSheet, type OverInfo } from '@/components/home/OverSheet';
 import { SlipFinder } from '@/components/home/SlipFinder';
-import { Tour } from '@/components/Tour';
-import { tourSpot } from '@/lib/tour';
+import { homeTour, Tour } from '@/components/Tour';
+import { tourSpot, useTourScroll } from '@/lib/tour';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { PaceChart } from '@/components/home/PaceChart';
 import { PaceSheet } from '@/components/home/PaceSheet';
@@ -76,6 +76,7 @@ export default function Home() {
   const [dayOpen, setDayOpen] = useState<Date | null>(null);
   const [paceOpen, setPaceOpen] = useState(false);
   const [catOpen, setCatOpen] = useState<CatKey | null>(null);
+  const tourScroll = useTourScroll();
   const isPlus = profile ? profile.plan !== 'free' : false;
 
   useFocusEffect(
@@ -452,7 +453,7 @@ export default function Home() {
   return (
     <View style={{ flex: 1 }}>
       <GlowBackground mood={fast ? 'fast' : 'calm'} />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 200 }} showsVerticalScrollIndicator={false}>
+      <ScrollView {...tourScroll.props} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 200 }} showsVerticalScrollIndicator={false}>
         {/* top */}
         <RiseIn style={styles.top}>
           <View style={styles.streak}>
@@ -678,8 +679,10 @@ export default function Home() {
         {/* bills */}
         {bills.length > 0 && (
           <RiseIn delay={480} style={{ paddingHorizontal: 20 }}>
-            <Section title={t('Monthly bills')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
-            <BillStack bills={bills} onPaid={setPaid} />
+            <View ref={tourSpot('bills')} collapsable={false}>
+              <Section title={t('Monthly bills')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
+              <BillStack bills={bills} onPaid={setPaid} />
+            </View>
           </RiseIn>
         )}
       </ScrollView>
@@ -769,7 +772,7 @@ export default function Home() {
       </Squish>
 
       {/* First-use tour (approved mockup): once, after Home has loaded */}
-      <Tour ready={Boolean(month) && !sheet} />
+      <Tour name="home" stops={homeTour} ready={Boolean(month) && !sheet} scrollBy={tourScroll.scrollBy} />
 
       {sheet && (
         <PlusSheet open onClose={() => setSheet(null)} onUnlocked={() => unlocked(sheet)} title={pitch[sheet].title} sub={pitch[sheet].sub}>
