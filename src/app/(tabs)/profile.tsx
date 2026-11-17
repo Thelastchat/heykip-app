@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { CaretRight } from 'phosphor-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
@@ -24,7 +24,7 @@ import { getLang, t, useLang, type Lang } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
-import { remindersOn, setRemindersOn } from '@/lib/reminders';
+import { phoneNotifications, remindersOn, setRemindersOn } from '@/lib/reminders';
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
 import { useLook } from '@/lib/look';
@@ -64,8 +64,15 @@ export default function Profile() {
   const { month, save } = useMonth();
   // Bill reminders on this phone (approved mockup): one switch for all of them.
   const [reminders, setReminders] = useState(true);
+  // …and whether the iPhone lets them through (Don't Allow can only be undone in iPhone Settings). Checked again
+  // when they come back from Settings.
+  const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     remindersOn().then(setReminders);
+    const check = () => phoneNotifications().then((p) => setBlocked(p === 'blocked'));
+    check();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && check());
+    return () => sub.remove();
   }, []);
   const { goals } = useHome(month);
   const [row, setRow] = useState<Row | null>(null);
@@ -251,15 +258,23 @@ export default function Profile() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{t('Bill reminders')}</Text>
                 <Text style={styles.small}>{t('9:00 AM, for bills with a due day')}</Text>
+                {reminders && blocked && (
+                  <Pressable onPress={() => Linking.openSettings()} accessibilityRole="link" hitSlop={6} style={{ marginTop: 4 }}>
+                    <Text style={[styles.small, { color: colors.orange }]}>
+                      {t('Notifications are off for HeyKip in iPhone Settings.')} <Text style={{ fontFamily: fonts.medium, textDecorationLine: 'underline' }}>{t('Open Settings')}</Text>
+                    </Text>
+                  </Pressable>
+                )}
               </View>
               <View style={styles.seg}>
                 {([true, false] as const).map((on) => (
                   <Pressable
                     key={String(on)}
                     onPress={() => {
+                      if (on && blocked) return Linking.openSettings();
                       if (on === reminders) return;
                       setReminders(on);
-                      setRemindersOn(on, month);
+                      setRemindersOn(on, month).then(() => phoneNotifications().then((p) => setBlocked(p === 'blocked')));
                     }}
                     style={[styles.segBtn, reminders === on && styles.segOn]}
                     accessibilityRole="button"

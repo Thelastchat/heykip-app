@@ -477,6 +477,8 @@ const th: Record<string, string> = {
   'Add your real bills here. Kip’s guess covers the ones you haven’t added yet — tap it to change.': 'เพิ่มบิลจริงของคุณที่นี่ ยอดที่ Kip กันไว้ครอบคลุมบิลที่ยังไม่ได้เพิ่ม แตะเพื่อแก้ได้',
   'Split into categories. Tap one to raise or lower it, and Kip shows what it changes.': 'แบ่งเป็นหมวด แตะหมวดไหนก็เพิ่มหรือลดได้ แล้ว Kip จะบอกว่ามีอะไรเปลี่ยนบ้าง',
   'Tap a bill to open it, slide to mark it paid, or Edit to change it. Kip reminds you the day before it’s due.': 'แตะบิลเพื่อเปิด เลื่อนเพื่อบอกว่าจ่ายแล้ว หรือกดแก้ไขเพื่อเปลี่ยน Kip เตือนก่อนครบกำหนด 1 วัน',
+  'Notifications are off for HeyKip in iPhone Settings.': 'การแจ้งเตือนของ HeyKip ปิดอยู่ในการตั้งค่า iPhone',
+  'Open Settings': 'เปิดการตั้งค่า',
 };
 
 export default th;

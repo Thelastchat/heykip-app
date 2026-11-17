@@ -37,14 +37,27 @@ export async function setRemindersOn(on: boolean, month: MonthBudget | null) {
   await syncReminders(month, true);
 }
 
-/** Ask the phone once, the first time someone sets a reminder. True when allowed. */
+/** Ask the phone once, the first time someone sets a reminder. True when allowed. Never asks when they switched
+ * bill reminders off (in setup or Profile) — the iPhone pop-up only comes when they want reminders. */
 export async function askReminders(): Promise<boolean> {
   const N = notifications();
-  if (!N) return false;
+  if (!N || !(await remindersOn())) return false;
   const cur = await N.getPermissionsAsync();
   if (cur.granted) return true;
   if (!cur.canAskAgain) return false;
   return (await N.requestPermissionsAsync()).granted;
+}
+
+/**
+ * What the iPhone says about notifications for HeyKip: 'allowed', 'ask' (not asked yet), 'blocked' (they tapped
+ * Don't Allow — only iPhone Settings can change it now), or null where there are none (web).
+ */
+export async function phoneNotifications(): Promise<'allowed' | 'ask' | 'blocked' | null> {
+  const N = notifications();
+  if (!N) return null;
+  const p = await N.getPermissionsAsync().catch(() => null);
+  if (!p) return null;
+  return p.granted ? 'allowed' : p.canAskAgain ? 'ask' : 'blocked';
 }
 
 /** Make the phone's waiting reminders match the month. Quiet: never asks permission, never throws. */
