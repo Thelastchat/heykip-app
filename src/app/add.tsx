@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -222,6 +222,7 @@ export default function Add() {
   });
   const [pickWhen, setPickWhen] = useState(false);
   const [slip, setSlip] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
   const [ids, setIds] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -328,12 +329,21 @@ export default function Add() {
           title={t('Add it yourself')}
           right={
             <Squish
-              onPress={async () => (isPlus ? (await ai.ensure()) && (await pickSlips()) && router.push('/slips') : setSlip(true))}
+              onPress={async () => {
+                if (!isPlus) return setSlip(true);
+                if (opening) return;
+                setError(null);
+                if (!(await ai.ensure())) return;
+                setOpening(true);
+                const picked = await pickSlips((msg) => setError(t('Photos didn’t open: {msg}', { msg })));
+                setOpening(false);
+                if (picked) router.push('/slips');
+              }}
               accessibilityRole="button"
               accessibilityLabel={isPlus ? t('Add from a slip') : t('Add from a slip — Plus')}>
               <Glass radius={23} innerStyle={styles.slip}>
-                <Receipt size={17} color={colors.ink} weight="fill" />
-                <Text style={styles.slipText}>{t('Slip')}</Text>
+                {opening ? <ActivityIndicator size="small" color={colors.ink} /> : <Receipt size={17} color={colors.ink} weight="fill" />}
+                <Text style={styles.slipText}>{opening ? t('Opening…') : t('Slip')}</Text>
                 {!isPlus && <LockSimple size={16} color={colors.muted} />}
               </Glass>
             </Squish>

@@ -1,5 +1,5 @@
 // The first-use tour (approved mockup): coach marks, not a card. The screen dims, one spot stays bright (cut out of
-// the dim, exactly where the real button is), a short line sits next to it, and Next moves on. Four stops on Home,
+// the dim, exactly where the real button is), a short line sits next to it, and Next moves on. Eight stops on Home,
 // Skip always there, shown once.
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -13,10 +13,14 @@ import { colors, fonts, themed } from '@/theme';
 
 type Stop = { spot: TourSpot; title: string; body: string; round: boolean };
 const stops = (): Stop[] => [
-  { spot: 'today', title: t('Your number for today'), body: t('What you can spend today and still stay on plan. It updates as you log.'), round: false },
+  { spot: 'today', title: t('What you can spend today'), body: t('Set so you stay on track for your goal. It changes as you log money in and out.'), round: false },
+  { spot: 'month', title: t('Your whole pay month'), body: t('The line is what you’ve spent so far. Stay inside the safe zone and you reach payday with your saving untouched.'), round: false },
+  { spot: 'week', title: t('Your week'), body: t('Tap a day to see what you spent. Full calendar shows the whole month.'), round: false },
   { spot: 'plus', title: t('Log what you spent'), body: t('Tap + and type it — or just tell Kip. Slips work too.'), round: true },
   { spot: 'kip', title: t('Ask Kip anything'), body: t('“Can I buy this?” “When’s Netflix due?” Kip answers from your own numbers.'), round: true },
-  { spot: 'bar', title: t('Your plan, your goals, you'), body: t('Where your money goes each month, what you’re saving for, and your settings.'), round: false },
+  { spot: 'plan', title: t('Your saving plan'), body: t('Where every baht goes each month: saving first, then bills, then spending. Change any part there.'), round: true },
+  { spot: 'goals', title: t('Your goals'), body: t('What you’re saving for, how far you are, and when you’ll get there.'), round: true },
+  { spot: 'you', title: t('You'), body: t('Your account, language, reminders, and what Kip may read.'), round: true },
 ];
 
 const PAD = 8;

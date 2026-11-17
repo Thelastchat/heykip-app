@@ -10,7 +10,7 @@ import { Kip } from '@/components/Kip';
 import { useAuth } from '@/lib/auth';
 import { Glass } from '@/components/glow/Glass';
 import { t } from '@/lib/i18n';
-import { tourSpot } from '@/lib/tour';
+import { tourSpot, type TourSpot } from '@/lib/tour';
 import { colors, themed } from '@/theme';
 
 // Floating 5-spot bar (approved mockup): Home · Your saving plan · Kip (centre, opens Talk) · Your goals · You.
@@ -31,12 +31,12 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <View style={styles.bar} ref={tourSpot('bar')}>
+      <View style={styles.bar}>
         <Glass radius={999} style={StyleSheet.absoluteFill} innerStyle={{ flex: 1 }} />
         <TabIcon label={t('Home')} active={current === 'index'} onPress={() => go('index')}>
           <House size={22} weight={current === 'index' ? 'fill' : 'regular'} color={current === 'index' ? colors.paper : colors.ink} />
         </TabIcon>
-        <TabIcon label={t('Your saving plan')} active={current === 'plan'} onPress={() => go('plan')}>
+        <TabIcon spot="plan" label={t('Your saving plan')} active={current === 'plan'} onPress={() => go('plan')}>
           <ChartPieSlice size={22} weight={current === 'plan' ? 'fill' : 'regular'} color={current === 'plan' ? colors.paper : colors.ink} />
         </TabIcon>
 
@@ -52,11 +52,11 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
           <Kip size={63} />
         </Pressable>
 
-        <TabIcon label={t('Your goals')} active={current === 'goals'} onPress={() => go('goals')}>
+        <TabIcon spot="goals" label={t('Your goals')} active={current === 'goals'} onPress={() => go('goals')}>
           <Target size={22} weight={current === 'goals' ? 'fill' : 'regular'} color={current === 'goals' ? colors.paper : colors.ink} />
         </TabIcon>
         {/* You: the photo itself, with a black ring when it's the open tab */}
-        <TabIcon label={t('You')} active={false} onPress={() => go('profile')} selected={current === 'profile'}>
+        <TabIcon spot="you" label={t('You')} active={false} onPress={() => go('profile')} selected={current === 'profile'}>
           <View style={[styles.face, current === 'profile' && styles.faceOn]}>
             {profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={{ width: 30, height: 30 }} /> : <UserCircle size={30} color={colors.ink} weight="light" />}
           </View>
@@ -66,9 +66,10 @@ export function TabBar({ state, navigateToTab }: BottomTabBarProps) {
   );
 }
 
-function TabIcon({ label, active, selected, onPress, children }: { label: string; active: boolean; selected?: boolean; onPress: () => void; children: React.ReactNode }) {
+function TabIcon({ spot, label, active, selected, onPress, children }: { spot?: TourSpot; label: string; active: boolean; selected?: boolean; onPress: () => void; children: React.ReactNode }) {
   return (
     <Pressable
+      ref={spot ? tourSpot(spot) : undefined}
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected: selected ?? active }}

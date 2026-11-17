@@ -18,7 +18,7 @@ const th: Record<string, string> = {
   'Hello, there': 'สวัสดีจ้า',
   'Hello, {name}': 'สวัสดี {name}',
   'Today’s money': 'เงินของวันนี้',
-  'Left today': 'ใช้ได้อีกวันนี้',
+  'Left today': 'ยอดคงเหลือวันนี้',
   'Spent {day} {date}': 'ใช้ไป {day} {date}',
   'Left this month': 'เหลือทั้งเดือน',
   days: 'วัน',
@@ -447,6 +447,19 @@ const th: Record<string, string> = {
   '{amount} saved so far': 'เก็บได้แล้ว {amount}',
   '{amount} this month': '{amount} เดือนนี้',
   '{goal}, {amount} a month': '{goal} เดือนละ {amount}',
+  'Monthly bills': 'บิลรายเดือน',
+  'Spending budget a month': 'งบใช้จ่ายต่อเดือน',
+  'Photos didn’t open: {msg}': 'เปิดแอปรูปภาพไม่ได้: {msg}',
+  'Opening…': 'กำลังเปิด…',
+  'What you can spend today': 'ยอดที่คุณใช้ได้วันนี้',
+  'Set so you stay on track for your goal. It changes as you log money in and out.': 'ยอดนี้ตั้งไว้เพื่อให้คุณยังอยู่ในเป้าหมาย ตัวเลขจะเปลี่ยนตามที่คุณบันทึกรายรับรายจ่าย',
+  'Your whole pay month': 'ภาพรวมทั้งรอบเงินเดือน',
+  'The line is what you’ve spent so far. Stay inside the safe zone and you reach payday with your saving untouched.': 'เส้นคือยอดที่ใช้ไปแล้ว อยู่ในโซนปลอดภัยไว้ ถึงวันเงินเดือนออกเงินเก็บก็ยังครบ',
+  'Your week': 'สัปดาห์นี้ของคุณ',
+  'Tap a day to see what you spent. Full calendar shows the whole month.': 'แตะวันไหนก็ดูได้ว่าใช้อะไรไปบ้าง ปฏิทินเต็มดูได้ทั้งเดือน',
+  'Where every baht goes each month: saving first, then bills, then spending. Change any part there.': 'เงินทุกบาทแต่ละเดือนไปไหน เก็บก่อน แล้วจ่ายบิล แล้วค่อยใช้ แก้ส่วนไหนก็ได้ในหน้านี้',
+  'What you’re saving for, how far you are, and when you’ll get there.': 'เก็บเงินเพื่ออะไร ไปถึงไหนแล้ว และจะถึงเมื่อไหร่',
+  'Your account, language, reminders, and what Kip may read.': 'บัญชี ภาษา การแจ้งเตือน และสิ่งที่ Kip อ่านได้',
 };
 
 export default th;

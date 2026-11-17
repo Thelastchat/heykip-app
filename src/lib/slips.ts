@@ -151,8 +151,12 @@ export function setPickedSlips(p: PickedSlip[]) {
  * screen shrinks them (an iCloud photo downloads first, which can take seconds) while showing "Getting your photos…"
  * — before, that happened here with nothing on screen, so the button looked broken.
  */
-export async function pickSlips(): Promise<boolean> {
-  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, quality: 1 }).catch(() => null);
+export async function pickSlips(onError?: (msg: string) => void): Promise<boolean> {
+  // A failure used to be swallowed (the button just did nothing); now it's said on screen so it can be fixed.
+  const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_SLIPS, quality: 1 }).catch((e: unknown) => {
+    onError?.(String((e as Error)?.message ?? e).slice(0, 140));
+    return null;
+  });
   if (!r || r.canceled || !r.assets?.length) return false;
   pending = r.assets.slice(0, MAX_SLIPS).map((a) => ({ uri: a.uri, width: a.width, raw: true }));
   return true;

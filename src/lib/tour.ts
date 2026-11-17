@@ -3,7 +3,7 @@
 // layout puts it. Shown once per person (remembered on this phone).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type TourSpot = 'today' | 'plus' | 'kip' | 'bar';
+export type TourSpot = 'today' | 'month' | 'week' | 'plus' | 'kip' | 'plan' | 'goals' | 'you';
 export type Rect = { x: number; y: number; width: number; height: number };
 
 type Measurable = { measureInWindow?: (cb: (x: number, y: number, width: number, height: number) => void) => void };

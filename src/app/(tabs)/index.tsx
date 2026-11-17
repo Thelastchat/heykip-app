@@ -536,7 +536,7 @@ export default function Home() {
         {/* the pay month as one line, with the plan as a safe zone (approved mockup G2) */}
         {spendBudget > 0 && (
           <RiseIn delay={160} style={{ paddingHorizontal: 20, marginTop: 20 }}>
-            <Pressable style={styles.paceCard} onPress={() => setPaceOpen(true)} accessibilityRole="button" accessibilityLabel={t('This pay month — see the details')}>
+            <Pressable ref={tourSpot('month')} style={styles.paceCard} onPress={() => setPaceOpen(true)} accessibilityRole="button" accessibilityLabel={t('This pay month — see the details')}>
               <View style={styles.paceHead}>
                 <Text style={styles.weekLbl}>{t('This pay month')}</Text>
                 <Text style={styles.paceSpent}>{t('{amount} spent', { amount: baht(line.spent) })}</Text>
@@ -547,14 +547,16 @@ export default function Home() {
         )}
 
         <RiseIn delay={200} style={{ paddingHorizontal: 20, marginTop: 24 }}>
-          <View style={styles.weekHead}>
-            <Text style={styles.weekLbl}>{t('This week')}</Text>
-            <Squish style={styles.calBtn} accessibilityRole="button" onPress={() => router.push('/calendar' as never)}>
-              <CalendarBlank size={15} color={colors.ink} />
-              <Text style={styles.calText}>{t('Full calendar')}</Text>
-            </Squish>
+          <View ref={tourSpot('week')} collapsable={false}>
+            <View style={styles.weekHead}>
+              <Text style={styles.weekLbl}>{t('This week')}</Text>
+              <Squish style={styles.calBtn} accessibilityRole="button" onPress={() => router.push('/calendar' as never)}>
+                <CalendarBlank size={15} color={colors.ink} />
+                <Text style={styles.calText}>{t('Full calendar')}</Text>
+              </Squish>
+            </View>
+            <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setDayOpen(d)} now={now} />
           </View>
-          <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setDayOpen(d)} now={now} />
         </RiseIn>
 
         {/* Kip finding slips: only when there's something to set up or something new */}
@@ -676,7 +678,7 @@ export default function Home() {
         {/* bills */}
         {bills.length > 0 && (
           <RiseIn delay={480} style={{ paddingHorizontal: 20 }}>
-            <Section title={t('Every month')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
+            <Section title={t('Monthly bills')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
             <BillStack bills={bills} onPaid={setPaid} />
           </RiseIn>
         )}

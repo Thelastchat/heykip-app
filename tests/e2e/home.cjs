@@ -366,7 +366,7 @@ module.exports = async function homeTests(browser) {
     const m0 = db.profiles[0].budget;
     const N0 = X.monthNumbers(m0, { total: 0, today: 0, bills: 0, byCat: {}, byDay: {} }, new Date());
     await check(page, `Home shows today’s budget even before spending (“of ${fmt(N0.dailyToday)}”)`, home0.includes(`of ${fmt(N0.dailyToday)}`), () => home0.slice(0, 200));
-    await check(page, 'Home’s section is called “Every month”', home0.includes('Every month'), () => home0.slice(-400));
+    await check(page, 'Home’s section is called “Monthly bills”', home0.includes('Monthly bills'), () => home0.slice(-400));
     await tap(page, visible(page.getByRole('button', { name: 'Add to every month' })), { wait: 2000 });
     await sane(page, 'Add to every month');
     await tap(page, visible(page.getByRole('radio', { name: 'Insurance' })), { wait: 200 });
@@ -1100,20 +1100,32 @@ module.exports = async function homeTests(browser) {
     const page = await open(browser, { db, tour: true });
     await page.waitForTimeout(1500);
     const seen = [];
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < 8; k++) {
       const txt = await screenText(page);
-      seen.push((txt.match(/Your number for today|Log what you spent|Ask Kip anything|Your plan, your goals, you/) || ['?'])[0]);
-      const btn = page.getByRole('button', { name: k === 3 ? 'Got it' : 'Next' }).last();
+      const shown = await page.evaluate(
+        () =>
+          [...document.querySelectorAll('div')]
+            .filter((d) => d.getAttribute('aria-live') === 'polite')
+            .map((d) => d.innerText.split('\n')[0])
+            .pop() || '?',
+      );
+      seen.push(shown);
+      const btn = page.getByRole('button', { name: k === 7 ? 'Got it' : 'Next' }).last();
       if (!(await btn.count())) break;
       await btn.click({ force: true });
       await page.waitForTimeout(700);
     }
-    await check(page, 'Four stops in order: today, +, Kip, the bar', seen.join('|') === 'Your number for today|Log what you spent|Ask Kip anything|Your plan, your goals, you', () => seen);
+    await check(
+      page,
+      'Eight stops in order: today, the month, the week, +, Kip, then each tab',
+      seen.join('|') === 'What you can spend today|Your whole pay month|Your week|Log what you spent|Ask Kip anything|Your saving plan|Your goals|You',
+      () => seen,
+    );
     const left = await page.evaluate((uid) => localStorage.getItem('heykip.tour.v1.' + uid), db.profiles[0].id);
     await check(page, 'Seen once — remembered on this phone', left === 'done', () => left);
     await page.reload();
     await page.waitForTimeout(3500);
-    await check(page, 'It doesn’t come back', !/Your number for today/.test(await screenText(page)), () => 0);
+    await check(page, 'It doesn’t come back', !/What you can spend today/.test(await screenText(page)), () => 0);
     await page.close();
   });
 

@@ -264,7 +264,7 @@ export function MonthScreen({
         {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
-        <Section n={3} title={t('Spending')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
+        <Section n={3} title={t('Spending budget a month')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
         <RiseIn delay={220} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             {month.spend.map((s, i) => {
