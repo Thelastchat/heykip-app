@@ -277,8 +277,7 @@ const th: Record<string, string> = {
   'can do for you': 'ช่วยอะไรคุณได้บ้าง',
   'Each one is yours to switch on or off — now, or later in Profile.': 'เปิดหรือปิดแต่ละอย่างได้เอง ตอนนี้ หรือทีหลังในโปรไฟล์ก็ได้',
   'Read what you type': 'อ่านสิ่งที่คุณพิมพ์',
-  '“ข้าวมันไก่ 60” becomes a logged spend. Kip’s AI is **Anthropic’s Claude**, outside Thailand: only the numbers are kept, it’s deleted within 30 days and never used to train AI.':
-    'พิมพ์ “ข้าวมันไก่ 60” ก็บันทึกเป็นรายจ่ายให้เลย AI ของ Kip คือ **Claude ของ Anthropic** ซึ่งอยู่นอกประเทศไทย เราเก็บแค่ตัวเลข ข้อมูลถูกลบภายใน 30 วัน และไม่ถูกใช้ฝึก AI',
+  '“ข้าวมันไก่ 60” becomes a logged spend. Only the numbers are kept, never used to train AI.': 'พิมพ์ “ข้าวมันไก่ 60” ก็บันทึกเป็นรายจ่ายให้เลย เก็บไว้แค่ตัวเลข และไม่ถูกนำไปฝึก AI',
   'Read your bank slips': 'อ่านสลิปธนาคาร',
   'Kip finds new slips in the albums you choose and logs them for you. Nothing else in Photos is looked at.': 'Kip หาสลิปใหม่ในอัลบั้มที่คุณเลือก แล้วบันทึกให้ รูปอื่นในแอปรูปภาพไม่ถูกเปิดดูเลย',
   'Remind you about bills': 'เตือนเรื่องบิล',

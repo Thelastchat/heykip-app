@@ -64,7 +64,9 @@ async function runSetup(page, s) {
   await tap(page, th ? 'เริ่มกันเลย' : 'Let’s start', { wait: 1500 });
   // 0 · What Kip can do: three switches, all on; one scenario turns slips and reminders off.
   const can = await sane(page, 'What Kip can do');
-  await check(page, 'What Kip can do: three switches before anything is asked', (await page.getByRole('switch').count()) === 3 && /Anthropic|Claude/.test(can), () => can.slice(0, 400));
+  await check(page, 'What Kip can do: three switches before anything is asked', (await page.getByRole('switch').count()) === 3 && /Only the numbers are kept|เก็บไว้แค่ตัวเลข/.test(can), () =>
+    can.slice(0, 400),
+  );
   if (s.allowOff) for (const name of s.allowOff) await tap(page, visible(page.getByRole('switch', { name })));
   await tap(page, th ? 'ต่อไป' : 'Continue', { wait: 1200 });
   // 1 · Basics

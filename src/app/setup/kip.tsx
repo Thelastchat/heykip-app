@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Glass } from '@/components/glow/Glass';
 import { BackButton, SetupScreen, Switch, Title } from '@/components/setup/kit';
 import { Button } from '@/components/ui';
-import { rich, t } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { useSetup } from '@/lib/setup/draft';
 import { colors, fonts, inkA, themed } from '@/theme';
@@ -18,7 +18,6 @@ export default function SetupKipCan() {
   const { draft, update } = useSetup();
   const allow = draft.allow;
   const set = (k: keyof typeof allow) => update({ allow: { ...allow, [k]: !allow[k] } });
-  const b = (s: string) => <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{s}</Text>;
 
   return (
     <SetupScreen footer={<Button label={t('Continue')} onPress={() => router.push('/setup/basics')} />}>
@@ -34,11 +33,7 @@ export default function SetupKipCan() {
 
       <Glass radius={24} innerStyle={styles.card}>
         <Row icon="expense" title={t('Read what you type')} on={allow.ai} onToggle={() => set('ai')} divider>
-          {rich(
-            '“ข้าวมันไก่ 60” becomes a logged spend. Kip’s AI is **Anthropic’s Claude**, outside Thailand: only the numbers are kept, it’s deleted within 30 days and never used to train AI.',
-            undefined,
-            b,
-          )}
+          {t('“ข้าวมันไก่ 60” becomes a logged spend. Only the numbers are kept, never used to train AI.')}
         </Row>
         <Row icon="bill" title={t('Read your bank slips')} on={allow.slips} onToggle={() => set('slips')} divider>
           {t('Kip finds new slips in the albums you choose and logs them for you. Nothing else in Photos is looked at.')}
