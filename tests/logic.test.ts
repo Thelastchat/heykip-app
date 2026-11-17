@@ -963,6 +963,8 @@ for (let n = 0; n < 2000; n++) {
       );
       const rentDue = planChange(withNet, [lite], [{ op: 'set_due', name: 'rent', day: 1 }], NOWS);
       check('Agent: "rent is on the 1st" sets rent’s day (when there is rent)', withNet.bills.rent > 0 ? rentDue?.next.rentDue?.day === 1 : rentDue === null, () => rentDue?.next.rentDue);
+      const twice = addBill(addBill(m, 'Yes', 80).month, 'yes', 90).month;
+      check('Two bills can’t share a name (the second is "yes 2"), so every card has its own key', twice.bills.items?.map((b) => b.name).join('|') === 'Yes|yes 2', () => twice.bills.items);
       const sub = planChange(withNet, [lite], [{ op: 'add_bill', name: 'Spotify', amount: 129, bill_type: 'streaming', day: 12 }], NOWS);
       check(
         'Agent: adding the found subscription carries its day, so it gets a reminder',

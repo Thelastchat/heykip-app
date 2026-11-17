@@ -5,7 +5,7 @@
 // fun money, then the goal. Food, transport and the safety net are never touched.
 // A yearly item sets aside what still has to be ready, spread over the months left until it's due (catch-up), then
 // total ÷ 12 once it's paid and starts again.
-import { addBill, type BillItem, type BillType, type MonthBudget, type Remind } from '@/lib/budget';
+import { addBill, uniqueBillName, type BillItem, type BillType, type MonthBudget, type Remind } from '@/lib/budget';
 import { monthShort, t } from '@/lib/i18n';
 import { isoDay } from '@/lib/setup/plan';
 
@@ -124,10 +124,9 @@ export function editBill(
       const { rentDue: _drop, ...rest } = month;
       month = rest;
     }
-  }
-  else {
+  } else {
     const old = items[which];
-    const name = (next.name ?? old.name).trim().slice(0, 40) || old.name;
+    const name = uniqueBillName(month, (next.name ?? old.name).trim().slice(0, 40) || old.name, which);
     const item: BillItem = { ...old, name, amount: now, ...(next.type ? { type: next.type } : {}) };
     if (next.yearly === null) delete item.yearly;
     else if (next.yearly) item.yearly = next.yearly;

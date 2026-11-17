@@ -280,7 +280,16 @@ export type BillImpact = { month: MonthBudget; fromGuess: number; fromFun: numbe
 
 const FUN_KEYS: CatKey[] = ['shopping', 'fun', 'spend_freely', 'learning', 'giving'];
 
+/** A name no other bill has (two "Netflix" would share a key): the second becomes "Netflix 2". */
+export function uniqueBillName(m: MonthBudget, name: string, except = -1): string {
+  const taken = new Set((m.bills.items ?? []).filter((_, i) => i !== except).map((b) => b.name.trim().toLowerCase()));
+  const base = name.trim();
+  if (!taken.has(base.toLowerCase())) return base;
+  for (let n = 2; ; n++) if (!taken.has(`${base} ${n}`.toLowerCase())) return `${base} ${n}`;
+}
+
 export function addBill(m: MonthBudget, name: string, amount: number, extra: Omit<BillItem, 'name' | 'amount'> = {}): BillImpact {
+  name = uniqueBillName(m, name);
   let left = Math.max(0, Math.round(amount));
   const fromGuess = Math.min(left, m.bills.guess);
   left -= fromGuess;
