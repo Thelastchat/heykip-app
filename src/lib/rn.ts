@@ -8,6 +8,7 @@ export {
   Animated,
   AppState,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Modal,
