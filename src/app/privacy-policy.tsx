@@ -18,6 +18,7 @@ export default function PrivacyPolicy() {
       title: t('What we keep'),
       lines: [
         t('Your email, and the name and photo you add.'),
+        t('Your goal photos, and the promise you sign at setup.'),
         t('Your plan: pay, payday, rent, bills, budgets and goals.'),
         t('What you log: amount, category, note, time — and for slips, who you paid and the slip’s reference number.'),
         t('When you agreed to let Kip read for you.'),
@@ -25,7 +26,12 @@ export default function PrivacyPolicy() {
     },
     {
       title: t('What we never keep'),
-      lines: [t('Slip pictures — they stay in your Photos.'), t('Your other photos, contacts, location or bank logins.'), t('Anything to sell. We don’t sell or share your data for ads.')],
+      lines: [
+        t('Slip pictures — they stay in your Photos.'),
+        t('Voice recordings — what you say becomes text, and the sound isn’t saved.'),
+        t('Photos you didn’t add to HeyKip, your contacts, location or bank logins.'),
+        t('Anything to sell. We don’t sell or share your data for ads.'),
+      ],
     },
     {
       title: t('Why'),
@@ -35,8 +41,11 @@ export default function PrivacyPolicy() {
       title: t('Who helps us'),
       lines: [
         t('Supabase stores your account and data (servers in Singapore).'),
-        t('Anthropic’s Claude AI reads what you send Kip, only when you allow it (servers in the USA). It deletes it within 30 days and doesn’t use it to train AI.'),
-        t('So your data does leave Thailand — both are bound to protect it.'),
+        t(
+          'Anthropic’s Claude AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.',
+        ),
+        t('Apple turns your voice into words when you tap the mic (Apple’s speech recognition).'),
+        t('So your data does leave Thailand — each of them is bound to protect it.'),
       ],
     },
     {
@@ -52,7 +61,10 @@ export default function PrivacyPolicy() {
     },
     {
       title: t('Keeping it safe'),
-      lines: [t('Encrypted connections, and every row is locked to your own account.')],
+      lines: [
+        t('Encrypted connections, and every row is locked to your own account.'),
+        t('If your data is ever leaked, we tell the PDPC within 72 hours, and tell you quickly if it could affect you.'),
+      ],
     },
   ];
   return (

@@ -45,30 +45,33 @@ const th: Record<string, string> = {
   'HeyKip · updated {date}': 'HeyKip · อัปเดต {date}',
   'What we keep': 'สิ่งที่เราเก็บ',
   'Your email, and the name and photo you add.': 'อีเมล และชื่อกับรูปที่ใส่เอง',
+  'Your goal photos, and the promise you sign at setup.': 'รูปเป้าหมาย และลายเซ็นสัญญาที่เซ็นตอนเริ่มใช้',
   'Your plan: pay, payday, rent, bills, budgets and goals.': 'แผนการเงิน: เงินเดือน วันเงินเดือนออก ค่าห้อง บิล งบ และเป้าหมาย',
   'What you log: amount, category, note, time — and for slips, who you paid and the slip’s reference number.': 'สิ่งที่จด: ยอดเงิน หมวด โน้ต เวลา — และถ้ามาจากสลิป ก็มีชื่อคนรับเงินกับเลขที่รายการ',
   'When you agreed to let Kip read for you.': 'เวลาที่กดอนุญาตให้ Kip อ่านให้',
   'What we never keep': 'สิ่งที่เราไม่เก็บเลย',
   'Slip pictures — they stay in your Photos.': 'รูปสลิป — ยังอยู่ในแอปรูปภาพในเครื่อง',
-  'Your other photos, contacts, location or bank logins.': 'รูปอื่นๆ รายชื่อติดต่อ ตำแหน่ง หรือรหัสเข้าแอปธนาคาร',
+  'Voice recordings — what you say becomes text, and the sound isn’t saved.': 'เสียงที่อัด — สิ่งที่พูดกลายเป็นข้อความ และไม่เก็บเสียงไว้',
+  'Photos you didn’t add to HeyKip, your contacts, location or bank logins.': 'รูปที่ไม่ได้ใส่ใน HeyKip รายชื่อติดต่อ ตำแหน่ง หรือรหัสเข้าแอปธนาคาร',
   'Anything to sell. We don’t sell or share your data for ads.': 'ไม่เก็บไว้ขาย เราไม่ขายหรือแชร์ข้อมูลเพื่อโฆษณา',
   Why: 'เก็บไปทำไม',
   'To run your money plan and show your money — that’s the app you signed up for.': 'เพื่อทำแผนการเงินและแสดงเงินในแต่ละวัน — ซึ่งก็คือสิ่งที่แอปนี้ทำ',
   'Kip’s AI reading (Talk to Kip, slips) only with your Allow, and you can turn it off any time.': 'การอ่านด้วย AI ของ Kip (คุยกับ Kip, สลิป) ทำเฉพาะเมื่อกดอนุญาต และปิดได้ตลอด',
   'Who helps us': 'ใครช่วยเราบ้าง',
   'Supabase stores your account and data (servers in Singapore).': 'Supabase เก็บบัญชีและข้อมูล (เซิร์ฟเวอร์อยู่สิงคโปร์)',
-  'Anthropic’s Claude AI reads what you send Kip, only when you allow it (servers in the USA). It deletes it within 30 days and doesn’t use it to train AI.':
-    'Claude AI ของ Anthropic อ่านสิ่งที่ส่งให้ Kip เฉพาะเมื่ออนุญาต (เซิร์ฟเวอร์อยู่สหรัฐฯ) และลบภายใน 30 วัน ไม่เอาไปฝึก AI',
-  'So your data does leave Thailand — both are bound to protect it.': 'ข้อมูลจึงถูกส่งออกนอกประเทศไทย — ทั้งสองบริษัทมีหน้าที่ต้องปกป้องข้อมูลนี้',
+  'Anthropic’s Claude AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.':
+    'Claude AI ของ Anthropic อ่านสิ่งที่พิมพ์หรือพูดกับ Kip และสลิปที่ส่ง เฉพาะเมื่ออนุญาต (เซิร์ฟเวอร์อยู่สหรัฐฯ) ลบภายใน 30 วัน — เก็บนานกว่านั้นเฉพาะเมื่อระบบความปลอดภัยของเขาพบการใช้งานผิดกฎ — และไม่เอาไปฝึก AI',
+  'Apple turns your voice into words when you tap the mic (Apple’s speech recognition).': 'Apple แปลงเสียงเป็นข้อความเมื่อกดไมค์ (ระบบรู้จำเสียงของ Apple)',
+  'So your data does leave Thailand — each of them is bound to protect it.': 'ข้อมูลจึงถูกส่งออกนอกประเทศไทย — ทุกบริษัทมีหน้าที่ต้องปกป้องข้อมูลนี้',
   'How long': 'เก็บนานแค่ไหน',
   'Until you delete it. Delete one entry, all spending, or your whole account any time in Profile → Privacy & data.':
     'จนกว่าจะลบเอง ลบทีละรายการ ลบรายจ่ายทั้งหมด หรือลบบัญชีได้ตลอดที่ โปรไฟล์ → ความเป็นส่วนตัวและข้อมูล',
   'Your rights': 'สิทธิ์ตามกฎหมาย',
-  'Under Thailand’s PDPA you can see, correct, take a copy of, or delete your data, and take back your consent.':
-    'ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) ขอดู แก้ไข ขอสำเนา หรือลบข้อมูล และถอนความยินยอมได้',
+  'Under Thailand’s PDPA you can see, correct, take a copy of, or delete your data, and take back your consent.': 'ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) ขอดู แก้ไข ขอสำเนา หรือลบข้อมูล และถอนความยินยอมได้',
   'Ask us at {email}. You can also complain to the Personal Data Protection Committee (PDPC).': 'ติดต่อเราได้ที่ {email} หรือร้องเรียนไปที่สำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.)',
   'Keeping it safe': 'ดูแลให้ปลอดภัย',
   'Encrypted connections, and every row is locked to your own account.': 'ส่งข้อมูลแบบเข้ารหัส และทุกรายการล็อกไว้ให้เฉพาะเจ้าของบัญชี',
+  'If your data is ever leaked, we tell the PDPC within 72 hours, and tell you quickly if it could affect you.': 'ถ้าข้อมูลรั่วไหล เราจะแจ้ง สคส. ภายใน 72 ชั่วโมง และแจ้งให้รู้โดยเร็วถ้าอาจกระทบคุณ',
 };
 
 export default th;

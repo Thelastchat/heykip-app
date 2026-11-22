@@ -775,7 +775,8 @@ module.exports = async function homeTests(browser) {
   // ---------- Bills: due days and reminders ----------
   scenario('Bills · a due day when adding, shown on Home');
   await safely(async () => {
-    const { db } = person();
+    // A payday well before today, so "in 3 days" is always inside this pay month (with payday on the 25th it wasn't on the 22nd–24th).
+    const { db } = person({ payday: Math.min(28, new Date(Date.now() - 10 * 86_400_000).getDate()) });
     const page = await open(browser, { db, path: '/month?add=1' });
     await tap(page, visible(page.getByRole('radio', { name: 'Streaming' })), { wait: 200 });
     await type(page, 'Bill name', 'Netflix');
