@@ -33,10 +33,10 @@ export default function SetupKipCan() {
 
       <Glass radius={24} innerStyle={styles.card}>
         <Row icon="expense" title={t('Read what you type')} asks divider>
-          {t('“ข้าวมันไก่ 60” becomes a logged spend. Claude AI from Anthropic reads it — only what you log is kept, never used to train AI.')}
+          {t('“ข้าวมันไก่ 60” becomes a logged spend. Only what you log is kept, never used to train AI.')}
         </Row>
         <Row icon="bill" title={t('Read your bank slips')} on={allow.slips} onToggle={() => set('slips')} divider>
-          {t('Kip finds new slips in the albums you choose, and Claude AI reads them for you. Nothing else in Photos is looked at.')}
+          {t('Kip finds new slips in the albums you choose and reads them for you. Nothing else in Photos is looked at.')}
         </Row>
         <Row icon="phone" title={t('Remind you about bills')} on={allow.reminders} onToggle={() => set('reminders')}>
           {t('The day before a bill is due, at 9:00.')}

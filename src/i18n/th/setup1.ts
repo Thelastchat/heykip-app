@@ -277,9 +277,8 @@ const th: Record<string, string> = {
   'can do for you': 'ช่วยอะไรคุณได้บ้าง',
   'Switch these on or off now, or later in Profile.': 'เปิดหรือปิดได้ตอนนี้ หรือทีหลังในโปรไฟล์ก็ได้',
   'Asks first': 'ถามก่อน',
-  '“ข้าวมันไก่ 60” becomes a logged spend. Claude AI from Anthropic reads it — only what you log is kept, never used to train AI.':
-    'พิมพ์ “ข้าวมันไก่ 60” ก็บันทึกเป็นรายจ่ายให้เลย Claude AI ของ Anthropic เป็นคนอ่าน เก็บไว้แค่สิ่งที่บันทึก และไม่ถูกนำไปฝึก AI',
-  'Kip finds new slips in the albums you choose, and Claude AI reads them for you. Nothing else in Photos is looked at.': 'Kip หาสลิปใหม่ในอัลบั้มที่คุณเลือก แล้วให้ Claude AI อ่านให้ รูปอื่นในแอปรูปภาพไม่ถูกเปิดดูเลย',
+  '“ข้าวมันไก่ 60” becomes a logged spend. Only what you log is kept, never used to train AI.': 'พิมพ์ “ข้าวมันไก่ 60” ก็บันทึกเป็นรายจ่ายให้เลย เก็บไว้แค่สิ่งที่บันทึก และไม่ถูกนำไปฝึก AI',
+  'Kip finds new slips in the albums you choose and reads them for you. Nothing else in Photos is looked at.': 'Kip หาสลิปใหม่ในอัลบั้มที่คุณเลือกแล้วอ่านให้ รูปอื่นในแอปรูปภาพไม่ถูกเปิดดูเลย',
   'Kip asks before it reads anything for the first time. Your iPhone asks for Photos and notifications too. Full details in Profile → Privacy & data.':
     'Kip จะถามก่อนอ่านอะไรครั้งแรก และ iPhone จะถามเรื่องรูปภาพกับการแจ้งเตือนด้วย รายละเอียดทั้งหมดอยู่ที่ โปรไฟล์ → ความเป็นส่วนตัวและข้อมูล',
   'Read what you type': 'อ่านสิ่งที่คุณพิมพ์',

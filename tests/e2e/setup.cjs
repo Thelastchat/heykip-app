@@ -67,8 +67,8 @@ async function runSetup(page, s) {
   const can = await sane(page, 'What Kip can do');
   await check(
     page,
-    'What Kip can do: AI asks first and names Claude AI; two switches',
-    (await page.getByRole('switch').count()) === 2 && /Asks first|ถามก่อน/.test(can) && /Claude AI/.test(can) && !/numbers are kept|แค่ตัวเลข/.test(can),
+    'What Kip can do: AI asks first (the Allow sheet names the AI); two switches',
+    (await page.getByRole('switch').count()) === 2 && /Asks first|ถามก่อน/.test(can) && !/numbers are kept|แค่ตัวเลข/.test(can),
     () => can.slice(0, 400),
   );
   if (s.allowOff) for (const name of s.allowOff) await tap(page, visible(page.getByRole('switch', { name })));
