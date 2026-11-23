@@ -42,7 +42,7 @@ export default function PrivacyPolicy() {
       lines: [
         t('Supabase stores your account and data (servers in Singapore).'),
         t(
-          'Anthropic’s Claude AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.',
+          'Anthropic’s AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.',
         ),
         t('Apple turns your voice into words when you tap the mic (Apple’s speech recognition).'),
         t('So your data does leave Thailand — each of them is bound to protect it.'),

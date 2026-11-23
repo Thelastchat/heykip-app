@@ -61,8 +61,8 @@ const th: Record<string, string> = {
   'Kip’s AI reading (Talk to Kip, slips) only with your Allow, and you can turn it off any time.': 'การอ่านด้วย AI ของ Kip (คุยกับ Kip, สลิป) ทำเฉพาะเมื่อกดอนุญาต และปิดได้ตลอด',
   'Who helps us': 'ใครช่วยเราบ้าง',
   'Supabase stores your account and data (servers in Singapore).': 'Supabase เก็บบัญชีและข้อมูล (เซิร์ฟเวอร์อยู่สิงคโปร์)',
-  'Anthropic’s Claude AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.':
-    'Claude AI ของ Anthropic อ่านสิ่งที่พิมพ์หรือพูดกับ Kip และสลิปที่ส่ง เฉพาะเมื่ออนุญาต (เซิร์ฟเวอร์อยู่สหรัฐฯ) ลบภายใน 30 วัน — เก็บนานกว่านั้นเฉพาะเมื่อระบบความปลอดภัยของเขาพบการใช้งานผิดกฎ — และไม่เอาไปฝึก AI',
+  'Anthropic’s AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.':
+    'AI ของ Anthropic อ่านสิ่งที่พิมพ์หรือพูดกับ Kip และสลิปที่ส่ง เฉพาะเมื่ออนุญาต (เซิร์ฟเวอร์อยู่สหรัฐฯ) ลบภายใน 30 วัน — เก็บนานกว่านั้นเฉพาะเมื่อระบบความปลอดภัยของเขาพบการใช้งานผิดกฎ — และไม่เอาไปฝึก AI',
   'Apple turns your voice into words when you tap the mic (Apple’s speech recognition).': 'Apple แปลงเสียงเป็นข้อความเมื่อกดไมค์ (ระบบรู้จำเสียงของ Apple)',
   'So your data does leave Thailand — each of them is bound to protect it.': 'ข้อมูลจึงถูกส่งออกนอกประเทศไทย — ทุกบริษัทมีหน้าที่ต้องปกป้องข้อมูลนี้',
   'How long': 'เก็บนานแค่ไหน',
