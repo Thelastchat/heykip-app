@@ -67,6 +67,10 @@ function thaiRoom(flat: TextStyle | undefined): TextStyle | null {
   return { ...(tight ? { lineHeight: Math.ceil(size * 1.5) } : null), ...(squeezed ? { letterSpacing: 0 } : null) };
 }
 
+/** How far iPhone's Text Size (Settings → Display & Brightness, or Accessibility → Larger Text) may grow HeyKip's
+ * text: a little, so it still helps, but never so much that cards, numbers and buttons break apart. */
+export const MAX_TEXT_SCALE = 1.2;
+
 // React 19: `ref` arrives as an ordinary prop and is passed straight through.
 export function Text(props: ComponentProps<typeof RNText>) {
   const parent = useContext(Inherited);
@@ -87,15 +91,15 @@ export function Text(props: ComponentProps<typeof RNText>) {
   const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
   return (
     <Inherited.Provider value={{ family, size }}>
-      <RNText {...props} style={style} />
+      <RNText maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} style={style} />
     </Inherited.Provider>
   );
 }
 
 export function TextInput(props: ComponentProps<typeof RNTextInput>) {
   const thai = THAI.test(props.value ?? props.defaultValue ?? '') || (!props.value && THAI.test(props.placeholder ?? ''));
-  if (!thai) return <RNTextInput {...props} />;
+  if (!thai) return <RNTextInput maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} />;
   const own = (StyleSheet.flatten(props.style) as TextStyle | undefined)?.fontFamily;
   const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
-  return <RNTextInput {...props} style={[props.style, { fontFamily: thaiFor(own) }, handSize(flat)]} />;
+  return <RNTextInput maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} style={[props.style, { fontFamily: thaiFor(own) }, handSize(flat)]} />;
 }
