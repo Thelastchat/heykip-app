@@ -33,10 +33,8 @@ const th: Record<string, string> = {
   '{amount}/day': '{amount}/วัน',
   'Best for you if: payday money “just disappears”. It saves first, keeps real life covered, and still leaves fun.':
     'เหมาะมาก ถ้าเงินเดือนออกแล้ว “หายไปไหนไม่รู้” แผนนี้เก็บก่อน ค่าใช้จ่ายจริงครบ แถมยังเหลือเงินเที่ยวเล่น',
-  'Best for you if: you like a payday treat. Saving moves first, and the treat is planned in your fun money.':
-    'เหมาะมาก ถ้าชอบให้รางวัลตัวเองวันเงินเดือนออก เงินเก็บย้ายก่อน ส่วนรางวัลวางไว้ในเงินเที่ยวเล่นแล้ว',
-  'Best for you if: you pay the bills, then see. Now your saving moves the same day, so nothing is left to chance.':
-    'เหมาะมาก ถ้าชอบจ่ายบิลก่อนแล้วค่อยดู ตอนนี้เงินเก็บจะย้ายวันเดียวกันเลย ไม่ต้องลุ้น',
+  'Best for you if: you like a payday treat. Saving moves first, and the treat is planned in your fun money.': 'เหมาะมาก ถ้าชอบให้รางวัลตัวเองวันเงินเดือนออก เงินเก็บย้ายก่อน ส่วนรางวัลวางไว้ในเงินเที่ยวเล่นแล้ว',
+  'Best for you if: you pay the bills, then see. Now your saving moves the same day, so nothing is left to chance.': 'เหมาะมาก ถ้าชอบจ่ายบิลก่อนแล้วค่อยดู ตอนนี้เงินเก็บจะย้ายวันเดียวกันเลย ไม่ต้องลุ้น',
   'Best for you if: you already save first. It keeps that habit — and covers real life too.': 'เหมาะมาก ถ้าเก็บก่อนใช้อยู่แล้ว แผนนี้รักษานิสัยนั้นไว้ — และดูแลค่าใช้จ่ายจริงด้วย',
   'Best for you if: you want {short} as soon as possible. The most Kip will plan goes out on payday; the rest is one pot — no categories to track.':
     'เหมาะมาก ถ้าอยากได้ {short} เร็วที่สุด วันเงินเดือนออก Kip ย้ายเงินเก็บให้เต็มที่ ที่เหลือรวมเป็นก้อนเดียว — ไม่ต้องแยกหมวด',
@@ -145,8 +143,7 @@ const th: Record<string, string> = {
   'This is your starting plan — it will change': 'นี่แค่แผนตั้งต้น — เดี๋ยวจะปรับไปเรื่อยๆ',
   'Once you log for a few weeks, I’ll swap my guesses for your real numbers. Subscriptions (Netflix, YouTube, Spotify, apps) are the ones almost everyone underestimates — when a new one shows up, I’ll show you exactly what it does to {short}.':
     'จดไปสักสองสามอาทิตย์ Kip จะเปลี่ยนตัวเลขที่เดาไว้เป็นตัวเลขจริง ค่าสมาชิกรายเดือน (Netflix, YouTube, Spotify, แอปต่างๆ) คือตัวที่เกือบทุกคนประเมินต่ำไป — มีอันใหม่โผล่มาเมื่อไหร่ Kip จะบอกเลยว่ามันกระทบ {short} แค่ไหน',
-  '{short} and fun money are both locked — I can’t find {amount} without touching one of them. Nothing changed yet.':
-    '{short} กับเงินเที่ยวเล่นล็อกทั้งคู่ — หา {amount} ไม่ได้ถ้าไม่แตะสักอัน ยังไม่ได้เปลี่ยนอะไรนะ',
+  '{short} and fun money are both locked — I can’t find {amount} without touching one of them. Nothing changed yet.': '{short} กับเงินเที่ยวเล่นล็อกทั้งคู่ — หา {amount} ไม่ได้ถ้าไม่แตะสักอัน ยังไม่ได้เปลี่ยนอะไรนะ',
   '{short} is locked — I can’t find {amount} without touching it. Nothing changed yet.': '{short} ล็อกอยู่ — หา {amount} ไม่ได้ถ้าไม่แตะ {short} ยังไม่ได้เปลี่ยนอะไรนะ',
   '{short} is locked, and fun is already at its minimum — I can’t find {amount} without touching it. Nothing changed yet.':
     '{short} ล็อกอยู่ แถมเงินเที่ยวเล่นก็ต่ำสุดแล้ว — หา {amount} ไม่ได้ถ้าไม่แตะ {short} ยังไม่ได้เปลี่ยนอะไรนะ',
@@ -387,11 +384,9 @@ const th: Record<string, string> = {
   'If money gets tight, I’ll cut the extras first. I won’t touch my savings.': 'ถ้าเงินตึง เราจะตัดของไม่จำเป็นก่อน จะไม่แตะเงินเก็บ',
   // Payday habits and leak rules (lib/setup/rules.ts)
   'Treat myself — I earned it': 'ให้รางวัลตัวเอง — สมควรได้',
-  'Then your saving still moves first, and your payday treat comes out of fun money — no guilt, it’s planned.':
-    'งั้นเงินเก็บยังย้ายก่อนเหมือนเดิม ส่วนรางวัลวันเงินเดือนออกใช้เงินเที่ยวเล่น — ไม่ต้องรู้สึกผิด วางแผนไว้แล้ว',
+  'Then your saving still moves first, and your payday treat comes out of fun money — no guilt, it’s planned.': 'งั้นเงินเก็บยังย้ายก่อนเหมือนเดิม ส่วนรางวัลวันเงินเดือนออกใช้เงินเที่ยวเล่น — ไม่ต้องรู้สึกผิด วางแผนไว้แล้ว',
   'Pay the bills, then see': 'จ่ายบิลก่อน แล้วค่อยดู',
-  'Then I’ll pay rent and bills first in your plan, and move your saving the same day so nothing is left to “see”.':
-    'งั้น Kip วางค่าห้องกับบิลไว้ก่อนในแผน แล้วย้ายเงินเก็บวันเดียวกันเลย ไม่ต้อง “รอดู”',
+  'Then I’ll pay rent and bills first in your plan, and move your saving the same day so nothing is left to “see”.': 'งั้น Kip วางค่าห้องกับบิลไว้ก่อนในแผน แล้วย้ายเงินเก็บวันเดียวกันเลย ไม่ต้อง “รอดู”',
   'Save some straight away': 'เก็บส่วนนึงทันที',
   'Love it. I’ll move your saving on payday morning for you, every month.': 'ชอบเลย เช้าวันเงินเดือนออก Kip ย้ายเงินเก็บให้ทุกเดือน',
   'Honestly? It just… disappears': 'บอกตรงๆ? มันหายไปเฉยๆ…',
@@ -407,8 +402,7 @@ const th: Record<string, string> = {
   'Every payday I list your subscriptions and ask which ones you still use. One tap to drop one.': 'ทุกวันเงินเดือนออก Kip ลิสต์ค่าสมาชิกให้ดูแล้วถามว่าอันไหนยังใช้อยู่ แตะทีเดียวก็เลิกได้',
   'Top-ups up to {amount} a month from Fun money. I ask once before you go over.': 'เติมเกมได้เดือนละไม่เกิน {amount} จากเงินเที่ยวเล่น ถ้าจะเกิน Kip ถามก่อนครั้งนึง',
   'A {amount} “treating” budget inside Fun money — pay for the table without the guilt.': 'งบ “เลี้ยงเพื่อน” {amount} ในเงินเที่ยวเล่น — เลี้ยงทั้งโต๊ะได้ไม่รู้สึกผิด',
-  'Before 9.9, 11.11 and 12.12 I remind you of your goal and set a sale budget. Carts wait 24 hours.':
-    'ก่อน 9.9, 11.11 และ 12.12 Kip เตือนเรื่องเป้าหมายแล้วตั้งงบช้อปให้ ของในตะกร้ารอ 24 ชั่วโมงก่อน',
+  'Before 9.9, 11.11 and 12.12 I remind you of your goal and set a sale budget. Carts wait 24 hours.': 'ก่อน 9.9, 11.11 และ 12.12 Kip เตือนเรื่องเป้าหมายแล้วตั้งงบช้อปให้ ของในตะกร้ารอ 24 ชั่วโมงก่อน',
   'Sale days': 'วันเซล',
   // Errors when saving Setup (lib/setup/save.ts)
   'Couldn’t upload your photo: {reason}': 'อัปโหลดรูปไม่สำเร็จ: {reason}',

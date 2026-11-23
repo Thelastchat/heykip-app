@@ -853,6 +853,31 @@ module.exports = async function homeTests(browser) {
     await page.close();
   });
 
+  scenario('Evening check-in · off until switched on, then a time');
+  await safely(async () => {
+    const { db } = person();
+    const page = await open(browser, { db, path: '/profile' });
+    let txt = await screenText(page);
+    await check(page, 'You: Evening check-in is off by default, and says what it does', /A nudge at night to log your day/.test(txt) && !/Kip asks what you spent/.test(txt), () => txt.slice(0, 700));
+    await tap(page, visible(page.getByRole('button', { name: 'Evening check-in on' })), { wait: 900 });
+    txt = await screenText(page);
+    await check(page, 'On opens the times, with the nudge it sends and no “coming soon”', /Anything to log today\?/.test(txt) && /Skipped on days/.test(txt) && !/coming soon/.test(txt), () =>
+      txt.slice(-700),
+    );
+    await tap(page, visible(page.getByText('8:00 pm', { exact: true })), { wait: 900 });
+    txt = await screenText(page);
+    const stored = await page.evaluate(() => [localStorage.getItem('heykip.checkin'), localStorage.getItem('heykip.checkin.time')]);
+    await check(
+      page,
+      'Picked 8:00 pm: on, saved, and the row says so',
+      stored[0] === 'on' && stored[1] === '20:00' && /Every night at 8:00 pm/.test(txt) && /^20:00/.test(String(db.profiles[0].checkin_time)),
+      () => ({ stored, t: db.profiles[0].checkin_time }),
+    );
+    await tap(page, visible(page.getByRole('button', { name: 'Evening check-in off' })), { wait: 700 });
+    await check(page, 'Off turns it off', (await page.evaluate(() => localStorage.getItem('heykip.checkin'))) === 'off' && /A nudge at night/.test(await screenText(page)), () => 0);
+    await page.close();
+  });
+
   // ---------- Subscription detective ----------
   scenario('Detective · Spotify 3 months running, not a bill yet');
   await safely(async () => {

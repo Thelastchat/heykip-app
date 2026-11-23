@@ -55,6 +55,7 @@ import { useMonth } from '@/lib/month';
 import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
+import { loggedToday } from '@/lib/checkin';
 import { colors, fonts, inkA, themed } from '@/theme';
 
 type Turn = {
@@ -305,6 +306,7 @@ export default function Talk() {
     });
     const { data: saved, error } = await supabase.from('transactions').insert(rows).select('id, kind, amount, note');
     if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
+    loggedToday();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     update(turn.id, { saved: true, savedIds: (saved ?? []).map((r) => r.id as string) });
     recent.current = null;
@@ -375,6 +377,7 @@ export default function Talk() {
       .insert({ user_id: session.user.id, kind: 'spend', amount: item.amount, category_id: ids[`spend:${item.category}`] ?? null, note: item.name, source: 'typed' });
     if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     save(applyBuy(month, plan));
+    loggedToday();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     update(turn.id, { bought: true });
     reload();

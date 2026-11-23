@@ -32,8 +32,7 @@ const th: Record<string, string> = {
   'Take money out': 'เอาเงินออก',
   'Pick what happened — it’s only for your own history': 'เลือกว่าเกิดอะไรขึ้น — ไว้ดูย้อนหลังเองเท่านั้น',
   '{amount} · 3 months of basics, ready if anything happens': '{amount} · ค่าใช้จ่ายจำเป็น 3 เดือน พร้อมใช้ถ้ามีอะไรเกิดขึ้น',
-  'From now on, the **{amount} a month goes to {goal}** instead. If you ever use some of it, I’ll refill it first.':
-    'ต่อจากนี้ **เดือนละ {amount} ไปเข้า {goal}** แทน ถ้าวันไหนใช้เงินสำรองไป Kip จะเติมคืนก่อน',
+  'From now on, the **{amount} a month goes to {goal}** instead. If you ever use some of it, I’ll refill it first.': 'ต่อจากนี้ **เดือนละ {amount} ไปเข้า {goal}** แทน ถ้าวันไหนใช้เงินสำรองไป Kip จะเติมคืนก่อน',
   '{goal} every payday': '{goal} ทุกวันเงินเดือนออก',
   '+{amount} from the safety net': '+{amount} จากเงินสำรอง',
   'Yay — got it': 'เย้ — เข้าใจแล้ว',

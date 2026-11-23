@@ -16,7 +16,7 @@ const native = Platform.OS === 'ios' || Platform.OS === 'android';
 // Loaded only on phones: the web build has no local notifications.
 type N = typeof import('expo-notifications');
 let mod: N | null = null;
-function notifications(): N | null {
+export function notifications(): N | null {
   if (!native) return null;
   if (!mod) {
     mod = require('expo-notifications') as N;
@@ -40,8 +40,14 @@ export async function setRemindersOn(on: boolean, month: MonthBudget | null) {
 /** Ask the phone once, the first time someone sets a reminder. True when allowed. Never asks when they switched
  * bill reminders off (in setup or Profile) — the iPhone pop-up only comes when they want reminders. */
 export async function askReminders(): Promise<boolean> {
+  if (!(await remindersOn())) return false;
+  return askPhone();
+}
+
+/** The iPhone's notification pop-up, once (bill reminders and the evening check-in). True when allowed. */
+export async function askPhone(): Promise<boolean> {
   const N = notifications();
-  if (!N || !(await remindersOn())) return false;
+  if (!N) return false;
   const cur = await N.getPermissionsAsync();
   if (cur.granted) return true;
   if (!cur.canAskAgain) return false;

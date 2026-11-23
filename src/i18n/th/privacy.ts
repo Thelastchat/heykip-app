@@ -2,10 +2,12 @@
 const th: Record<string, string> = {
   // Before Kip reads for you
   'Before Kip reads for you': 'ก่อน Kip จะอ่านให้นะ',
-  'To read slips and chats, Kip sends them to **Anthropic’s Claude AI**, a company outside Thailand.': 'เพื่ออ่านสลิปและแชต Kip จะส่งไปให้ **Claude AI ของ Anthropic** ซึ่งเป็นบริษัทนอกประเทศไทย',
-  'We save **only the numbers** — amount, who, when. Slip pictures stay in your Photos.': 'เราเก็บ**แค่ตัวเลข** — ยอดเงิน ให้ใคร เมื่อไหร่ ส่วนรูปสลิปยังอยู่ในแอปรูปภาพในเครื่อง',
-  'Anthropic deletes it within 30 days and **never trains AI on it**. Nothing is sold, ever.': 'Anthropic ลบทิ้งภายใน 30 วัน และ**ไม่เอาไปฝึก AI** เราไม่ขายข้อมูลเด็ดขาด',
   'Turn this off or delete everything any time in **Profile → Privacy & data**.': 'ปิดหรือลบทุกอย่างได้ตลอดที่ **โปรไฟล์ → ความเป็นส่วนตัวและข้อมูล**',
+  'To read what you type or say, and your slips, Kip sends them to **Anthropic’s Claude AI**, a company outside Thailand.':
+    'เพื่ออ่านสิ่งที่พิมพ์หรือพูด และสลิป Kip จะส่งไปให้ **Claude AI ของ Anthropic** ซึ่งเป็นบริษัทนอกประเทศไทย',
+  'We keep **only what you log** — amount, name, category, when. Slip pictures stay in your Photos.': 'เราเก็บ**แค่สิ่งที่บันทึก** — ยอดเงิน ชื่อ หมวด เมื่อไหร่ ส่วนรูปสลิปยังอยู่ในแอปรูปภาพในเครื่อง',
+  'Anthropic deletes it within 30 days (longer only if it’s flagged for misuse) and **never trains AI on it**. Nothing is sold, ever.':
+    'Anthropic ลบทิ้งภายใน 30 วัน (เก็บนานกว่านั้นเฉพาะเมื่อพบการใช้งานผิดกฎ) และ**ไม่เอาไปฝึก AI** เราไม่ขายข้อมูลเด็ดขาด',
   Allow: 'อนุญาต',
   'Not now — you can still type it in yourself': 'ไว้ก่อน — ยังพิมพ์จดเองได้นะ',
   'Privacy policy': 'นโยบายความเป็นส่วนตัว',

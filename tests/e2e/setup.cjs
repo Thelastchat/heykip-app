@@ -62,10 +62,14 @@ const SCENARIOS = [
 async function runSetup(page, s) {
   const th = s.lang === 'th';
   await tap(page, th ? 'เริ่มกันเลย' : 'Let’s start', { wait: 1500 });
-  // 0 · What Kip can do: three switches, all on; one scenario turns slips and reminders off.
+  // 0 · What Kip can do: Kip's AI asks first (no switch, names the AI); slips and reminders are switches, on; one
+  // scenario turns them off.
   const can = await sane(page, 'What Kip can do');
-  await check(page, 'What Kip can do: three switches before anything is asked', (await page.getByRole('switch').count()) === 3 && /Only the numbers are kept|เก็บไว้แค่ตัวเลข/.test(can), () =>
-    can.slice(0, 400),
+  await check(
+    page,
+    'What Kip can do: AI asks first and names Claude AI; two switches',
+    (await page.getByRole('switch').count()) === 2 && /Asks first|ถามก่อน/.test(can) && /Claude AI/.test(can) && !/numbers are kept|แค่ตัวเลข/.test(can),
+    () => can.slice(0, 400),
   );
   if (s.allowOff) for (const name of s.allowOff) await tap(page, visible(page.getByRole('switch', { name })));
   await tap(page, th ? 'ต่อไป' : 'Continue', { wait: 1200 });
@@ -174,7 +178,7 @@ module.exports = async function setupTests(browser) {
       onboarded: p.onboarded,
     }));
     await check(page, 'The plan is saved', m && m.v === 2, () => p);
-    await check(page, 'What Kip can do is applied: Kip’s AI allowed on the account', !!p.ai_consent_at && !p.ai_off, () => ({ ai: p.ai_consent_at }));
+    await check(page, 'What Kip can do is applied: Kip’s AI not allowed yet (the Allow sheet asks the first time)', !p.ai_consent_at, () => ({ ai: p.ai_consent_at }));
     if (s.allowOff) {
       const local = await page.evaluate(() => ({ rem: localStorage.getItem('heykip.billReminders') }));
       await check(page, 'Switched-off reminders stay off on this phone', local.rem === 'off', () => local);

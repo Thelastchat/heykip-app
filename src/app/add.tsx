@@ -35,6 +35,7 @@ import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, money, inkA, themed } from '@/theme';
 import { Accent } from '@/lib/accent';
+import { loggedToday } from '@/lib/checkin';
 
 type Kind = 'spend' | 'income';
 type Cat = { key: string; name: string; icon: IconKey; color: string; i3?: Icon3D };
@@ -314,6 +315,7 @@ export default function Add() {
       .single();
     setBusy(false);
     if (e) return setError(t('Couldn’t save: {msg}', { msg: e.message }));
+    loggedToday();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // Money in: give it a job first (usual pay moves the saving; extra picks goal, safety net or spending).
     if (kind === 'income' && row) return setMoneyIn([{ id: row.id as string, amount, category: cat.key, note: note.trim() || null }]);

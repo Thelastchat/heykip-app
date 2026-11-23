@@ -95,8 +95,8 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   if (profileError) throw new Error(t('Couldn’t finish setup: {reason}', { reason: profileError.message }));
   // 6. "What Kip can do" (asked after the intro): Kip's AI permission goes on the account; the other two are
   // this phone's settings. An off switch means Kip never offers it on its own (it stays in Profile to turn on).
-  const allow = draft.allow ?? { ai: true, slips: true, reminders: true };
-  if (allow.ai) await supabase.from('profiles').update({ ai_consent_at: new Date().toISOString(), ai_off: false }).eq('id', userId);
+  // Kip's AI isn't allowed here (Apple: a clear yes, after saying what's sent): the Allow sheet asks the first time Kip reads.
+  const allow = draft.allow ?? { slips: true, reminders: true };
   if (!allow.slips && !(await loadAuto())) await saveAuto({ on: false, albums: [], since: Date.now(), dismissed: true });
   if (!allow.reminders) await setRemindersOn(false, null);
   // The free week is started by the server (once per person). If it's already used, setup still finishes on Free.

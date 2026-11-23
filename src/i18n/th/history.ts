@@ -3,10 +3,8 @@ const th: Record<string, string> = {
   // Home
   'This month’s spending money is used up — {amount} over. It comes out of your saving, so rent and bills are safe. Must-haves only until payday.':
     'เงินใช้จ่ายเดือนนี้หมดแล้ว — เกินมา {amount} ส่วนนี้ดึงจากเงินออมไปก่อน ค่าห้องกับบิลยังปลอดภัย ช่วงนี้ใช้แค่ของจำเป็นจนถึงวันเงินเดือนออกนะ',
-  'A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on {date}.':
-    'วันนี้ใช้เยอะหน่อย ไม่เป็นไร — Kip เกลี่ย {amount} ไปอีก {n} วันข้างหน้าแล้ว {goal} ยังได้ {date} เหมือนเดิม',
-  'A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on track.':
-    'วันนี้ใช้เยอะหน่อย ไม่เป็นไร — Kip เกลี่ย {amount} ไปอีก {n} วันข้างหน้าแล้ว {goal} ยังทันตามแผน',
+  'A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on {date}.': 'วันนี้ใช้เยอะหน่อย ไม่เป็นไร — Kip เกลี่ย {amount} ไปอีก {n} วันข้างหน้าแล้ว {goal} ยังได้ {date} เหมือนเดิม',
+  'A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on track.': 'วันนี้ใช้เยอะหน่อย ไม่เป็นไร — Kip เกลี่ย {amount} ไปอีก {n} วันข้างหน้าแล้ว {goal} ยังทันตามแผน',
   '{amount} over today — see what it changes': 'วันนี้เกินมา {amount} — ดูว่าแผนเปลี่ยนยังไง',
   'Over today': 'เกินวันนี้',
   '{amount} over this month — see what it changes': 'เดือนนี้เกินมา {amount} — ดูว่าแผนเปลี่ยนยังไง',
@@ -21,8 +19,7 @@ const th: Record<string, string> = {
   'You spent {spent} · today’s money was {daily}': 'วันนี้ใช้ไป {spent} · งบของวันนี้คือ {daily}',
   'This comes out of **this month’s {goal} saving**, so rent and bills are safe. Until payday, try to spend only on must-haves.':
     'ส่วนนี้ดึงจาก**เงินออม {goal} ของเดือนนี้** ค่าห้องกับบิลยังปลอดภัย ระหว่างนี้ลองใช้แค่ของจำเป็นจนเงินเดือนออกนะ',
-  'This comes out of **your safety net**, so rent and bills are safe. Until payday, try to spend only on must-haves.':
-    'ส่วนนี้ดึงจาก**เงินสำรอง** ค่าห้องกับบิลยังปลอดภัย ระหว่างนี้ลองใช้แค่ของจำเป็นจนเงินเดือนออกนะ',
+  'This comes out of **your safety net**, so rent and bills are safe. Until payday, try to spend only on must-haves.': 'ส่วนนี้ดึงจาก**เงินสำรอง** ค่าห้องกับบิลยังปลอดภัย ระหว่างนี้ลองใช้แค่ของจำเป็นจนเงินเดือนออกนะ',
   'No stress — I took it from the days ahead, **about {amount} less each day**. Your month and your goal don’t move.':
     'ไม่ต้องเครียด — Kip เกลี่ยไปที่วันข้างหน้าแล้ว **วันละน้อยลงราว {amount}** ทั้งเดือนกับเป้าหมายยังเหมือนเดิม',
   'No stress — payday is tomorrow, and **your month still has room** for it.': 'ไม่ต้องเครียด — พรุ่งนี้เงินเดือนออกแล้ว และ**เดือนนี้ยังพอรับไหว**',

@@ -12,6 +12,7 @@ import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearly
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
 import { paceOf } from '../src/lib/pace';
+import { nightsAhead, ymd } from '../src/lib/checkinDays';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
@@ -1113,6 +1114,31 @@ for (let n = 0; n < 2000; n++) {
     );
   }
   check('Recap: the random runs made real recaps', made > 100, () => made);
+}
+
+// ---------- evening check-in nights ----------
+{
+  const times = ['19:00', '20:00', '21:00', '22:00'];
+  for (let k = 0; k < 3000; k++) {
+    const now = new Date(2026, Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28), Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+    const time = times[k % 4];
+    const logged = Math.random() < 0.5 ? ymd(now) : null;
+    const n = nightsAhead(now, time, logged);
+    const [h] = time.split(':').map(Number);
+    const tonight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0);
+    check(
+      'Check-in: every nudge is in the future, at the chosen time',
+      n.every((d) => d > now && d.getHours() === h && d.getMinutes() === 0),
+      () => ({ now, time, n }),
+    );
+    check('Check-in: one nudge a night, no night twice', new Set(n.map(ymd)).size === n.length, () => n.map(ymd));
+    check('Check-in: tonight only if the time is still ahead and nothing is logged today', n.some((d) => ymd(d) === ymd(now)) === (tonight > now && logged !== ymd(now)), () => ({
+      now,
+      time,
+      logged,
+    }));
+    check('Check-in: the next two weeks, so it stops after two weeks away', n.length === 13 || n.length === 14, () => n.length);
+  }
 }
 
 // ---------- report ----------

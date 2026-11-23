@@ -49,7 +49,7 @@ export type SetupDraft = {
   signature: string | null; // PNG, base64
   signedAt: string | null; // ISO time
   /** "What Kip can do" (asked right after the intro): applied when the account is made. */
-  allow: { ai: boolean; slips: boolean; reminders: boolean };
+  allow: { slips: boolean; reminders: boolean };
 };
 
 export const EMPTY_DRAFT: SetupDraft = {
@@ -80,7 +80,7 @@ export const EMPTY_DRAFT: SetupDraft = {
   promiseMain: null,
   promiseBackup: null,
   signature: null,
-  allow: { ai: true, slips: true, reminders: true },
+  allow: { slips: true, reminders: true },
   signedAt: null,
 };
 

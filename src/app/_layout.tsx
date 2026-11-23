@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { useCheckinTaps } from '@/lib/checkin';
 import { LangProvider, takeReturnTo } from '@/lib/i18n';
 import { LookProvider, useLook } from '@/lib/look';
 import { useImagesReady } from '@/lib/preload';
@@ -39,37 +40,46 @@ function RootStack() {
   if (waiting) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-      {/* New here (signed in or not): Setup, which starts with "Hi, I'm Kip." */}
-      <Stack.Protected guard={!onboarded}>
-        <Stack.Screen name="setup" />
-      </Stack.Protected>
+    <>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        {/* New here (signed in or not): Setup, which starts with "Hi, I'm Kip." */}
+        <Stack.Protected guard={!onboarded}>
+          <Stack.Screen name="setup" />
+        </Stack.Protected>
 
-      {/* Not signed in: "Log in" from the intro, or saving the plan after the promise. */}
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" />
-      </Stack.Protected>
+        {/* Not signed in: "Log in" from the intro, or saving the plan after the promise. */}
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="sign-in" />
+        </Stack.Protected>
 
-      <Stack.Screen name="privacy-policy" />
+        <Stack.Screen name="privacy-policy" />
 
-      {/* Signed in and set up: the app. */}
-      <Stack.Protected guard={signedIn && onboarded}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="month" />
-        <Stack.Screen name="calendar" />
-        <Stack.Screen name="styles" />
-        <Stack.Screen name="kip-moods" />
-        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="slips" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="goal-edit" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="goal-new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="privacy" />
-        <Stack.Screen name="history" />
-        <Stack.Screen name="safety" />
-        <Stack.Screen name="talk" options={{ presentation: 'fullScreenModal' }} />
-      </Stack.Protected>
-    </Stack>
+        {/* Signed in and set up: the app. */}
+        <Stack.Protected guard={signedIn && onboarded}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="month" />
+          <Stack.Screen name="calendar" />
+          <Stack.Screen name="styles" />
+          <Stack.Screen name="kip-moods" />
+          <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="slips" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="goal-edit" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="goal-new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="privacy" />
+          <Stack.Screen name="history" />
+          <Stack.Screen name="safety" />
+          <Stack.Screen name="talk" options={{ presentation: 'fullScreenModal' }} />
+        </Stack.Protected>
+      </Stack>
+      {signedIn && onboarded ? <CheckinTaps /> : null}
+    </>
   );
+}
+
+/** Evening check-in: tapping one opens Add; opening HeyKip sets the next nights. Only once someone is in the app. */
+function CheckinTaps() {
+  useCheckinTaps();
+  return null;
 }
 
 export default function RootLayout() {

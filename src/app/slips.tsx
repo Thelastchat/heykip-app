@@ -31,6 +31,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { cleanSlip, markAlready, prepareSlip, readSlip, savedKeys, slipKey, takePickedSlips, type PickedSlip, type Slip } from '@/lib/slips';
 import { supabase } from '@/lib/supabase';
+import { loggedToday } from '@/lib/checkin';
 import { colors, fonts, glassA, inkA, themed } from '@/theme';
 
 const AT_ONCE = 3; // slips read side by side
@@ -209,6 +210,7 @@ export default function Slips() {
     }
     setBusy(false);
     if (error) return setProblem(t('Couldn’t save: {msg}', { msg: error.message }));
+    loggedToday();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     // Tick off the bills these slips paid, and add the new ones the person chose.
     let next = month;

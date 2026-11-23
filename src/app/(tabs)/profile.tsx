@@ -24,6 +24,7 @@ import { getLang, t, useLang, type Lang } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
+import { checkinOn, setCheckin, setCheckinTime } from '@/lib/checkin';
 import { phoneNotifications, remindersOn, setRemindersOn } from '@/lib/reminders';
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
@@ -64,11 +65,14 @@ export default function Profile() {
   const { month, save } = useMonth();
   // Bill reminders on this phone (approved mockup): one switch for all of them.
   const [reminders, setReminders] = useState(true);
+  // The evening check-in (approved mockup): off until they switch it on, on this phone.
+  const [checkin, setCheckinState] = useState(false);
   // …and whether the iPhone lets them through (Don't Allow can only be undone in iPhone Settings). Checked again
   // when they come back from Settings.
   const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     remindersOn().then(setReminders);
+    checkinOn().then(setCheckinState);
     const check = () => phoneNotifications().then((p) => setBlocked(p === 'blocked'));
     check();
     const sub = AppState.addEventListener('change', (s) => s === 'active' && check());
@@ -77,6 +81,7 @@ export default function Profile() {
   const { goals } = useHome(month);
   const [row, setRow] = useState<Row | null>(null);
   const [open, setOpen] = useState<Open>(null);
+  const checkinTime = row?.checkin_time?.slice(0, 5) ?? '21:00';
   const [toast, setToast] = useState<string | null>(null);
   const uid = session?.user.id;
   const { lang, setLang } = useLang();
@@ -253,18 +258,44 @@ export default function Profile() {
         <Text style={styles.cap}>Kip</Text>
         <RiseIn delay={360}>
           <Glass radius={24} innerStyle={styles.group}>
-            <SetRow first title={t('Evening check-in')} sub={t('Kip asks what you spent')} value={timeLabel(row?.checkin_time ?? '21:00')} soft onPress={() => setOpen('checkin')} />
+            <View style={styles.row}>
+              <Pressable style={{ flex: 1 }} disabled={!checkin} onPress={() => setOpen('checkin')} accessibilityRole="button" accessibilityLabel={t('Change')}>
+                <Text style={styles.rowTitle}>{t('Evening check-in')}</Text>
+                {checkin ? (
+                  <Text style={styles.small}>
+                    {t('Every night at {time}', { time: timeLabel(checkinTime) })} · <Text style={{ fontFamily: fonts.medium, color: colors.ink, textDecorationLine: 'underline' }}>{t('Change')}</Text>
+                  </Text>
+                ) : (
+                  <Text style={styles.small}>{t('A nudge at night to log your day')}</Text>
+                )}
+                {checkin && blocked && <OpenSettings />}
+              </Pressable>
+              <View style={styles.seg}>
+                {([true, false] as const).map((on) => (
+                  <Pressable
+                    key={String(on)}
+                    onPress={() => {
+                      if (on === checkin) return;
+                      setCheckinState(on);
+                      // On asks the iPhone (once), starts at the saved time, and opens the times to pick another.
+                      setCheckin(on, checkinTime).then(() => phoneNotifications().then((p) => setBlocked(p === 'blocked')));
+                      if (on) setOpen('checkin');
+                      else flash(t('Evening check-in is off'));
+                    }}
+                    style={[styles.segBtn, checkin === on && styles.segOn]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: checkin === on }}
+                    accessibilityLabel={on ? t('Evening check-in on') : t('Evening check-in off')}>
+                    <Text style={[styles.segText, checkin === on && { color: colors.paper }]}>{on ? t('On') : t('Off')}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             <View style={[styles.row, styles.rowLine]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{t('Bill reminders')}</Text>
                 <Text style={styles.small}>{t('9:00 AM, for bills with a due day')}</Text>
-                {reminders && blocked && (
-                  <Pressable onPress={() => Linking.openSettings()} accessibilityRole="link" hitSlop={6} style={{ marginTop: 4 }}>
-                    <Text style={[styles.small, { color: colors.orange }]}>
-                      {t('Notifications are off for HeyKip in iPhone Settings.')} <Text style={{ fontFamily: fonts.medium, textDecorationLine: 'underline' }}>{t('Open Settings')}</Text>
-                    </Text>
-                  </Pressable>
-                )}
+                {reminders && blocked && <OpenSettings />}
               </View>
               <View style={styles.seg}>
                 {([true, false] as const).map((on) => (
@@ -368,10 +399,13 @@ export default function Profile() {
       )}
       {open === 'checkin' && (
         <CheckinSheet
-          value={row?.checkin_time?.slice(0, 5) ?? '21:00'}
+          value={checkinTime}
           onClose={() => setOpen(null)}
           onPick={async (time) => {
-            if (await patch({ checkin_time: time }, t('Kip will check in at {time}', { time: timeLabel(time) }))) setOpen(null);
+            if (await patch({ checkin_time: time }, t('Kip will check in at {time}', { time: timeLabel(time) }))) {
+              setCheckinTime(time);
+              setOpen(null);
+            }
           }}
         />
       )}
@@ -485,15 +519,33 @@ function MeSheet({
   );
 }
 
+/** The iPhone said Don't Allow: only iPhone Settings can change it now. */
+function OpenSettings() {
+  return (
+    <Pressable onPress={() => Linking.openSettings()} accessibilityRole="link" hitSlop={6} style={{ marginTop: 4 }}>
+      <Text style={[styles.small, { color: colors.orange }]}>
+        {t('Notifications are off for HeyKip in iPhone Settings.')} <Text style={{ fontFamily: fonts.medium, textDecorationLine: 'underline' }}>{t('Open Settings')}</Text>
+      </Text>
+    </Pressable>
+  );
+}
+
 function CheckinSheet({ value, onClose, onPick }: { value: string; onClose: () => void; onPick: (t: string) => void }) {
   return (
-    <Sheet open onClose={onClose} title={t('Evening check-in')} sub={t('When should Kip ask what you spent today?')}>
+    <Sheet open onClose={onClose} title={t('Evening check-in')} sub={t('One nudge a night to log what you spent. Skipped on days you’ve already logged something.')}>
+      <Glass radius={20} innerStyle={{ flexDirection: 'row', gap: 10, padding: 12, alignItems: 'center' }}>
+        <Kip mood="happy" size={36} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 13.5, color: colors.ink }}>HeyKip</Text>
+          <Text style={{ fontFamily: fonts.regular, fontSize: 13.5, lineHeight: 18, color: colors.ink }}>{t('Anything to log today? Tap to add it — takes a few seconds.')}</Text>
+        </View>
+      </Glass>
       <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
         {CHECKIN.map((time) => (
           <Pill key={time} label={timeLabel(time)} on={value === time} onPress={() => onPick(time)} />
         ))}
       </View>
-      <Text style={[sheet.sub, { textAlign: 'center', marginBottom: 6 }]}>{t('Kip’s reminders arrive with notifications, coming soon — your time is saved for then.')}</Text>
+      <Text style={[sheet.sub, { textAlign: 'center', marginBottom: 6 }]}>{t('Turn it off any time here.')}</Text>
     </Sheet>
   );
 }
