@@ -56,7 +56,7 @@ export function useAiConsent(onPolicy?: () => void): { ensure: () => Promise<boo
       <View style={{ alignItems: 'center', marginTop: -4 }}>
         <Kip mood="happy" size={80} />
       </View>
-      <Line n={1}>{rich('To read what you type or say, and your slips, Kip sends them to **Anthropic’s Claude AI**, a company outside Thailand.', undefined, b)}</Line>
+      <Line n={1}>{rich('To read what you type or say, and your slips, Kip sends them to **Anthropic’s AI** — Anthropic is a company outside Thailand.', undefined, b)}</Line>
       <Line n={2}>{rich('We keep **only what you log** — amount, name, category, when. Slip pictures stay in your Photos.', undefined, b)}</Line>
       <Line n={3}>{rich('Anthropic deletes it within 30 days (longer only if it’s flagged for misuse) and **never trains AI on it**. Nothing is sold, ever.', undefined, b)}</Line>
       <Line n={4}>{rich('Turn this off or delete everything any time in **Profile → Privacy & data**.', undefined, b)}</Line>
