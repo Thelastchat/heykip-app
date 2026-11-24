@@ -628,7 +628,7 @@ function EditAmount({ month, cat, onDone }: { month: MonthBudget; cat: CatKey; o
           }}
           keyboardType="number-pad"
           selectTextOnFocus
-          style={[styles.moneyText, { flex: 1, padding: 0 }]}
+          style={[styles.moneyText, { flex: 1, minWidth: 0, padding: 0 }]}
           accessibilityLabel={t('{name} budget', { name: c.name })}
         />
       </Pressable>

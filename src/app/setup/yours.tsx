@@ -4,6 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { Lock, LockOpen } from 'phosphor-react-native';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Image } from 'expo-image';
+
 import { CatBadge } from '@/components/CatIcon';
 import { Kip } from '@/components/Kip';
 import { BackButton, SetupScreen, Title, picked } from '@/components/setup/kit';
@@ -12,6 +14,7 @@ import { Button } from '@/components/ui';
 import { LIVING_FLOOR, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
 import { CATEGORY, type IconKey } from '@/lib/budget';
 import { getLang, rich, t } from '@/lib/i18n';
+import { ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { makePlan, monthYear, type Plan } from '@/lib/setup/plan';
@@ -412,6 +415,9 @@ export default function SetupYours() {
   );
 }
 
+/** The same 3D icon each kind of money has everywhere else in HeyKip. */
+const ICON3D_FOR: Partial<Record<IconKey, Icon3D>> = { food: 'bowl', travel: 'car', health: 'heart', more: 'bill', fun: 'fun', shield: 'shield', book: 'phone', gift: 'piggy' };
+
 const semi = (s: string) => <Text style={{ fontFamily: fonts.semibold }}>{s}</Text>;
 
 type Dest = 'goal' | 'food' | 'transport' | 'fun';
@@ -552,7 +558,7 @@ function Row({
   return (
     <View style={styles.row}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <CatBadge name={icon} color={color} size={34} />
+        {ICON3D_FOR[icon] ? <Image source={ICON3D[ICON3D_FOR[icon]!]} style={{ width: 36, height: 36 }} contentFit="contain" /> : <CatBadge name={icon} color={color} size={34} />}
         <View style={{ flex: 1, gap: 1 }}>
           <Text
             style={{
@@ -755,7 +761,7 @@ const styles = themed(() =>
     },
     heads: {
       borderRadius: 16,
-      backgroundColor: colors.sky,
+      backgroundColor: colors.card,
       paddingVertical: 12,
       paddingHorizontal: 14,
       gap: 4,

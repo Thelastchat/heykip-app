@@ -443,8 +443,8 @@ function IdeaCard({ idea, i, on, onPick, draftMonths }: { idea: Idea; i: number;
       <View style={[styles.card, { backgroundColor: soft(bg) }]}>
         <View style={styles.cardTop}>
           {idea.kipsPick ? (
-            <View style={[styles.tag, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.tagText, { color: colors.paper }]}>{t('Kip’s pick')}</Text>
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{t('Kip’s pick')}</Text>
             </View>
           ) : (
             <View style={styles.tag}>

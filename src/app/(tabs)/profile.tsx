@@ -56,7 +56,7 @@ const CHECKIN = ['19:00', '20:00', '21:00', '22:00'];
 const timeLabel = (time: string) => {
   if (getLang() === 'th') return `${time.slice(0, 5)} น.`;
   const h = Number(time.slice(0, 2));
-  return `${h % 12 || 12}:${time.slice(3, 5)} ${h < 12 ? 'am' : 'pm'}`;
+  return `${h % 12 || 12}:${time.slice(3, 5)} ${h < 12 ? 'am' : 'pm'}`;
 };
 
 export default function Profile() {
@@ -294,7 +294,7 @@ export default function Profile() {
             <View style={[styles.row, styles.rowLine]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{t('Bill reminders')}</Text>
-                <Text style={styles.small}>{t('9:00 AM, for bills with a due day')}</Text>
+                <Text style={styles.small}>{t('9:00 am, for bills with a due day')}</Text>
                 {reminders && blocked && <OpenSettings />}
               </View>
               <View style={styles.seg}>

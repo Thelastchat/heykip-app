@@ -875,7 +875,7 @@ module.exports = async function homeTests(browser) {
     await check(
       page,
       'Picked 8:00 pm: on, saved, and the row says so',
-      stored[0] === 'on' && stored[1] === '20:00' && /Every night at 8:00 pm/.test(txt) && /^20:00/.test(String(db.profiles[0].checkin_time)),
+      stored[0] === 'on' && stored[1] === '20:00' && /Every night at 8:00\spm/.test(txt) && /^20:00/.test(String(db.profiles[0].checkin_time)),
       () => ({ stored, t: db.profiles[0].checkin_time }),
     );
     await tap(page, visible(page.getByRole('button', { name: 'Evening check-in off' })), { wait: 700 });

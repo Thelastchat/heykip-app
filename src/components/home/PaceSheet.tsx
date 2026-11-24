@@ -114,7 +114,7 @@ export function PaceSheet({ pace, budget, total, start, end, left, daysAfter, pe
                 <Svg width={W} height={H} style={{ overflow: 'visible' }}>
                   <Path d={`M0,${H} L${W},${y(budget)} L${W},${H} Z`} fill={inkA(0.045)} />
                   <Line x1={0} y1={H} x2={W} y2={y(budget)} stroke={inkA(0.18)} strokeWidth={1.5} />
-                  <SvgText x={W - 6} y={H - 8} textAnchor="end" fontSize={11} fill={colors.muted} fontFamily={fonts.regular}>
+                  <SvgText x={W - 10} y={py > H - 30 || (lx > W - 80 && ly > H - 30) ? y(budget) + 18 : H - 8} textAnchor="end" fontSize={11} fill={colors.muted} fontFamily={fonts.regular}>
                     {t('Safe zone')}
                   </SvgText>
                   <Path d={smooth(pts)} fill="none" stroke={colors.ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" />

@@ -13,7 +13,6 @@ const th: Record<string, string> = {
   'Kip’s plan': 'แผนของ Kip',
   'Save first': 'เก็บก่อน',
   '6 Jars': '6 โหล',
-  Recommended: 'แนะนำ',
   Fastest: 'เร็วสุด',
   'The classic': 'คลาสสิก',
   'Grow yourself': 'พัฒนาตัวเอง',
@@ -226,7 +225,7 @@ const th: Record<string, string> = {
   'That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.': 'วันนี้คุยกับ Kip เยอะมากแล้ว พรุ่งนี้มาใหม่นะ ระหว่างนี้ยังจดเองได้ตามปกติ',
   // bill due days and reminders
   'Bill reminders': 'เตือนจ่ายบิล',
-  '9:00 AM, for bills with a due day': '9:00 น. สำหรับบิลที่ตั้งวันครบกำหนดไว้',
+  '9:00 am, for bills with a due day': '09:00 น. สำหรับบิลที่ตั้งวันครบกำหนดไว้',
   'Bill reminders on': 'เปิดเตือนจ่ายบิล',
   'Bill reminders off': 'ปิดเตือนจ่ายบิล',
   On: 'เปิด',

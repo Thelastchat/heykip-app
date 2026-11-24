@@ -153,7 +153,6 @@ const th: Record<string, string> = {
   Arrives: 'ถึงเป้า',
   'Each month': 'ต่อเดือน',
   'Put money in': 'เติมเงิน',
-  '+ Put money in': '+ เติมเงิน',
   'Edit the plan': 'แก้แผน',
   Edit: 'แก้ไข',
   '{amount} moves in by itself on the {day}.': '{amount} ย้ายเข้าเองทุกวันที่ {n}',

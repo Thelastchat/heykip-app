@@ -105,7 +105,7 @@ export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: st
       return t('Kip’s plan');
     },
     get tag() {
-      return t('Recommended');
+      return t('Kip’s pick');
     },
     tagColor: colors.lime,
     get desc() {

@@ -39,7 +39,7 @@ export default function SetupKipCan() {
           {t('Kip finds new slips in the albums you choose and reads them for you. Nothing else in Photos is looked at.')}
         </Row>
         <Row icon="phone" title={t('Remind you about bills')} on={allow.reminders} onToggle={() => set('reminders')}>
-          {t('The day before a bill is due, at 9:00.')}
+          {t('The day before a bill is due, at 9:00 am')}
         </Row>
       </Glass>
 

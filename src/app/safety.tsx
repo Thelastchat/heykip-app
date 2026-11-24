@@ -1,6 +1,7 @@
 // Safety net (approved mockup): how much is saved against 3 months of basics, what that covers in real life,
 // what went in and out, and two actions — put money in, or take some out for a real emergency ("I need it").
 // When it's full, the monthly saving that went here goes to the goal instead (moneyin.ts savingThisCycle).
+import { Plus } from 'phosphor-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -145,7 +146,8 @@ export default function Safety() {
             )}
             <View style={styles.btns}>
               <Squish onPress={() => setOpen('put')} style={[styles.btn, styles.btnDark]} accessibilityRole="button">
-                <Text style={styles.btnDarkText}>{t('+ Put money in')}</Text>
+                <Plus size={16} color={colors.paper} weight="bold" />
+                <Text style={styles.btnDarkText}>{t('Put money in')}</Text>
               </Squish>
               <Squish onPress={() => setOpen('need')} disabled={saved <= 0} style={[styles.btn, styles.btnSoft, saved <= 0 && { opacity: 0.45 }]} accessibilityRole="button">
                 <Text style={styles.btnSoftText}>{t('I need it')}</Text>
@@ -388,7 +390,7 @@ const styles = themed(() =>
     stat: { flex: 1, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 9, backgroundColor: inkA(0.04) },
     statV: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 1, fontVariant: ['tabular-nums'] },
     btns: { flexDirection: 'row', gap: 8 },
-    btn: { flex: 1, height: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    btn: { flex: 1, height: 48, borderRadius: 999, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
     btnDark: { backgroundColor: colors.ink },
     btnDarkText: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
     btnSoft: { backgroundColor: inkA(0.07) },

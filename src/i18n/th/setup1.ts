@@ -284,7 +284,7 @@ const th: Record<string, string> = {
   'Read what you type': 'อ่านสิ่งที่คุณพิมพ์',
   'Read your bank slips': 'อ่านสลิปธนาคาร',
   'Remind you about bills': 'เตือนเรื่องบิล',
-  'The day before a bill is due, at 9:00.': 'ก่อนบิลครบกำหนด 1 วัน ตอน 9 โมงเช้า',
+  'The day before a bill is due, at 9:00 am': 'ก่อนบิลครบกำหนด 1 วัน ตอน 09:00 น.',
   'Change Kip’s bill guess': 'แก้ยอดบิลที่ Kip กันไว้',
   'Your number for today': 'ตัวเลขของคุณวันนี้',
   'What you can spend today and still stay on plan. It updates as you log.': 'ใช้ได้เท่านี้วันนี้ แล้วยังอยู่ในแผน ตัวเลขจะเปลี่ยนตามที่คุณบันทึก',
