@@ -668,7 +668,12 @@ module.exports = async function homeTests(browser) {
     await check(
       page,
       'It explains why, and lists what’s pushing the line up — biggest first',
-      /Why:/.test(txt) && txt.indexOf('Shopping') < txt.indexOf('Food') && /What’s pushing the line up/.test(txt),
+      /Why:/.test(txt) &&
+        /What’s pushing the line up/.test(txt) &&
+        (() => {
+          const list = txt.slice(txt.indexOf('What’s pushing the line up'));
+          return list.indexOf('Shopping') < list.indexOf('Food');
+        })(),
       () => txt.slice(-600),
     );
     await tap(page, visible(page.getByRole('button', { name: /^Shopping:/ })), { wait: 1000 });

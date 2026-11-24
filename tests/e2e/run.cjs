@@ -16,7 +16,7 @@ const { results, OUT } = require('./kit.cjs');
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
   const only = process.argv[2];
   try {
-    for (const part of ['setup', 'home', 'screens']) {
+    for (const part of ['setup', 'home', 'screens', 'textsize']) {
       if (only && only !== part) continue;
       const file = path.join(__dirname, part + '.cjs');
       if (fs.existsSync(file)) await require(file)(browser);

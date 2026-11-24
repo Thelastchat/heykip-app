@@ -13,6 +13,7 @@ import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
 import { paceOf } from '../src/lib/pace';
 import { nightsAhead, ymd } from '../src/lib/checkinDays';
+import { grown, grownStyle, stepFor } from '../src/lib/textScale';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
 import { dayOpen, daysFrom, earliestDay, monthAt, monthGrid, OLDEST } from '../src/lib/calendar';
@@ -1139,6 +1140,24 @@ for (let n = 0; n < 2000; n++) {
     }));
     check('Check-in: the next two weeks, so it stops after two weeks away', n.length === 13 || n.length === 14, () => n.length);
   }
+}
+
+// ---------- iPhone Text Size steps ----------
+{
+  for (const f of [0.82, 0.88, 0.95, 1, 1.05]) check('Text Size: middle and smaller are Default', stepFor(f) === 0, () => f);
+  for (const f of [1.12, 1.24]) check('Text Size: one or two notches bigger is Large', stepFor(f) === 1, () => f);
+  for (const f of [1.35, 1.64, 1.95, 2.35, 2.76, 3.12]) check('Text Size: three notches and the Accessibility sizes stop at Larger', stepFor(f) === 2, () => f);
+  for (let size = 8; size <= 80; size += 0.5) {
+    const [a, b, c] = [grown(size, 0), grown(size, 1), grown(size, 2)];
+    check('Text Size: Default is the design size', a === size, () => size);
+    check('Text Size: Larger ≥ Large ≥ Default', c >= b && b >= a, () => ({ size, a, b, c }));
+    check('Text Size: never more than +30% (+15% at Large)', b <= size * 1.15 + 0.5 && c <= size * 1.3 + 0.5, () => ({ size, b, c }));
+    check('Text Size: 40pt and up (big numbers) keep their size', size < 40 || (b === size && c === size), () => ({ size, b, c }));
+    check('Text Size: small text grows the most (+30% at Larger, to the nearest half point)', size > 13 || c >= size * 1.3 - 0.25, () => ({ size, c }));
+    const st = grownStyle({ fontSize: size, lineHeight: Math.ceil(size * 1.5) }, 2, false)!;
+    check('Text Size: line height grows with the text (Thai marks keep room)', (st.lineHeight as number) >= (st.fontSize as number) * 1.5 - 1, () => ({ size, st }));
+  }
+  check('Text Size: a nested text with no size of its own takes the grown size around it', grownStyle({ color: 'red' }, 2, true) === null, () => 0);
 }
 
 // ---------- report ----------

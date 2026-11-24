@@ -12,6 +12,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useCheckinTaps } from '@/lib/checkin';
+import { TextSizeProvider } from '@/lib/textSize';
 import { LangProvider, takeReturnTo } from '@/lib/i18n';
 import { LookProvider, useLook } from '@/lib/look';
 import { useImagesReady } from '@/lib/preload';
@@ -101,18 +102,20 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>
-        <LookProvider>
-          <LangProvider>
-            <AuthProvider>
-              <SetupProvider>
-                <Bar />
-                <RootStack />
-              </SetupProvider>
-            </AuthProvider>
-          </LangProvider>
-        </LookProvider>
-      </KeyboardProvider>
+      <TextSizeProvider>
+        <KeyboardProvider>
+          <LookProvider>
+            <LangProvider>
+              <AuthProvider>
+                <SetupProvider>
+                  <Bar />
+                  <RootStack />
+                </SetupProvider>
+              </AuthProvider>
+            </LangProvider>
+          </LookProvider>
+        </KeyboardProvider>
+      </TextSizeProvider>
     </GestureHandlerRootView>
   );
 }

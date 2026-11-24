@@ -51,6 +51,7 @@ import { SubsFinder } from '@/components/SubsFinder';
 import { KipStill } from '@/components/KipStill';
 import { Tour, type TourStop } from '@/components/Tour';
 import { tourSpot, useTourScroll, type TourSpot } from '@/lib/tour';
+import { useTextStep } from '@/lib/textSize';
 
 /** This pay cycle: payday → the day before next payday (or the calendar month). */
 function period(payday: number | null, now = new Date()) {
@@ -104,6 +105,7 @@ export function MonthScreen({
   /** As the tab (false): no back arrow, no Looks good, and room for the bar. */
   back?: boolean;
 }) {
+  const textStep = useTextStep();
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
   const [sheet, setSheet] = useState<Sheet>(
@@ -170,7 +172,9 @@ export function MonthScreen({
             right={
               <Squish onPress={() => (isPlus ? router.push('/styles') : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
                 <Glass radius={999} innerStyle={styles.stylePill}>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>{style.name}</Text>
+                  <Text allowFontScaling={false} style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>
+                    {style.name}
+                  </Text>
                   {isPlus ? <CaretDown size={11} color={colors.ink} weight="bold" /> : <MiniLock />}
                 </Glass>
               </Squish>
@@ -292,7 +296,7 @@ export function MonthScreen({
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.rowName}>{c.name}</Text>
-                    <Text style={styles.sub} numberOfLines={1}>
+                    <Text style={styles.sub} numberOfLines={textStep ? 2 : 1}>
                       {hintFor(s.key)}
                     </Text>
                   </View>

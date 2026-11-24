@@ -443,8 +443,10 @@ function Hero({
         {line ? (
           <View style={styles.note}>
             <View style={styles.tape} />
-            <Text style={styles.noteHead}>{monthly ? t('Why I save') : t('My promise')}</Text>
-            <Text style={styles.noteText} numberOfLines={3}>
+            <Text allowFontScaling={false} style={styles.noteHead}>
+              {monthly ? t('Why I save') : t('My promise')}
+            </Text>
+            <Text allowFontScaling={false} style={styles.noteText} numberOfLines={3}>
               {line}
             </Text>
             {goal.signature ? (

@@ -22,7 +22,14 @@ export function ScreenHeader({ title, close, right, back = true }: { title?: str
           </Glass>
         </Pressable>
       )}
-      {title ? <T style={{ fontSize: 17, fontFamily: fonts.medium }}>{title}</T> : <View />}
+      {/* Like an iPhone bar title: one line, its own size at every Text Size (it has the room it has). */}
+      {title ? (
+        <T allowFontScaling={false} numberOfLines={1} style={{ fontSize: 17, fontFamily: fonts.medium, flexShrink: 1, textAlign: 'center', marginHorizontal: 8 }}>
+          {title}
+        </T>
+      ) : (
+        <View />
+      )}
       <View style={{ minWidth: 46, alignItems: 'flex-end' }}>{right}</View>
     </View>
   );

@@ -7,6 +7,8 @@ import { createContext, useContext, type ComponentProps, type ReactNode } from '
 import { StyleSheet, Text as RNText, TextInput as RNTextInput, type TextStyle } from '@real/react-native';
 
 import { OnAccent } from '@/lib/accent';
+import { grownStyle } from '@/lib/textScale';
+import { useTextStep } from '@/lib/textSize';
 import { colors, fonts } from '@/theme';
 
 const THAI = /[\u0E00-\u0E7F]/;
@@ -67,14 +69,11 @@ function thaiRoom(flat: TextStyle | undefined): TextStyle | null {
   return { ...(tight ? { lineHeight: Math.ceil(size * 1.5) } : null), ...(squeezed ? { letterSpacing: 0 } : null) };
 }
 
-/** How far iPhone's Text Size (Settings → Display & Brightness, or Accessibility → Larger Text) may grow HeyKip's
- * text: a little, so it still helps, but never so much that cards, numbers and buttons break apart. */
-export const MAX_TEXT_SCALE = 1.2;
-
 // React 19: `ref` arrives as an ordinary prop and is passed straight through.
 export function Text(props: ComponentProps<typeof RNText>) {
   const parent = useContext(Inherited);
   const accent = useContext(OnAccent);
+  const step = useTextStep();
   const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
   const own = flat?.fontFamily;
   const family = own ?? parent.family;
@@ -88,18 +87,23 @@ export function Text(props: ComponentProps<typeof RNText>) {
   const hand = thai ? handSize(flat) : null;
   const title = thai && !hand && (size ?? 0) >= PAGE_TITLE && shown === fonts.thaiMedium;
   const room = thai ? (hand ?? (title ? { ...thaiRoom(flat), letterSpacing: titleTracking(size!) } : thaiRoom(flat))) : null;
-  const style = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
+  const base = (thai && shown !== own) || accentColor || room ? [props.style, thai && shown !== own ? { fontFamily: shown } : null, room, accentColor ? { color: accentColor } : null] : props.style;
+  // iPhone's Text Size, through HeyKip's three steps (textSize.tsx) instead of iOS growing everything alike.
+  // A Text that says allowFontScaling={false} keeps its design size (bar titles, which have only the room they have).
+  const grow = step && props.allowFontScaling !== false ? grownStyle(StyleSheet.flatten(base) as TextStyle, step, parent.size !== undefined || parent.family !== undefined) : null;
+  const style = grow ? [base, grow] : base;
   return (
     <Inherited.Provider value={{ family, size }}>
-      <RNText maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} style={style} />
+      <RNText {...props} allowFontScaling={false} style={style} />
     </Inherited.Provider>
   );
 }
 
 export function TextInput(props: ComponentProps<typeof RNTextInput>) {
+  const step = useTextStep();
   const thai = THAI.test(props.value ?? props.defaultValue ?? '') || (!props.value && THAI.test(props.placeholder ?? ''));
-  if (!thai) return <RNTextInput maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} />;
-  const own = (StyleSheet.flatten(props.style) as TextStyle | undefined)?.fontFamily;
   const flat = StyleSheet.flatten(props.style) as TextStyle | undefined;
-  return <RNTextInput maxFontSizeMultiplier={MAX_TEXT_SCALE} {...props} style={[props.style, { fontFamily: thaiFor(own) }, handSize(flat)]} />;
+  const base = thai ? [props.style, { fontFamily: thaiFor(flat?.fontFamily) }, handSize(flat)] : props.style;
+  const grow = step ? grownStyle(StyleSheet.flatten(base) as TextStyle, step, false) : null;
+  return <RNTextInput {...props} allowFontScaling={false} style={grow ? [base, grow] : base} />;
 }

@@ -36,6 +36,7 @@ import { supabase } from '@/lib/supabase';
 import { colors, fonts, money, inkA, themed } from '@/theme';
 import { Accent } from '@/lib/accent';
 import { loggedToday } from '@/lib/checkin';
+import { useTextStep } from '@/lib/textSize';
 
 type Kind = 'spend' | 'income';
 type Cat = { key: string; name: string; icon: IconKey; color: string; i3?: Icon3D };
@@ -205,6 +206,8 @@ function whenLabel(d: Date) {
 const hintBold = (warn: boolean) => (s: string) => <Text style={{ fontFamily: fonts.semibold, color: warn ? colors.orangeText : colors.ink }}>{s}</Text>;
 
 export default function Add() {
+  // Larger text (iPhone Text Size): Note and When drop their icons (the labels say it), so both still fit side by side.
+  const larger = useTextStep() === 2;
   const insets = useSafeAreaInsets();
   const { session, profile } = useAuth();
   const { month } = useMonth();
@@ -404,7 +407,7 @@ export default function Add() {
 
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
           <Glass radius={16} style={{ flex: 1 }} innerStyle={styles.field}>
-            <PencilSimple size={16} color={colors.muted} />
+            {!larger && <PencilSimple size={16} color={colors.muted} />}
             <View style={{ flex: 1 }}>
               <Text style={styles.fieldK}>{t('Note')}</Text>
               <TextInput
@@ -419,7 +422,7 @@ export default function Add() {
           </Glass>
           <Pressable style={{ flex: 1 }} onPress={() => setPickWhen(true)} accessibilityRole="button" accessibilityLabel={t('When: {when}', { when: whenLabel(when) })}>
             <Glass radius={16} innerStyle={styles.field}>
-              <CalendarBlank size={16} color={colors.muted} />
+              {!larger && <CalendarBlank size={16} color={colors.muted} />}
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldK}>{t('When')}</Text>
                 <Text style={styles.fieldV} numberOfLines={1}>

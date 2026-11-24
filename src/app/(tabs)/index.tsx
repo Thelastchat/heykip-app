@@ -48,6 +48,7 @@ import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { useTextStep } from '@/lib/textSize';
 import { colors, fonts, inkA, themed, whiteA, blackA } from '@/theme';
 
 /** ฿ drawn smaller next to a big number. */
@@ -63,6 +64,8 @@ const Small = bahtSized(20);
 
 export default function Home() {
   const insets = useSafeAreaInsets();
+  // Larger text (iPhone Text Size): the month numbers go under today's, so the big number keeps the whole width.
+  const stacked = useTextStep() === 2;
   const { width } = useWindowDimensions();
   const { profile, session, refreshProfile } = useAuth();
   const { month, save } = useMonth();
@@ -476,7 +479,7 @@ export default function Home() {
         {/* the two numbers (approved mockup G2): the one that matters on the left, big; the other on the right.
             Over is said in words and in orange (never a minus sign), and only one number is orange at a time:
             once the month is used up, "over today" means nothing, so the month leads and today just says what you spent. */}
-        <RiseIn delay={120} style={styles.nums}>
+        <RiseIn delay={120} style={[styles.nums, stacked && styles.numsStacked]}>
           {monthOver && isTodaySelected ? (
             <Pressable
               style={{ flexShrink: 1 }}
@@ -512,7 +515,7 @@ export default function Home() {
           )}
           {monthOver && isTodaySelected ? (
             <Pressable
-              style={{ alignItems: 'flex-end', flexShrink: 1 }}
+              style={{ alignItems: stacked ? 'flex-start' : 'flex-end', flexShrink: 1 }}
               onPress={() => router.push('/history')}
               accessibilityRole="button"
               accessibilityLabel={t('{amount} spent today — see history', { amount: baht(spent.today) })}>
@@ -522,7 +525,7 @@ export default function Home() {
             </Pressable>
           ) : (
             <Pressable
-              style={{ alignItems: 'flex-end', flexShrink: 1 }}
+              style={{ alignItems: stacked ? 'flex-start' : 'flex-end', flexShrink: 1 }}
               onPress={() => router.push('/history')}
               accessibilityRole="button"
               accessibilityLabel={t('{amount} left this month — see history', { amount: baht(leftMonth) })}>
@@ -828,8 +831,10 @@ function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: numb
       {line ? (
         <View style={styles.note}>
           <View style={styles.tape} />
-          <Text style={styles.noteHead}>{monthly ? t('Why I save') : t('My promise')}</Text>
-          <Text style={styles.noteText} numberOfLines={3}>
+          <Text allowFontScaling={false} style={styles.noteHead}>
+            {monthly ? t('Why I save') : t('My promise')}
+          </Text>
+          <Text allowFontScaling={false} style={styles.noteText} numberOfLines={3}>
             {line}
           </Text>
         </View>
@@ -909,6 +914,7 @@ const styles = themed(() =>
     readBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 },
     readText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
     nums: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingHorizontal: 20, paddingTop: 20 },
+    numsStacked: { flexDirection: 'column', alignItems: 'flex-start', gap: 14 },
     n1: { fontFamily: fonts.medium, fontSize: 60, letterSpacing: -3, lineHeight: 70, marginTop: -8, color: colors.ink, fontVariant: ['tabular-nums'] },
     n2: { fontFamily: fonts.medium, fontSize: 26, letterSpacing: -0.8, lineHeight: 34, color: colors.ink, fontVariant: ['tabular-nums'] },
     lbl: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 4 },
