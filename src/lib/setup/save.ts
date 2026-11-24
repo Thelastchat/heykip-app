@@ -99,7 +99,7 @@ export async function finishSetup(userId: string, draft: SetupDraft, choice: Pla
   const allow = draft.allow ?? { slips: true, reminders: true };
   if (!allow.slips && !(await loadAuto())) await saveAuto({ on: false, albums: [], since: Date.now(), dismissed: true });
   if (!allow.reminders) await setRemindersOn(false, null);
-  // The free week is started by the server (once per person). If it's already used, setup still finishes on Free.
-  if (choice === 'trial') await supabase.rpc('start_trial');
+  // Setup always finishes on Free; Plus (and its free week) is bought through Apple from the Plus sheet.
+  void choice;
   forgetMonth(); // the plan was just written here — screens load the new one
 }

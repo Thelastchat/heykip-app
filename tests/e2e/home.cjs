@@ -52,6 +52,8 @@ module.exports = async function homeTests(browser) {
   scenario('Everyday · log spending');
   await safely(async () => {
     const { db } = person({
+      // Not on payday (a new pay month starts that day and yesterday's spending isn't in it).
+      payday: Math.min(28, new Date(Date.now() - 10 * 86_400_000).getDate()),
       spends: [
         ['food', 120, 0, 'Lunch'],
         ['transport', 42, 1, 'BTS'],
@@ -651,6 +653,7 @@ module.exports = async function homeTests(browser) {
   scenario('Home · tap the graph: This pay month');
   await safely(async () => {
     const { db } = person({
+      payday: Math.min(28, new Date(Date.now() - 10 * 86_400_000).getDate()),
       spends: [
         ['food', 300, 0, 'Lunch'],
         ['shopping', 2600, 2, 'Shoes'],
@@ -1079,30 +1082,37 @@ module.exports = async function homeTests(browser) {
 
   // ---------- Plus can't be faked ----------
   // The database refuses plan writes from the app (guard_plan); the mock does the same and keeps each try as "refused …".
-  scenario('Plus · the free week is started by the server');
+  scenario('Plus · bought through the App Store, never started by the app');
   await safely(async () => {
     const { db } = person();
     const page = await open(browser, { db, path: '/talk' });
     await check(page, 'Free: Talk to Kip is locked', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0].plan);
-    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 2500 });
-    await check(page, 'The trial is asked of the server (start_trial), not written by the app', db.writes.includes('rpc start_trial'), () => db.writes);
+    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 4000 });
+    const txt = await screenText(page);
+    await check(page, 'No free week from our own server (DPLA 3.3.1(C)): start_trial isn’t called', !db.writes.includes('rpc start_trial'), () => db.writes);
     await check(page, 'The app never tried to write its own plan', !db.writes.some((w) => w.startsWith('refused')), () => db.writes);
-    await check(page, 'The trial ends in 7 days', Math.abs(new Date(db.profiles[0].trial_ends_at).getTime() - Date.now() - 7 * 86_400_000) < 60_000, () => db.profiles[0]);
-    await check(page, 'Talk to Kip opens', (await page.getByPlaceholder('Message Kip').count()) > 0, () => db.profiles[0].plan);
+    await check(page, 'Without an App Store purchase it stays Free, and says why', db.profiles[0].plan === 'free' && /isn’t available to buy here|Couldn’t start Plus/.test(txt), () => ({
+      plan: db.profiles[0].plan,
+      txt: txt.slice(-300),
+    }));
     await page.close();
   });
 
-  scenario('Plus · an ended trial is Free, and can’t start again');
+  scenario('Plus · it runs to the end of what Apple charged for');
   await safely(async () => {
-    const { db } = person({ plan: 'trial' });
-    Object.assign(db.profiles[0], { trial_ends_at: new Date(Date.now() - 86_400_000).toISOString(), trial_used: true });
-    const page = await open(browser, { db, path: '/talk' });
-    await check(page, 'A trial that ended yesterday is locked again', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0]);
-    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 2000 });
-    const txt = await screenText(page);
-    await check(page, 'A second free week is refused, and it says so', /already used/.test(txt) && !db.writes.includes('rpc start_trial'), () => ({ writes: db.writes, txt: txt.slice(-300) }));
-    await check(page, 'Still Free after trying', db.profiles[0].trial_ends_at < new Date().toISOString(), () => db.profiles[0]);
-    await page.close();
+    const day = 86_400_000;
+    for (const [what, extra, open_] of [
+      ['A free week that ended yesterday is locked again', { plan: 'trial', trial_ends_at: new Date(Date.now() - day).toISOString(), trial_used: true }, false],
+      ['A paid month that runs to next week is open', { plan: 'monthly', plan_until: new Date(Date.now() + 7 * day).toISOString() }, true],
+      ['A paid month that ended 3 days ago (past the day’s grace) is locked', { plan: 'monthly', plan_until: new Date(Date.now() - 3 * day).toISOString() }, false],
+    ]) {
+      const { db } = person();
+      Object.assign(db.profiles[0], extra);
+      const page = await open(browser, { db, path: '/talk' });
+      const locked = (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0;
+      await check(page, what, locked === !open_, () => db.profiles[0]);
+      await page.close();
+    }
   });
 
   scenario('Plus · cheating is refused');

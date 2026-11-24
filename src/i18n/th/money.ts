@@ -1,6 +1,9 @@
 // Thai for the money part of the app — see src/i18n/GUIDE.md.
 const th: Record<string, string> = {
   // ---------- categories & money styles (lib/budget.ts) ----------
+  'Plus isn’t available to buy here yet.': 'ยังซื้อ Plus จากตรงนี้ไม่ได้นะ',
+  'Couldn’t start Plus: {msg}': 'เริ่ม Plus ไม่สำเร็จ: {msg}',
+  'Payment done. Plus turns on in a moment — you can close this.': 'ชำระเงินแล้ว Plus จะเปิดในอีกแป๊บเดียว ปิดหน้านี้ได้เลย',
   'Food & drinks': 'อาหารและเครื่องดื่ม',
   Transport: 'เดินทาง',
   Shopping: 'ช้อปปิ้ง',
@@ -197,7 +200,6 @@ const th: Record<string, string> = {
   'Talk to Kip · “Can I buy this?”': 'คุยกับ Kip · “ซื้ออันนี้ไหวมั้ย?”',
   'Payday auto-move & nudges': 'ย้ายเงินอัตโนมัติวันเงินเดือนออก + แจ้งเตือน',
   'Customize & locks · 3 goals · slip photos': 'ปรับแผนและล็อก · 3 เป้าหมาย · ถ่ายสลิป',
-  'Couldn’t start your trial: {msg}': 'เริ่มทดลองใช้ไม่ได้: {msg}',
   'Try free for 7 days': 'ลองฟรี 7 วัน',
   'Starting…': 'กำลังเริ่ม…',
   '฿1.9 a day after · reminder 2 days before · cancel in 2 taps': 'หลังจากนั้นวันละ ฿1.9 · เตือนก่อน 2 วัน · ยกเลิกได้ใน 2 แตะ',
@@ -221,7 +223,6 @@ const th: Record<string, string> = {
   'Money in · {name}': 'เงินเข้า · {name}',
   'Nothing logged this day': 'วันนั้นยังไม่ได้จดอะไร',
   'Add to this day': 'เพิ่มในวันนั้น',
-  'Your free week is already used. Plus is coming to the App Store soon.': 'คุณใช้สิทธิ์ทดลองฟรี 1 สัปดาห์ไปแล้ว Plus จะมาใน App Store เร็ว ๆ นี้',
   'That’s a lot of Kip for one day — I’ll be back tomorrow. You can still log by hand.': 'วันนี้คุยกับ Kip เยอะมากแล้ว พรุ่งนี้มาใหม่นะ ระหว่างนี้ยังจดเองได้ตามปกติ',
   // bill due days and reminders
   'Bill reminders': 'เตือนจ่ายบิล',

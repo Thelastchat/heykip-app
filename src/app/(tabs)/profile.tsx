@@ -38,6 +38,7 @@ type Row = {
   avatar_url: string | null;
   plan: 'free' | 'trial' | 'yearly' | 'monthly' | 'student';
   trial_ends_at: string | null;
+  plan_until: string | null;
   income_type: 'regular' | 'changes';
   monthly_income: number | null;
   slow_month_income: number | null;
@@ -91,7 +92,7 @@ export default function Profile() {
     if (!uid) return;
     const { data } = await supabase
       .from('profiles')
-      .select('display_name, avatar_url, plan, trial_ends_at, income_type, monthly_income, slow_month_income, good_month_income, payday, rent, checkin_time')
+      .select('display_name, avatar_url, plan, trial_ends_at, plan_until, income_type, monthly_income, slow_month_income, good_month_income, payday, rent, checkin_time')
       .eq('id', uid)
       .single();
     if (data) setRow(data as Row);
@@ -178,7 +179,7 @@ export default function Profile() {
   const styleName = STYLES.find((s) => s.key === month?.style)?.name ?? t('Kip’s plan');
 
   // ---- Plus ----
-  const plan = planNow(row?.plan, row?.trial_ends_at);
+  const plan = planNow(row?.plan, row?.trial_ends_at, row?.plan_until);
   const daysLeft = row?.trial_ends_at ? Math.max(0, Math.ceil((new Date(row.trial_ends_at).getTime() - Date.now()) / 86_400_000)) : 0;
 
   return (

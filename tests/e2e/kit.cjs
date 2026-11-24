@@ -34,6 +34,8 @@ async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signe
   // “No handler for tag”: the gesture library on the web, when a swiped row is removed — doesn't happen on phones.
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
+  // RevenueCat (Test Store on the web) can't be reached from the tests: answer it with a failure, like being offline.
+  await page.route(/revenuecat\.com/, (r) => r.abort());
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource|503|net::|favicon|No handler for tag/.test(m.text()) && page.errors.push('console: ' + m.text().slice(0, 200)));
   await install(page, db);
   await page.goto(BASE + '/');

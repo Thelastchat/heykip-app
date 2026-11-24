@@ -1,5 +1,6 @@
 // The paywall, inside the app: a black sheet made for the one feature someone just tapped, with their own numbers.
-// The plan itself is always free — Plus makes Kip do the work. Store payments come later; "Try free" starts the 7-day trial.
+// The plan itself is always free — Plus makes Kip do the work. "Try free" opens Apple's purchase sheet: Plus is a
+// subscription whose first 7 days are free (its introductory offer), bought through RevenueCat (lib/purchases.ts).
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -9,9 +10,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
 import { Squish } from '@/components/glow/motion';
-import { useAuth } from '@/lib/auth';
+import { planNow, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
+import { buyPlus, waitForPlus } from '@/lib/purchases';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, themed, whiteA, blackA } from '@/theme';
 import { DragSheet } from '@/components/DragSheet';
@@ -30,13 +32,26 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
     if (!session || busy) return;
     setBusy(true);
     setError(null);
-    // The server starts it (once per person, on its own clock) — the app can't write the plan itself.
-    const { error: e } = await supabase.rpc('start_trial');
+    // Apple's purchase sheet: the free week is the subscription's introductory offer. The server turns Plus on when
+    // RevenueCat confirms the purchase — the app can't write the plan itself.
+    const result = await buyPlus();
+    if (result === 'cancelled') return setBusy(false);
+    if (result === 'unavailable') {
+      setBusy(false);
+      return setError(t('Plus isn’t available to buy here yet.'));
+    }
+    if (typeof result === 'object') {
+      setBusy(false);
+      return setError(t('Couldn’t start Plus: {msg}', { msg: result.error }));
+    }
+    const on = await waitForPlus(async () => {
+      const { data } = await supabase.from('profiles').select('plan, trial_ends_at, plan_until').eq('id', session.user.id).maybeSingle();
+      return !!data && planNow(data.plan, data.trial_ends_at, data.plan_until) !== 'free';
+    });
     setBusy(false);
-    if (e)
-      return setError(/trial already used/.test(e.message) ? t('Your free week is already used. Plus is coming to the App Store soon.') : t('Couldn’t start your trial: {msg}', { msg: e.message }));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     await refreshProfile();
+    if (!on) return setError(t('Payment done. Plus turns on in a moment — you can close this.'));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onClose();
     onUnlocked();
   }
