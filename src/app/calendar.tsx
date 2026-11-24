@@ -159,7 +159,7 @@ export default function FullCalendar() {
                           {k === payday ? <Text style={[styles.pay, on && { color: colors.paper }]}>฿</Text> : null}
                         </Text>
                         <Text style={[styles.amt, over && { color: colors.ink, fontFamily: fonts.medium }, on && { color: colors.paper }]} numberOfLines={1}>
-                          {open && loaded ? (amount > 0 ? Math.round(amount).toLocaleString('en-US') : '–') : ' '}
+                          {open && loaded ? (amount > 0 ? Math.round(amount).toLocaleString('en-US') : ' ') : ' '}
                         </Text>
                         <View style={[styles.dot, { backgroundColor: dot }]} />
                       </Pressable>

@@ -33,7 +33,7 @@ import { tourSpot } from '@/lib/tour';
 import { FormScroll } from '@/components/FormScroll';
 import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { supabase } from '@/lib/supabase';
-import { colors, fonts, money, inkA, themed } from '@/theme';
+import { colors, fonts, glow, money, inkA, themed } from '@/theme';
 import { Accent } from '@/lib/accent';
 import { loggedToday } from '@/lib/checkin';
 import { useTextStep } from '@/lib/textSize';
@@ -445,7 +445,7 @@ export default function Add() {
             <View key={row.join('')} style={{ flexDirection: 'row', gap: 8 }}>
               {row.map((k) => (
                 <Squish key={k} haptic={false} onPress={() => press(k)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={k === 'del' ? t('Delete') : k}>
-                  <Glass radius={16} innerStyle={styles.key}>
+                  <Glass radius={16} tint={glow.glassSolid} innerStyle={styles.key}>
                     {k === 'del' ? <Backspace size={24} color={colors.ink} /> : <Text style={styles.keyText}>{k}</Text>}
                   </Glass>
                 </Squish>

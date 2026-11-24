@@ -56,6 +56,9 @@ export function PaceChart({ pace, budget, total, start }: { pace: Pace; budget: 
   const short = pace.leftAtPayday < 0;
   const bubble = pace.inside ? t('Inside the safe zone') : t('Above the safe zone');
   const bubbleW = 150;
+  // "Safe zone" sits at the bottom of the payday edge, unless the line ends there — then at the top, under the edge.
+  const lowEnd = (yy: number) => yy > H - 30;
+  const labelTop = lowEnd(py) || (lx > W - 80 && lowEnd(ly));
 
   return (
     <View accessible accessibilityLabel={`${bubble}. ${short ? t('Payday · {amount} short', { amount: baht(-pace.leftAtPayday) }) : t('Payday · {amount} left', { amount: baht(pace.leftAtPayday) })}`}>
@@ -65,7 +68,7 @@ export function PaceChart({ pace, budget, total, start }: { pace: Pace; budget: 
             <Svg width={W} height={H} style={{ overflow: 'visible' }}>
               <Path d={`M0,${H} L${W},${planEnd} L${W},${H} Z`} fill={inkA(0.045)} />
               <Line x1={0} y1={H} x2={W} y2={planEnd} stroke={inkA(0.18)} strokeWidth={1.5} />
-              <SvgText x={W - 6} y={H - 8} textAnchor="end" fontSize={11} fill={colors.muted} fontFamily={fonts.regular}>
+              <SvgText x={W - 10} y={labelTop ? planEnd + 18 : H - 8} textAnchor="end" fontSize={11} fill={colors.muted} fontFamily={fonts.regular}>
                 {t('Safe zone')}
               </SvgText>
               <Path d={smooth(pts)} fill="none" stroke={colors.ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" />

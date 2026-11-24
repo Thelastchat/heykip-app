@@ -89,6 +89,7 @@ const GLOW_LIGHT = {
   lavender: '#DCD2F7',
   cream: '#FFE2C2',
   glass: 'rgba(255,255,255,0.42)',
+  glassSolid: 'rgba(255,255,255,0.82)', // keys: white, so the glow's colour doesn't tint them
   glassEdge: 'rgba(255,255,255,0.95)',
   control: 'rgba(17,17,17,0.07)', // buttons that sit on glass need their own fill
   blobOpacity: 1,
@@ -101,6 +102,7 @@ const GLOW_DARK: typeof GLOW_LIGHT = {
   lavender: '#3B3166',
   cream: '#5A4027',
   glass: 'rgba(255,255,255,0.06)',
+  glassSolid: 'rgba(255,255,255,0.09)',
   glassEdge: 'rgba(255,255,255,0.10)',
   control: 'rgba(243,242,236,0.10)',
   blobOpacity: 0.75,

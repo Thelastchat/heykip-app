@@ -276,7 +276,7 @@ export function MonthScreen({
         {notice ? <Text style={[styles.note, { color: colors.ink }]}>{notice}</Text> : null}
 
         {/* 3 · Spending */}
-        <Section n={3} spot="planSpend" title={t('Spending budget a month')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
+        <Section n={3} spot="planSpend" below title={t('Spending budget a month')} right={t('{total} · {daily} a day', { total: baht(spending), daily: baht(dailyOf(month)) })} />
         <RiseIn delay={220} style={styles.cardWrap}>
           <Glass radius={26} innerStyle={styles.card}>
             {month.spend.map((s, i) => {
@@ -304,10 +304,7 @@ export function MonthScreen({
                     <Text style={styles.amount}>{baht(s.amount)}</Text>
                     {spent ? <Text style={styles.sub}>{t('{amt} left', { amt: baht(left) })}</Text> : null}
                   </View>
-                  <View style={styles.editPill}>
-                    <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.ink }}>{t('Edit')}</Text>
-                    {!isPlus && <MiniLock />}
-                  </View>
+                  {isPlus ? <CaretRight size={14} color={colors.faint} /> : <MiniLock />}
                 </Pressable>
               );
             })}
@@ -542,7 +539,7 @@ function MiniLock() {
   );
 }
 
-function Section({ n, title, right, spot }: { n: number; title: string; right: string; spot?: TourSpot }) {
+function Section({ n, title, right, spot, below }: { n: number; title: string; right: string; spot?: TourSpot; below?: boolean }) {
   return (
     <View style={{ paddingTop: 28 }}>
       <View
@@ -552,9 +549,12 @@ function Section({ n, title, right, spot }: { n: number; title: string; right: s
           <View style={styles.nDot}>
             <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.paper }}>{n}</Text>
           </View>
-          <Text style={styles.sectionTitle}>{title}</Text>
+          <View>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            {below && <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>}
+          </View>
         </View>
-        <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>
+        {!below && <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.muted }}>{right}</Text>}
       </View>
     </View>
   );
@@ -990,7 +990,6 @@ const styles = themed(() =>
     xBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: glow.control, alignItems: 'center', justifyContent: 'center' },
     addRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: inkA(0.06) },
     addDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
-    editPill: { height: 30, paddingHorizontal: 10, borderRadius: 999, backgroundColor: glow.control, flexDirection: 'row', alignItems: 'center', gap: 5 },
     leftovers: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
     footer: {
       position: 'absolute',
