@@ -7,7 +7,7 @@
 // Events can arrive late or out of order, so nothing goes backwards: a newer end date always wins.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const ENTITLEMENT = 'plus';
+const ENTITLEMENT = 'heykip_plus';
 /** Events after which Plus is on until expiration_at_ms (a cancellation still runs to the end of the paid period). */
 const ACTIVE = new Set([
   'INITIAL_PURCHASE',

@@ -11,7 +11,7 @@ import Purchases, { PURCHASES_ERROR_CODE, type PurchasesPackage } from 'react-na
 const APPLE_KEY = 'appl_dYOwmxNYkhqwzcPXTqqUhQJEIag';
 const TEST_STORE_KEY = 'test_pcVPtdNWEIfZIspvsiptusiHFzU';
 /** The entitlement Plus unlocks, as set up in RevenueCat. */
-export const ENTITLEMENT = 'plus';
+export const ENTITLEMENT = 'heykip_plus';
 
 /** Expo Go or the web: no App Store, so the Test Store. */
 const testStore = Platform.OS === 'web' || Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
