@@ -1,10 +1,12 @@
 // The paywall, inside the app: a black sheet made for the one feature someone just tapped, with their own numbers.
-// The plan itself is always free — Plus makes Kip do the work. "Try free" opens Apple's purchase sheet: Plus is a
-// subscription whose first 7 days are free (its introductory offer), bought through RevenueCat (lib/purchases.ts).
+// The plan itself is always free — Plus makes Kip do the work. Two ways to pay, priced by Apple for this person's
+// storefront: Yearly (picked first, with a free week as its introductory offer) and Monthly. Bought through
+// RevenueCat (lib/purchases.ts); the renewal terms, Restore purchases, Terms and Privacy are what App Review 3.1.2 asks for.
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,7 +15,7 @@ import { Squish } from '@/components/glow/motion';
 import { planNow, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
-import { buyPlus, waitForPlus } from '@/lib/purchases';
+import { buyPlus, plusPlans, restorePlus, waitForPlus, type PlusPlan } from '@/lib/purchases';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, themed, whiteA, blackA } from '@/theme';
 import { DragSheet } from '@/components/DragSheet';
@@ -22,19 +24,53 @@ export type PlusFeature = 'styles' | 'talk' | 'customize' | 'automove' | 'goals'
 
 const perks = () => [t('All 4 money styles — switch any time'), t('Talk to Kip · “Can I buy this?”'), t('Payday auto-move & nudges'), t('Customize & locks · 3 goals · slip photos')];
 
+/** Apple's standard licence agreement: HeyKip uses it as its Terms of Use (App Review 3.1.2). */
+const TERMS = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+/** "฿690.00" → "฿690": whole prices read cleaner; others ("$4.99") stay as the store wrote them. */
+const whole = (price: string) => price.replace(/[.,]00$/, '');
+
 export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: { open: boolean; onClose: () => void; onUnlocked: () => void; title: string; sub: string; children?: ReactNode }) {
   const insets = useSafeAreaInsets();
   const { session, refreshProfile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<PlusPlan[]>([]);
+  const [pick, setPick] = useState<'yearly' | 'monthly'>('yearly');
 
-  async function startTrial() {
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    plusPlans().then((p) => live && setPlans(p));
+    return () => {
+      live = false;
+    };
+  }, [open]);
+
+  const chosen = plans.find((p) => p.key === pick) ?? plans[0];
+  const yearly = plans.find((p) => p.key === 'yearly');
+  const monthly = plans.find((p) => p.key === 'monthly');
+
+  const isPlusNow = async () => {
+    if (!session) return false;
+    const { data } = await supabase.from('profiles').select('plan, trial_ends_at, plan_until').eq('id', session.user.id).maybeSingle();
+    return !!data && planNow(data.plan, data.trial_ends_at, data.plan_until) !== 'free';
+  };
+
+  async function finish(on: boolean) {
+    setBusy(false);
+    await refreshProfile();
+    if (!on) return setError(t('Payment done. Plus turns on in a moment — you can close this.'));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    onClose();
+    onUnlocked();
+  }
+
+  async function start() {
     if (!session || busy) return;
     setBusy(true);
     setError(null);
-    // Apple's purchase sheet: the free week is the subscription's introductory offer. The server turns Plus on when
-    // RevenueCat confirms the purchase — the app can't write the plan itself.
-    const result = await buyPlus();
+    // Apple's purchase sheet. The server turns Plus on when RevenueCat confirms it — the app can't write the plan.
+    const result = await buyPlus(chosen);
     if (result === 'cancelled') return setBusy(false);
     if (result === 'unavailable') {
       setBusy(false);
@@ -44,17 +80,41 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
       setBusy(false);
       return setError(t('Couldn’t start Plus: {msg}', { msg: result.error }));
     }
-    const on = await waitForPlus(async () => {
-      const { data } = await supabase.from('profiles').select('plan, trial_ends_at, plan_until').eq('id', session.user.id).maybeSingle();
-      return !!data && planNow(data.plan, data.trial_ends_at, data.plan_until) !== 'free';
-    });
-    setBusy(false);
-    await refreshProfile();
-    if (!on) return setError(t('Payment done. Plus turns on in a moment — you can close this.'));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    onClose();
-    onUnlocked();
+    finish(await waitForPlus(isPlusNow));
   }
+
+  /** Restore purchases: Plus bought on this Apple ID before (a new phone, or another HeyKip account). */
+  async function restore() {
+    if (!session || busy) return;
+    setBusy(true);
+    setError(null);
+    const found = await restorePlus().catch(() => false);
+    if (!found) {
+      setBusy(false);
+      return setError(t('No Plus found on this Apple ID.'));
+    }
+    finish(await waitForPlus(isPlusNow));
+  }
+
+  const price = chosen ? whole(chosen.price) : '';
+  const fine = !chosen
+    ? ''
+    : chosen.freeWeek
+      ? chosen.key === 'yearly'
+        ? t('Free for 7 days, then {price} a year. Renews automatically unless you cancel at least 24 hours before, in your Apple ID settings.', { price })
+        : t('Free for 7 days, then {price} a month. Renews automatically unless you cancel at least 24 hours before, in your Apple ID settings.', { price })
+      : chosen.key === 'yearly'
+        ? t('{price} a year. Renews automatically unless you cancel at least 24 hours before, in your Apple ID settings.', { price })
+        : t('{price} a month. Renews automatically unless you cancel at least 24 hours before, in your Apple ID settings.', { price });
+  const cta = busy
+    ? t('Starting…')
+    : !chosen
+      ? t('Get Plus')
+      : chosen.freeWeek
+        ? t('Try free for 7 days')
+        : chosen.key === 'yearly'
+          ? t('Get Plus · {price} a year', { price })
+          : t('Get Plus · {price} a month', { price });
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
@@ -79,16 +139,80 @@ export function PlusSheet({ open, onClose, onUnlocked, title, sub, children }: {
             </View>
           ))}
         </View>
+        {yearly || monthly ? (
+          <View style={{ flexDirection: 'row', gap: 10 }} accessibilityRole="radiogroup">
+            {yearly ? (
+              <PlanCard
+                on={chosen?.key === 'yearly'}
+                onPress={() => setPick('yearly')}
+                name={t('Yearly')}
+                price={whole(yearly.price)}
+                per={t('/ year')}
+                line={yearly.perMonth ? t('{price} a month', { price: whole(yearly.perMonth) }) : ''}
+                tag={yearly.freeWeek ? t('7 days free') : undefined}
+              />
+            ) : null}
+            {monthly ? (
+              <PlanCard
+                on={chosen?.key === 'monthly'}
+                onPress={() => setPick('monthly')}
+                name={t('Monthly')}
+                price={whole(monthly.price)}
+                per={t('/ month')}
+                line={t('Cancel any time')}
+                tag={monthly.freeWeek ? t('7 days free') : undefined}
+              />
+            ) : null}
+          </View>
+        ) : null}
         {error && <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.orange, textAlign: 'center' }}>{error}</Text>}
-        <Squish onPress={startTrial} style={[styles.cta, busy && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel={t('Try free for 7 days')}>
-          <Text style={styles.ctaText}>{busy ? t('Starting…') : t('Try free for 7 days')}</Text>
-        </Squish>
-        <Text style={styles.fine}>{t('฿1.9 a day after · reminder 2 days before · cancel in 2 taps')}</Text>
+        <View style={{ gap: 10 }}>
+          <Squish onPress={start} style={[styles.cta, busy && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel={cta}>
+            <Text style={styles.ctaText}>{cta}</Text>
+          </Squish>
+          {fine ? <Text style={styles.fine}>{fine}</Text> : null}
+        </View>
+        <View style={styles.links}>
+          <Pressable onPress={restore} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.link}>{t('Restore purchases')}</Text>
+          </Pressable>
+          <Text style={styles.dot}>·</Text>
+          <Pressable onPress={() => Linking.openURL(TERMS)} hitSlop={8} accessibilityRole="link">
+            <Text style={styles.link}>{t('Terms')}</Text>
+          </Pressable>
+          <Text style={styles.dot}>·</Text>
+          <Pressable
+            onPress={() => {
+              onClose();
+              router.push('/privacy-policy');
+            }}
+            hitSlop={8}
+            accessibilityRole="link">
+            <Text style={styles.link}>{t('Privacy')}</Text>
+          </Pressable>
+        </View>
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
           <Text style={styles.notNow}>{t('Not now')}</Text>
         </Pressable>
       </DragSheet>
     </Modal>
+  );
+}
+
+/** One way to pay: picked → the lime border and dot. */
+function PlanCard({ on, onPress, name, price, per, line, tag }: { on: boolean; onPress: () => void; name: string; price: string; per: string; line: string; tag?: string }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.planCard, on && styles.planOn]} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${name} ${price} ${per}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.planName}>{name}</Text>
+        <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
+      </View>
+      <Text style={styles.planPrice}>
+        {price} <Text style={styles.planPer}>{per}</Text>
+      </Text>
+      <Text style={styles.planLine}>{line}</Text>
+      {tag ? <Text style={styles.planTag}>{tag}</Text> : null}
+    </Pressable>
   );
 }
 
@@ -227,7 +351,20 @@ const styles = themed(() =>
     tick: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
     cta: { height: 56, borderRadius: 999, backgroundColor: colors.limeDeep, alignItems: 'center', justifyContent: 'center' },
     ctaText: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onAccent },
-    fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.5), marginTop: -6 },
+    fine: { textAlign: 'center', fontFamily: fonts.regular, fontSize: 11.5, lineHeight: 16, color: whiteA(0.5) },
+    links: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: -4 },
+    link: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.6) },
+    dot: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.3) },
+    planCard: { flex: 1, borderRadius: 18, borderWidth: 1.5, borderColor: whiteA(0.12), backgroundColor: whiteA(0.04), paddingVertical: 12, paddingHorizontal: 14, gap: 2 },
+    planOn: { borderColor: colors.limeDeep, backgroundColor: whiteA(0.08) },
+    planName: { fontFamily: fonts.medium, fontSize: 13, color: whiteA(0.75) },
+    planPrice: { fontFamily: fonts.semibold, fontSize: 22, letterSpacing: -0.4, color: colors.onSolid, fontVariant: ['tabular-nums'], marginTop: 4 },
+    planPer: { fontFamily: fonts.regular, fontSize: 12, letterSpacing: 0, color: whiteA(0.55) },
+    planLine: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.55) },
+    planTag: { fontFamily: fonts.medium, fontSize: 12, color: colors.limeDeep, marginTop: 4 },
+    radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: whiteA(0.3), alignItems: 'center', justifyContent: 'center' },
+    radioOn: { borderColor: colors.limeDeep },
+    radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.limeDeep },
     notNow: { textAlign: 'center', fontFamily: fonts.medium, fontSize: 14, color: whiteA(0.85), textDecorationLine: 'underline' },
     trade: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: whiteA(0.55) },
     laneLabel: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.6) },

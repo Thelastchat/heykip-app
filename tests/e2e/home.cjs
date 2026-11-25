@@ -1087,7 +1087,11 @@ module.exports = async function homeTests(browser) {
     const { db } = person();
     const page = await open(browser, { db, path: '/talk' });
     await check(page, 'Free: Talk to Kip is locked', (await page.getByPlaceholder('Talk to Kip is a Plus feature').count()) > 0, () => db.profiles[0].plan);
-    await tap(page, visible(page.getByRole('button', { name: 'Try free for 7 days' })), { wait: 4000 });
+    // No store on the web, so no prices: the sheet still has what App Review checks (Restore, Terms, Privacy).
+    const sheet = await screenText(page);
+    await check(page, 'The Plus sheet has Restore purchases, Terms and Privacy', /Restore purchases/.test(sheet) && /Terms/.test(sheet) && /Privacy/.test(sheet), () => sheet.slice(-300));
+    await check(page, 'No price or free week is promised without the store’s own price', !/Free for 7 days, then|a year\. Renews/.test(sheet), () => sheet.slice(-300));
+    await tap(page, visible(page.getByRole('button', { name: 'Get Plus' })), { wait: 4000 });
     const txt = await screenText(page);
     await check(page, 'No free week from our own server (DPLA 3.3.1(C)): start_trial isn’t called', !db.writes.includes('rpc start_trial'), () => db.writes);
     await check(page, 'The app never tried to write its own plan', !db.writes.some((w) => w.startsWith('refused')), () => db.writes);
@@ -1096,6 +1100,24 @@ module.exports = async function homeTests(browser) {
       txt: txt.slice(-300),
     }));
     await page.close();
+  });
+
+  scenario('Plus · the card on You: Get Plus, or Manage once it’s on');
+  await safely(async () => {
+    for (const [what, extra, title, button] of [
+      ['Free', { plan: 'free' }, 'HeyKip Free', 'Get Plus'],
+      ['In the free week', { plan: 'trial', trial_ends_at: new Date(Date.now() + 5 * 86_400_000).toISOString(), trial_used: true }, 'Your free week', 'Manage'],
+      ['Paid', { plan: 'yearly', plan_until: new Date(Date.now() + 200 * 86_400_000).toISOString() }, 'HeyKip Plus', 'Manage'],
+    ]) {
+      const { db } = person();
+      Object.assign(db.profiles[0], extra);
+      const page = await open(browser, { db, path: '/profile' });
+      await page.waitForTimeout(1200);
+      const txt = await screenText(page);
+      const ok = txt.includes(title) && (await page.getByRole('button', { name: button, exact: true }).count()) > 0 && !/Keep Plus|coming soon/.test(txt);
+      await check(page, `${what}: “${title}” with ${button}`, ok, () => txt.slice(0, 300));
+      await page.close();
+    }
   });
 
   scenario('Plus · it runs to the end of what Apple charged for');

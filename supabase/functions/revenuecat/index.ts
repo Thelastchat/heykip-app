@@ -46,6 +46,30 @@ function accountOf(e: RcEvent): string | null {
   return null;
 }
 
+type Admin = ReturnType<typeof createClient>;
+
+/**
+ * Plus for one account as RevenueCat has it now (REST API v1, with the secret key in REVENUECAT_SECRET_KEY — never in
+ * the app). Used where a notice has no end date of its own: a transfer.
+ */
+async function syncFromRevenueCat(admin: Admin, id: string): Promise<string> {
+  const key = Deno.env.get('REVENUECAT_SECRET_KEY');
+  if (!key) return 'no secret key';
+  const r = await fetch(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10_000) });
+  if (!r.ok) return `revenuecat ${r.status}`;
+  const sub = (await r.json())?.subscriber;
+  const ent = sub?.entitlements?.[ENTITLEMENT] as { expires_date?: string | null; product_identifier?: string } | undefined;
+  const ends = ent?.expires_date ? new Date(ent.expires_date) : null;
+  if (!ent || !ends || ends <= new Date()) return 'no active Plus';
+  const trial = sub?.subscriptions?.[ent.product_identifier ?? '']?.period_type === 'trial';
+  const paid = /year/i.test(ent.product_identifier ?? '') ? 'yearly' : 'monthly';
+  const { error } = await admin
+    .from('profiles')
+    .update(trial ? { plan: 'trial', trial_ends_at: ends.toISOString(), trial_used: true, plan_until: null } : { plan: paid, plan_until: ends.toISOString(), trial_used: true })
+    .eq('id', id);
+  return error ? error.message : trial ? 'trial' : paid;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   const secret = Deno.env.get('REVENUECAT_WEBHOOK_AUTH');
@@ -66,10 +90,12 @@ Deno.serve(async (req) => {
 
   try {
     if (event.type === 'TRANSFER') {
-      // The purchase moved to another HeyKip account (same Apple ID): the old one loses Plus; the new one gets it
-      // with RevenueCat's next notice for it.
+      // "Restore purchases" moved Plus to another HeyKip account (same Apple ID). The old one loses it; the notice
+      // carries no end date, so the new one's is asked from RevenueCat and Plus turns on now, not at the next renewal.
       for (const id of event.transferred_from ?? []) if (UUID.test(id)) await admin.from('profiles').update({ plan: 'free', plan_until: null }).eq('id', id);
-      return json({ ok: true });
+      const synced: Record<string, string> = {};
+      for (const id of event.transferred_to ?? []) if (UUID.test(id)) synced[id] = await syncFromRevenueCat(admin, id);
+      return json({ ok: true, synced });
     }
 
     const id = accountOf(event);

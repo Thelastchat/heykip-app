@@ -17,6 +17,7 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Ring, Squish } from '@/components/glow/motion';
 import { PaySheet, RentSheet } from '@/components/profile/MoneySheets';
 import { Pill, SaveButton, Sheet, sheet } from '@/components/profile/Sheet';
+import { manageSubscription } from '@/lib/purchases';
 import { planNow, useAuth } from '@/lib/auth';
 import { billsTotal, dailyOf, STYLES, type MonthBudget } from '@/lib/budget';
 import { useHome } from '@/lib/home';
@@ -216,27 +217,21 @@ export default function Profile() {
               <Image source={ICON3D.piggy} style={{ width: 44, height: 44 }} contentFit="contain" />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={styles.plusTitle}>
-                {plan === 'trial'
-                  ? daysLeft > 0
+              <Text style={styles.plusTitle}>{plan === 'trial' ? t('Your free week') : plan === 'free' ? 'HeyKip Free' : 'HeyKip Plus'}</Text>
+              <Text style={styles.plusSub}>
+                {plan === 'free'
+                  ? t('Plus: Talk to Kip, your budgets, 3 goals')
+                  : plan === 'trial'
                     ? daysLeft === 1
-                      ? t('{n} day of Plus left', { n: daysLeft })
-                      : t('{n} days of Plus left', { n: daysLeft })
-                    : t('Your Plus trial ended')
-                  : plan === 'free'
-                    ? 'HeyKip Free'
-                    : 'HeyKip Plus'}
+                      ? t('{n} day left, then Plus renews', { n: daysLeft })
+                      : t('{n} days left, then Plus renews', { n: daysLeft })
+                    : t('Talk to Kip, your budgets, 3 goals')}
               </Text>
-              <Text style={styles.plusSub}>{plan === 'free' ? t('Plus: Talk to Kip, your budgets, 3 goals') : t('Talk to Kip, your budgets, 3 goals')}</Text>
             </View>
-            {plan === 'trial' || plan === 'free' ? (
-              <Squish
-                onPress={() => (plan === 'free' ? setOpen('plus') : flash(t('Paying for Plus is coming soon — your trial keeps everything on until then.')))}
-                style={styles.go}
-                accessibilityRole="button">
-                <Text style={styles.goText}>{plan === 'free' ? t('Try free') : t('Keep Plus')}</Text>
-              </Squish>
-            ) : null}
+            {/* Manage = Apple's own subscription page: cancel, switch Yearly/Monthly. */}
+            <Squish onPress={() => (plan === 'free' ? setOpen('plus') : manageSubscription())} style={styles.go} accessibilityRole="button">
+              <Text style={styles.goText}>{plan === 'free' ? t('Get Plus') : t('Manage')}</Text>
+            </Squish>
           </View>
         </RiseIn>
 

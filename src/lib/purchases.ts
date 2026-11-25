@@ -42,20 +42,43 @@ export async function stopPurchases() {
   await Purchases.logOut().catch(() => {});
 }
 
-/** The monthly Plus package from RevenueCat's current offering (null when there isn't one yet). */
-export async function plusPackage(): Promise<PurchasesPackage | null> {
-  if (!configuredFor) return null;
-  const offerings = await Purchases.getOfferings();
-  return offerings.current?.monthly ?? offerings.current?.availablePackages[0] ?? null;
+/** One way to pay for Plus, as the store prices it for this person (their currency, their storefront). */
+export type PlusPlan = { key: 'yearly' | 'monthly'; pkg: PurchasesPackage; price: string; perMonth: string | null; freeWeek: boolean };
+
+/** Yearly first, then Monthly, from RevenueCat's current offering. Empty when the store can't be reached. */
+export async function plusPlans(): Promise<PlusPlan[]> {
+  if (!supported || !configuredFor) return [];
+  try {
+    const current = (await Purchases.getOfferings()).current;
+    const pkgs = [current?.annual, current?.monthly].filter((p): p is PurchasesPackage => !!p);
+    // The free week is Apple's introductory offer: only for someone who hasn't had one in this group before.
+    const free = new Set<string>();
+    const withIntro = pkgs.filter((p) => p.product.introPrice?.price === 0).map((p) => p.product.identifier);
+    if (withIntro.length && testStore) withIntro.forEach((id) => free.add(id));
+    else if (withIntro.length) {
+      // Unknown counts as "no free week": never promise one Apple might not give.
+      const seen = await Purchases.checkTrialOrIntroductoryPriceEligibility(withIntro).catch(() => ({}) as Record<string, { status: number }>);
+      for (const id of withIntro) if (seen[id]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE) free.add(id);
+    }
+    return pkgs.map((pkg) => ({
+      key: pkg === current?.annual ? 'yearly' : 'monthly',
+      pkg,
+      price: pkg.product.priceString,
+      perMonth: pkg === current?.annual ? pkg.product.pricePerMonthString : null,
+      freeWeek: free.has(pkg.product.identifier),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export type BuyResult = 'bought' | 'cancelled' | 'unavailable' | { error: string };
 
-/** Apple's purchase sheet for Plus. The free week is the subscription's introductory offer, decided by Apple. */
-export async function buyPlus(): Promise<BuyResult> {
+/** Apple's purchase sheet for the plan they picked. The free week, if any, is decided by Apple. */
+export async function buyPlus(plan?: PlusPlan): Promise<BuyResult> {
   if (!supported || !configuredFor) return 'unavailable';
   try {
-    const pkg = await plusPackage();
+    const pkg = plan?.pkg ?? (await plusPlans())[0]?.pkg;
     if (!pkg) return 'unavailable';
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     return customerInfo.entitlements.active[ENTITLEMENT] ? 'bought' : { error: 'not active' };
