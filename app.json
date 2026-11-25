@@ -2,7 +2,8 @@
   "expo": {
     "name": "HeyKip",
     "slug": "heykip",
-    "version": "0.1.0",
+    "owner": "heykip.app",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "heykip",
