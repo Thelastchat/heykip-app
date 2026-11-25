@@ -4,7 +4,7 @@ import { PixelRatio, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useDerivedValue, useFrameCallback, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 
 import { kipShader } from './kipShader';
-import { ANCHOR_Y, REST_POSE, blinkAmount, eyesFor, isBouncy, poseFor, type KipMood, type Pose } from './motion';
+import { ANCHOR_Y, REST_POSE, eyesFor, isBouncy, startSim, stepKip, type KipMood, type KipSim, type Pose } from './motion';
 
 export type KipProps = {
   mood?: KipMood;
@@ -41,47 +41,16 @@ export default function KipJelly({ mood = 'idle', size = 160, style }: KipProps)
   useEffect(() => ampSV.set(reduceMotion ? 0.35 : 1), [reduceMotion, ampSV]);
 
   // Everything the shader needs, recomputed every frame on the UI thread.
-  const sim = useSharedValue({ lastT: -1, pose: REST_POSE as Pose, pokeAt: -10, pokesSeen: 0, blinkAt: 1 + seed * 0.3 });
+  const sim = useSharedValue<KipSim>(startSim(seed));
   const uniforms = useSharedValue(shaderInputs(REST_POSE, 0, 1, eyesFor(0, mood), 1, false));
 
-  useFrameCallback(({ timeSinceFirstFrame }) => {
+  useFrameCallback(({ timeSincePreviousFrame }) => {
     'worklet';
-    const s = sim.value;
-    const t = timeSinceFirstFrame / 1000;
-    const dt = s.lastT < 0 ? 0 : Math.min(0.05, Math.max(0, t - s.lastT));
     const m = moodSV.value;
     const amp = ampSV.value;
-
-    // Ease toward the mood's pose; hops follow it exactly so landings stay crisp.
-    const goal = poseFor(t, m, seed);
-    const k = isBouncy(m) ? 1 : 1 - Math.exp(-dt * 9);
-    const p = s.pose;
-    const pose: Pose = {
-      sx: p.sx + (goal.sx - p.sx) * k,
-      sy: p.sy + (goal.sy - p.sy) * k,
-      rot: p.rot + (goal.rot - p.rot) * k,
-      jump: p.jump + (goal.jump - p.jump) * k,
-      wob: p.wob + (goal.wob - p.wob) * k,
-    };
-
-    // A tap starts a jiggle that dies away over about a second.
-    const pokeAt = pokes.value !== s.pokesSeen ? t : s.pokeAt;
-    const since = t - pokeAt;
-    const envelope = since < 3 ? Math.exp(-since * 4.5) : 0;
-    const jiggle = Math.sin(since * 20) * envelope;
-    const shown: Pose = {
-      sx: 1 + (pose.sx - 1) * amp - 0.09 * jiggle * amp,
-      sy: 1 + (pose.sy - 1) * amp + 0.11 * jiggle * amp,
-      rot: pose.rot * amp,
-      jump: pose.jump * amp,
-      wob: (pose.wob + 0.03 * envelope) * amp,
-    };
-
-    // Blink every 2.6–5.2 s.
-    const blinkAt = t > s.blinkAt + 0.14 ? t + 2.6 + Math.random() * 2.6 : s.blinkAt;
-
-    uniforms.value = shaderInputs(shown, t, amp, eyesFor(t, m), blinkAmount(t, blinkAt), isBouncy(m));
-    sim.value = { lastT: t, pose, pokeAt, pokesSeen: pokes.value, blinkAt };
+    const next = stepKip(sim.value, timeSincePreviousFrame, m, amp, pokes.value, seed);
+    uniforms.value = shaderInputs(next.shown, next.t, amp, eyesFor(next.t, m), next.blink, isBouncy(m));
+    sim.value = next.sim;
   });
 
   // Same values, placed on this canvas.

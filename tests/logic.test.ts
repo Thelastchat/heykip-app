@@ -22,6 +22,7 @@ import { recapContext, recapFor } from '../src/lib/recap';
 import { cleanName, findPriceChanges, findRepeats, findStopped, foundSubs, streamingTotal } from '../src/lib/subs';
 import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
 import { kipKnows } from '../src/lib/kipknows';
+import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
 // ---------- tiny test kit ----------
 let seed = 20261103;
@@ -1158,6 +1159,35 @@ for (let n = 0; n < 2000; n++) {
     check('Text Size: line height grows with the text (Thai marks keep room)', (st.lineHeight as number) >= (st.fontSize as number) * 1.5 - 1, () => ({ size, st }));
   }
   check('Text Size: a nested text with no size of its own takes the grown size around it', grownStyle({ color: 'red' }, 2, true) === null, () => 0);
+}
+
+// ---------- Kip's jelly motion ----------
+// The frame callback can start again (Reanimated restarts its clock on every re-render — a sheet closing over Kip).
+// Whatever happens — taps, restarts, long stalls, any mood — Kip stays Kip-shaped: no runaway squash, wave or hop.
+{
+  for (let run = 0; run < 300; run++) {
+    const kipSeed = rand() * 10;
+    let sim = startSim(kipSeed);
+    let pokes = 0;
+    let worst = 0;
+    let lastClock = 0;
+    let bad: unknown = null;
+    for (let f = 0; f < 900; f++) {
+      if (rand() < 0.01) pokes++;
+      const restart = rand() < 0.01;
+      const elapsed = restart ? null : rand() < 0.01 ? int(200, 5000) : 1000 / pick([60, 120, 30]);
+      const mood = KIP_MOODS[Math.floor(f / 150) % KIP_MOODS.length];
+      const next = stepKip(sim, elapsed, mood, pick([1, 0.35]), pokes, kipSeed);
+      const p = next.shown;
+      const off = Math.max(Math.abs(p.sx - 1), Math.abs(p.sy - 1), Math.abs(p.rot), Math.abs(p.jump), Math.abs(p.wob));
+      worst = Math.max(worst, Number.isFinite(off) ? off : Infinity);
+      if (next.sim.clock < lastClock && !bad) bad = { f, clock: next.sim.clock, lastClock };
+      lastClock = next.sim.clock;
+      sim = next.sim;
+    }
+    check('Kip: his clock never runs backwards, even when the frame callback restarts', !bad, () => bad);
+    check('Kip: taps, restarts and stalls never bend him out of shape (every value stays within 0.6 of rest)', worst < 0.6, () => ({ run, worst }));
+  }
 }
 
 // ---------- report ----------

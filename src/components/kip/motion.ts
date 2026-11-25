@@ -104,3 +104,53 @@ export function blinkAmount(t: number, blinkAt: number): number {
   if (t < blinkAt || t > blinkAt + BLINK) return 1;
   return Math.max(0.08, Math.abs(Math.cos(((t - blinkAt) / BLINK) * Math.PI)));
 }
+
+/** Everything Kip remembers from one frame to the next. `clock` is Kip's own time, in seconds: it only moves forward. */
+export type KipSim = { clock: number; pose: Pose; pokeAt: number; pokesSeen: number; blinkAt: number };
+
+export function startSim(seed: number): KipSim {
+  'worklet';
+  return { clock: 0, pose: REST_POSE, pokeAt: -10, pokesSeen: 0, blinkAt: 1 + seed * 0.3 };
+}
+
+/**
+ * One frame of Kip. `elapsedMs` is the time since the previous frame — null on the first frame of a frame callback.
+ * Kip keeps his own clock instead of Reanimated's `timeSinceFirstFrame`, which starts again at 0 whenever the
+ * callback is registered again (every re-render, e.g. when a sheet closes over him). With that clock going
+ * backwards, a tap from before became a jiggle "in the future" and its exp() exploded, smearing Kip across his canvas.
+ */
+export function stepKip(s: KipSim, elapsedMs: number | null, mood: KipMood, amp: number, pokes: number, seed: number) {
+  'worklet';
+  const dt = Math.min(0.05, Math.max(0, (elapsedMs ?? 0) / 1000));
+  const t = s.clock + dt;
+
+  // Ease toward the mood's pose; hops follow it exactly so landings stay crisp.
+  const goal = poseFor(t, mood, seed);
+  const k = isBouncy(mood) ? 1 : 1 - Math.exp(-dt * 9);
+  const p = s.pose;
+  const pose: Pose = {
+    sx: p.sx + (goal.sx - p.sx) * k,
+    sy: p.sy + (goal.sy - p.sy) * k,
+    rot: p.rot + (goal.rot - p.rot) * k,
+    jump: p.jump + (goal.jump - p.jump) * k,
+    wob: p.wob + (goal.wob - p.wob) * k,
+  };
+
+  // A tap starts a jiggle that dies away over about a second.
+  const pokeAt = pokes !== s.pokesSeen ? t : s.pokeAt;
+  const since = Math.max(0, t - pokeAt);
+  const envelope = since < 3 ? Math.exp(-since * 4.5) : 0;
+  const jiggle = Math.sin(since * 20) * envelope;
+  const shown: Pose = {
+    sx: 1 + (pose.sx - 1) * amp - 0.09 * jiggle * amp,
+    sy: 1 + (pose.sy - 1) * amp + 0.11 * jiggle * amp,
+    rot: pose.rot * amp,
+    jump: pose.jump * amp,
+    wob: (pose.wob + 0.03 * envelope) * amp,
+  };
+
+  // Blink every 2.6–5.2 s.
+  const blinkAt = t > s.blinkAt + 0.14 ? t + 2.6 + Math.random() * 2.6 : s.blinkAt;
+
+  return { sim: { clock: t, pose, pokeAt, pokesSeen: pokes, blinkAt } as KipSim, shown, t, blink: blinkAmount(t, blinkAt) };
+}
