@@ -15,6 +15,13 @@ import { GlowBackground } from '@/components/glow/GlowBackground';
 
 // Email + 6-digit code. It works everywhere, including Expo Go, with no deep links.
 // Apple and Google sign-in are added once their keys are set up in Supabase.
+
+// Apple's reviewers (TestFlight and App Store) can't receive an emailed code, so this one account signs in with a
+// fixed number instead: its password, set only in the Supabase dashboard and given to Apple in App Store Connect.
+// No email is sent for it. Everyone else gets a code as usual.
+const REVIEW_EMAIL = 'appreview@heykip.app';
+const isReview = (e: string) => e.trim().toLowerCase() === REVIEW_EMAIL;
+
 export default function SignIn() {
   // Arriving from a signed promise: this is "save your plan", not a cold sign-in.
   const saving = Boolean(useSetup().draft.signature);
@@ -28,6 +35,7 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
 
   async function sendCode() {
+    if (isReview(email)) return setStep('code');
     setBusy(true);
     setError(null);
     const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } });
@@ -39,7 +47,9 @@ export default function SignIn() {
   async function verify() {
     setBusy(true);
     setError(null);
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
+    const { error } = isReview(email)
+      ? await supabase.auth.signInWithPassword({ email: REVIEW_EMAIL, password: code.trim() })
+      : await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
     setBusy(false);
     if (error) setError(t('That code didn’t work. Check the newest email and try again.'));
   }
