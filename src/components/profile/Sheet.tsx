@@ -19,7 +19,14 @@ export function Sheet({ open, onClose, title, sub, children }: { open: boolean; 
         <Pressable style={sheet.dim} onPress={onClose} accessibilityLabel={t('Close')} />
         <DragSheet onClose={onClose} style={[sheet.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
           <View style={sheet.grip} />
-          <FormScroll style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false} bounces={false}>
+          {/* The scroll reaches the sheet's edges (content keeps its 18 inset), so a card's soft shadow isn't cut off
+              into a hard grey edge that looks like another card hiding behind it. */}
+          <FormScroll
+            style={{ flexGrow: 0, flexShrink: 1, marginHorizontal: -18 }}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 14, paddingHorizontal: 18, paddingBottom: 12 }}
+            showsVerticalScrollIndicator={false}
+            bounces={false}>
             <View style={{ alignItems: 'center', gap: 3 }}>
               <Text style={sheet.title}>{title}</Text>
               {sub ? <Text style={[sheet.sub, { textAlign: 'center' }]}>{sub}</Text> : null}

@@ -50,7 +50,7 @@ export function MonthTellKip({ month, save }: { month: MonthBudget; save: (m: Mo
   const tell = useTellKip<MonthBudget>(async (text) => {
     const r = await askKipDo<{ ops?: Op[] }>('month', text, {
       month: {
-        categories: month.spend.map((s) => ({ key: s.key, amount: s.amount })),
+        categories: month.spend.map((s) => ({ key: s.key, name: CATEGORY[s.key].name, amount: s.amount })),
         bills: (month.bills.items ?? []).map((b) => ({ name: b.name, amount: b.amount })),
         rent: month.bills.rent,
         bills_guess: month.bills.guess,

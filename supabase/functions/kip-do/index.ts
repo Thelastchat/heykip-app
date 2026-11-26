@@ -7,6 +7,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const MODEL = 'claude-haiku-5-5';
 const CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'learning', 'giving', 'other', 'spend_freely'];
 
+const CAT_NAMES =
+  'Category names: each key is a row the person sees on screen (English / Thai), and they may say any part of its name, in either language, with or without "&", plural or misspelt: food = "Food & drinks" / "อาหารและเครื่องดื่ม" (food, drinks, eating, meals, coffee, ข้าว, กิน); transport = "Transport" / "เดินทาง" (getting around, BTS, MRT, Grab, bike taxi, รถ, วิน); shopping = "Shopping" / "ช้อปปิ้ง" (clothes, gadgets, online, ช้อป); fun = "Fun" / "เที่ยวเล่น" (going out, movies, parties, เที่ยว); health_beauty = "Health & beauty" / "สุขภาพและความงาม" (health, beauty, pharmacy, haircut, skincare, สุขภาพ, ความงาม); learning = "Learning" / "เรียนรู้" (courses, books, เรียน); giving = "Giving" / "ให้คนอื่น" (gifts, donations, ทำบุญ); other = "Household & other" / "ของใช้ในบ้านและอื่นๆ" (household, home, laundry, small things, other, ของใช้, ในบ้าน, อื่นๆ); spend_freely = "Spend freely" / "ใช้ได้อิสระ". Match what they said to the key yourself. Never say a category does not exist or is not in the plan when what they said fits one of these names. Only when it truly fits none (or two equally), ask which one, naming the categories the way the app shows them (never keys like health_beauty or spend_freely).';
+
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -169,6 +172,7 @@ Deno.serve(async (req) => {
           'You are Kip, a friendly money buddy inside the HeyKip app. Amounts are Thai baht.',
           ...VOICE,
           JOB[task as string],
+          CAT_NAMES,
           'Use only numbers from the context or that the person said. "half" = 50%, "the rest" = whatever is left so the total matches.',
           'Reply in the language the person used; if unclear, the app language.',
           `The app is set to ${thai ? 'Thai' : 'English'}. In Thai, sound like a friend texting (ได้เลย, นะ), never formal. Kip and HeyKip stay in English letters.`,
