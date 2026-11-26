@@ -16,7 +16,15 @@ export const ICON3D = {
   shield: require('../../assets/icons3d/shield.png'),
   plane: require('../../assets/icons3d/plane.png'),
   phone: require('../../assets/icons3d/phone.png'),
-  fun: require('../../assets/icons3d/fun.png'), // stand-in until the real Fun icon is made
+  fun: require('../../assets/icons3d/fun.png'),
+  // For people's own categories (same yellow, matte clay set).
+  pet: require('../../assets/icons3d/pet.png'),
+  coffee: require('../../assets/icons3d/coffee.png'),
+  gift: require('../../assets/icons3d/gift.png'),
+  book: require('../../assets/icons3d/book.png'),
+  game: require('../../assets/icons3d/game.png'),
+  baby: require('../../assets/icons3d/baby.png'),
+  gym: require('../../assets/icons3d/gym.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 export type Icon3D = keyof typeof ICON3D;
