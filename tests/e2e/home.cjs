@@ -61,7 +61,12 @@ module.exports = async function homeTests(browser) {
     });
     const page = await open(browser, { db });
     const m = db.profiles[0].budget;
-    const before = await sane(page, 'Home');
+    let before = await sane(page, 'Home');
+    // "Left this month" counts up when Home opens: wait (up to 3 s) for it to land before reading it.
+    for (let i = 0; i < 15 && !before.includes(fmt(X.spendingTotal(m) - 162)); i++) {
+      await page.waitForTimeout(200);
+      before = await screenText(page);
+    }
     await check(page, `Home: left this month = plan − spent (${fmt(X.spendingTotal(m) - 162)})`, before.includes(fmt(X.spendingTotal(m) - 162)), () => before.slice(0, 200));
     await addSpend(page, 250, 'Food', 'Noodles');
     const t = db.transactions.find((x) => x.note === 'Noodles');
