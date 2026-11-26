@@ -25,6 +25,7 @@ export const ICON3D = {
   game: require('../../assets/icons3d/game.png'),
   baby: require('../../assets/icons3d/baby.png'),
   gym: require('../../assets/icons3d/gym.png'),
+  music: require('../../assets/icons3d/music.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
 export type Icon3D = keyof typeof ICON3D;
