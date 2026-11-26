@@ -68,10 +68,13 @@ export function useVoice(onStoppedByItself: (heard: string) => void) {
   const heard = useRef('');
   const done = useRef<((t: string) => void) | null>(null);
   const subs = useRef<{ remove: () => void }[]>([]);
+  const pause = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clear = useCallback(() => {
     subs.current.forEach((s) => s.remove());
     subs.current = [];
+    if (pause.current) clearTimeout(pause.current);
+    pause.current = null;
   }, []);
   useEffect(
     () => () => {
@@ -91,9 +94,12 @@ export function useVoice(onStoppedByItself: (heard: string) => void) {
     else stoppedByItself.current(heard.current.trim());
   }, [clear]);
 
-  /** Start listening. Returns a problem if it can't. */
+  /**
+   * Start listening. Returns a problem if it can't. With `pauseMs` (talking with Kip like a call), it stops by itself
+   * once they've said something and then paused that long; with nothing said at all it stops after `giveUpMs`.
+   */
   const start = useCallback(
-    async (lang: VoiceLang): Promise<VoiceProblem | null> => {
+    async (lang: VoiceLang, opts?: { pauseMs?: number; giveUpMs?: number }): Promise<VoiceProblem | null> => {
       const m = voiceModule();
       if (!m) return 'unavailable';
       const perm = await m.requestPermissionsAsync();
@@ -102,12 +108,22 @@ export function useVoice(onStoppedByItself: (heard: string) => void) {
       heard.current = '';
       setText('');
       setState('starting');
+      // The quiet timer: restarted on every word; when it runs out the phone stops and `end` hands over the words.
+      const wait = (ms?: number) => {
+        if (!ms) return;
+        if (pause.current) clearTimeout(pause.current);
+        pause.current = setTimeout(() => m.stop(), ms);
+      };
       subs.current = [
-        m.addListener('start', () => setState('listening')),
+        m.addListener('start', () => {
+          setState('listening');
+          wait(opts?.giveUpMs);
+        }),
         m.addListener('result', (e) => {
           const t = e.results[0]?.transcript ?? '';
           heard.current = t;
           setText(t);
+          if (t.trim()) wait(opts?.pauseMs);
         }),
         m.addListener('volumechange', (e) => setLevel(Math.max(0, Math.min(1, e.value / 10)))),
         m.addListener('error', () => settle()),

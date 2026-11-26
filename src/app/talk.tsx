@@ -6,7 +6,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { ArrowUp, Microphone, X } from 'phosphor-react-native';
+import { ArrowUp, Keyboard, Microphone, X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
-import { Listening } from '@/components/talk/Listening';
+import { Blink, LangSwitch, LiveWords, Waves } from '@/components/talk/VoiceBits';
 import { SlipRangeCard } from '@/components/talk/SlipRangeCard';
 import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
@@ -57,6 +57,7 @@ import { monthYear, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
 import { loggedToday } from '@/lib/checkin';
+import { hush, say } from '@/lib/kipSpeak';
 import { colors, fonts, inkA, themed } from '@/theme';
 
 type Turn = {
@@ -137,47 +138,84 @@ export default function Talk() {
   const first = profile?.display_name?.split(' ')[0];
 
   // ---- talking out loud ----
-  const [listening, setListening] = useState(false);
+  // Talking with Kip out loud, right here (like a call): tap Kip, say it, pause — Kip answers out loud and listens
+  // again, until they tap the keyboard or leave. Typing never makes Kip speak.
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const live = useRef(false); // voiceOn, for callbacks that finish after a re-render
   const [lang, setLang] = useState<VoiceLang>(defaultVoiceLang);
   useEffect(() => {
     savedVoiceLang().then((l) => l && setLang(l));
   }, []);
   const ai = useAiConsent(() => router.push('/privacy-policy'));
   const voice = useVoice((heard) => {
-    // The phone stopped by itself (long silence, or a hiccup): use what it heard.
-    setListening(false);
-    if (heard) send(heard);
-    else flash(t('I didn’t catch that — try again?'));
+    // The phone stopped by itself: they paused after saying something, or said nothing for a while.
+    if (!live.current) return;
+    if (heard) talkTurn(heard);
+    else {
+      endVoice();
+      flash(t('Tap Kip when you want to talk'));
+    }
   });
+  useEffect(
+    () => () => {
+      live.current = false;
+      hush();
+    },
+    [],
+  );
 
   async function listen(l = lang) {
     if (!isPlus) return setLocked(true);
     if (!(await ai.ensure())) return;
     if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap the mic on your keyboard.'));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setListening(true);
-    const problem = await voice.start(l);
+    live.current = true;
+    setVoiceOn(true);
+    const problem = await voice.start(l, { pauseMs: 1300, giveUpMs: 12_000 });
     if (problem) {
-      setListening(false);
+      endVoice();
       flash(problem === 'denied' ? t('I need the microphone — turn it on for HeyKip in Settings.') : t('Listening isn’t working right now — type it instead?'));
     }
   }
-  async function doneTalking() {
-    const heard = await voice.finish();
-    setListening(false);
-    if (heard) send(heard);
-    else flash(t('I didn’t catch that — try again?'));
+  /** One turn of the call: send what they said, Kip says his answer out loud, then listens again. */
+  async function talkTurn(heard: string) {
+    const said = await send(heard);
+    if (!live.current) return;
+    if (!said) return endVoice();
+    setSpeaking(true);
+    await say(said);
+    setSpeaking(false);
+    if (live.current) listen();
   }
-  function stopTalking() {
+  /** Tapping Kip: start talking · send now (don't wait for the pause) · cut in while he's talking. */
+  async function tapKip() {
+    if (!voiceOn) return listen();
+    if (speaking) return hush(); // talkTurn carries on and listens again
+    if (voice.state === 'listening') {
+      Haptics.selectionAsync().catch(() => {});
+      const heard = await voice.finish();
+      if (live.current && heard) talkTurn(heard);
+    }
+  }
+  function endVoice() {
+    live.current = false;
+    setVoiceOn(false);
+    setSpeaking(false);
     voice.cancel();
-    setListening(false);
+    hush();
   }
   function switchLang(l: VoiceLang) {
     setLang(l);
     saveVoiceLang(l);
+    if (voice.state === 'idle') return;
     voice.cancel();
     listen(l);
   }
+  const thinking = turns.some((x) => x.state === 'thinking');
+  const phase: 'off' | 'listening' | 'thinking' | 'speaking' = !voiceOn ? 'off' : speaking ? 'speaking' : voice.state === 'idle' || thinking ? 'thinking' : 'listening';
+  const kipMood = phase === 'speaking' ? 'talk' : phase === 'thinking' ? 'think' : 'listen';
+  const hearing = phase === 'listening' ? voice.text.trim() : '';
 
   function flash(msg: string) {
     setToast(msg);
@@ -237,11 +275,15 @@ export default function Talk() {
       });
   }
 
-  async function send(said = text) {
+  /** Send to Kip. Resolves with what Kip said back (for talking out loud), or null if nothing was sent. */
+  async function send(said = text): Promise<string | null> {
     const msg = said.trim();
-    if (!msg) return;
-    if (!isPlus) return setLocked(true);
-    if (!(await ai.ensure())) return;
+    if (!msg) return null;
+    if (!isPlus) {
+      setLocked(true);
+      return null;
+    }
+    if (!(await ai.ensure())) return null;
     Haptics.selectionAsync().catch(() => {});
     const id = nextId.current++;
     setText('');
@@ -279,10 +321,10 @@ export default function Talk() {
         if (dupe) update(id, { dupe });
         else saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
       }
-    } else
-      update(id, {
-        state: 'error',
-        error:
+      setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
+      return reply.reply;
+    }
+    const error =
           res.reason === 'consent'
             ? t('Kip’s reading is turned off — turn it on in Profile → Privacy & data.')
             : res.reason === 'limit'
@@ -293,10 +335,11 @@ export default function Talk() {
                   ? t('Talking to me is a Plus feature.')
                   : res.reason === 'offline'
                     ? t('I can’t reach the internet right now. Try again in a moment?')
-                    : t('I got a bit muddled. Try saying it another way?'),
-      });
-    if (!res.ok && res.reason === 'plus') setLocked(true);
+                    : t('I got a bit muddled. Try saying it another way?');
+    update(id, { state: 'error', error });
+    if (res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
+    return res.reason === 'plus' ? null : error;
   }
 
   async function saveItems(turn: Turn, items: Item[]) {
@@ -394,10 +437,20 @@ export default function Talk() {
           </Glass>
         </Pressable>
         <Glass radius={999} innerStyle={styles.status}>
-          <View style={[styles.dot, turns.some((x) => x.state === 'thinking') && { backgroundColor: colors.orange }]} />
-          <Text style={styles.statusText}>{turns.some((x) => x.state === 'thinking') ? t('Thinking…') : isPlus ? 'Kip' : t('Kip · Plus feature')}</Text>
+          {phase === 'listening' ? <Blink on /> : <View style={[styles.dot, (thinking || phase === 'speaking') && { backgroundColor: colors.orange }]} />}
+          <Text style={styles.statusText}>
+            {phase === 'listening' ? t('Listening') : phase === 'speaking' ? t('Kip is talking') : thinking ? t('Thinking…') : isPlus ? 'Kip' : t('Kip · Plus feature')}
+          </Text>
         </Glass>
-        <View style={{ width: 44 }} />
+        {voiceOn ? (
+          <Pressable onPress={() => switchLang(lang === 'th-TH' ? 'en-US' : 'th-TH')} accessibilityRole="button" accessibilityLabel={t('Switch language')}>
+            <Glass radius={999}>
+              <LangSwitch th={lang === 'th-TH'} />
+            </Glass>
+          </Pressable>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
       </View>
 
       <ScrollView
@@ -408,11 +461,25 @@ export default function Talk() {
         {turns.length === 0 && (
           <RiseIn style={{ alignItems: 'center', marginTop: 12 }}>
             <Text style={styles.h1}>{t('What did you spend today?')}</Text>
-            <View style={{ marginVertical: 20 }}>
-              <Kip mood="listen" size={168} />
-            </View>
-            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
-            {n && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
+            <Pressable onPress={tapKip} style={styles.stage} accessibilityRole="button" accessibilityLabel={voiceOn ? t('Send now') : t('Tap Kip to talk')}>
+              <Waves size={200} level={voice.level} on={phase === 'listening'} />
+              <Kip mood={kipMood} size={168} />
+            </Pressable>
+            {voiceOn ? (
+              hearing ? (
+                <LiveWords text={hearing} style={styles.said} />
+              ) : (
+                <Text style={[styles.sub, styles.hint]}>
+                  {phase === 'listening' ? (lang === 'th-TH' ? 'พูดได้เลย เช่น “ข้าวมันไก่ 60 วิน 40”' : 'Just say it, like “Chicken rice 60, Grab 80”') : ' '}
+                </Text>
+              )
+            ) : (
+              <>
+                <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
+                <Text style={styles.tapKip}>{t('Or tap Kip and just say it')}</Text>
+              </>
+            )}
+            {n && !voiceOn && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
           </RiseIn>
         )}
 
@@ -442,9 +509,14 @@ export default function Talk() {
             )}
           </View>
         ))}
+        {turns.length > 0 && hearing ? (
+          <View style={[styles.me, styles.meLive]}>
+            <LiveWords text={hearing} style={styles.meText} />
+          </View>
+        ) : null}
       </ScrollView>
 
-      {turns.length === 0 && (
+      {turns.length === 0 && !voiceOn && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -461,6 +533,28 @@ export default function Talk() {
         </ScrollView>
       )}
 
+      {voiceOn ? (
+        <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
+          <Glass radius={30} style={{ flex: 1 }} innerStyle={styles.dock}>
+            {turns.length > 0 && (
+              <Pressable onPress={tapKip} style={styles.dockKip} accessibilityRole="button" accessibilityLabel={phase === 'speaking' ? t('Cut in') : t('Send now')}>
+                <Waves size={52} level={voice.level} on={phase === 'listening'} />
+                <Kip mood={kipMood} size={52} />
+              </Pressable>
+            )}
+            <Pressable onPress={tapKip} style={{ flex: 1, paddingLeft: turns.length > 0 ? 0 : 10 }} accessibilityRole="button">
+              <Text style={styles.dockText} numberOfLines={2}>
+                {phase === 'listening' ? t('Pause and Kip answers · tap Kip to send now') : phase === 'speaking' ? t('Tap Kip to cut in') : t('One moment…')}
+              </Text>
+            </Pressable>
+          </Glass>
+          <Pressable onPress={endVoice} accessibilityRole="button" accessibilityLabel={t('Stop talking and type')}>
+            <Glass radius={30} innerStyle={styles.dockBtn}>
+              <Keyboard size={22} color={colors.ink} weight="bold" />
+            </Glass>
+          </Pressable>
+        </View>
+      ) : (
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel={t('Talk to Kip out loud')}>
           <Glass radius={24} innerStyle={styles.mic}>
@@ -485,6 +579,7 @@ export default function Talk() {
           <ArrowUp size={20} color={text.trim() ? colors.paper : colors.muted} weight="bold" />
         </Squish>
       </View>
+      )}
 
       {moneyIn && (
         <MoneyInSheet
@@ -501,8 +596,6 @@ export default function Talk() {
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
-
-      {listening && <Listening name={first} state={voice.state} text={voice.text} level={voice.level} lang={lang} onLang={switchLang} onDone={doneTalking} onCancel={stopTalking} />}
 
       {ai.sheet}
       {locked && !isPlus && (
@@ -837,6 +930,15 @@ const styles = themed(() =>
     input: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
     send: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     sendOff: { backgroundColor: inkA(0.08) },
+    stage: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginVertical: 4 },
+    said: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 30, color: colors.ink, textAlign: 'center', paddingHorizontal: 20 },
+    hint: { textAlign: 'center', paddingHorizontal: 20, fontSize: 15, lineHeight: 21 },
+    tapKip: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, marginTop: 10 },
+    meLive: { opacity: 0.85 },
+    dock: { height: 60, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 6, paddingRight: 16 },
+    dockKip: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
+    dockText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
+    dockBtn: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
     toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
   }),
