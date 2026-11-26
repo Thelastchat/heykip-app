@@ -83,6 +83,8 @@ type Turn = {
   before?: MonthBudget;
   /** change / fix: a newer one came ("actually make it ฿279"), so this one can't be done any more */
   replaced?: boolean;
+  /** Kip's 50 for today are used up */
+  limit?: boolean;
 };
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
@@ -115,6 +117,9 @@ export default function Talk() {
   const [ids, setIds] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
+  // Kip's messages left today (from the server, after each answer). Shown only near the end, so it never nags.
+  const [kipLeft, setKipLeft] = useState<number | null>((globalThis as { __KIP_LEFT?: number }).__KIP_LEFT ?? null); // MOCKUP default
+  const outOfKip = kipLeft === 0;
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const nextId = useRef(1);
 
@@ -336,7 +341,8 @@ export default function Talk() {
                   : res.reason === 'offline'
                     ? t('I can’t reach the internet right now. Try again in a moment?')
                     : t('I got a bit muddled. Try saying it another way?');
-    update(id, { state: 'error', error });
+    update(id, { state: 'error', error, limit: res.reason === 'limit' });
+    if (res.reason === 'limit') setKipLeft(0);
     if (res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
     return res.reason === 'plus' ? null : error;
@@ -439,7 +445,19 @@ export default function Talk() {
         <Glass radius={999} innerStyle={styles.status}>
           {phase === 'listening' ? <Blink on /> : <View style={[styles.dot, (thinking || phase === 'speaking') && { backgroundColor: colors.orange }]} />}
           <Text style={styles.statusText}>
-            {phase === 'listening' ? t('Listening') : phase === 'speaking' ? t('Kip is talking') : thinking ? t('Thinking…') : isPlus ? 'Kip' : t('Kip · Plus feature')}
+            {phase === 'listening'
+              ? t('Listening')
+              : phase === 'speaking'
+                ? t('Kip is talking')
+                : thinking
+                  ? t('Thinking…')
+                  : !isPlus
+                    ? t('Kip · Plus feature')
+                    : outOfKip
+                      ? t('Kip · back at midnight')
+                      : kipLeft !== null && kipLeft <= 5
+                        ? t('Kip · {n} left today', { n: kipLeft })
+                        : 'Kip'}
           </Text>
         </Glass>
         {voiceOn ? (
@@ -489,7 +507,8 @@ export default function Talk() {
               <Text style={styles.meText}>{turn.me}</Text>
             </View>
             {turn.state === 'thinking' && <KipLine mood="think" text={t('Let me look…')} />}
-            {turn.state === 'error' && <KipLine mood="careful" text={turn.error ?? ''} />}
+            {turn.state === 'error' && !turn.limit && <KipLine mood="careful" text={turn.error ?? ''} />}
+            {turn.state === 'error' && turn.limit && <OutOfKip />}
             {turn.state === 'done' && turn.reply && (
               <Answer
                 turn={turn}
@@ -566,7 +585,8 @@ export default function Talk() {
             value={text}
             onChangeText={setText}
             onFocus={() => !isPlus && setLocked(true)}
-            placeholder={isPlus ? t('Message Kip') : t('Talk to Kip is a Plus feature')}
+            placeholder={!isPlus ? t('Talk to Kip is a Plus feature') : outOfKip ? t('Kip is back at midnight') : t('Message Kip')}
+            editable={!outOfKip}
             placeholderTextColor={colors.faint}
             style={styles.input}
             onSubmitEditing={() => send()}
@@ -604,6 +624,27 @@ export default function Talk() {
         </PlusSheet>
       )}
     </KeyboardSafe>
+  );
+}
+
+/** Kip's 50 for today are used up: say when he's back, and what still works without him. */
+function OutOfKip() {
+  return (
+    <View style={{ gap: 10 }}>
+      <KipLine mood="careful" text={t('That’s all 50 of my messages for today, so I’m resting. I’m back at midnight.')} />
+      <Squish onPress={() => router.push('/add')} accessibilityRole="button">
+        <Glass radius={22} innerStyle={styles.outCard}>
+          <Image source={ICON3D.expense} style={{ width: 40, height: 40 }} contentFit="contain" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.outTitle}>{t('Log it yourself')}</Text>
+            <Text style={styles.cap}>{t('Takes a few seconds. Today’s money still updates.')}</Text>
+          </View>
+          <View style={styles.outPill}>
+            <Text style={styles.outPillText}>{t('Add')}</Text>
+          </View>
+        </Glass>
+      </Squish>
+    </View>
   );
 }
 
@@ -930,6 +971,10 @@ const styles = themed(() =>
     input: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
     send: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     sendOff: { backgroundColor: inkA(0.08) },
+    outCard: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    outTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+    outPill: { height: 36, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+    outPillText: { fontFamily: fonts.medium, fontSize: 13, color: colors.paper },
     stage: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginVertical: 4 },
     said: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 30, color: colors.ink, textAlign: 'center', paddingHorizontal: 20 },
     hint: { textAlign: 'center', paddingHorizontal: 20, fontSize: 15, lineHeight: 21 },

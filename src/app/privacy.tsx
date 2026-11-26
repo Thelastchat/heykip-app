@@ -14,9 +14,10 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { RiseIn, Squish } from '@/components/glow/motion';
+import { HoldButton } from '@/components/HoldButton';
 import { SaveButton, Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
-import { t } from '@/lib/i18n';
+import { monthShort, t } from '@/lib/i18n';
 import { autoSlipsAvailable, loadAuto, saveAuto, type AutoSlips } from '@/lib/autoslips';
 import { ICON3D } from '@/lib/icons3d';
 import { PRIVACY_EMAIL } from '@/lib/privacy';
@@ -29,11 +30,23 @@ export default function Privacy() {
   const ai = useAiConsent(() => router.push('/privacy-policy'));
   const [count, setCount] = useState<number | null>(null);
   const [auto, setAuto] = useState<AutoSlips | null>(null);
-  const [confirm, setConfirm] = useState<null | 'spending' | 'account'>(null);
+  const [confirm, setConfirm] = useState<null | 'spending' | 'fresh' | 'account'>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const uid = session?.user.id;
   const on = aiAllowed(profile);
+  const paying = profile ? profile.plan !== 'free' : false;
+  const dm = (iso?: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getDate()} ${monthShort(d.getMonth())}`;
+  };
+  const planLine =
+    profile?.plan === 'trial'
+      ? t('HeyKip Plus · your free trial still ends {date}', { date: dm(profile.trial_ends_at) })
+      : paying
+        ? t('HeyKip Plus · stays on')
+        : t('Your plan (Free)');
 
   const loadCount = useCallback(async () => {
     if (!uid) return;
@@ -84,6 +97,10 @@ export default function Privacy() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setCount(0);
     flash(t('All spending and slips are deleted.'));
+  }
+
+  async function startFresh() {
+    flash('MOCKUP: Start fresh'); // MOCKUP — the real clear-out comes after approval
   }
 
   async function deleteAccount() {
@@ -158,11 +175,45 @@ export default function Privacy() {
 
         <Glass radius={24} innerStyle={styles.group}>
           <Row title={t('Delete all spending & slips')} sub={t('Keeps your account, goals and plan')} danger onPress={() => setConfirm('spending')} />
-          <Row title={t('Delete account')} sub={t('Everything, for good')} danger line onPress={() => setConfirm('account')} />
+          <Row title={t('Start fresh')} sub={t('Clear everything and make a new plan · keeps your login and Plus')} danger line onPress={() => setConfirm('fresh')} />
+          <Row
+            title={t('Delete account')}
+            sub={paying ? t('Everything, for good · cancel Plus in the App Store first') : t('Everything, for good')}
+            danger
+            line
+            onPress={() => setConfirm('account')}
+          />
         </Glass>
       </ScrollView>
 
-      {confirm && (
+      {confirm === 'fresh' && (
+        <Sheet open onClose={() => setConfirm(null)} title={t('Start fresh?')} sub={t('Everything you made in HeyKip is cleared, then you set up a new plan. This can’t be undone.')}>
+          <Glass radius={22} innerStyle={styles.list}>
+            <Text style={styles.listHead}>{t('Cleared')}</Text>
+            {[t('Spending, slips and money in'), t('Goals, photos and your promise'), t('Bills and your monthly plan'), t('Safety net and what Kip learned')].map((x) => (
+              <Text key={x} style={styles.listItem}>
+                <Text style={{ color: colors.orangeText }}>– </Text>
+                {x}
+              </Text>
+            ))}
+            <View style={styles.listGap} />
+            <Text style={styles.listHead}>{t('Kept')}</Text>
+            {[t('Your login ({email})', { email: session?.user.email ?? '' }), planLine, t('Your privacy choices')].map((x) => (
+              <Text key={x} style={styles.listItem}>
+                <Text style={{ color: colors.ink }}>✓ </Text>
+                {x}
+              </Text>
+            ))}
+          </Glass>
+          <HoldButton label={busy ? t('Clearing…') : t('Hold to start fresh')} disabled={busy} onDone={startFresh} demo={(globalThis as { __HOLD?: number }).__HOLD /* MOCKUP */} />
+          <Squish onPress={() => setConfirm(null)} accessibilityRole="button">
+            <Glass radius={999} innerStyle={{ height: 52, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={styles.rowTitle}>{t('Keep everything')}</Text>
+            </Glass>
+          </Squish>
+        </Sheet>
+      )}
+      {(confirm === 'spending' || confirm === 'account') && (
         <Sheet
           open
           onClose={() => setConfirm(null)}
@@ -170,7 +221,9 @@ export default function Privacy() {
           sub={
             confirm === 'spending'
               ? t('Every entry you saved — typed, from slips or from Kip — is deleted for good. Your account, goals and plan stay. This can’t be undone.')
-              : t('Your goals, spending, photos and promise are deleted for good. This can’t be undone.')
+              : paying
+                ? t('Your goals, spending, photos and promise are deleted for good. Deleting doesn’t cancel Plus: cancel it first in Settings → your name → Subscriptions, or Apple keeps charging. Want to keep using HeyKip? Start fresh instead.')
+                : t('Your goals, spending, photos and promise are deleted for good. This can’t be undone.')
           }>
           <View style={{ alignItems: 'center', marginVertical: 4 }}>
             <Kip mood="careful" size={90} />
@@ -218,6 +271,10 @@ const styles = themed(() =>
     rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 1 },
     val: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, fontVariant: ['tabular-nums'] },
+    list: { paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
+    listHead: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+    listItem: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+    listGap: { height: 6 },
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
     toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
   }),

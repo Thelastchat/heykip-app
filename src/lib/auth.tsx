@@ -14,6 +14,7 @@ export type Profile = {
   safety_saved: number; // what's in the safety net pot
   ai_consent_at: string | null; // when they tapped Allow on "Before Kip reads for you"
   ai_off: boolean; // Privacy & data → Kip's AI turned off
+  trial_ends_at?: string | null; // when the free trial ends (already loaded with the profile)
 };
 
 type AuthState = {

@@ -9,5 +9,6 @@ import setup2 from './setup2';
 import privacy from './privacy';
 import slips from './slips';
 import talk from './talk';
+import categories from './categories';
 
-export const TH: Record<string, string> = { ...home, ...money, ...talk, ...setup1, ...setup2, ...slips, ...privacy, ...history, ...moneyin, ...safety };
+export const TH: Record<string, string> = { ...home, ...money, ...talk, ...setup1, ...setup2, ...slips, ...privacy, ...history, ...moneyin, ...safety, ...categories };
