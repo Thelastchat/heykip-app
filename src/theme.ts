@@ -1,5 +1,5 @@
 // HeyKip design tokens — the single source for colours, type, radii and shadows.
-// Glow redesign (Oct 2026): lime and orange moved warmer — lime to 58° (#FFFC9A), orange to 20° (#E28151).
+// Glow redesign (Oct 2026): lime and orange moved warmer — lime to 58° (#FFFC9A; matched to the 3D icons' yellow #FBF77A in Nov), orange to 20° (#E28151).
 // Lime is still the ONLY yellow; the 3D icon set is tinted to the same 58°.
 
 // Light (the original Glow) and Dark. Every screen reads these at the moment it draws, so switching the look
@@ -24,7 +24,7 @@ const LIGHT = {
   solid: '#141414', // the black cards (Plus) — stay dark in both looks
   onSolid: '#FFFFFF',
 
-  lime: '#FFFC9A',
+  lime: '#FBF77A', // = the light side of the 3D icons' yellow (58°), so fills and icons read as one colour
   limeDeep: '#F0EA4A', // the stronger lime: rings, fills, progress
   lavender: '#CAC2DF', // money in
   lavenderText: '#5B4A96', // money in, as text
@@ -85,7 +85,7 @@ const GLOW_LIGHT = {
   field: ['#FDFBF6', '#FCF8EF', '#F8F5F7', '#F5F2F8'] as readonly string[], // top → bottom
   peach: '#FFD2A6',
   peachWarm: '#FFBF8E', // when spending runs a bit fast
-  yellow: '#FFF47A',
+  yellow: '#FBF77A',
   lavender: '#DCD2F7',
   cream: '#FFE2C2',
   glass: 'rgba(255,255,255,0.42)',

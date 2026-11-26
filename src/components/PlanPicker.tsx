@@ -18,7 +18,7 @@ import { leakRules } from '@/lib/setup/rules';
 import { colors, fonts, money, inkA, themed } from '@/theme';
 
 /** A picked plan: its own pastel (light in both looks, so the dark text and outline always read). */
-const PICK: Record<Style, string> = { kip: '#FFFC9A', savefirst: '#D9E6CF', '503020': '#EDE6E5', jars: '#E7E1F0' };
+const PICK: Record<Style, string> = { kip: '#FBF77A', savefirst: '#D9E6CF', '503020': '#EDE6E5', jars: '#E7E1F0' };
 const DAY_ICON: Record<'food' | 'travel' | 'health' | 'fun', Icon3D> = { food: 'bowl', travel: 'car', health: 'heart', fun: 'fun' };
 
 /** "Best for you if: …" — the whole sentence, so Thai can word it freely. */

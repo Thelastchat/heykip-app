@@ -576,7 +576,7 @@ function DeleteSheet({ onClose, onError }: { onClose: () => void; onError: (t: s
 const styles = themed(() =>
   StyleSheet.create({
     me: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16 },
-    ava: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF6CF', borderWidth: 1, borderColor: colors.paper },
+    ava: { width: 56, height: 56, borderRadius: 28, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.lime, borderWidth: 1, borderColor: colors.paper },
     name: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
     sub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     chip: { height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: inkA(0.07), alignItems: 'center', justifyContent: 'center' },
