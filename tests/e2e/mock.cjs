@@ -171,7 +171,7 @@ async function install(page, db) {
       const out = arr.map((x) => {
         const hit = upsert && x.id ? rows.find((y) => y.id === x.id) : null;
         if (hit) return Object.assign(hit, x);
-        const row = { created_at: new Date().toISOString(), ...x, id: x.id ?? 'id-' + Math.random().toString(36).slice(2, 8) };
+        const row = { created_at: new Date().toISOString(), ...(table === 'transactions' ? { occurred_at: new Date().toISOString() } : {}), ...x, id: x.id ?? 'id-' + Math.random().toString(36).slice(2, 8) };
         rows.push(row);
         return row;
       });

@@ -97,15 +97,19 @@ const th: Record<string, string> = {
   'Keep it to spend': 'เก็บไว้ใช้',
   'Today’s money stays the same either way': 'เลือกแบบไหน เงินของวันนี้ก็เท่าเดิม',
 
-  // ---- Listening (components/talk/Listening.tsx) ----
-  'Stop and close': 'หยุดแล้วปิด',
-  'Got it…': 'ได้แล้ว…',
+  // ---- Talking with Kip out loud (app/talk.tsx) ----
   Listening: 'กำลังฟัง',
-  'Getting ready…': 'แป๊บนะ…',
   'Switch language': 'เปลี่ยนภาษา',
-  'Done talking': 'พูดเสร็จแล้ว',
   'One moment…': 'แป๊บนึงนะ…',
-  'Tap when you’re done': 'พูดเสร็จแล้วแตะเลย',
+  'Kip is talking': 'Kip กำลังพูด',
+  'Tap Kip to talk': 'แตะ Kip เพื่อคุย',
+  'Or tap Kip and just say it': 'หรือแตะ Kip แล้วพูดได้เลย',
+  'Send now': 'ส่งเลย',
+  'Cut in': 'พูดแทรก',
+  'Pause and Kip answers · tap Kip to send now': 'หยุดพูดแป๊บ Kip จะตอบ · แตะ Kip เพื่อส่งเลย',
+  'Tap Kip to cut in': 'แตะ Kip เพื่อพูดแทรก',
+  'Stop talking and type': 'เลิกพูด แล้วพิมพ์แทน',
+  'Tap Kip when you want to talk': 'อยากคุยเมื่อไหร่ แตะ Kip ได้เลยนะ',
 
   // ---- You & settings (app/profile.tsx) ----
   'Your goal': 'เป้าหมาย',
