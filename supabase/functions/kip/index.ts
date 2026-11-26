@@ -13,6 +13,23 @@ const MODEL = 'claude-haiku-5-5';
 const CAT_NAMES =
   'Category names: each key is a row the person sees on screen (English / Thai), and they may say any part of its name, in either language, with or without "&", plural or misspelt: food = "Food & drinks" / "อาหารและเครื่องดื่ม" (food, drinks, eating, meals, coffee, ข้าว, กิน); transport = "Transport" / "เดินทาง" (getting around, BTS, MRT, Grab, bike taxi, รถ, วิน); shopping = "Shopping" / "ช้อปปิ้ง" (clothes, gadgets, online, ช้อป); fun = "Fun" / "เที่ยวเล่น" (going out, movies, parties, เที่ยว); health_beauty = "Health & beauty" / "สุขภาพและความงาม" (health, beauty, pharmacy, haircut, skincare, สุขภาพ, ความงาม); learning = "Learning" / "เรียนรู้" (courses, books, เรียน); giving = "Giving" / "ให้คนอื่น" (gifts, donations, ทำบุญ); other = "Household & other" / "ของใช้ในบ้านและอื่นๆ" (household, home, laundry, small things, other, ของใช้, ในบ้าน, อื่นๆ); spend_freely = "Spend freely" / "ใช้ได้อิสระ". Match what they said to the key yourself. Never say a category does not exist or is not in the plan when what they said fits one of these names. Only when it truly fits none (or two equally), ask which one, naming the categories the way the app shows them (never keys like health_beauty or spend_freely).';
 
+// The person's own categories ("Create your own"), sent by the app. Only `c_` keys with a name are used, at most 8.
+type Own = { key: string; name: string; need: boolean };
+function ownCats(...lists: unknown[]): Own[] {
+  const seen = new Map<string, Own>();
+  for (const list of lists)
+    for (const c of Array.isArray(list) ? list : []) {
+      const k = (c as { key?: unknown })?.key;
+      const n = (c as { name?: unknown })?.name;
+      if (typeof k === 'string' && /^c_[a-z0-9]{2,12}$/.test(k) && typeof n === 'string' && n.trim() && !seen.has(k))
+        seen.set(k, { key: k, name: n.trim().slice(0, 24), need: !!(c as { need?: unknown }).need });
+    }
+  return [...seen.values()].slice(0, 8);
+}
+const ownLine = (own: Own[]) =>
+  own.length
+    ? `The person's own categories (they made these; use the key when what they said or paid for fits one, and prefer it over a built-in category that fits less well — e.g. an album for an own "K-pop"): ${own.map((o) => `${o.key} = ${JSON.stringify(o.name)} (${o.need ? 'a need' : 'a want'})`).join('; ')}.`
+    : '';
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -137,6 +154,17 @@ Deno.serve(async (req) => {
     if (!key) return json({ error: 'no key' }, 503);
 
     const { text, context, history } = await req.json();
+    const own = ownCats((context as { own?: unknown } | undefined)?.own, (context as { categories?: unknown } | undefined)?.categories);
+    // Their own categories join the lists Kip may pick from.
+    const kipTool = JSON.parse(JSON.stringify(tool));
+    if (own.length) {
+      const P = kipTool.input_schema.properties;
+      const keys = own.map((o) => o.key);
+      P.items.items.properties.category.enum.push(...keys);
+      P.buy.properties.category.enum.push(...keys);
+      P.fixes.items.properties.category.enum.push(...keys);
+      for (const f of ['from', 'to', 'category']) P.ops.items.properties[f].enum.push(...keys);
+    }
     const said = String(text ?? '')
       .slice(0, 500)
       .trim();
@@ -159,6 +187,7 @@ Deno.serve(async (req) => {
       'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
       CAT_NAMES,
+      ownLine(own),
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',
       `The person's month right now (JSON): ${JSON.stringify(context ?? {}).slice(0, 8000)}`,
     ].join('\n');
@@ -167,13 +196,17 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({ model: MODEL, max_tokens: 900, system, tools: [tool], tool_choice: { type: 'tool', name: 'kip_reply' }, messages: [...past, { role: 'user', content: said }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 900, system, tools: [kipTool], tool_choice: { type: 'tool', name: 'kip_reply' }, messages: [...past, { role: 'user', content: said }] }),
     });
     if (!r.ok) return json({ error: 'kip is busy', detail: (await r.text()).slice(0, 300) }, 502);
     const out = await r.json();
     const use = (out.content ?? []).find((c: { type: string }) => c.type === 'tool_use');
     if (!use) return json({ error: 'no reply' }, 502);
-    return json(use.input);
+    // How many Kip messages are left today (Thai time), so the app can say so near the end — never a surprise.
+    const { data: me } = await sb.from('profiles').select('ai_day, ai_count').eq('id', u.user.id).single();
+    const today = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+    const left = me && me.ai_day === today ? Math.max(0, 50 - Number(me.ai_count)) : 50;
+    return json({ ...use.input, left });
   } catch (e) {
     return json({ error: String(e).slice(0, 200) }, 500);
   }

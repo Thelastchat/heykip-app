@@ -39,6 +39,7 @@ import { liteOf } from '@/components/goals/bits';
 import { GoalCard } from '@/components/goals/GoalCard';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
+import { noteToday } from '@/lib/checkin';
 import { useMonth } from '@/lib/month';
 import { dueBills, nextDue } from '@/lib/billdue';
 import { applyOps } from '@/lib/monthops';
@@ -96,6 +97,10 @@ export default function Home() {
 
   // ---- the month in numbers (the same numbers as the + screen) ----
   const { P, spendBudget, leftMonth, dailyToday, leftToday, pace, overToday, overMonth, leftAtStart, daysAfter, dailyAfter, extraIn } = monthNumbers(month, spent, now);
+  // Tonight's check-in says today's real amount (only sent if nothing gets logged).
+  useEffect(() => {
+    if (month) noteToday(dailyToday);
+  }, [month, dailyToday]);
   const saving = month ? savingTotal(month) : 0;
   const split = month ? splitOf(month, goals.map(liteOf)) : new Map<string, number>();
   // When each goal really arrives at this month's pace — the same as the Goals screen (a new bill or a style change

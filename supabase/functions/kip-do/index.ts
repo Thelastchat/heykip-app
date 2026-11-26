@@ -10,6 +10,24 @@ const CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'learning
 const CAT_NAMES =
   'Category names: each key is a row the person sees on screen (English / Thai), and they may say any part of its name, in either language, with or without "&", plural or misspelt: food = "Food & drinks" / "อาหารและเครื่องดื่ม" (food, drinks, eating, meals, coffee, ข้าว, กิน); transport = "Transport" / "เดินทาง" (getting around, BTS, MRT, Grab, bike taxi, รถ, วิน); shopping = "Shopping" / "ช้อปปิ้ง" (clothes, gadgets, online, ช้อป); fun = "Fun" / "เที่ยวเล่น" (going out, movies, parties, เที่ยว); health_beauty = "Health & beauty" / "สุขภาพและความงาม" (health, beauty, pharmacy, haircut, skincare, สุขภาพ, ความงาม); learning = "Learning" / "เรียนรู้" (courses, books, เรียน); giving = "Giving" / "ให้คนอื่น" (gifts, donations, ทำบุญ); other = "Household & other" / "ของใช้ในบ้านและอื่นๆ" (household, home, laundry, small things, other, ของใช้, ในบ้าน, อื่นๆ); spend_freely = "Spend freely" / "ใช้ได้อิสระ". Match what they said to the key yourself. Never say a category does not exist or is not in the plan when what they said fits one of these names. Only when it truly fits none (or two equally), ask which one, naming the categories the way the app shows them (never keys like health_beauty or spend_freely).';
 
+// The person's own categories ("Create your own"), sent by the app. Only `c_` keys with a name are used, at most 8.
+type Own = { key: string; name: string; need: boolean };
+function ownCats(...lists: unknown[]): Own[] {
+  const seen = new Map<string, Own>();
+  for (const list of lists)
+    for (const c of Array.isArray(list) ? list : []) {
+      const k = (c as { key?: unknown })?.key;
+      const n = (c as { name?: unknown })?.name;
+      if (typeof k === 'string' && /^c_[a-z0-9]{2,12}$/.test(k) && typeof n === 'string' && n.trim() && !seen.has(k))
+        seen.set(k, { key: k, name: n.trim().slice(0, 24), need: !!(c as { need?: unknown }).need });
+    }
+  return [...seen.values()].slice(0, 8);
+}
+const ownLine = (own: Own[]) =>
+  own.length
+    ? `The person's own categories (they made these; use the key when what they said or paid for fits one, and prefer it over a built-in category that fits less well — e.g. an album for an own "K-pop"): ${own.map((o) => `${o.key} = ${JSON.stringify(o.name)} (${o.need ? 'a need' : 'a want'})`).join('; ')}.`
+    : '';
+
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -121,9 +139,24 @@ const TOOLS: Record<string, object> = {
       required: ['ok', 'reply'],
     },
   },
+  sort: {
+    name: 'sort',
+    description: 'Which of context.items belong in the person’s new category (context.category). Only items that clearly fit; none is fine.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ok,
+        reply,
+        refs: { type: 'array', items: { type: 'string' }, description: 'the refs (e.g. "r3") of the items that fit, from context.items only' },
+      },
+      required: ['ok', 'reply'],
+    },
+  },
 };
 
 const JOB: Record<string, string> = {
+  sort:
+    'The person just made their own category (context.category: its name and whether it is a need). Pick which of this month’s spending (context.items: what it was, amount, its current category) clearly belongs in it, by meaning, in Thai or English — e.g. for "K-pop": albums, photocards, lightsticks, fan meetings, Weverse; for "Cat food": Whiskas, cat litter, ทรายแมว. Leave out anything unsure. ok=true with the refs (an empty list is fine).',
   recap:
     'It is payday. You are writing the person’s recap of the pay month that just ended (context: their real numbers, already worked out by the app). Notice one or two useful patterns and pick which suggestions to show. You cannot change anything yourself; the app shows each suggestion with its exact numbers and a Do it button.',
   extra:
@@ -157,7 +190,17 @@ Deno.serve(async (req) => {
     if (!key) return json({ error: 'no key' }, 503);
 
     const { task, text, context } = await req.json();
-    const tool = TOOLS[task as string];
+    const base = TOOLS[task as string];
+    const ctx = (context ?? {}) as { own?: unknown; categories?: unknown; month?: { categories?: unknown } };
+    const own = ownCats(ctx.own, ctx.categories, ctx.month?.categories);
+    // Their own categories join the lists Kip may pick from.
+    const tool = base && own.length ? JSON.parse(JSON.stringify(base)) : base;
+    if (base && own.length) {
+      const keys = own.map((o) => o.key);
+      const P = tool.input_schema.properties;
+      if (task === 'extra') P.parts.items.properties.category.enum.push(...keys);
+      if (task === 'month') for (const f of ['from', 'to', 'category']) P.ops.items.properties[f].enum.push(...keys);
+    }
     if (!tool || typeof text !== 'string' || !text.trim()) return json({ error: 'bad request' }, 400);
     const thai = (context as { language?: string } | undefined)?.language === 'th';
 
@@ -173,6 +216,7 @@ Deno.serve(async (req) => {
           ...VOICE,
           JOB[task as string],
           CAT_NAMES,
+          ownLine(own),
           'Use only numbers from the context or that the person said. "half" = 50%, "the rest" = whatever is left so the total matches.',
           'Reply in the language the person used; if unclear, the app language.',
           `The app is set to ${thai ? 'Thai' : 'English'}. In Thai, sound like a friend texting (ได้เลย, นะ), never formal. Kip and HeyKip stay in English letters.`,

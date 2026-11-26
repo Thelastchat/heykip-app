@@ -1,17 +1,13 @@
 // A button you press and hold to do something that can't be undone (Start fresh). It fills from the left while you
 // hold; letting go early empties it and nothing happens. A tap alone never fires it.
 import * as Haptics from 'expo-haptics';
-import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, cancelAnimation, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { colors, fonts, themed } from '@/theme';
 
-export function HoldButton({ label, onDone, ms = 1800, disabled, demo }: { label: string; onDone: () => void; ms?: number; disabled?: boolean; demo?: number }) {
-  const p = useSharedValue(demo ?? 0);
-  useEffect(() => {
-    if (demo != null) p.value = demo;
-  }, [demo, p]);
+export function HoldButton({ label, onDone, ms = 1800, disabled }: { label: string; onDone: () => void; ms?: number; disabled?: boolean }) {
+  const p = useSharedValue(0);
   const done = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     onDone();

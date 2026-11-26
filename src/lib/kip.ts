@@ -1,7 +1,7 @@
 // Talk to Kip: what we send to the server (the person's month as plain numbers) and the money maths the app
 // does itself — the AI only understands words; every baht figure comes from here.
 import { plan as splitMonth } from '@/lib/brain';
-import { CATEGORY, spendingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
+import { CATEGORY, ownList, spendingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
 import { budgetKey, monthNumbers, type Spent } from '@/lib/home';
 import { getLang, t } from '@/lib/i18n';
 import type { Icon3D } from '@/lib/icons3d';
@@ -12,7 +12,7 @@ import type { AgentOp, FixOp } from '@/lib/agent';
 import type { KipKnows } from '@/lib/kipknows';
 
 /** Every category key the server can return (the database's categories). */
-export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other';
+export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other' | `c_${string}`;
 /** Money in: the database's income categories ('other' is shared with spending). */
 export type InCat = 'pay' | 'side_gigs' | 'gifts' | 'other';
 export type LogItem = { name: string; amount: number; category: DbCat; money?: 'in' | 'out' };
@@ -23,6 +23,8 @@ export type KipReply = {
   reply: string;
   /** kind=slips: the days to read slips for (YYYY-MM-DD, Thai time, both included). */
   slips?: { from: string; to: string };
+  /** Kip messages left today (after this one), from the server */
+  left?: number;
   items?: (LogItem | InItem)[];
   buy?: LogItem;
   ops?: AgentOp[];
@@ -31,6 +33,7 @@ export type KipReply = {
 
 /** Category names, translated each time they're read. */
 export const DB_CAT_NAME: Record<DbCat, string> = {
+  // (the person's own categories are added by customCats.ts)
   get food() {
     return t('Food');
   },
@@ -69,7 +72,7 @@ export const DB_CAT_NAME: Record<DbCat, string> = {
   },
 };
 export function dbCatIcon(c: DbCat): Icon3D {
-  const extra: Partial<Record<DbCat, Icon3D>> = { home_bills: 'house', travel: 'plane', family_pets: 'piggy', installments: 'bill' };
+  const extra: Partial<Record<DbCat, Icon3D>> = { home_bills: 'house', travel: 'plane', family_pets: 'pet', installments: 'bill' };
   return extra[c] ?? (c in CAT_ICON3D ? CAT_ICON3D[c as CatKey] : 'bill');
 }
 
@@ -87,7 +90,7 @@ export const IN_CAT_NAME: Record<InCat, string> = {
     return t('Other money in');
   },
 };
-const IN_ICON: Record<InCat, Icon3D> = { pay: 'income', side_gigs: 'phone', gifts: 'piggy', other: 'income' };
+const IN_ICON: Record<InCat, Icon3D> = { pay: 'income', side_gigs: 'phone', gifts: 'gift', other: 'income' };
 export const inCatIcon = (c: InCat): Icon3D => IN_ICON[c] ?? 'income';
 
 /**
@@ -147,6 +150,8 @@ export function kipContext(
     categories: month.spend.map((s) => ({ key: s.key, name: CATEGORY[s.key].name, budget: s.amount, spent: spent.byCat[s.key] ?? 0, left: Math.max(0, s.amount - (spent.byCat[s.key] ?? 0)) })),
     rent: month.bills.rent,
     bills: (month.bills.items ?? []).map((b) => ({ name: b.name, perMonth: b.amount, ...(b.yearly ? { yearly: b.yearly.total, due: b.yearly.due } : {}) })),
+    // Their own categories ("Create your own"): Kip logs into these when what they said fits.
+    own: ownList(),
     moneyStyle: month.style,
     // Kip advises by the plan (approved): what the style did with this person's numbers, in the app's own words.
     styleNotes: planNotes(month),

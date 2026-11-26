@@ -5,7 +5,14 @@ import { t } from '@/lib/i18n';
 import type { BudgetStyle } from '@/lib/setup/draft';
 import { colors, money } from '@/theme';
 
-export type CatKey = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
+export type BuiltinCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'learning' | 'giving' | 'other' | 'spend_freely';
+/** A person's own category ("Create your own") is `c_` + a short id; it lives in their categories table. */
+export type CustomCat = `c_${string}`;
+export type CatKey = BuiltinCat | CustomCat;
+export const isCustom = (k: string): k is CustomCat => k.startsWith('c_');
+/** The person's own categories, as Kip is told about them. */
+export const ownList = () =>
+  (Object.keys(CATEGORY) as CatKey[]).filter(isCustom).map((k) => ({ key: k, name: CATEGORY[k].name, need: !!CATEGORY[k].need }));
 export type IconKey =
   | 'food'
   | 'travel'
@@ -32,7 +39,9 @@ export type IconKey =
   | 'plus';
 
 // Names are getters so they're translated when read, not when this file loads.
-export const CATEGORY: Record<CatKey, { name: string; color: string; icon: IconKey }> = {
+export type CatInfo = { name: string; color: string; icon: IconKey; /** own categories: a need (true) or a want */ need?: boolean };
+/** Built-in categories, plus the person's own ones (added by customCats.ts once they're loaded). */
+export const CATEGORY: Record<BuiltinCat, CatInfo> & Record<CustomCat, CatInfo> = {
   food: {
     get name() {
       return t('Food & drinks');
@@ -228,7 +237,42 @@ export function monthFrom(inputs: Inputs, style: BudgetStyle, goalPerMonth: numb
 export function withStyle(m: MonthBudget, style: BudgetStyle, goalPerMonth: number | null = m.goalPerMonth): MonthBudget {
   let next = monthFrom(m.inputs, style, goalPerMonth, m.payday, m.safety.target);
   for (const { name, amount, ...extra } of m.bills.items ?? []) next = addBill(next, name, amount, extra).month;
+  for (const own of m.spend.filter((x) => isCustom(x.key))) next = keepOwn(next, own);
   return { ...next, ...keepOnReplan(m) };
+}
+
+/** Its own line in the month: `amount` a month, taken from `from` (never more than `from` has), so the month still adds
+ *  up and each day stays the same. */
+export function addToMonth(m: MonthBudget, key: CustomCat, amount: number, from: string): MonthBudget {
+  const src = m.spend.find((s) => s.key === from);
+  const take = Math.max(0, Math.min(amount, src?.amount ?? 0));
+  const spend = m.spend.map((s) => (s.key === from ? { ...s, amount: s.amount - take } : s)).filter((s) => s.key !== key);
+  return { ...m, spend: [...spend, { key, amount: take }] };
+}
+
+/** Which category a new one's money comes from by default: wants from shopping or fun, needs from household. */
+export function defaultFrom(m: MonthBudget, need: boolean): string {
+  const order = need ? ['other', 'food', 'spend_freely'] : ['shopping', 'fun', 'spend_freely', 'other'];
+  return order.find((k) => (m.spend.find((s) => s.key === k)?.amount ?? 0) > 0) ?? m.spend[0]?.key ?? 'other';
+}
+
+/** A re-plan keeps the person's own categories at the same amount, taken from where a new one's money would come
+ *  from (wants: shopping, then fun; needs: household, then food) — never more than is there, so it still adds up. */
+function keepOwn(m: MonthBudget, own: { key: CatKey; amount: number }): MonthBudget {
+  const need = CATEGORY[own.key]?.need ?? false;
+  const order: CatKey[] = need ? ['other', 'food', 'spend_freely'] : ['shopping', 'fun', 'spend_freely', 'other'];
+  let left = own.amount;
+  let spend = m.spend.filter((x) => x.key !== own.key);
+  for (const k of order) {
+    if (left <= 0) break;
+    spend = spend.map((x) => {
+      if (x.key !== k || left <= 0) return x;
+      const take = Math.min(left, x.amount);
+      left -= take;
+      return { ...x, amount: x.amount - take };
+    });
+  }
+  return { ...m, spend: [...spend, { key: own.key, amount: own.amount - left }] };
 }
 
 /** What any re-plan keeps: the "always" choice, bills marked paid, this cycle's payday move, covers, the goal split. */
@@ -279,6 +323,8 @@ export function lowerBudget(m: MonthBudget, key: CatKey, to: number, dest: Freed
 export type BillImpact = { month: MonthBudget; fromGuess: number; fromFun: number; fromGoal: number; short: number };
 
 const FUN_KEYS: CatKey[] = ['shopping', 'fun', 'spend_freely', 'learning', 'giving'];
+/** Money that can pay for a new bill: fun money, and the person's own categories that are wants. */
+const isFunKey = (k: CatKey) => FUN_KEYS.includes(k) || (isCustom(k) && CATEGORY[k]?.need === false);
 
 /** A name no other bill has (two "Netflix" would share a key): the second becomes "Netflix 2". */
 export function uniqueBillName(m: MonthBudget, name: string, except = -1): string {
@@ -294,7 +340,7 @@ export function addBill(m: MonthBudget, name: string, amount: number, extra: Omi
   const fromGuess = Math.min(left, m.bills.guess);
   left -= fromGuess;
   // Fun money, in proportion, down to zero (a bill is a must; fun bends).
-  const fun = m.spend.filter((s) => FUN_KEYS.includes(s.key) && s.amount > 0);
+  const fun = m.spend.filter((s) => isFunKey(s.key) && s.amount > 0);
   const pool = fun.reduce((a, s) => a + s.amount, 0);
   const fromFun = Math.min(left, pool);
   // In proportion (฿10 steps), then whatever rounding left over goes to whichever still has room — never more than a

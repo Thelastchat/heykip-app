@@ -3,13 +3,16 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { CaretDown, Check, Minus } from 'phosphor-react-native';
+import { CaretDown, Check, Minus, Plus } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
+import { CreateFlow } from '@/components/categories/CreateFlow';
+import { customCats, useCustomCats } from '@/lib/customCats';
+import { rememberShop, shopCategory } from '@/lib/shops';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -73,8 +76,7 @@ export default function Slips() {
   useEffect(() => {
     supabase
       .from('categories')
-      .select('id, key, kind')
-      .is('user_id', null)
+      .select('id, key, kind') // built-in and their own (the database only shows them their own)
       .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 
@@ -141,6 +143,14 @@ export default function Slips() {
       );
       setPhase('review');
       return;
+    }
+    // Shops they've sorted before go where they put them last time ("Kip remembered").
+    const valid = new Set<string>([...SPEND, ...customCats().map((c) => c.key)]);
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r.state !== 'done' || r.money !== 'out' || !r.name) continue;
+      const known = await shopCategory(r.name);
+      if (known && valid.has(known) && known !== r.category) results[i] = { ...r, category: known as DbCat, remembered: true };
     }
     const keys = results.filter((s) => s.state === 'done').map(slipKey);
     const saved = session ? await savedKeys(session.user.id, keys).catch(() => new Set<string>()) : new Set<string>();
@@ -242,7 +252,14 @@ export default function Slips() {
     router.dismissTo('/');
   }
 
-  const setCat = (id: string, category: DbCat | InCat) => setSlips((xs) => xs.map((s) => (s.id === id ? { ...s, category } : s)));
+  const setCat = (id: string, category: DbCat | InCat) => {
+    const sl = slips.find((x) => x.id === id);
+    // Sorting a shop's slip teaches Kip where that shop goes next time.
+    if (sl && sl.money === 'out' && sl.name) rememberShop(sl.name, category);
+    setSlips((xs) => xs.map((s) => (s.id === id ? { ...s, category, remembered: false } : s)));
+  };
+  const [creating, setCreating] = useState<string | null>(null); // the slip a new category is for
+  const custom = useCustomCats();
   const editingSlip = slips.find((s) => s.id === editing);
 
   return (
@@ -386,7 +403,7 @@ export default function Slips() {
       {editingSlip && (
         <Sheet open onClose={() => setEditing(null)} title={editingSlip.money === 'in' ? t('What was it?') : t('What was it for?')} sub={editingSlip.name || undefined}>
           <View style={styles.cats}>
-            {(editingSlip.money === 'in' ? INCOME : SPEND).map((c) => {
+            {(editingSlip.money === 'in' ? INCOME : [...SPEND, ...custom.map((x) => x.key)]).map((c) => {
               const on = editingSlip.category === c;
               const isIn = editingSlip.money === 'in';
               return (
@@ -398,15 +415,40 @@ export default function Slips() {
                   }}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}>
-                  <Glass radius={999} tint={on ? (isIn ? colors.lavender : colors.lime) : undefined} innerStyle={[styles.catPick, on && { borderWidth: 1.5, borderColor: colors.ink }]}>
+                  <Glass radius={999} tint={on ? (isIn ? colors.lavender : colors.lime) : undefined} innerStyle={styles.catPick}>
                     <Image source={ICON3D[isIn ? inCatIcon(c as InCat) : dbCatIcon(c as DbCat)]} style={{ width: 28, height: 28 }} contentFit="contain" />
                     <Text style={[styles.catText, on && { fontFamily: fonts.medium }]}>{isIn ? IN_CAT_NAME[c as InCat] : DB_CAT_NAME[c as DbCat]}</Text>
                   </Glass>
                 </Squish>
               );
             })}
+            {editingSlip.money === 'out' && (
+              <Squish
+                onPress={() => {
+                  setCreating(editingSlip.id);
+                  setEditing(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('Create your own')}>
+                <View style={[styles.catPick, styles.create]}>
+                  <View style={styles.plus}>
+                    <Plus size={16} color={colors.ink} weight="bold" />
+                  </View>
+                  <Text style={[styles.catText, { fontFamily: fonts.medium }]}>{t('Create your own')}</Text>
+                </View>
+              </Squish>
+            )}
           </View>
         </Sheet>
+      )}
+      {creating && (
+        <CreateFlow
+          onClose={() => setCreating(null)}
+          onCreated={(c) => {
+            setIds((m) => ({ ...m, [`spend:${c.key}`]: c.id }));
+            setCat(creating, c.key);
+          }}
+        />
       )}
     </View>
   );
@@ -482,6 +524,12 @@ function Row({ slip, onCategory, match, on, onTick, impact }: { slip: Slip; onCa
           )}
         </View>
       </View>
+      {slip.remembered && !slip.already && (
+        <View style={styles.learned}>
+          <Kip mood="happy" size={24} />
+          <Text style={styles.learnedText}>{t('Kip remembered: {shop} goes to {name}', { shop: slip.name, name: DB_CAT_NAME[slip.category as DbCat] ?? '' })}</Text>
+        </View>
+      )}
       {match && (
         <Pressable
           onPress={onTick}
@@ -556,5 +604,9 @@ const styles = themed(() =>
     lightText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     cats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 },
     catPick: { height: 44, paddingLeft: 4, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    create: { borderRadius: 999, backgroundColor: inkA(0.06), paddingLeft: 6 },
+    plus: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    learned: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12, borderTopWidth: 1, borderTopColor: inkA(0.08) },
+    learnedText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
   }),
 );

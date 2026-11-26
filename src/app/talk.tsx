@@ -58,6 +58,7 @@ import { supabase } from '@/lib/supabase';
 import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule, type VoiceLang } from '@/lib/voice';
 import { loggedToday } from '@/lib/checkin';
 import { hush, say } from '@/lib/kipSpeak';
+import { customCats } from '@/lib/customCats';
 import { colors, fonts, inkA, themed } from '@/theme';
 
 type Turn = {
@@ -101,7 +102,7 @@ function clean(items: KipReply['items']): Item[] {
     .map((it) =>
       it.money === 'in'
         ? ({ name: it.name, amount: it.amount, money: 'in', category: IN_CATS.includes(it.category as InCat) ? (it.category as InCat) : 'other' } as InItem)
-        : ({ name: it.name, amount: it.amount, money: 'out', category: SPEND_CATS.includes(it.category as DbCat) ? (it.category as DbCat) : 'other' } as LogItem),
+        : ({ name: it.name, amount: it.amount, money: 'out', category: SPEND_CATS.includes(it.category as DbCat) || customCats().some((c) => c.key === it.category) ? (it.category as DbCat) : 'other' } as LogItem),
     );
 }
 
@@ -118,7 +119,7 @@ export default function Talk() {
   const [toast, setToast] = useState<string | null>(null);
   const [moneyIn, setMoneyIn] = useState<MoneyIn[] | null>(null);
   // Kip's messages left today (from the server, after each answer). Shown only near the end, so it never nags.
-  const [kipLeft, setKipLeft] = useState<number | null>((globalThis as { __KIP_LEFT?: number }).__KIP_LEFT ?? null); // MOCKUP default
+  const [kipLeft, setKipLeft] = useState<number | null>(null);
   const outOfKip = kipLeft === 0;
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const nextId = useRef(1);
@@ -126,8 +127,7 @@ export default function Talk() {
   useEffect(() => {
     supabase
       .from('categories')
-      .select('id, key, kind')
-      .is('user_id', null)
+      .select('id, key, kind') // built-in and their own (the database only shows them their own)
       .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 
@@ -172,6 +172,7 @@ export default function Talk() {
 
   async function listen(l = lang) {
     if (!isPlus) return setLocked(true);
+    if (outOfKip) return flash(t('Kip is back at midnight'));
     if (!(await ai.ensure())) return;
     if (!voiceModule()) return flash(t('Talking out loud works in the HeyKip app build. For now, tap the mic on your keyboard.'));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -308,6 +309,7 @@ export default function Talk() {
     // Every answer is worked out once, from the month as it was when Kip answered.
     if (res.ok) {
       const reply = { ...res.reply, items: clean(res.reply.items) };
+      if (typeof reply.left === 'number') setKipLeft(reply.left);
       const lites = goals.map(liteOf);
       // A new change replaces any earlier one still waiting for "Do it" — only the latest can be done.
       if (reply.kind === 'change' || reply.kind === 'fix')

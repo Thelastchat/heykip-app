@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { startPurchases, stopPurchases } from './purchases';
+import { loadCustom } from './customCats';
 import { supabase } from './supabase';
 
 export type Profile = {
@@ -35,8 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (s: Session | null) => {
     if (!s) {
       setProfile(null);
+      loadCustom(undefined);
       return;
     }
+    // Their own categories first, so no screen ever meets a category it can't name.
+    await loadCustom(s.user.id);
     // The profiles row is created by a database trigger on sign-up (see the migration).
     const { data } = await supabase
       .from('profiles')

@@ -7,6 +7,23 @@ const IN = ['pay', 'side_gigs', 'gifts', 'other'];
 const MODEL = 'claude-haiku-5-5';
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
+// The person's own categories ("Create your own"), sent by the app. Only `c_` keys with a name are used, at most 8.
+type Own = { key: string; name: string; need: boolean };
+function ownCats(...lists: unknown[]): Own[] {
+  const seen = new Map<string, Own>();
+  for (const list of lists)
+    for (const c of Array.isArray(list) ? list : []) {
+      const k = (c as { key?: unknown })?.key;
+      const n = (c as { name?: unknown })?.name;
+      if (typeof k === 'string' && /^c_[a-z0-9]{2,12}$/.test(k) && typeof n === 'string' && n.trim() && !seen.has(k))
+        seen.set(k, { key: k, name: n.trim().slice(0, 24), need: !!(c as { need?: unknown }).need });
+    }
+  return [...seen.values()].slice(0, 8);
+}
+const ownLine = (own: Own[]) =>
+  own.length
+    ? `The person's own categories (they made these; use the key when what they said or paid for fits one, and prefer it over a built-in category that fits less well — e.g. an album for an own "K-pop"): ${own.map((o) => `${o.key} = ${JSON.stringify(o.name)} (${o.need ? 'a need' : 'a want'})`).join('; ')}.`
+    : '';
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 const tool = {
@@ -84,7 +101,10 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);
 
-    const { image, mediaType, today, kind } = await req.json();
+    const { image, mediaType, today, kind, own: ownRaw } = await req.json();
+    const own = ownCats(ownRaw);
+    const slipTool = own.length ? JSON.parse(JSON.stringify(tool)) : tool;
+    if (own.length) slipTool.input_schema.properties.category.enum.push(...own.map((o) => o.key));
     const subs = kind === 'subs';
     if (typeof image !== 'string' || image.length < 100) return json({ error: 'no image' }, 400);
     if (image.length > 7_000_000) return json({ error: 'too big' }, 413);
@@ -100,8 +120,8 @@ Deno.serve(async (req) => {
         max_tokens: subs ? 900 : 400,
         system: subs
           ? `You read phone subscription lists (App Store / Google Play) exactly. Never guess a name, price or date you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand.`
-          : `You read Thai bank transfer slips and payment receipts exactly. Never guess numbers you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand. ${owner}`,
-        tools: [subs ? subsTool : tool],
+          : `You read Thai bank transfer slips and payment receipts exactly. Never guess numbers you cannot see. Today is ${String(today ?? '').slice(0, 10)} in Thailand. ${owner} ${ownLine(own)}`,
+        tools: [subs ? subsTool : slipTool],
         tool_choice: { type: 'tool', name: subs ? 'subs' : 'slip' },
         messages: [
           {

@@ -105,7 +105,7 @@ export function CatSheet({ info, spends, onClose }: { info: CatInfo; spends: Cat
           )}
 
           <View style={styles.btns}>
-            <Squish style={styles.btn} accessibilityRole="button" onPress={() => go(ONE_CAT.includes(key) ? `/history?cat=${key}` : '/history')}>
+            <Squish style={styles.btn} accessibilityRole="button" onPress={() => go(ONE_CAT.includes(key) || key.startsWith('c_') ? `/history?cat=${key}` : '/history')}>
               <Text style={styles.btnText}>{t('See all in History')}</Text>
             </Squish>
             <Squish style={styles.btn} accessibilityRole="button" onPress={() => go('/month')}>

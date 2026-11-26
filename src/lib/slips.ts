@@ -4,6 +4,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import type { DbCat, InCat } from '@/lib/kip';
+import { ownList } from '@/lib/budget';
 import { supabase } from '@/lib/supabase';
 
 export type SlipRead = {
@@ -28,6 +29,8 @@ export type Slip = {
   ref: string | null;
   category: DbCat | InCat;
   already: boolean; // saved before, or the same slip twice in this batch
+  /** its category came from Kip's shop memory ("Kip remembered") */
+  remembered?: boolean;
 };
 
 const SPEND: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
@@ -51,7 +54,7 @@ export function cleanSlip(id: string, uri: string, r: SlipRead | null): Slip {
   const amount = Math.round(Math.abs(Number(r.amount) || 0) * 100) / 100;
   if (!r.is_slip || amount <= 0) return { ...base, state: 'notslip' };
   const money = r.money === 'in' ? 'in' : 'out';
-  const category = money === 'in' ? (INCOME.includes(r.category as InCat) ? (r.category as InCat) : 'other') : SPEND.includes(r.category as DbCat) ? (r.category as DbCat) : 'other';
+  const category = money === 'in' ? (INCOME.includes(r.category as InCat) ? (r.category as InCat) : 'other') : SPEND.includes(r.category as DbCat) || ownList().some((o) => o.key === r.category) ? (r.category as DbCat) : 'other';
   return { ...base, state: 'done', money, amount, name: (r.name ?? '').trim().slice(0, 80), at: thaiTime(r.when), ref: r.ref?.replace(/\s+/g, '').slice(0, 64) || null, category };
 }
 
@@ -81,7 +84,7 @@ export async function readSlip(image: string, mediaType: string): Promise<{ ok: 
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10); // Thai date
   // A slip takes a few seconds; if the network stalls, give up on this one instead of "Reading…" forever.
   const timeout = new Promise<{ data: null; error: { context: { status: number } } }>((res) => setTimeout(() => res({ data: null, error: { context: { status: 504 } } }), 60_000));
-  const { data, error } = await Promise.race([supabase.functions.invoke('read-slip', { body: { image, mediaType, today } }), timeout]);
+  const { data, error } = await Promise.race([supabase.functions.invoke('read-slip', { body: { image, mediaType, today, own: ownList() } }), timeout]);
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };

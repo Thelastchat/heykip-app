@@ -16,6 +16,21 @@ const th: Record<string, string> = {
   'I found {n} things this month that look like {name}. Move them there?': 'เดือนนี้ Kip เจอ {n} รายการที่น่าจะเป็น {name} ย้ายไปไว้ตรงนั้นเลยมั้ย?',
   '{name} this month': '{name} เดือนนี้',
   'Move them': 'ย้ายเลย',
+  'Your own name, icon and money a month': 'ตั้งชื่อ เลือกไอคอน และเงินต่อเดือนเอง',
+  'Your own · a need': 'หมวดของคุณ · ของจำเป็น',
+  'Your own · a want': 'หมวดของคุณ · ของที่อยากได้',
+  'Your category': 'หมวดของคุณ',
+  'Give it a name first': 'ตั้งชื่อก่อนนะ',
+  'You can have up to {n} of your own categories': 'สร้างหมวดของตัวเองได้สูงสุด {n} หมวด',
+  'Couldn’t create it — check your internet and try again.': 'สร้างไม่สำเร็จ ลองเช็กอินเทอร์เน็ตแล้วลองอีกทีนะ',
+  'Like K-pop, Cat food, Coffee': 'เช่น เคป๊อป อาหารแมว กาแฟ',
+  'Kip thinks it’s a need: it comes before fun money. Change it if not.': 'Kip ว่าเป็นของจำเป็น มาก่อนเงินเที่ยวเล่น ถ้าไม่ใช่เปลี่ยนได้เลย',
+  'Kip thinks it’s a want: fun money. Change it if not.': 'Kip ว่าเป็นของที่อยากได้ ใช้เงินเที่ยวเล่น ถ้าไม่ใช่เปลี่ยนได้เลย',
+  '{from} has {amount}, so that’s the most it can give': '{from} มี {amount} เลยให้ได้มากสุดเท่านั้น',
+  'Creating…': 'กำลังสร้าง…',
+  'Let me look through this month for things that fit {name}…': 'ขอ Kip ดูเดือนนี้ก่อนนะ ว่ามีอะไรเข้ากับ {name} บ้าง…',
+  'Moving…': 'กำลังย้าย…',
+
   ' of {amount}': ' จาก {amount}',
 
   // ---- Start fresh (app/privacy.tsx) ----
@@ -38,8 +53,12 @@ const th: Record<string, string> = {
   'Clearing…': 'กำลังล้าง…',
   'Hold to start fresh': 'กดค้างไว้เพื่อเริ่มใหม่',
   'Keep everything': 'เก็บไว้เหมือนเดิม',
+  'Couldn’t start fresh — check your internet and try again.': 'เริ่มใหม่ไม่สำเร็จ ลองเช็กอินเทอร์เน็ตแล้วลองอีกทีนะ',
   'Your goals, spending, photos and promise are deleted for good. Deleting doesn’t cancel Plus: cancel it first in Settings → your name → Subscriptions, or Apple keeps charging. Want to keep using HeyKip? Start fresh instead.':
     'เป้าหมาย รายจ่าย รูป และคำสัญญาจะถูกลบถาวร การลบบัญชีไม่ได้ยกเลิก Plus นะ ต้องยกเลิกก่อนที่ ตั้งค่า → ชื่อของคุณ → การสมัครรับ ไม่งั้น Apple จะยังตัดเงินอยู่ ถ้ายังอยากใช้ HeyKip ต่อ ลอง "เริ่มใหม่ทั้งหมด" แทนได้',
+
+  // ---- Evening check-in (lib/checkin.ts) ----
+  '{amount} for today and nothing logged yet. Spent anything?': 'วันนี้มี {amount} ยังไม่ได้จดอะไรเลย ใช้อะไรไปบ้างมั้ย?',
 
   // ---- Kip's daily limit (app/talk.tsx) ----
   'Kip · back at midnight': 'Kip · กลับมาตอนเที่ยงคืน',

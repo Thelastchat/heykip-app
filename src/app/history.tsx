@@ -93,8 +93,7 @@ export default function History() {
   useEffect(() => {
     supabase
       .from('categories')
-      .select('id, key, kind')
-      .is('user_id', null)
+      .select('id, key, kind') // built-in and their own (the database only shows them their own)
       .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 

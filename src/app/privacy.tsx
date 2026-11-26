@@ -21,6 +21,8 @@ import { monthShort, t } from '@/lib/i18n';
 import { autoSlipsAvailable, loadAuto, saveAuto, type AutoSlips } from '@/lib/autoslips';
 import { ICON3D } from '@/lib/icons3d';
 import { PRIVACY_EMAIL } from '@/lib/privacy';
+import { useSetup } from '@/lib/setup/draft';
+import { startFresh } from '@/lib/startFresh';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, inkA, themed } from '@/theme';
 
@@ -28,6 +30,7 @@ export default function Privacy() {
   const insets = useSafeAreaInsets();
   const { session, profile, refreshProfile } = useAuth();
   const ai = useAiConsent(() => router.push('/privacy-policy'));
+  const setup = useSetup();
   const [count, setCount] = useState<number | null>(null);
   const [auto, setAuto] = useState<AutoSlips | null>(null);
   const [confirm, setConfirm] = useState<null | 'spending' | 'fresh' | 'account'>(null);
@@ -99,8 +102,18 @@ export default function Privacy() {
     flash(t('All spending and slips are deleted.'));
   }
 
-  async function startFresh() {
-    flash('MOCKUP: Start fresh'); // MOCKUP — the real clear-out comes after approval
+  async function doStartFresh() {
+    if (!uid) return;
+    setBusy(true);
+    const err = await startFresh(uid);
+    if (err) {
+      setBusy(false);
+      setConfirm(null);
+      return flash(t('Couldn’t start fresh — check your internet and try again.'));
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setup.reset();
+    await refreshProfile(); // onboarded is now false, so HeyKip opens setup
   }
 
   async function deleteAccount() {
@@ -205,7 +218,7 @@ export default function Privacy() {
               </Text>
             ))}
           </Glass>
-          <HoldButton label={busy ? t('Clearing…') : t('Hold to start fresh')} disabled={busy} onDone={startFresh} demo={(globalThis as { __HOLD?: number }).__HOLD /* MOCKUP */} />
+          <HoldButton label={busy ? t('Clearing…') : t('Hold to start fresh')} disabled={busy} onDone={doStartFresh} />
           <Squish onPress={() => setConfirm(null)} accessibilityRole="button">
             <Glass radius={999} innerStyle={{ height: 52, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={styles.rowTitle}>{t('Keep everything')}</Text>

@@ -1,7 +1,7 @@
 // The yellow 3D icon set (tinted to the brand lime, 58°). One image per kind of money.
 import type { ImageSourcePropType } from 'react-native';
 
-import type { CatKey } from '@/lib/budget';
+import type { BuiltinCat, CustomCat } from '@/lib/budget';
 
 export const ICON3D = {
   bowl: require('../../assets/icons3d/bowl.png'),
@@ -31,14 +31,14 @@ export const ICON3D = {
 export type Icon3D = keyof typeof ICON3D;
 
 /** The 3D icon for each spending category. */
-export const CAT_ICON3D: Record<CatKey, Icon3D> = {
+export const CAT_ICON3D: Record<BuiltinCat, Icon3D> & Record<CustomCat, Icon3D> = {
   food: 'bowl',
   transport: 'car',
   shopping: 'shop',
   fun: 'fun',
   health_beauty: 'heart',
-  learning: 'phone',
-  giving: 'piggy',
+  learning: 'book',
+  giving: 'gift',
   other: 'bill',
   spend_freely: 'expense',
 };

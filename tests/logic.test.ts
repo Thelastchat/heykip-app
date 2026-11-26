@@ -2,7 +2,7 @@
 // Each check is a rule that must ALWAYS hold — "every baht has a job", "food is never cut for a goal", … —
 // tried across random pay, rent, bills, payday, money style and 1–3 goals. A seeded random, so a failure repeats.
 import { funMinimum, livingFor, safetyNet, verdict, type Inputs, type Style } from '../src/lib/brain';
-import { addBill, billsTotal, lowerBudget, monthFrom, raiseBudget, removeBill, savingTotal, setGuess, spendingTotal, withStyle, type CatKey, type MonthBudget } from '../src/lib/budget';
+import { addBill, addToMonth, billsTotal, CATEGORY, defaultFrom, lowerBudget, monthFrom, raiseBudget, removeBill, savingTotal, setGuess, spendingTotal, withStyle, type CatKey, type MonthBudget } from '../src/lib/budget';
 import { arrivals, assess, funRoom, goalTotal, planNew, replanOne, splitOf, withoutGoal, type GoalLite } from '../src/lib/goals';
 import { replanGoal } from '../src/lib/goalEdit';
 import { monthNumbers, overCover, period, periodAt, streakOf, type Spent } from '../src/lib/home';
@@ -730,7 +730,7 @@ for (let n = 0; n < 2000; n++) {
     // Random spending so far: some budgets fast, some slow, some untouched.
     const byCat: Spent['byCat'] = {};
     for (const s of m.spend) if (rand() < 0.8) byCat[s.key] = Math.round(s.amount * (P.dayIndex / P.total) * (rand() * 2.2));
-    const spent: Spent = { total: Object.values(byCat).reduce((a, n) => a + (n ?? 0), 0), today: 0, bills: 0, byCat, byDay: {} };
+    const spent: Spent = { total: Object.values(byCat).reduce((a: number, n) => a + (n ?? 0), 0), today: 0, bills: 0, byCat, byDay: {} };
     const n = runoutNotice(m, spent, P, now);
     if (!n) continue;
     cards++;
@@ -1187,6 +1187,38 @@ for (let n = 0; n < 2000; n++) {
     }
     check('Kip: his clock never runs backwards, even when the frame callback restarts', !bad, () => bad);
     check('Kip: taps, restarts and stalls never bend him out of shape (every value stays within 0.6 of rest)', worst < 0.6, () => ({ run, worst }));
+  }
+}
+
+// ---------- Own categories ("Create your own") ----------
+{
+  CATEGORY['c_kpop'] = { name: 'K-pop', color: '#FBF77A', icon: 'more', need: false };
+  CATEGORY['c_cat'] = { name: 'Cat food', color: '#FBF77A', icon: 'more', need: true };
+  for (let n = 0; n < 2000; n++) {
+    const i = person();
+    if (!i) continue;
+    const s = pick(STYLES);
+    const m = month(i, s);
+    const daily0 = spendingTotal(m);
+    for (const [key, need] of [['c_kpop', false], ['c_cat', true]] as const) {
+      const from = defaultFrom(m, need);
+      const ask = pick([0, 100, 500, 1000, 3000, 50000]);
+      const made = addToMonth(m, key, ask, from);
+      check('Own category: the month still adds up (bills + saving + spending = pay)', near(jobs(made), m.income), () => ({ s, key, ask, from }));
+      check('Own category: each day stays the same (spending money unchanged)', spendingTotal(made) === daily0, () => ({ s, key, ask }));
+      check('Own category: never takes more than its source has, no pot below zero', !negative(made) && amt(made, key as CatKey) <= amt(m, from as CatKey), () => ({ s, key, ask, from, spend: made.spend }));
+      check('Own category: wants come from shopping or fun first, needs from household first', s === 'savefirst' || from === (need ? 'other' : amt(m, 'shopping') > 0 ? 'shopping' : 'fun'), () => ({ s, need, from }));
+      // Switching style keeps it, at the same amount when there's room, and still adds up.
+      const sw = withStyle(made, pick(STYLES));
+      check('Own category: a style switch keeps it', sw.spend.some((x) => x.key === key), () => ({ s, key }));
+      check('Own category: a style switch still adds up, no pot below zero', near(jobs(sw), m.income) && !negative(sw), () => ({ s, key, spend: sw.spend }));
+      check('Own category: a style switch keeps its amount when there’s room', amt(sw, key as CatKey) <= amt(made, key as CatKey), () => ({ s, key, was: amt(made, key as CatKey), now: amt(sw, key as CatKey) }));
+    }
+    // A new bill can be paid from a want of their own, never from a need of their own.
+    let both = addToMonth(addToMonth(m, 'c_kpop', 800, defaultFrom(m, false)), 'c_cat', 600, defaultFrom(m, true));
+    const catBefore = amt(both, 'c_cat');
+    both = addBill(both, 'Gym', 99999).month;
+    check('Own category: a big new bill never takes money from a need of their own', amt(both, 'c_cat') === catBefore, () => ({ s, before: catBefore, after: amt(both, 'c_cat') }));
   }
 }
 

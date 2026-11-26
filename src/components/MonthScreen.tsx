@@ -1,4 +1,5 @@
 import { MonthTellKip } from '@/components/MonthTellKip';
+import { CreateFlow } from '@/components/categories/CreateFlow';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -21,6 +22,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button } from '@/components/ui';
 import {
   CATEGORY,
+  isCustom,
   STYLES,
   billsTotal,
   dailyOf,
@@ -108,6 +110,7 @@ export function MonthScreen({
   const textStep = useTextStep();
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
+  const [creating, setCreating] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(
     openEdit === '\u0000guess'
       ? { stage: 'guess' }
@@ -308,8 +311,18 @@ export function MonthScreen({
                 </Pressable>
               );
             })}
+            <Pressable onPress={() => setCreating(true)} accessibilityRole="button" accessibilityLabel={t('Create your own')} style={[styles.row, styles.divider]}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: inkA(0.06), alignItems: 'center', justifyContent: 'center' }}>
+                <Plus size={18} color={colors.ink} weight="bold" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.rowName}>{t('Create your own')}</Text>
+                <Text style={styles.sub}>{t('Your own name, icon and money a month')}</Text>
+              </View>
+            </Pressable>
           </Glass>
         </RiseIn>
+        {creating && <CreateFlow onClose={() => setCreating(false)} />}
 
         <Text style={styles.note}>
           {t('Changing a number? Kip rebalances the rest so your month still adds up.')}
@@ -458,6 +471,7 @@ export function MonthScreen({
 
 /** The small line under each spending category. */
 function hintFor(k: CatKey) {
+  if (isCustom(k)) return CATEGORY[k]?.need ? t('Your own · a need') : t('Your own · a want');
   const hint: Record<CatKey, string> = {
     food: t('฿150 a day at least'),
     transport: t('BTS/MRT, bus or bike taxi'),

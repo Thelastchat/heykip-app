@@ -3,7 +3,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Receipt } from 'phosphor-react-native';
+import { Backspace, CalendarBlank, DotsThree, LockSimple, PencilSimple, Plus, Receipt } from 'phosphor-react-native';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
@@ -36,6 +36,8 @@ import { supabase } from '@/lib/supabase';
 import { colors, fonts, glow, money, inkA, themed } from '@/theme';
 import { Accent } from '@/lib/accent';
 import { loggedToday } from '@/lib/checkin';
+import { CreateFlow } from '@/components/categories/CreateFlow';
+import { useCustomCats } from '@/lib/customCats';
 import { useTextStep } from '@/lib/textSize';
 
 type Kind = 'spend' | 'income';
@@ -107,7 +109,7 @@ const SPEND_MORE: Cat[] = [
     },
     icon: 'gift',
     color: CATEGORY.giving.color,
-    i3: 'piggy',
+    i3: 'gift',
   },
   {
     key: 'learning',
@@ -116,6 +118,7 @@ const SPEND_MORE: Cat[] = [
     },
     icon: 'book',
     color: CATEGORY.learning.color,
+    i3: 'book',
   },
   {
     key: 'travel',
@@ -133,6 +136,7 @@ const SPEND_MORE: Cat[] = [
     },
     icon: 'family',
     color: CATEGORY.other.color,
+    i3: 'pet',
   },
   {
     key: 'installments',
@@ -179,7 +183,7 @@ const INCOME: Cat[] = [
     },
     icon: 'gift',
     color: colors.lavender,
-    i3: 'piggy',
+    i3: 'gift',
   },
   {
     key: 'other',
@@ -233,13 +237,15 @@ export default function Add() {
   const [ids, setIds] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const custom = useCustomCats();
+  const ownChips: Cat[] = custom.map((c) => ({ key: c.key, name: c.name, icon: 'more', color: colors.lime, i3: c.icon }));
 
   // Category ids, so a row points at the shared category list.
   useEffect(() => {
     supabase
       .from('categories')
-      .select('id, key, kind')
-      .is('user_id', null)
+      .select('id, key, kind') // built-in and their own (the database only shows them their own)
       .then(({ data }) => setIds(Object.fromEntries((data ?? []).map((c) => [`${c.kind}:${c.key}`, c.id]))));
   }, []);
 
@@ -325,7 +331,7 @@ export default function Add() {
     router.canGoBack() ? router.back() : router.replace('/');
   }
 
-  const chips = kind === 'income' ? INCOME : more ? [...SPEND_MAIN, ...SPEND_MORE] : SPEND_MAIN;
+  const chips = kind === 'income' ? INCOME : [...SPEND_MAIN, ...(more ? SPEND_MORE : []), ...ownChips];
   const shown = digits ? Number(digits.replace(/\.$/, '')).toLocaleString('en-US', { maximumFractionDigits: 2 }) + (digits.endsWith('.') ? '.' : '') : '0';
 
   return (
@@ -403,7 +409,26 @@ export default function Add() {
               </Glass>
             </Squish>
           )}
+          {kind === 'spend' && (
+            <Squish onPress={() => setCreating(true)} accessibilityRole="button" accessibilityLabel={t('Create your own')}>
+              <View style={[styles.chip, styles.create]}>
+                <View style={styles.plus}>
+                  <Plus size={16} color={colors.ink} weight="bold" />
+                </View>
+                <Text style={[styles.chipText, { fontFamily: fonts.medium }]}>{t('Create your own')}</Text>
+              </View>
+            </Squish>
+          )}
         </View>
+        {creating && (
+          <CreateFlow
+            onClose={() => setCreating(false)}
+            onCreated={(c) => {
+              setIds((m) => ({ ...m, [`spend:${c.key}`]: c.id }));
+              setCat({ key: c.key, name: c.name, icon: 'more', color: colors.lime, i3: c.icon });
+            }}
+          />
+        )}
 
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
           <Glass radius={16} style={{ flex: 1 }} innerStyle={styles.field}>
@@ -563,6 +588,8 @@ const styles = themed(() =>
     chip: { height: 44, paddingLeft: 4, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
     chipOn: { borderWidth: 1.5, borderColor: colors.onAccent }, // picked: lime + black outline, in both looks
     chipText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
+    create: { borderRadius: 23, backgroundColor: inkA(0.06), paddingLeft: 6 },
+    plus: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
     field: { minHeight: 56, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12 },
     fieldK: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
     fieldV: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink, padding: 0, outlineStyle: 'none' } as never,
