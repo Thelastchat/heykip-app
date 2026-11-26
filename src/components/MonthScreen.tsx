@@ -1,5 +1,6 @@
 import { MonthTellKip } from '@/components/MonthTellKip';
 import { CreateFlow } from '@/components/categories/CreateFlow';
+import { OwnCategory } from '@/components/categories/OwnCategory';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui';
 import {
   CATEGORY,
   isCustom,
+  type CustomCat,
   STYLES,
   billsTotal,
   dailyOf,
@@ -111,6 +113,7 @@ export function MonthScreen({
   const insets = useSafeAreaInsets();
   const startEdit = openEdit === 'rent' ? ('rent' as const) : openEdit ? (month?.bills.items ?? []).findIndex((b) => b.name === openEdit) : -1;
   const [creating, setCreating] = useState(false);
+  const [own, setOwn] = useState<CustomCat | null>(null);
   const [sheet, setSheet] = useState<Sheet>(
     openEdit === '\u0000guess'
       ? { stage: 'guess' }
@@ -289,7 +292,7 @@ export function MonthScreen({
               return (
                 <Pressable
                   key={s.key}
-                  onPress={() => edit(s.key)}
+                  onPress={() => (isCustom(s.key) ? setOwn(s.key) : edit(s.key))}
                   accessibilityRole="button"
                   accessibilityLabel={t('{name}, {amount}, {left} left. Change', { name: c.name, amount: baht(s.amount), left: baht(left) })}
                   style={[styles.row, i > 0 && styles.divider]}>
@@ -323,6 +326,25 @@ export function MonthScreen({
           </Glass>
         </RiseIn>
         {creating && <CreateFlow onClose={() => setCreating(false)} />}
+        {own && month && (
+          <OwnCategory
+            cat={own}
+            month={month}
+            spent={spent?.[own] ?? 0}
+            save={save}
+            isPlus={isPlus}
+            onAmount={() => {
+              setSheet({ stage: 'edit', key: own });
+              setOwn(null);
+            }}
+            onLocked={() => {
+              setOwn(null);
+              onLocked?.('customize');
+            }}
+            onDone={() => setOwn(null)}
+            onClose={() => setOwn(null)}
+          />
+        )}
 
         <Text style={styles.note}>
           {t('Changing a number? Kip rebalances the rest so your month still adds up.')}

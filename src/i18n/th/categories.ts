@@ -33,6 +33,20 @@ const th: Record<string, string> = {
 
   ' of {amount}': ' จาก {amount}',
 
+  // ---- One of their own categories (components/categories/OwnCategory.tsx) ----
+  'Couldn’t save — check your internet and try again.': 'บันทึกไม่สำเร็จ ลองเช็กอินเทอร์เน็ตแล้วลองอีกทีนะ',
+  'Couldn’t delete it — check your internet and try again.': 'ลบไม่สำเร็จ ลองเช็กอินเทอร์เน็ตแล้วลองอีกทีนะ',
+  'Delete {name}?': 'ลบ {name}?',
+  'Its money goes back to {to}, and what you logged in it moves there too. Nothing is lost.': 'เงินของหมวดนี้จะกลับไปที่ {to} และรายการที่จดไว้ก็ย้ายไปด้วย ไม่มีอะไรหาย',
+  'Logged this month': 'ที่จดไว้เดือนนี้',
+  '{amount} → {to}': '{amount} → {to}',
+  'Delete {name}': 'ลบ {name}',
+  'Save name': 'บันทึกชื่อ',
+  'Money a month': 'เงินต่อเดือน',
+  '{amount} · {spent} used this month': '{amount} · เดือนนี้ใช้ไป {spent}',
+  'Delete category': 'ลบหมวดนี้',
+  'Its money and what you logged go back to {to}': 'เงินและรายการที่จดไว้จะกลับไปที่ {to}',
+
   // ---- Start fresh (app/privacy.tsx) ----
   'HeyKip Plus · your free trial still ends {date}': 'HeyKip Plus · ทดลองใช้ฟรียังหมดวันที่ {date} เหมือนเดิม',
   'HeyKip Plus · stays on': 'HeyKip Plus · ยังใช้ได้ต่อ',
@@ -65,7 +79,7 @@ const th: Record<string, string> = {
   'Kip · {n} left today': 'Kip · วันนี้เหลือ {n} ข้อความ',
   'Kip is back at midnight': 'Kip กลับมาตอนเที่ยงคืนนะ',
   'That’s all 50 of my messages for today, so I’m resting. I’m back at midnight.': 'วันนี้ใช้ครบ 50 ข้อความแล้ว Kip ขอพักก่อนนะ เที่ยงคืนกลับมา',
-  'Log it yourself': 'จดเองก็ได้',
+  'Log it yourself': 'จดด้วยตัวเอง',
   'Takes a few seconds. Today’s money still updates.': 'แป๊บเดียวเสร็จ เงินของวันนี้ก็อัปเดตเหมือนเดิม',
 };
 export default th;

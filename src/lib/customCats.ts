@@ -103,3 +103,26 @@ export function guessIcon(name: string): Icon3D {
   ];
   return rules.find(([r]) => r.test(n))?.[1] ?? 'fun';
 }
+
+/** A new name for one of their own categories. Returns an error message, or null. */
+export async function renameCustom(c: Custom, name: string): Promise<string | null> {
+  const n = name.trim().slice(0, 24);
+  if (!n) return 'name';
+  const { error } = await supabase.from('categories').update({ name: n }).eq('id', c.id);
+  if (error) return error.message;
+  register(list.map((x) => (x.id === c.id ? { ...x, name: n } : x)));
+  return null;
+}
+
+/**
+ * Delete one of their own categories. What was logged in it moves to `to` (a built-in category, so nothing is
+ * lost from the month's spending); the month itself is changed by the caller before this runs.
+ */
+export async function deleteCustom(c: Custom, to: string): Promise<string | null> {
+  const { data: target } = await supabase.from('categories').select('id').is('user_id', null).eq('kind', 'spend').eq('key', to === 'spend_freely' ? 'other' : to).maybeSingle();
+  if (target?.id) await supabase.from('transactions').update({ category_id: target.id }).eq('category_id', c.id);
+  const { error } = await supabase.from('categories').delete().eq('id', c.id);
+  if (error) return error.message;
+  register(list.filter((x) => x.id !== c.id));
+  return null;
+}

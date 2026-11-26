@@ -12,7 +12,7 @@ import { guessType, matchBill, monthsToDue, nextDue, readyOf, rollYearly, yearly
 import { isoDay, dayInMonth } from '../src/lib/setup/plan';
 import { catchUpRows } from '../src/lib/catchup';
 import { paceOf } from '../src/lib/pace';
-import { nightsAhead, ymd } from '../src/lib/checkinDays';
+import { nightAmounts, nightsAhead, ymd } from '../src/lib/checkinDays';
 import { grown, grownStyle, stepFor } from '../src/lib/textScale';
 import { editBill } from '../src/lib/everymonth';
 import { planChange, planFix, type AgentOp } from '../src/lib/agent';
@@ -1219,6 +1219,30 @@ for (let n = 0; n < 2000; n++) {
     const catBefore = amt(both, 'c_cat');
     both = addBill(both, 'Gym', 99999).month;
     check('Own category: a big new bill never takes money from a need of their own', amt(both, 'c_cat') === catBefore, () => ({ s, before: catBefore, after: amt(both, 'c_cat') }));
+  }
+}
+
+// ---------- Evening check-in: every night's amount is the real one ----------
+{
+  for (let n = 0; n < 1500; n++) {
+    const i = person();
+    if (!i) continue;
+    const m = month(i);
+    const now = new Date(2026, pick([0, 3, 10, 11]), int(1, 28), int(7, 20));
+    const P = period(m.payday, now);
+    const total = Math.round(spendingTotal(m) * (P.dayIndex / P.total) * rand() * 1.4);
+    const today = Math.min(total, pick([0, 0, 60, 250]));
+    const spent: Spent = { total, today, bills: 0, byCat: {}, byDay: {} };
+    const nights = nightAmounts(m, spent, monthNumbers, (p, d) => period(p, d).start.getTime(), now);
+    check('Check-in: tonight says exactly what Home shows for today', nights[ymd(now)] === Math.max(0, Math.round(monthNumbers(m, spent, now).dailyToday)), () => ({ now, nights }));
+    for (let k = 1; k < 15; k++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + k, 12);
+      const same = period(m.payday, d).start.getTime() === P.start.getTime();
+      // Nothing logged since: Home on that day would show this (same pay cycle), or a fresh month's day (after payday).
+      const home = monthNumbers(m, same ? { ...spent, today: 0 } : { total: 0, today: 0, bills: 0, byCat: {}, byDay: {} }, d).dailyToday;
+      check('Check-in: every night ahead says what Home will show that day (nothing logged in between)', nights[ymd(d)] === Math.max(0, Math.round(home)), () => ({ now, d, same }));
+      check('Check-in: never a negative amount', nights[ymd(d)] >= 0, () => ({ d }));
+    }
   }
 }
 
