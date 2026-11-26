@@ -127,3 +127,37 @@ export async function markChecked(a: AutoSlips, assets: MediaLibrary.Asset[]) {
   const newest = Math.max(a.since, ...assets.map((x) => x.creationTime));
   await saveAuto({ ...a, since: newest });
 }
+
+/** Most slips Kip reads in one go when asked for a stretch of time (the rest: ask again). */
+export const RANGE_MAX = 60;
+
+/**
+ * "Kip, read my slips for November": every photo in the chosen albums taken between `from` and `to` (both days
+ * included, Thai time), oldest first so the month fills in order. At most RANGE_MAX; `total` says how many there were.
+ */
+export async function findInRange(albums: { id: string; title: string }[], from: string, to: string): Promise<{ assets: MediaLibrary.Asset[]; albums: string[]; total: number }> {
+  const start = new Date(`${from}T00:00:00+07:00`).getTime();
+  const end = new Date(`${to}T23:59:59.999+07:00`).getTime();
+  const found: { asset: MediaLibrary.Asset; album: string }[] = [];
+  for (const al of albums) {
+    let after: string | undefined;
+    // Page through the album (newest last): a busy month can have a few hundred photos.
+    for (let page = 0; page < 10; page++) {
+      const res = await MediaLibrary.getAssetsAsync({
+        album: al.id,
+        createdAfter: start - 1,
+        createdBefore: end + 1,
+        first: 100,
+        after,
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [[MediaLibrary.SortBy.creationTime, true]],
+      });
+      for (const asset of res.assets) if (asset.creationTime >= start && asset.creationTime <= end) found.push({ asset, album: al.title });
+      if (!res.hasNextPage) break;
+      after = res.endCursor;
+    }
+  }
+  const seen = new Set<string>();
+  const unique = found.filter((f) => (seen.has(f.asset.id) ? false : (seen.add(f.asset.id), true))).sort((x, y) => x.asset.creationTime - y.asset.creationTime);
+  return { assets: unique.slice(0, RANGE_MAX).map((f) => f.asset), albums: [...new Set(unique.map((f) => f.album))], total: unique.length };
+}

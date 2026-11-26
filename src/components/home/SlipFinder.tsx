@@ -200,7 +200,7 @@ export function AlbumSheet({ albums, onClose, onDone }: { albums: FoundAlbum[]; 
   );
 }
 
-function Stack({ n, uris }: { n: number; uris: string[] }) {
+export function Stack({ n, uris }: { n: number; uris: string[] }) {
   const tilt = ['-8deg', '-1deg', '7deg'];
   return (
     <View style={styles.stack}>

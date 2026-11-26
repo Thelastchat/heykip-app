@@ -212,7 +212,8 @@ function moment(kind: GoalKind, title: string, short: string) {
   }
 }
 
-function promise(kind: GoalKind, title: string, short: string, due: Date, target: number, monthly: number) {
+/** The promise on a goal's sticky note, in the person's own words to themself (Setup's, and New goal's default). */
+export function promiseLine(kind: GoalKind, title: string, short: string, due: Date, target: number, monthly: number) {
   const when = longDate(due);
   switch (kind) {
     case 'monthly':
@@ -333,7 +334,7 @@ export function makePlan(d: SetupDraft, now = new Date()): Plan {
     changes,
     stays,
     moment: moment(d.goalKind, d.goalTitle.trim(), short),
-    promiseMain: promise(d.goalKind, d.goalTitle.trim(), short, due, target, d.goalMonthly ?? 0),
+    promiseMain: promiseLine(d.goalKind, d.goalTitle.trim(), short, due, target, d.goalMonthly ?? 0),
     promiseBackup: picked.length
       ? t('If money gets tight, I’ll cut {thing} first. I won’t touch my savings.', { thing: CUT_FIRST()[picked[0]] })
       : t('If money gets tight, I’ll cut the extras first. I won’t touch my savings.'),

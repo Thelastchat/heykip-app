@@ -81,6 +81,24 @@ const th: Record<string, string> = {
   'Getting your photos…': 'กำลังดึงรูปมา…',
   '{got} of {n}': '{got} จาก {n}',
   'From Photos — iCloud ones take a moment': 'จากแอปรูปภาพ — รูปที่อยู่ใน iCloud ใช้เวลาแป๊บนึง',
+  // Talk · "Kip, read my slips for November"
+  'Looking in your bank albums…': 'กำลังดูในอัลบั้มธนาคาร…',
+  'Which albums are your slips in?': 'สลิปอยู่ในอัลบั้มไหนบ้าง?',
+  '1 slip · {when}': 'สลิป 1 ใบ · {when}',
+  '{n} slips · {when}': 'สลิป {n} ใบ · {when}',
+  'No slips for {when}': 'ไม่มีสลิปช่วง {when}',
+  'Slips are read on your phone': 'อ่านสลิปได้ในมือถือ',
+  'Sent to Kip · {when}': 'ส่งให้ Kip แล้ว · {when}',
+  'Kip only ever looks in the bank albums you choose — never your other photos': 'Kip ดูแค่อัลบั้มธนาคารที่เลือกไว้เท่านั้น ไม่แตะรูปอื่นเลย',
+  '{albums} · Kip reads the first {max} now — ask again for the rest': '{albums} · Kip อ่าน {max} ใบแรกก่อนนะ ที่เหลือเรียกอีกทีได้เลย',
+  '{albums} · you check each one before it’s saved': '{albums} · เช็กทุกใบก่อนบันทึกได้',
+  'Nothing in {albums} for those days': 'ไม่มีสลิปใน {albums} ช่วงวันนั้น',
+  'Settings → HeyKip → Photos → Full Access. Kip still only looks in the albums you choose.': 'การตั้งค่า → HeyKip → รูปภาพ → เข้าถึงทั้งหมด Kip ก็ยังดูแค่อัลบั้มที่เลือกไว้นะ',
+  'Open HeyKip on your iPhone to read slips from your bank albums': 'เปิด HeyKip ใน iPhone เพื่ออ่านสลิปจากอัลบั้มธนาคาร',
+  'Slips already logged are left out': 'สลิปที่จดไปแล้วจะไม่ซ้ำ',
+  'Try again in a moment': 'ลองใหม่อีกสักครู่นะ',
+  'Choose albums': 'เลือกอัลบั้ม',
+  'Look again': 'ดูอีกครั้ง',
 };
 
 export default th;

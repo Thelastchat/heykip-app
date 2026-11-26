@@ -19,8 +19,10 @@ export type LogItem = { name: string; amount: number; category: DbCat; money?: '
 export type InItem = { name: string; amount: number; category: InCat; money: 'in' };
 export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
 export type KipReply = {
-  kind: 'log' | 'buy' | 'answer' | 'change' | 'fix';
+  kind: 'log' | 'buy' | 'answer' | 'change' | 'fix' | 'slips';
   reply: string;
+  /** kind=slips: the days to read slips for (YYYY-MM-DD, Thai time, both included). */
+  slips?: { from: string; to: string };
   items?: (LogItem | InItem)[];
   buy?: LogItem;
   ops?: AgentOp[];
@@ -116,6 +118,9 @@ export function incomeNotes(items: InItem[], month: MonthBudget | null) {
   return { notes, extra, from };
 }
 
+/** YYYY-MM-DD in the phone's own time (Thailand for HeyKip's people). */
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 /** The month as numbers Kip may quote. */
 export function kipContext(
   month: MonthBudget | null,
@@ -129,6 +134,9 @@ export function kipContext(
   return {
     language: getLang(),
     name: name ?? undefined,
+    // Dates for "this month", "since payday", "last week" (Kip's slip reading needs real days).
+    today: ymd(new Date()),
+    payMonthStart: ymd(n.P.start),
     usualPayPerMonth: month.income,
     leftToday: n.leftToday,
     leftThisMonth: n.leftMonth,

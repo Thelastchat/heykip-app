@@ -16,6 +16,7 @@ import { Kip } from '@/components/Kip';
 import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
 import { Listening } from '@/components/talk/Listening';
+import { SlipRangeCard } from '@/components/talk/SlipRangeCard';
 import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -701,6 +702,15 @@ function Answer({
             )}
           </View>
         )}
+      </>
+    );
+  }
+
+  if (reply.kind === 'slips' && reply.slips && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.from) && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.to)) {
+    return (
+      <>
+        <KipLine text={reply.reply} />
+        <SlipRangeCard from={reply.slips.from} to={reply.slips.to} />
       </>
     );
   }

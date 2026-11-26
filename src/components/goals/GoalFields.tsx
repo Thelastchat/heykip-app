@@ -77,7 +77,7 @@ export function DueRow({ value, onChange }: { value: string | null; onChange: (i
       <Pressable onPress={show} style={[styles.row, styles.line]} accessibilityRole="button" accessibilityLabel={t('By when')}>
         <View style={{ flex: 1 }}>
           <Text style={styles.k}>{t('By when')}</Text>
-          <Text style={styles.v}>{value ? monthYear(parseDay(value)) : t('Pick a date')}</Text>
+          <Text style={[styles.v, !value && { color: colors.faint }]}>{value ? monthYear(parseDay(value)) : t('Pick a date')}</Text>
         </View>
         <CaretRight size={14} color={colors.faint} weight="bold" />
       </Pressable>

@@ -154,6 +154,7 @@ const th: Record<string, string> = {
   'Couldn’t upload your photo: {msg}': 'อัปโหลดรูปไม่ได้: {msg}',
   'Change photo': 'เปลี่ยนรูป',
   'Add a photo': 'ใส่รูป',
+  'Preview of your goal card': 'ตัวอย่างการ์ดเป้าหมายของคุณ',
   'Your name': 'ชื่อของเรา',
   'Couldn’t delete your account — check your internet and try again.': 'ลบบัญชีไม่ได้ — เช็กเน็ตแล้วลองใหม่นะ',
   'Delete your account?': 'ลบบัญชีเลยมั้ย?',

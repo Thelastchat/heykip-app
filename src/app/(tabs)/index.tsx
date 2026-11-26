@@ -36,7 +36,8 @@ import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
 import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
 import { dueLabel, guessType, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
 import { liteOf } from '@/components/goals/bits';
-import { CAT_ICON3D, goalIcon3D, ICON3D, type Icon3D } from '@/lib/icons3d';
+import { GoalCard } from '@/components/goals/GoalCard';
+import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dueBills, nextDue } from '@/lib/billdue';
@@ -49,7 +50,7 @@ import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { useTextStep } from '@/lib/textSize';
-import { colors, fonts, inkA, themed, whiteA, blackA } from '@/theme';
+import { colors, fonts, inkA, themed, whiteA } from '@/theme';
 
 /** ฿ drawn smaller next to a big number. */
 // The baht sign at about half the number's size: big enough to read, small enough to let the number lead.
@@ -601,7 +602,17 @@ export default function Home() {
           <Section title={goals.length > 1 ? t('Your goals') : goal?.kind === 'monthly' ? t('Your saving') : t('Your goal')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={322} decelerationRate="fast" style={styles.rowOuter} contentContainerStyle={styles.rowInner}>
             {goals.map((g) => (
-              <GoalCard key={g.id} g={g} perMonth={split.get(g.id) ?? 0} arrives={arrive.get(g.id) ?? null} width={Math.min(312, width - 60)} />
+              <GoalCard
+                key={g.id}
+                g={{ ...g, perMonth: split.get(g.id) ?? 0, arrives: arrive.get(g.id) ?? null }}
+                width={Math.min(312, width - 60)}
+                onPress={() => router.push('/goals')}
+                accessibilityLabel={
+                  g.kind === 'monthly'
+                    ? t('{goal}, {amount} a month', { goal: g.title, amount: baht(split.get(g.id) ?? 0) })
+                    : t('{goal}, {pct}% saved', { goal: g.title, pct: g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0 })
+                }
+              />
             ))}
             {goals.length < MAX_GOALS && (
               <Squish onPress={() => openFeature('goals')} style={styles.addGoal} accessibilityRole="button" accessibilityLabel={isPlus ? t('Add a goal') : t('Pin 2 more goals')}>
@@ -800,75 +811,6 @@ function Section({ title, right, onRight, caret, inset = true }: { title: string
   );
 }
 
-function GoalCard({ g, perMonth, arrives, width }: { g: HomeGoal; perMonth: number; arrives: Date | null; width: number }) {
-  const type = typeInfo(g.goalType, g.kind as never);
-  const monthly = g.kind === 'monthly';
-  const short = monthly ? g.title : shortName(g.title, g.kind as never);
-  const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
-  const line = (g.promise ?? '').split('\n')[0];
-  // Calm by design (approved mockup): the name, never a day count. A real goal says the month it arrives.
-  return (
-    <Squish
-      onPress={() => router.push('/goals')}
-      style={[styles.goal, { width, backgroundColor: type.color }]}
-      accessibilityRole="button"
-      accessibilityLabel={monthly ? t('{goal}, {amount} a month', { goal: g.title, amount: baht(perMonth) }) : t('{goal}, {pct}% saved', { goal: g.title, pct })}>
-      {g.photo ? (
-        <Image source={{ uri: g.photo, cacheKey: g.photoKey ?? undefined }} cachePolicy="disk" style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }]}>
-          <Float amount={6}>
-            <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 120, height: 120 }} contentFit="contain" />
-          </Float>
-        </View>
-      )}
-      <View style={styles.gchip}>
-        <Image source={ICON3D[goalIcon3D(g.kind)]} style={{ width: 26, height: 26 }} contentFit="contain" />
-        <Text style={styles.gchipText} numberOfLines={1}>
-          {short}
-        </Text>
-      </View>
-      {line ? (
-        <View style={styles.note}>
-          <View style={styles.tape} />
-          <Text allowFontScaling={false} style={styles.noteHead}>
-            {monthly ? t('Why I save') : t('My promise')}
-          </Text>
-          <Text allowFontScaling={false} style={styles.noteText} numberOfLines={3}>
-            {line}
-          </Text>
-        </View>
-      ) : null}
-      <View style={styles.strip}>
-        <Glass radius={22} shadow={false} light tint="rgba(255,255,255,0.72)">
-          <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <Text style={styles.stripBig}>{g.target > 0 ? t('{amount} saved', { amount: baht(g.saved) }) : t('{amount} this month', { amount: baht(perMonth) })}</Text>
-              {g.target > 0 && <Text style={styles.stripSmall}>{pct}%</Text>}
-            </View>
-            {g.target > 0 ? (
-              <>
-                <View style={styles.track}>
-                  <View style={[styles.trackFill, { width: `${Math.max(pct, 2)}%` }]} />
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={styles.stripSmall}>{t('{amount} a month', { amount: baht(perMonth) })}</Text>
-                  <Text style={styles.stripSmall}>{t('of {amount}', { amount: baht(g.target) })}</Text>
-                </View>
-                {arrives ? <Text style={[styles.stripSmall, { marginTop: 2 }]}>{t('On track for {date}', { date: monthYear(arrives) })}</Text> : null}
-              </>
-            ) : (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={styles.stripSmall}>{g.saved > 0 ? t('{amount} saved so far', { amount: baht(g.saved) }) : t('adds up every payday')}</Text>
-              </View>
-            )}
-          </View>
-        </Glass>
-      </View>
-    </Squish>
-  );
-}
-
 /** The short category name on a tile ("Food", not "Food & drinks"). */
 function catShort(key: CatKey) {
   const short: Partial<Record<CatKey, string>> = {
@@ -945,44 +887,8 @@ const styles = themed(() =>
     // swipe rows: room for shadows to fade out, then the space is pulled back — no clipped edges
     rowOuter: { marginTop: -20, marginBottom: -30 },
     rowInner: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 48, gap: 12 },
-    goal: { height: 272, borderRadius: 28, overflow: 'hidden', boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 16px 36px rgba(17,17,17,0.08)' },
-    gchip: {
-      position: 'absolute',
-      left: 12,
-      top: 12,
-      height: 32,
-      paddingLeft: 4,
-      paddingRight: 12,
-      borderRadius: 999,
-      backgroundColor: whiteA(0.9),
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      maxWidth: '70%',
-    },
-    gchipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent, flexShrink: 1 },
-    note: {
-      position: 'absolute',
-      right: 16,
-      top: 60,
-      width: 150,
-      backgroundColor: colors.lime,
-      paddingTop: 14,
-      paddingHorizontal: 12,
-      paddingBottom: 10,
-      transform: [{ rotate: '3deg' }],
-      boxShadow: '0 12px 20px rgba(0,0,0,0.22)',
-    },
-    tape: { position: 'absolute', top: -8, left: 52, width: 44, height: 15, backgroundColor: whiteA(0.65), transform: [{ rotate: '-4deg' }] },
-    noteHead: { fontFamily: fonts.regular, fontSize: 12, color: blackA(0.55) },
     calBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.card, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
     calText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-    noteText: { fontFamily: fonts.hand, fontSize: 18, lineHeight: 18, color: colors.onAccent, marginTop: 2 },
-    strip: { position: 'absolute', left: 12, right: 12, bottom: 12 },
-    stripBig: { fontFamily: fonts.medium, fontSize: 17, color: colors.onAccent },
-    stripSmall: { fontFamily: fonts.regular, fontSize: 12, color: colors.onAccentMuted },
-    track: { height: 8, borderRadius: 4, backgroundColor: blackA(0.08), marginTop: 9, marginBottom: 6, overflow: 'hidden' },
-    trackFill: { height: 8, borderRadius: 4, backgroundColor: colors.limeDeep },
     addGoal: {
       width: 140,
       height: 272,

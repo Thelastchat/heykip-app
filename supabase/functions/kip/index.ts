@@ -24,9 +24,9 @@ const tool = {
     properties: {
       kind: {
         type: 'string',
-        enum: ['log', 'buy', 'answer', 'change', 'fix'],
+        enum: ['log', 'buy', 'answer', 'change', 'fix', 'slips'],
         description:
-          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal, switch money style); fix = they want to delete or correct something already logged (context.recent); answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
+          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal, switch money style); fix = they want to delete or correct something already logged (context.recent); slips = they ask you to read, find, check or log their bank slips / สลิป for some days; answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
       },
       items: {
         type: 'array',
@@ -91,10 +91,17 @@ const tool = {
           required: ['ref', 'op'],
         },
       },
+      slips: {
+        type: 'object',
+        description:
+          'kind=slips: which days, as YYYY-MM-DD in Thai time, both included. "this month" = context.payMonthStart to context.today; "November" = 1–30 Nov (never after today); "since payday" = context.payMonthStart; "last week" = the 7 days before today; nothing said = context.payMonthStart to today.',
+        properties: { from: { type: 'string' }, to: { type: 'string' } },
+        required: ['from', 'to'],
+      },
       reply: {
         type: 'string',
         description:
-          'kind=answer: 1–3 short, warm sentences, in their language, using only numbers from the context. Never invent numbers. kind=log/buy: one short friendly line. kind=change/fix: one short line saying what you’ll change ("Here’s what changes:") — the app shows the numbers. If you can’t do what they ask (send or pay money, anything outside this app), use kind=answer and say kindly what you can do.',
+          'kind=answer: 1–3 short, warm sentences, in their language, using only numbers from the context. Never invent numbers. kind=log/buy: one short friendly line. kind=change/fix: one short line saying what you’ll change ("Here’s what changes:") — the app shows the numbers. kind=slips: one short line ("Sure — I’ll look through your bank albums for 1–26 Nov."); the app finds and shows the slips. If you can’t do what they ask (send or pay money, anything outside this app), use kind=answer and say kindly what you can do.',
       },
     },
     required: ['kind', 'reply'],
@@ -145,6 +152,7 @@ Deno.serve(async (req) => {
       `The app is set to ${(context as { language?: string } | undefined)?.language === 'th' ? 'Thai' : 'English'}. In Thai, sound like a friend texting (casual: ได้เลย, นะ, ไหวมั้ย), never formal (no ท่าน, กรุณา). Kip and HeyKip stay in English letters.`,
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
       'You can change their plan in HeyKip (kind=change) and fix what they logged (kind=fix). You cannot send, transfer or pay real money, or touch their bank: say so kindly if asked.',
+      'You CAN read their bank slips: the app looks only in the bank albums they chose on this phone (K PLUS, SCB…), reads each slip and lets them check it before saving. When they ask about their slips for any days, use kind=slips. Never say you cannot read slips. One slip at a time from a photo they pick also works on the + screen (Slip).',
       'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',

@@ -15,6 +15,7 @@ import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { AmountRow, Delta, DueRow } from '@/components/goals/GoalFields';
+import { GoalCard, type GoalCardData } from '@/components/goals/GoalCard';
 import { Timeline, type Lane } from '@/components/goals/Timeline';
 import { iconOf, liteOf, nameOf } from '@/components/goals/bits';
 import { Glass } from '@/components/glow/Glass';
@@ -32,7 +33,7 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { smallPhoto } from '@/lib/photos';
 import { GOAL_TYPES, typeInfo, type GoalTypeKey } from '@/lib/setup/goalTypes';
-import { isoDay, monthYear, ordinal, parseDay } from '@/lib/setup/plan';
+import { isoDay, monthYear, ordinal, parseDay, promiseLine, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, pinColors, themed, whiteA } from '@/theme';
 
@@ -83,6 +84,22 @@ export default function GoalNew() {
   const info = typeInfo(type);
   const monthly = info.kind === 'monthly';
   const name = title.trim() || info.example;
+  // The Home card as it will be: the promise fills in once there's a date (or a monthly amount).
+  const dueDate = !monthly && due ? parseDay(due) : null;
+  const months = dueDate ? Math.max(1, monthsBetween(new Date(), dueDate)) : 0;
+  const promise = monthly ? (monthlyAmt ? promiseLine('monthly', name, name, new Date(), 0, monthlyAmt) : null) : dueDate ? promiseLine(info.kind, name, shortName(name, info.kind), dueDate, target ?? 0, 0) : null;
+  const preview: GoalCardData = {
+    title: name,
+    kind: info.kind,
+    goalType: type,
+    photo,
+    promise,
+    target: monthly ? 0 : (target ?? 0),
+    saved: 0,
+    perMonth: monthly ? (monthlyAmt ?? 0) : months && target ? Math.ceil(target / months / 10) * 10 : 0,
+    arrives: dueDate,
+    dated: !monthly,
+  };
   const ok = !!title.trim() && (monthly ? (monthlyAmt ?? 0) > 0 : (target ?? 0) > 0 && !!due && parseDay(due).getTime() > Date.now());
   const lites = useMemo(() => goals.map(liteOf), [goals]);
   const full = goals.length >= MAX_GOALS;
@@ -237,6 +254,14 @@ export default function GoalNew() {
             .select('id')
             .single();
       if (e || !data) throw new Error(t('Couldn’t pin your goal: {reason}', { reason: e?.message ?? '' }));
+      // The sticky note they saw on the preview, with the date the goal really lands. Edit goal can change it.
+      const finalDue = row.due_date ? parseDay(row.due_date) : null;
+      const note = monthly
+        ? promiseLine('monthly', title.trim(), title.trim(), new Date(), 0, monthlyAmt ?? 0)
+        : finalDue
+          ? promiseLine(info.kind, title.trim(), shortName(title.trim(), info.kind), finalDue, row.target_amount ?? 0, 0)
+          : null;
+      if (note && !fromRow) await supabase.from('promises').insert({ user_id: uid, goal_id: data.id, text: note });
       if (someday || !plan) {
         await reload();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -285,12 +310,12 @@ export default function GoalNew() {
 
       {step === 'what' ? (
         <FormScroll contentContainerStyle={{ paddingTop: 16, gap: 16, paddingBottom: 120 + insets.bottom }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.typeRow} contentContainerStyle={styles.typeRowInner}>
             {TYPES.map((x) => {
               const on = x.key === type;
               return (
                 <Squish key={x.key} onPress={() => setType(x.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={x.label}>
-                  <Glass radius={22} tint={on ? colors.lime : undefined} innerStyle={[styles.type, on && styles.typeOn]}>
+                  <Glass radius={22} tint={on ? colors.lime : undefined} innerStyle={styles.type}>
                     <Image source={ICON3D[goalTypeIcon3D(x.key)]} style={{ width: 36, height: 36 }} contentFit="contain" />
                     <Text style={[styles.typeText, on && { fontFamily: fonts.medium, color: colors.onAccent }]}>{x.label}</Text>
                   </Glass>
@@ -300,19 +325,13 @@ export default function GoalNew() {
           </ScrollView>
 
           <View style={{ paddingHorizontal: 20, gap: 16 }}>
-            <Pressable onPress={pickPhoto} style={[styles.cover, { backgroundColor: info.color }]} accessibilityRole="button" accessibilityLabel={photo ? t('Change photo') : t('Add a photo')}>
-              {photo ? (
-                <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              ) : (
-                <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-                  <Image source={ICON3D[goalTypeIcon3D(type)]} style={{ width: 96, height: 96 }} contentFit="contain" />
-                </View>
-              )}
-              <View style={styles.photoBtn}>
+            {/* Live preview: the card exactly as it will sit on Home, filling in as they type. */}
+            <GoalCard g={preview} accessibilityLabel={t('Preview of your goal card')}>
+              <Pressable onPress={pickPhoto} style={styles.photoBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={photo ? t('Change photo') : t('Add a photo')}>
                 <Camera size={16} color={colors.onAccent} />
                 <Text style={styles.photoText}>{photo ? t('Change photo') : t('Add a photo')}</Text>
-              </View>
-            </Pressable>
+              </Pressable>
+            </GoalCard>
 
             <Glass radius={24} innerStyle={{ paddingHorizontal: 16 }}>
               <View style={styles.row}>
@@ -467,10 +486,11 @@ export default function GoalNew() {
 const styles = themed(() =>
   StyleSheet.create({
     type: { height: 44, paddingLeft: 4, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
-    typeOn: { borderWidth: 1.5, borderColor: colors.onAccent },
+    // Room for the chips' shadows to fade out, then the space is pulled back (the row never cuts them off).
+    typeRow: { flexGrow: 0, marginVertical: -16 },
+    typeRowInner: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
     typeText: { fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
-    cover: { height: 160, borderRadius: 24, overflow: 'hidden' },
-    photoBtn: { position: 'absolute', right: 12, bottom: 12, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: whiteA(0.9), flexDirection: 'row', alignItems: 'center', gap: 6 },
+    photoBtn: { position: 'absolute', right: 12, top: 12, height: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: whiteA(0.9), flexDirection: 'row', alignItems: 'center', gap: 6 },
     photoText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
     row: { minHeight: 64, paddingVertical: 10, justifyContent: 'center' },
     k: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
