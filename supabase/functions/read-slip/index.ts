@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser();
     if (!u?.user) return json({ error: 'not signed in' }, 401);
     // Plus (a trial that has ended is Free), the person's Allow (PDPA, App Store 5.1.2(i)), and today's cap — all
-    // decided by the database (kip_allow), which also counts this call. The app can't set any of these itself.
-    const gate = await sb.rpc('kip_allow');
+    // decided by the database (slip_allow), which also counts this call. The app can't set any of these itself.
+    const gate = await sb.rpc('slip_allow'); // slips have their own 100 a day, apart from Kip's chat
     if (gate.error) return json({ error: 'busy' }, 503);
     if (gate.data === 'plus') return json({ error: 'plus' }, 402);
     if (gate.data === 'consent') return json({ error: 'consent' }, 403);
