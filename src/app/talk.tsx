@@ -148,6 +148,7 @@ export default function Talk() {
   const [voiceOn, setVoiceOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const live = useRef(false); // voiceOn, for callbacks that finish after a re-render
+  const voiceRested = useRef(false); // told them today's voice is used up
   const [lang, setLang] = useState<VoiceLang>(defaultVoiceLang);
   useEffect(() => {
     savedVoiceLang().then((l) => l && setLang(l));
@@ -190,8 +191,13 @@ export default function Talk() {
     if (!live.current) return;
     if (!said) return endVoice();
     setSpeaking(true);
-    await say(said);
+    const r = await say(said);
     setSpeaking(false);
+    // Today's 15 spoken replies are used: say so once, then Kip carries on in text.
+    if (r.said === 'limit' && !voiceRested.current) {
+      voiceRested.current = true;
+      flash(t('Kip’s voice is resting till midnight — he’ll answer in text.'));
+    }
     if (live.current) listen();
   }
   /** Tapping Kip: start talking · send now (don't wait for the pause) · cut in while he's talking. */
@@ -305,6 +311,7 @@ export default function Talk() {
         ...(month ? kipKnows(month, tx) : {}),
       }),
       history(),
+      live.current,
     );
     // Every answer is worked out once, from the month as it was when Kip answered.
     if (res.ok) {

@@ -1,42 +1,30 @@
-// Kip talking back out loud: the phone's own voices (Apple's on iPhone), Thai or English. Free, instant, and nothing
-// Kip says leaves the phone to be spoken. Kip picks the best voice the phone has for the language (Enhanced when the
-// person has downloaded one in Settings → Accessibility → Spoken Content).
+// Kip talking back out loud, in his own voice (approved 27 Nov): Google's Gemini 2.5 Flash TTS, voice Fenrir, made
+// by the kip-voice function — Plus only, 15 spoken replies a day. Only the words Kip is about to say go to Google.
+// When the voice is used up or can't be reached, Kip simply answers in text (never a robot fallback voice).
 import { requireOptionalNativeModule } from 'expo';
+import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-type SpeechModule = typeof import('expo-speech');
+import { supabase } from '@/lib/supabase';
 
-let cached: SpeechModule | null | undefined;
-function speech(): SpeechModule | null {
+type AudioLib = typeof import('expo-audio');
+type Player = ReturnType<AudioLib['createAudioPlayer']>;
+
+let cached: AudioLib | null | undefined;
+function audio(): AudioLib | null {
   if (cached !== undefined) return cached;
-  if (Platform.OS !== 'web' && !requireOptionalNativeModule('ExpoSpeech')) return (cached = null);
+  if (Platform.OS !== 'web' && !requireOptionalNativeModule('ExpoAudio')) return (cached = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    cached = require('expo-speech') as SpeechModule;
+    cached = require('expo-audio') as AudioLib;
   } catch {
     cached = null;
   }
   return cached;
 }
 
-/** Can this phone speak? (No in an older build without the voice part.) */
-export const canSpeak = () => speech() != null;
-
-const best: Partial<Record<string, string | null>> = {};
-async function voiceFor(lang: string): Promise<string | undefined> {
-  if (lang in best) return best[lang] ?? undefined;
-  const s = speech();
-  try {
-    const all = (await s?.getAvailableVoicesAsync()) ?? [];
-    const mine = all.filter((v) => v.language?.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
-    const exact = mine.filter((v) => v.language === lang);
-    const pool = exact.length ? exact : mine;
-    best[lang] = (pool.find((v) => v.quality === 'Enhanced') ?? pool[0])?.identifier ?? null;
-  } catch {
-    best[lang] = null;
-  }
-  return best[lang] ?? undefined;
-}
+/** Can this phone play Kip's voice? (No in an older build without the audio part.) */
+export const canSpeak = () => audio() != null;
 
 /** Thai or English, from what Kip wrote (any Thai letter → Thai). */
 export function langOf(text: string): 'th-TH' | 'en-US' {
@@ -55,22 +43,70 @@ export function forSpeaking(text: string, lang: 'th-TH' | 'en-US') {
     .trim();
 }
 
-/** Say it. Resolves when Kip has finished (or was stopped, or the phone couldn't). */
-export async function say(text: string): Promise<void> {
-  const s = speech();
+/** spoke = Kip said it · limit = today's 15 are used (back at midnight) · off = no voice this time (offline, older build…) */
+export type Said = { said: 'spoke' | 'limit' | 'off'; left?: number };
+
+let current: { player: Player; done: () => void } | null = null;
+let turn = 0;
+
+/** Say it in Kip's voice. Resolves when he has finished, was cut off, or couldn't speak. */
+export async function say(text: string): Promise<Said> {
+  const A = audio();
   const lang = langOf(text);
   const words = forSpeaking(text, lang);
-  if (!s || !words) return;
-  const voice = await voiceFor(lang);
-  await new Promise<void>((done) => {
-    // Its own audio session, so Kip is loud through the speaker even right after the mic was listening.
-    s.speak(words, { language: lang, voice, rate: lang === 'th-TH' ? 1 : 1.02, pitch: 1.08, useApplicationAudioSession: false, onDone: done, onStopped: done, onError: () => done() });
+  if (!A || !words) return { said: 'off' };
+  const mine = ++turn;
+
+  const { data, error } = await supabase.functions.invoke('kip-voice', { body: { text: words, lang } });
+  if (error) return { said: (error as { context?: { status?: number } }).context?.status === 429 ? 'limit' : 'off' };
+  const b64 = (data as { audio?: string } | null)?.audio;
+  const left = (data as { left?: number } | null)?.left;
+  if (!b64 || mine !== turn) return { said: 'off', left }; // cut off while the voice was being made
+
+  let uri = `data:audio/mpeg;base64,${b64}`;
+  let file: { delete: () => void } | null = null;
+  if (Platform.OS !== 'web') {
+    // iPhone's player wants a real file: a throwaway one in the cache.
+    const f = new File(Paths.cache, `kip-${mine}.mp3`);
+    f.create({ overwrite: true });
+    await f.write(b64, { encoding: 'base64' });
+    uri = f.uri;
+    file = f;
+  }
+
+  // Loud through the speaker even right after the mic was listening; other audio ducks while Kip talks.
+  await A.setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false, interruptionMode: 'duckOthers' }).catch(() => {});
+  await new Promise<void>((resolve) => {
+    const player = A.createAudioPlayer({ uri });
+    let ended = false;
+    const done = () => {
+      if (ended) return;
+      ended = true;
+      sub.remove();
+      try {
+        player.remove();
+      } catch {}
+      try {
+        file?.delete();
+      } catch {}
+      if (current?.player === player) current = null;
+      resolve();
+    };
+    const sub = player.addListener('playbackStatusUpdate', (s) => s.didJustFinish && done());
+    current = { player, done };
+    player.play();
+    setTimeout(done, 30_000); // never wait forever
   });
+  return { said: 'spoke', left };
 }
 
 /** Stop Kip mid-sentence (they tapped him, or left). */
 export function hush() {
-  speech()
-    ?.stop()
-    .catch(() => {});
+  turn++;
+  const c = current;
+  if (!c) return;
+  try {
+    c.player.pause();
+  } catch {}
+  c.done();
 }

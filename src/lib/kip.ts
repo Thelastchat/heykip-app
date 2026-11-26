@@ -164,8 +164,10 @@ export async function askKip(
   text: string,
   context: object,
   history: { me: string; kip: string }[] = [],
+  /** They're talking out loud: Kip answers in one or two short spoken sentences. */
+  voice = false,
 ): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
-  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history } });
+  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history, voice } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };

@@ -102,6 +102,7 @@ const th: Record<string, string> = {
   'Switch language': 'เปลี่ยนภาษา',
   'One moment…': 'แป๊บนึงนะ…',
   'Kip is talking': 'Kip กำลังพูด',
+  'Kip’s voice is resting till midnight — he’ll answer in text.': 'เสียงของ Kip พักถึงเที่ยงคืนนะ ตอนนี้ขอตอบเป็นข้อความก่อน',
   'Tap Kip to talk': 'แตะ Kip เพื่อคุย',
   'Or tap Kip and just say it': 'หรือแตะ Kip แล้วพูดได้เลย',
   'Send now': 'ส่งเลย',

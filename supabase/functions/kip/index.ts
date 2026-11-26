@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);
 
-    const { text, context, history } = await req.json();
+    const { text, context, history, voice } = await req.json();
     const own = ownCats((context as { own?: unknown } | undefined)?.own, (context as { categories?: unknown } | undefined)?.categories);
     // Their own categories join the lists Kip may pick from.
     const kipTool = JSON.parse(JSON.stringify(tool));
@@ -189,6 +189,9 @@ Deno.serve(async (req) => {
       CAT_NAMES,
       ownLine(own),
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',
+      voice
+        ? 'They are TALKING to you out loud and you answer out loud: reply must be ONE or TWO short spoken sentences (under 25 words, under about 80 Thai characters), plain words, no lists, no emoji, no symbols. Say only the key number.'
+        : '',
       `The person's month right now (JSON): ${JSON.stringify(context ?? {}).slice(0, 8000)}`,
     ].join('\n');
 
