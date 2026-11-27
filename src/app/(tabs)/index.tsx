@@ -3,7 +3,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { CalendarBlank, CaretRight, Flame, LockSimple, Plus, TrendDown } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, Flame, LockSimple, Plus } from 'phosphor-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -326,6 +326,8 @@ export default function Home() {
 
   // Everything put away so far: every goal plus the safety net. The one number on Home that only goes up.
   const totalSaved = goals.reduce((a, g) => a + g.saved, 0) + safetySaved;
+  // Where the plan is at the start of today — the same line "under plan" is measured against, so the numbers agree.
+  const planSoFar = Math.max(0, spent.total - pace);
   // Payday (and the day after): the month's saving has just gone in — Kip says so before anything else.
   const paydaySaved = P.dayIndex <= 1 && goalPerMonth > 0 && !monthOver;
 
@@ -340,10 +342,9 @@ export default function Home() {
         : spent.total === 0
           ? t('Your plan is running. Tell me what you spend and I’ll keep {goal} on track.', { goal: short })
           : pace < 0 && overToday <= 0
-            ? // The yellow line above already says how far under they are; Kip says what it means for the goal.
-              goalDate
-              ? t('You’re doing great. Keep this up and {goal} stays on track for {date}.', { goal: short, date: monthYear(goalDate) })
-              : t('You’re doing great. Keep this up and {goal} stays on track.', { goal: short })
+            ? goalDate
+              ? t('{amount} under plan so far. {goal} stays on track for {date}', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
+              : t('{amount} under plan so far. {goal} stays on track', { amount: baht(-pace), goal: short })
           : pace <= 0
             ? goalDate
               ? t('You’re doing great — {amount} under pace. {goal} is on track for {date}.', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
@@ -485,13 +486,13 @@ export default function Home() {
             </Text>
           </View>
           {totalSaved > 0 && (
-            <Squish style={styles.savedPill} onPress={() => router.push('/goals')} accessibilityRole="button" accessibilityLabel={t('{amount} saved in total', { amount: baht(totalSaved) })}>
-              <Image source={ICON3D.piggy} style={{ width: 22, height: 22 }} contentFit="contain" />
-              <Text style={styles.savedText}>
-                <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{baht(totalSaved)} </Text>
+            <Pressable style={styles.saved} hitSlop={8} onPress={() => router.push('/goals')} accessibilityRole="button" accessibilityLabel={t('{amount} saved in total', { amount: baht(totalSaved) })}>
+              <Text style={styles.streakText}>
+                <Text style={{ fontFamily: fonts.medium, color: colors.ink, fontVariant: ['tabular-nums'] }}>{baht(totalSaved)} </Text>
                 {t('saved')}
               </Text>
-            </Squish>
+              <CaretRight size={12} color={colors.muted} weight="bold" />
+            </Pressable>
           )}
         </RiseIn>
 
@@ -564,16 +565,6 @@ export default function Home() {
           )}
         </RiseIn>
 
-        {/* the win, said out loud: how far under the plan they are so far this pay month */}
-        {pace < 0 && !monthOver && overToday <= 0 && isTodaySelected && (
-          <RiseIn delay={150} style={{ paddingHorizontal: 20, marginTop: 14, flexDirection: 'row' }}>
-            <View style={styles.under}>
-              <TrendDown size={14} color={colors.onAccent} weight="bold" />
-              <Text style={styles.underText}>{t('{amount} under plan so far this month', { amount: baht(-pace) })}</Text>
-            </View>
-          </RiseIn>
-        )}
-
         {/* Kip: one line on Home; tap to read the whole thing. When Kip notices something, the line becomes a card. */}
         <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 16 }}>
           {kipDone ? (
@@ -593,16 +584,16 @@ export default function Home() {
             <Squish style={styles.payday} onPress={() => router.push('/goals')} accessibilityRole="button">
               <Kip mood="celebrate" size={56} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.paydayTitle}>{t('Payday! {amount} went to {goal}', { amount: baht(goalPerMonth), goal: short })}</Text>
+                <Text style={styles.paydayTitle}>{t('Payday. {amount} went to {goal}', { amount: baht(goalPerMonth), goal: short })}</Text>
                 <Text style={styles.paydayText}>
-                  {goalDate ? t('That’s {saved} saved — on track for {date}.', { saved: baht(goal?.saved ?? 0), date: monthYear(goalDate) }) : t('That’s {saved} saved so far.', { saved: baht(goal?.saved ?? 0) })}
+                  {goalDate ? t('{saved} saved, on track for {date}', { saved: baht(goal?.saved ?? 0), date: monthYear(goalDate) }) : t('{saved} saved so far', { saved: baht(goal?.saved ?? 0) })}
                 </Text>
               </View>
             </Squish>
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />
-              <Text style={styles.kipText} numberOfLines={1}>
+              <Text style={styles.kipText} numberOfLines={2}>
                 <Text style={styles.kipName}>Kip </Text>
                 {say}
               </Text>
@@ -654,9 +645,12 @@ export default function Home() {
               </View>
               <View style={styles.paceTrack}>
                 <View style={[styles.paceFill, { width: `${Math.min(100, Math.max(2, (line.spent / spendBudget) * 100))}%`, backgroundColor: line.inside ? colors.limeDeep : colors.orange }]} />
-                <View style={[styles.paceMark, { left: `${Math.min(100, (line.planToday / spendBudget) * 100)}%` }]} />
+                <View style={[styles.paceMark, { left: `${Math.min(100, Math.max(0, (planSoFar / spendBudget) * 100))}%` }]} />
               </View>
-              <Text style={styles.paceNote}>{line.inside ? t('Inside the plan — the line is where the plan is today') : t('Ahead of the plan — the line is where the plan is today')}</Text>
+              <View style={styles.paceFoot}>
+                <Text style={styles.paceNote}>{t('Plan so far {amount}', { amount: baht(planSoFar) })}</Text>
+                <Text style={styles.paceNote}>{t('of {amount}', { amount: baht(spendBudget) })}</Text>
+              </View>
             </Pressable>
           </RiseIn>
         )}
@@ -889,17 +883,15 @@ const styles = themed(() =>
     hello: { paddingHorizontal: 20, paddingTop: 20, fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -0.9, color: colors.ink },
     l1: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 4 },
     l2: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
-    paceRow: { borderRadius: 24, backgroundColor: colors.paper, paddingHorizontal: 18, paddingVertical: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
+    paceRow: { borderRadius: 24, backgroundColor: colors.paper, paddingHorizontal: 20, paddingVertical: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
     paceHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     paceTrack: { height: 8, borderRadius: 4, backgroundColor: inkA(0.07) },
     paceFill: { height: 8, borderRadius: 4 },
     paceMark: { position: 'absolute', top: -4, width: 2, height: 16, borderRadius: 1, backgroundColor: colors.ink },
-    paceNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 10 },
-    under: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.lime },
-    underText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
-    savedPill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingLeft: 8, paddingRight: 14, borderRadius: 18, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 6px 18px rgba(0,0,0,0.05)' },
-    savedText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
-    payday: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 28, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
+    paceFoot: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+    paceNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted, fontVariant: ['tabular-nums'] },
+    saved: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 40 },
+    payday: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 28, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
     paydayTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink },
     paydayText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
     paceSpent: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
@@ -909,14 +901,14 @@ const styles = themed(() =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 8,
-      paddingLeft: 8,
+      paddingVertical: 12,
+      paddingLeft: 12,
       paddingRight: 16,
-      borderRadius: 999,
+      borderRadius: 24,
       backgroundColor: colors.paper,
       boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)',
     },
-    kipText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
+    kipText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
     readBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 },
     readText: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
     nums: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingHorizontal: 20, paddingTop: 20 },
