@@ -317,7 +317,7 @@ const styles = themed(() =>
     optOn: { borderWidth: 1.5, borderColor: colors.ink },
     optTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     optSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: inkA(0.5) },
+    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.faint },
     radioOn: { borderWidth: 7, borderColor: colors.ink },
     kipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
     bub: { padding: 12, paddingHorizontal: 14 },

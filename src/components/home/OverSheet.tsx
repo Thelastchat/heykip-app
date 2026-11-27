@@ -270,7 +270,7 @@ const styles = themed(() =>
     line: { borderTopWidth: 1, borderTopColor: inkA(0.07) },
     title: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     sub: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, marginTop: 1 },
-    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
     to: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
     link: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted, textAlign: 'center', textDecorationLine: 'underline', paddingVertical: 4 },
   }),

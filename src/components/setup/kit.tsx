@@ -278,7 +278,7 @@ const styles = themed(() =>
     toggle: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
 
     radioCard: { paddingVertical: 12, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: glow.glassEdge },
-    radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: inkA(0.5) },
+    radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
 
     chip: { height: 40, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
     chipText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },

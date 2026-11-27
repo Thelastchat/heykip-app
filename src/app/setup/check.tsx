@@ -11,7 +11,7 @@ import { baht } from '@/lib/money';
 import { useSetup, type SetupDraft } from '@/lib/setup/draft';
 import { funMinimum } from '@/lib/brain';
 import { fullDate, inputsFrom, isoDay, monthYear, monthsFromNow, parseDay, shortName } from '@/lib/setup/plan';
-import { colors, fonts, money, radius, shadow, themed, inkA } from '@/theme';
+import { colors, fonts, money, radius, shadow, themed } from '@/theme';
 
 type Choice = { key: string; per?: number; title: string; tag?: string; tagColor?: string; lines: string[]; apply: Partial<SetupDraft>; button: string };
 const PICK: Record<string, string> = { comfy: colors.lime, anyway: colors.lime, tight: colors.peach, keep: colors.peach, most: colors.peach, smaller: colors.sky, numbers: colors.sky };
@@ -270,7 +270,7 @@ const styles = themed(() =>
       alignItems: 'flex-start',
     },
     optionOn: { borderColor: colors.ink },
-    radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: inkA(0.5) },
+    radio: { width: 22, height: 22, marginTop: 1, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.faint },
     tag: { height: 20, paddingHorizontal: 8, borderRadius: radius.pill, justifyContent: 'center' },
   }),
 );

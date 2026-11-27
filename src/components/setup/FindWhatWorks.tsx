@@ -603,7 +603,7 @@ const styles = themed(() =>
     addon: { borderRadius: 18, borderWidth: 1.5, borderColor: inkA(0.12), backgroundColor: glassA(0.55), paddingVertical: 12, paddingHorizontal: 14, gap: 10 },
     addonTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
     addonSub: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted },
-    box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: inkA(0.5), backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
+    box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.faint, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
     boxOn: { backgroundColor: colors.ink, borderColor: colors.ink },
     h1: { fontFamily: fonts.semibold, fontSize: 27, letterSpacing: -0.5, color: colors.ink },
     section: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted, paddingHorizontal: 4, paddingTop: 4 },
