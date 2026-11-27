@@ -107,58 +107,6 @@ export const CATEGORY: Record<BuiltinCat, CatInfo> & Record<CustomCat, CatInfo> 
   },
 };
 
-export const STYLES: { key: BudgetStyle; name: string; tag: string; tagColor: string; desc: string }[] = [
-  {
-    key: 'kip',
-    get name() {
-      return t('Kip’s plan');
-    },
-    get tag() {
-      return t('Kip’s pick');
-    },
-    tagColor: colors.lime,
-    get desc() {
-      return t('Living costs first, a little safety net, then as much for your goal as you can comfortably save.');
-    },
-  },
-  {
-    key: 'savefirst',
-    get name() {
-      return t('Save first');
-    },
-    get tag() {
-      return t('Fastest');
-    },
-    tagColor: colors.sage,
-    get desc() {
-      return t('The most Kip will plan goes out on payday. The rest is one pot — no categories to track.');
-    },
-  },
-  {
-    key: '503020',
-    name: '50 / 30 / 20',
-    get tag() {
-      return t('The classic');
-    },
-    tagColor: colors.roseBeige,
-    get desc() {
-      return t('20% saved, the rest on needs and wants.');
-    },
-  },
-  {
-    key: 'jars',
-    get name() {
-      return t('6 Jars');
-    },
-    get tag() {
-      return t('Grow yourself');
-    },
-    tagColor: colors.lilac,
-    get desc() {
-      return t('Jars for learning and giving too, plus a bigger safety net.');
-    },
-  },
-];
 
 // ---------- the month ----------
 
@@ -190,6 +138,8 @@ export type MonthBudget = {
   payMoved?: string;
   /** Taken back from this cycle's goal saving / the safety net to cover going over — added to spending money. */
   covers?: { period: string; goal: number; safety: number; today?: { day: string; amount: number } };
+  /** Spare spending money sent to the goal by the weekly sweep, per pay month (period key → amount). */
+  swept?: Record<string, number>;
   /** More goals (Plus): how the goal saving is split, in pin order. Missing = all to the first goal. */
   goals?: { id: string; amount: number }[];
   /** Rent's due day and reminder (without one, rent is due on payday and has no reminder). */

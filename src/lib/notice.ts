@@ -11,6 +11,8 @@
 //              bill yet, a bill that went up, one that stopped, and what streaming comes to in a year.
 //   renew    — Keep or cancel (subscriptions.ts): a subscription renews in 1–3 days. Still using it, or cancel it and
 //              let its money go to the goal.
+//   sweep    — Monday: what's spare so far this pay month (under the plan's line) can go to the goal now, before it
+//              gets spent late in the month (sweep.ts).
 //   leftover — the pay month that just ended had money left over by what you logged. Kip asks (it can't see your
 //              bank) whether to put it toward your goal. Only when last month was logged well, early in the new month.
 import { addBill, CATEGORY, removeBill, type CatKey, type MonthBudget } from '@/lib/budget';
@@ -22,6 +24,8 @@ import { periodAt, periodKey, type Spent } from '@/lib/home';
 import { dueBills, nextDue } from '@/lib/billdue';
 import { applyOps } from '@/lib/monthops';
 import { renewalNotice, type Renewal } from '@/lib/subscriptions';
+import { MIN_SWEEP, SWEEP_DAYS, spareNow, sweptIn, weekOf } from '@/lib/sweep';
+import { monthNumbers } from '@/lib/home';
 
 /** Days of the pay month that must have passed before a pace means anything. */
 const MIN_DAYS = 4;
@@ -74,6 +78,8 @@ export type Notice =
   | { id: string; kind: 'substream'; names: { name: string; amount: number }[]; perYear: number }
   | { id: string; kind: 'recap'; recap: Recap }
   | Renewal
+  | { id: string; kind: 'payday'; amount: number; parts: { label: string; amount: number }[]; bank: string | null; moved: boolean }
+  | { id: string; kind: 'sweep'; amount: number; goalId: string | null; goalName: string; daily: number; was: Date | null; will: Date | null }
   | {
       id: string;
       kind: 'leftover';
@@ -177,13 +183,31 @@ export function leftoverNotice(m: MonthBudget, last: LastCycle, P: Period, goals
   const prev = periodAt(m.payday, -1, now);
   if (last.days < Math.ceil(prev.total / 2)) return null;
   const budget = m.spend.reduce((a, s) => a + s.amount, 0) + last.extra;
-  const amount = Math.floor((budget - last.total) / 100) * 100;
+  // Already sent to the goal by weekly sweeps that month: not left over any more.
+  const swept = m.swept?.[periodKey(m.payday, prev.start)] ?? 0;
+  const amount = Math.floor((budget - last.total - swept) / 100) * 100;
   if (amount < 300) return null;
   const lites = goals.map(({ title: _t, ...g }) => g);
   const was = goal.kind !== 'monthly' ? (arrivals(lites, splitOf(m, lites), m.payday, now).get(goal.id) ?? null) : null;
   const after = lites.map((g) => (g.id === goal.id ? { ...g, saved: g.saved + amount } : g));
   const will = goal.kind !== 'monthly' ? (arrivals(after, splitOf(m, after), m.payday, now).get(goal.id) ?? null) : null;
   return { id: `leftover:${prev.start.toDateString()}`, kind: 'leftover', amount, goalId: goal.id, goalName: goal.title, was, will };
+}
+
+/** Monday (or Tuesday): what's spare so far goes to the first goal (or the safety net when that's the goal). */
+export function sweepNotice(m: MonthBudget, spent: Spent, P: Period, goals: (GoalLite & { title: string })[], now = new Date()): Extract<Notice, { kind: 'sweep' }> | null {
+  if (!SWEEP_DAYS.includes(now.getDay()) || P.dayIndex < 3) return null;
+  const n = monthNumbers(m, spent, now);
+  if (n.overToday > 0 || n.overMonth > 0) return null;
+  const amount = spareNow(n.spendBudget, spent, sweptIn(m, now), P);
+  if (amount < MIN_SWEEP) return null;
+  const goal = m.goal.isSafetyNet ? null : (goals[0] ?? null);
+  const lites = goals.map(({ title: _t, ...g }) => g);
+  const was = goal && goal.kind !== 'monthly' ? (arrivals(lites, splitOf(m, lites), m.payday, now).get(goal.id) ?? null) : null;
+  const after = lites.map((g) => (goal && g.id === goal.id ? { ...g, saved: g.saved + amount } : g));
+  const will = goal && goal.kind !== 'monthly' ? (arrivals(after, splitOf(m, after), m.payday, now).get(goal.id) ?? null) : null;
+  const daily = Math.round((n.spendBudget / Math.max(1, P.total)) / 10) * 10;
+  return { id: `sweep:${weekOf(now)}`, kind: 'sweep', amount, goalId: goal?.id ?? null, goalName: goal?.title ?? '', daily, was, will };
 }
 
 /** A bill due today or late that isn't ticked — the latest-due first. */
@@ -250,6 +274,8 @@ export function noticesFor(
   if (b) out.push(b);
   const rn = renewalNotice(m, now, off2);
   if (rn) out.push(rn);
+  const sw = sweepNotice(m, spent, P, goals, now);
+  if (sw && !off2(sw.id)) out.push(sw);
   const subs = subNotices(m, tx, now).filter((n) => !off2(n.id));
   out.push(...subs.filter((n) => n.kind !== 'substream'));
   const l = last ? leftoverNotice(m, last, P, goals, now) : null;
@@ -266,6 +292,9 @@ export function laterFor(n: Notice, now = new Date()): number {
   const day = 86_400_000;
   if (n.kind === 'billdue' || n.kind === 'recap') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   // Still using it: quiet until the day after it renews (the next renewal asks again).
+  if (n.kind === 'payday') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  // Keep it: quiet until next Monday.
+  if (n.kind === 'sweep') return now.getTime() + 6 * day;
   if (n.kind === 'renew') return new Date(n.date.getFullYear(), n.date.getMonth(), n.date.getDate() + 1).getTime();
   if (n.kind === 'sub') return now.getTime() + 365 * day;
   if (n.kind === 'substop') return now.getTime() + 60 * day;

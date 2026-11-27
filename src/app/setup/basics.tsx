@@ -18,7 +18,7 @@ export default function SetupBasics() {
   const regular = draft.incomeType === 'regular';
   const payday = draft.payday;
   const income = plannedIncome(draft);
-  const L = living(income);
+  const L = living(income, draft.rent === 0);
   const guess = billsGuess(income);
   const cycle = payday ? t('{from} to {to}', { from: nth(payday), to: nth(payday === 1 ? 31 : payday - 1) }) : t('Payday to the day before');
 

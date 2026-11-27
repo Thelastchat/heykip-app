@@ -69,15 +69,17 @@ export function monthNumbers(month: MonthBudget | null, spent: Spent, now = new 
   const P = period(month?.payday ?? null, now);
   const added = addedThisCycle(month, spent, now);
   const spendBudget = month ? spendingTotal(month) + added.extra + added.cover : 0;
-  const leftMonth = Math.max(0, spendBudget - spent.total);
+  // What the weekly sweep sent to the goal counts as used: it's no longer spending money.
+  const used = spent.total + (month?.swept?.[periodKey(month.payday, now)] ?? 0);
+  const leftMonth = Math.max(0, spendBudget - used);
   // Today's share of what was left when today started (today's spending counted back in).
-  const leftAtStart = Math.max(0, spendBudget - (spent.total - spent.today));
+  const leftAtStart = Math.max(0, spendBudget - (used - spent.today));
   const dailyToday = Math.max(0, Math.round(Math.max(0, leftAtStart - added.coverToday) / P.daysLeft / 10) * 10) + added.coverToday;
   const leftToday = Math.max(0, dailyToday - spent.today);
-  const pace = Math.round(spent.total - spendBudget * (P.dayIndex / P.total));
+  const pace = Math.round(used - spendBudget * (P.dayIndex / P.total));
   // Going over: past today's money, and past the whole month's spending money.
   const overToday = Math.max(0, spent.today - dailyToday);
-  const overMonth = Math.max(0, spent.total - spendBudget);
+  const overMonth = Math.max(0, used - spendBudget);
   // What each day after today gets now (the days ahead carry today's extra).
   const daysAfter = P.daysLeft - 1;
   const dailyAfter = daysAfter > 0 ? Math.max(0, Math.round(leftMonth / daysAfter / 10) * 10) : 0;

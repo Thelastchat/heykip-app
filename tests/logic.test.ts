@@ -24,6 +24,8 @@ import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/l
 import { kipKnows } from '../src/lib/kipknows';
 import { cancelSub, renewalNotice, subsOf } from '../src/lib/subscriptions';
 import { savedOverTime } from '../src/lib/savingHistory';
+import { spareNow, sweptIn, withSweep } from '../src/lib/sweep';
+import { living, livingTotal } from '../src/lib/brain';
 import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
 // ---------- tiny test kit ----------
@@ -581,7 +583,7 @@ for (let n = 0; n < 2000; n++) {
 
 // ---------- agent Kip: changes and fixes ----------
 {
-  const OPS = ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'style'] as const;
+  const OPS = ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal'] as const;
   const BKEYS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'learning', 'giving', 'other'];
   let tried = 0;
   for (let i = 0; i < 3000; i++) {
@@ -599,7 +601,6 @@ for (let n = 0; n < 2000; n++) {
         amount: int(10, 6000),
         name: pick(['Netflix', 'Gym', 'Mom', 'rent', 'AIA']),
         due_month: rand() < 0.3 ? int(1, 12) : undefined,
-        style: pick(['kip', '503020', 'jars', 'savefirst']),
       };
     });
     const p = planChange(m, [lite], ops);
@@ -645,7 +646,7 @@ for (let n = 0; n < 2000; n++) {
     () => paid?.next.paid,
   );
   check('Agent: removing a bill that isn’t there is refused', planChange(m, [lite], [{ op: 'remove_bill', name: 'Spotify' }]) === null, () => 0);
-  check('Agent: switching to the style you already have is refused', planChange(m, [lite], [{ op: 'style', style: m.style }]) === null, () => m.style);
+  check('Agent: switching money style is gone (one plan, Kip’s)', planChange(m, [lite], [{ op: 'style' as never }]) === null, () => 0);
   check('Agent: an unknown change is refused, never guessed', planChange(m, [lite], [{ op: 'transfer' as never, amount: 100 }]) === null, () => 0);
 
   const recent = [
@@ -1305,6 +1306,44 @@ for (let n = 0; n < 2000; n++) {
     const onlyIn = moves.every((m) => m.amount > 0);
     if (onlyIn) check('Saving over time: with only money going in, the line never goes down', pts.every((p, k) => k === 0 || p.total >= pts[k - 1].total), () => ({ pts }));
   }
+}
+
+// ---------- weekly sweep (approved 27 Nov): spare money goes to the goal, the rest of the month is untouched ----------
+{
+  for (let k = 0; k < 1500; k++) {
+    const i = person();
+    if (!i) continue;
+    const m0 = month(i, 'kip', pick([null, 1, 15, 25, 28]));
+    const now = new Date(2026, int(0, 11), int(1, 28), 12);
+    const P = period(m0.payday, now);
+    const budget = spendingTotal(m0);
+    const today = int(0, 300);
+    const before = Math.max(0, Math.round((budget * P.dayIndex) / P.total) - int(0, 4000));
+    const spent = spentOf(before + today, today);
+    const amount = spareNow(budget, spent, sweptIn(m0, now), P);
+    if (amount < 200) continue;
+    const m1 = withSweep(m0, amount, now);
+    const a = monthNumbers(m0, spent, now);
+    const b = monthNumbers(m1, spent, now);
+    const plan = Math.round(budget / P.total / 10) * 10;
+    check('Sweep: what’s spare is never more than what’s unspent', amount <= a.leftAtStart, () => ({ amount, a }));
+    check('Sweep: after it, every day left still gets at least the plan’s daily amount', b.dailyToday >= plan - 10, () => ({ amount, plan, b, P }));
+    check('Sweep: spending money left goes down by exactly the amount sent', a.leftMonth - b.leftMonth === Math.min(amount, a.leftMonth), () => ({ amount, a, b }));
+    check('Sweep: a second ask the same moment finds nothing more spare', spareNow(budget, spent, sweptIn(m1, now), P) < 200, () => ({ amount }));
+    check('Sweep: only the last two pay months are kept', Object.keys(withSweep(withSweep(m1, 100, new Date(now.getTime() + 40 * 86_400_000)), 100, new Date(now.getTime() + 80 * 86_400_000)).swept ?? {}).length <= 2, () => ({}));
+  }
+}
+
+// ---------- living at home (approved 27 Nov): food floor ฿100 a day, so minimum wage at home can still save ----------
+{
+  for (let k = 0; k < 400; k++) {
+    const income = r100(8000, 40000);
+    const home = living(income, true), rented = living(income, false);
+    check('At home: food floor is ฿3,000 (฿100 a day), never below', home.food >= 3000, () => ({ income, home }));
+    check('At home: never needs more than renting', livingTotal(home) <= livingTotal(rented), () => ({ income, home, rented }));
+  }
+  const minWage: Inputs = { income: 9000, rent: 0, bills: 300, goal: { type: 'trip', title: 'Japan', target: 20000, saved: 0, months: null, monthly: null } };
+  check('At home on minimum wage (฿9,000, no rent): there is room to save', verdict(minWage).kind !== 'noRoom', () => verdict(minWage));
 }
 
 // ---------- report ----------

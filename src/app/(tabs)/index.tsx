@@ -10,7 +10,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PlusSheet, type PlusFeature } from '@/components/PlusSheet';
-import { fasterStyle, plusPitch } from '@/components/plusPitch';
+import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
 import { CountUp, Float, RiseIn, Ring, Squish } from '@/components/glow/motion';
@@ -27,12 +27,13 @@ import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
 import { KipDone, KipNotice } from '@/components/home/KipNotice';
 import { DaySheet } from '@/components/DaySheet';
-import { plan as splitMonth, type Style } from '@/lib/brain';
-import { addBill, CATEGORY, savingTotal, STYLES, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, savingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, period, periodKey, useHome, type HomeGoal } from '@/lib/home';
-import { cover as coverMonth, savingThisCycle } from '@/lib/moneyin';
+import { cover as coverMonth, moveSaving, savingMoved, savingThisCycle } from '@/lib/moneyin';
+import { BankSheet } from '@/components/goals/BankSheet';
+import { BANKS, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
 import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
 import { dueLabel, guessType, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
 import { liteOf } from '@/components/goals/bits';
@@ -52,6 +53,7 @@ import { typeInfo } from '@/lib/setup/goalTypes';
 import { dayInMonth, monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { cancelSub, subsOf, subsTotal, type FreedTo, type Renewal } from '@/lib/subscriptions';
+import { sweptIn, withSweep } from '@/lib/sweep';
 import { CancelSheet, type CancelChoice } from '@/components/home/CancelSheet';
 import { useTextStep } from '@/lib/textSize';
 import { colors, fonts, inkA, themed, whiteA } from '@/theme';
@@ -209,7 +211,35 @@ export default function Home() {
   }, [recapParam, !!recapAny]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const notices = useMemo(() => noticesFor(month, spent, period(month?.payday ?? null), last, noticeGoals, hidden, new Date(), tx, recap), [month, spent, last, noticeGoals, hidden, tx, recap, today]);
-  const notice = kipDone ? null : notices[0];
+  // Payday made real: in the first days of the pay month, before anything else, Kip asks about this payday's saving —
+  // "did your bank move it?" when a transfer is set up, else "move it now" (and offers to make it automatic).
+  const pk = periodKey(month?.payday ?? null, now);
+  const cycleSaving = month ? savingThisCycle(month, safetySaved, now) : { goal: 0, safety: 0 };
+  const paydayTotal = cycleSaving.goal + cycleSaving.safety;
+  const bankT = profile?.bank_transfer ?? null;
+  const paydayConfirmed = !!month && (bankT?.ok === pk || (hidden[`payday:${pk}`] ?? 0) > now.getTime());
+  const paydayNotice: Notice | null =
+    month && month.payday && P.dayIndex <= 2 && paydayTotal > 0 && !monthOver && !paydayConfirmed && !((hidden[`paydaylater:${pk}`] ?? 0) > now.getTime())
+      ? {
+          id: `payday:${pk}`,
+          kind: 'payday',
+          amount: paydayTotal,
+          parts: [
+            ...(cycleSaving.goal > 0 ? [{ label: month.goal.isSafetyNet ? t('Safety net') : short, amount: cycleSaving.goal }] : []),
+            ...(cycleSaving.safety > 0 ? [{ label: t('Safety net'), amount: cycleSaving.safety }] : []),
+          ],
+          bank: bankT ? (BANKS.find((b) => b.key === bankT.bank)?.name ?? null) : null,
+          moved: savingMoved(month, now),
+        }
+      : null;
+  const [bankOpen, setBankOpen] = useState(false);
+  // "+฿x this month" on a goal: only money that really went in — this payday's share once it moved, and the weekly
+  // sweeps (they go to the first goal).
+  const payMoved = !!month && savingMoved(month, now);
+  const sweptNow = month && !month.goal.isSafetyNet ? sweptIn(month, now) : 0;
+  const addedTo = (id: string) => (payMoved ? (split.get(id) ?? 0) : 0) + (goals[0]?.id === id ? sweptNow : 0);
+  const allNotices = paydayNotice ? [paydayNotice, ...notices] : notices;
+  const notice = kipDone ? null : allNotices[0];
   function showDone(text: string, undo: () => Promise<string | null>) {
     if (doneTimer.current) clearTimeout(doneTimer.current);
     setKipDone({ text, undo });
@@ -313,6 +343,52 @@ export default function Home() {
       hide(n.id, laterFor(n, new Date()));
       return;
     }
+    if (n.kind === 'payday') {
+      // It moved / I moved it: Kip records this payday's saving (once per pay month) and stops asking.
+      setNoticeBusy(true);
+      if (!savingMoved(month, now)) {
+        const r = await moveSaving(month, goals.map(liteOf), safetySaved, now);
+        if ('error' in r) {
+          setNoticeBusy(false);
+          return flash(t('Couldn’t save: {msg}', { msg: r.error }));
+        }
+        save(r.month);
+      }
+      if (bankT && profile) await saveBankTransfer(profile.id, { ...bankT, ok: pk });
+      hide(n.id, P.end.getTime());
+      setNoticeBusy(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      reload();
+      refreshProfile();
+      return;
+    }
+    if (n.kind === 'sweep') {
+      // Spare money → the goal (or the safety net), and this pay month's spending money goes down by the same.
+      setNoticeBusy(true);
+      const sent = n.goalId
+        ? await supabase.rpc('put_in_goal', { p_goal: n.goalId, p_amount: n.amount, p_source: 'extra', p_from: 'leftover', p_note: t('Kip: spare this week') })
+        : await supabase.rpc('put_in_safety', { p_amount: n.amount, p_kind: 'extra' });
+      setNoticeBusy(false);
+      if (sent.error) return flash(t('Couldn’t save: {msg}', { msg: sent.error.message }));
+      const before = month;
+      save(withSweep(month, n.amount));
+      hide(n.id, laterFor(n, new Date()));
+      reload();
+      refreshProfile();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      showDone(t('{amount} sent to {goal}', { amount: baht(n.amount), goal: n.goalId ? n.goalName : t('the safety net') }), async () => {
+        const back = n.goalId
+          ? await supabase.rpc('take_from_goal', { p_goal: n.goalId, p_amount: n.amount, p_note: t('Undo') })
+          : await supabase.rpc('put_in_safety', { p_amount: -n.amount, p_kind: 'extra' });
+        if (back.error) return t('Couldn’t undo: {msg}', { msg: back.error.message });
+        save(before);
+        hide(n.id, null);
+        reload();
+        refreshProfile();
+        return null;
+      });
+      return;
+    }
     if (n.kind === 'renew') {
       // Still using it: quiet until it has renewed; the next renewal asks again.
       hide(n.id, laterFor(n, new Date()));
@@ -392,7 +468,7 @@ export default function Home() {
   // Where the plan is at the start of today — the same line "under plan" is measured against, so the numbers agree.
   const planSoFar = Math.max(0, spent.total - pace);
   // Payday (and the day after): the month's saving has just gone in — Kip says so before anything else.
-  const paydaySaved = P.dayIndex <= 1 && goalPerMonth > 0 && !monthOver;
+  const paydaySaved = P.dayIndex <= 2 && goalPerMonth > 0 && !monthOver && paydayConfirmed && !!month && savingMoved(month, now);
 
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
@@ -427,7 +503,6 @@ export default function Home() {
     unlocked(f);
   }
   async function unlocked(f: PlusFeature) {
-    if (f === 'styles') return router.push('/styles');
     if (f === 'customize') return router.push('/month');
     if (f === 'talk') return router.push('/talk');
     if (f === 'goals') return router.push(goals.length < MAX_GOALS ? '/goal-new' : '/goals');
@@ -448,20 +523,8 @@ export default function Home() {
 
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = plusPitch(month, short, funLeft);
-  const styleCompare = month ? fasterStyle(month) : null;
 
   const plusCards: { f: PlusFeature; icon: Icon3D; title: string; teaser: string; on?: boolean }[] = [
-    {
-      f: 'styles',
-      icon: 'piggy',
-      title: t('Money styles'),
-      teaser:
-        styleCompare && styleCompare.sooner > 0
-          ? styleCompare.sooner > 1
-            ? t('{goal} {n} months sooner with {style}', { goal: short, n: styleCompare.sooner, style: t(styleCompare.best.s.name) })
-            : t('{goal} {n} month sooner with {style}', { goal: short, n: styleCompare.sooner, style: t(styleCompare.best.s.name) })
-          : t('Try Save first, 50/30/20 or 6 Jars'),
-    },
     {
       f: 'automove',
       icon: 'income',
@@ -476,7 +539,6 @@ export default function Home() {
   ];
 
   // ---- bills (paid marks reset each pay period); a bill with a due day shows when it's due next ----
-  const pk = periodKey(month?.payday ?? null, now);
   const withDue = month ? dueBills(month, now) : [];
   const dueNext = new Map(withDue.map((b) => [b.key, nextDue(b, month?.payday ?? null, now)] as const));
   const paidKeys = month?.paid?.period === pk ? month.paid.keys : [];
@@ -636,12 +698,20 @@ export default function Home() {
             <KipNotice
               notice={notice}
               index={0}
-              count={notices.length}
+              count={allNotices.length}
               busy={noticeBusy}
               isPlus={isPlus}
               onLocked={() => setSheet('talk')}
               onDo={() => doNotice(notice)}
-              onLater={() => (notice.kind === 'renew' ? setCancelFor(notice) : hide(notice.id, laterFor(notice, new Date())))}
+              onLater={() =>
+                notice.kind === 'renew'
+                  ? setCancelFor(notice)
+                  : notice.kind === 'payday'
+                    ? notice.bank
+                      ? hide(`paydaylater:${pk}`, laterFor(notice, new Date()))
+                      : setBankOpen(true)
+                    : hide(notice.id, laterFor(notice, new Date()))
+              }
             />
           ) : paydaySaved ? (
             <Squish style={styles.payday} onPress={() => router.push('/goals')} accessibilityRole="button">
@@ -675,7 +745,7 @@ export default function Home() {
             {goals.map((g) => (
               <GoalCard
                 key={g.id}
-                g={{ ...g, perMonth: split.get(g.id) ?? 0, arrives: arrive.get(g.id) ?? null, added: split.get(g.id) ?? 0 }}
+                g={{ ...g, perMonth: split.get(g.id) ?? 0, arrives: arrive.get(g.id) ?? null, added: addedTo(g.id) }}
                 width={Math.min(312, width - 60)}
                 onPress={() => router.push('/goals')}
                 accessibilityLabel={
@@ -828,6 +898,21 @@ export default function Home() {
             .slice(0, 3)}
           onCat={(k) => setCatOpen(k)}
           onClose={() => setPaceOpen(false)}
+        />
+      )}
+      {bankOpen && month && paydayNotice && (
+        <BankSheet
+          amount={savingTotal(month)}
+          day={month.payday}
+          parts={paydayNotice.parts}
+          onClose={() => setBankOpen(false)}
+          onDone={async (b: BankKey) => {
+            if (!profile) return;
+            const err = await saveBankTransfer(profile.id, { amount: savingTotal(month), day: month.payday, bank: b, at: new Date().toISOString() });
+            setBankOpen(false);
+            await refreshProfile();
+            flash(err ? t('Couldn’t save: {msg}', { msg: err }) : t('Set. On payday Kip checks it went through'));
+          }}
         />
       )}
       {cancelFor && cancelChoice(cancelFor) && (

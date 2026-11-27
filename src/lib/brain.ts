@@ -50,10 +50,11 @@ const r100 = (n: number) => Math.round(n / 100) * 100;
 const f100 = (n: number) => Math.max(0, Math.floor(n / 100) * 100);
 
 /** Realistic monthly living costs for one person. Floors from what things actually cost in Thailand;
- *  above the floor, people with more income spend a bit more (shares from the Commerce Ministry household survey). */
-export function living(income: number): Living {
+ *  above the floor, people with more income spend a bit more (shares from the Commerce Ministry household survey).
+ *  No rent = living with family (27 Nov): meals at home most days, so food starts lower (฿100 a day, still editable). */
+export function living(income: number, atHome = false): Living {
   return {
-    food: r100(Math.max(4500, income * 0.18)), // ฿150/day minimum — two cheap meals and a drink
+    food: r100(Math.max(atHome ? 3000 : 4500, income * 0.18)), // ฿150/day minimum — two cheap meals and a drink; ฿100 at home
     transport: r100(Math.max(1000, income * 0.06)), // BTS/MRT/bus or motorbike fuel
     health: r100(Math.max(500, income * 0.03)), // pharmacy, toiletries, haircut
     household: r100(Math.max(500, income * 0.02)), // laundry, cleaning, small things for the room
@@ -62,10 +63,12 @@ export function living(income: number): Living {
 export const livingTotal = (l: Living) => l.food + l.transport + l.health + l.household;
 
 /** Kip's realistic numbers, with anything the person changed on top. */
-export const livingFor = (i: Inputs): Living => ({ ...living(i.income), ...i.living });
+export const livingFor = (i: Inputs): Living => ({ ...living(i.income, i.rent === 0), ...i.living });
 
 /** Below these, a month isn't really liveable — Kip warns. */
 export const LIVING_FLOOR: Living = { food: 4500, transport: 1000, health: 500, household: 500 };
+/** The floor for this person: living with family (no rent) eats at home most days. */
+export const floorFor = (i: Pick<Inputs, 'rent'>): Living => (i.rent === 0 ? { ...LIVING_FLOOR, food: 3000 } : LIVING_FLOOR);
 
 /** Kip's guess for other bills (phone, internet, electricity, water) until it learns the real ones. */
 export const billsGuess = (income: number) => r100(Math.max(1000, income * 0.05));
@@ -348,8 +351,8 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit, loc
   const isLiving = e.key !== 'rent' && e.key !== 'bills';
   const old = e.key === 'rent' ? i.rent : e.key === 'bills' ? i.bills : L[e.key as keyof Living];
   let to = Math.max(0, r10(e.to));
-  if (isLiving && to < LIVING_FLOOR[e.key as keyof Living]) {
-    to = LIVING_FLOOR[e.key as keyof Living];
+  if (isLiving && to < floorFor(i)[e.key as keyof Living]) {
+    to = floorFor(i)[e.key as keyof Living];
     out.limit = { why: 'floor', value: to };
   }
   let d = to - old;
@@ -379,6 +382,9 @@ export function applyEdit(i: Inputs, style: Style, goalNow: number, e: Edit, loc
     out.toFun = -d - out.toGoal;
     out.goal = goalNow + out.toGoal;
   }
-  out.inputs = e.key === 'rent' ? { ...i, rent: to } : e.key === 'bills' ? { ...i, bills: to } : { ...i, living: { ...i.living, [e.key]: to } };
+  // Rent changing to or from ฿0 would quietly move the food floor (at home vs not); keep their living as it is —
+  // paying rent can mean paying parents, so food changes only when they change it.
+  const keepLiving = e.key === 'rent' && (i.rent === 0) !== (to === 0) ? { living: L } : {};
+  out.inputs = e.key === 'rent' ? { ...i, rent: to, ...keepLiving } : e.key === 'bills' ? { ...i, bills: to } : { ...i, living: { ...i.living, [e.key]: to } };
   return out;
 }

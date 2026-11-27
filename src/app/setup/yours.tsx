@@ -11,7 +11,7 @@ import { Kip } from '@/components/Kip';
 import { BackButton, SetupScreen, Title, picked } from '@/components/setup/kit';
 import { Slider } from '@/components/Slider';
 import { Button } from '@/components/ui';
-import { LIVING_FLOOR, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
+import { floorFor, applyEdit, funMinimum, goalNeed, livingFor, safetyNet, type Edit, type EditResult, type Locks } from '@/lib/brain';
 import { CATEGORY, type IconKey } from '@/lib/budget';
 import { getLang, rich, t } from '@/lib/i18n';
 import { ICON3D, type Icon3D } from '@/lib/icons3d';
@@ -324,10 +324,10 @@ export default function SetupYours() {
           'food',
           'food',
           colors.lime,
-          t('{perDay} a day · lowest ฿150', { perDay: baht(Math.round(L.food / 30)) }),
+          inputs.rent === 0 ? t('{perDay} a day · lowest ฿100 living at home', { perDay: baht(Math.round(L.food / 30)) }) : t('{perDay} a day · lowest ฿150', { perDay: baht(Math.round(L.food / 30)) }),
           L.food,
           (to) => ({ kind: 'cost', key: 'food', to }),
-          L.food <= LIVING_FLOOR.food,
+          L.food <= floorFor(inputs).food,
         )}
         {row('transport', 'travel', colors.sky, t('BTS/MRT, bus or bike fuel'), L.transport, (to) => ({ kind: 'cost', key: 'transport', to }))}
         {row('health', 'health', CATEGORY.health_beauty.color, t('Pharmacy, haircut, toiletries'), L.health, (to) => ({ kind: 'cost', key: 'health', to }))}

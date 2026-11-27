@@ -46,7 +46,7 @@ const tool = {
         type: 'string',
         enum: ['log', 'buy', 'answer', 'change', 'fix', 'slips'],
         description:
-          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal, switch money style); fix = they want to delete or correct something already logged (context.recent); slips = they ask you to read, find, check or log their bank slips / สลิป for some days; answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
+          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal); fix = they want to delete or correct something already logged (context.recent); slips = they ask you to read, find, check or log their bank slips / สลิป for some days; answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
       },
       items: {
         type: 'array',
@@ -80,9 +80,9 @@ const tool = {
           properties: {
             op: {
               type: 'string',
-              enum: ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'style', 'set_due'],
+              enum: ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'set_due'],
               description:
-                'move = amount from one budget category to another this month; set = a category budget to a new amount; add_bill = a new bill every month (or every year with due_month); remove_bill = delete a bill they added; pay_bill = mark a bill paid this month (rent or one in context.bills); to_goal = move amount from a category (usually fun) to the goal saving this month; take_goal = take money out of the goal’s savings; style = switch money style; set_due = set the day of the month a bill (or rent) is due, e.g. "Netflix is on the 18th"',
+                'move = amount from one budget category to another this month; set = a category budget to a new amount; add_bill = a new bill every month (or every year with due_month); remove_bill = delete a bill they added; pay_bill = mark a bill paid this month (rent or one in context.bills); to_goal = move amount from a category (usually fun) to the goal saving this month; take_goal = take money out of the goal’s savings; set_due = set the day of the month a bill (or rent) is due, e.g. "Netflix is on the 18th"',
             },
             from: { type: 'string', enum: BUDGET_CATS },
             to: { type: 'string', enum: BUDGET_CATS },
@@ -92,7 +92,6 @@ const tool = {
             bill_type: { type: 'string', enum: BILL_TYPES },
             due_month: { type: 'number', description: 'add_bill once a year: the month it is due, 1–12 (e.g. "every February" = 2). Leave out for monthly bills.' },
             day: { type: 'number', description: 'set_due, or add_bill when they say it: the day of the month it is due, 1–31' },
-            style: { type: 'string', enum: ['kip', '503020', 'jars', 'savefirst'], description: 'kip = Kip’s plan, 503020 = 50/30/20, jars = jars, savefirst = save first' },
           },
           required: ['op'],
         },
@@ -132,7 +131,7 @@ const tool = {
 const VOICE = [
   'Tone: warm, encouraging, never shaming or preachy. Money is stressful; people often come to you frustrated. When they went over, name the fix, not the fault ("a big day — that happens; here is how it spreads"). When they did well, say so plainly. Never lecture, never moralise, never call spending "bad". Celebrate small wins (a day under, a bill ticked, money that went to saving).',
   'Investing: you NEVER recommend what to invest in. No stocks, funds, bonds, crypto, gold, insurance products, savings accounts or any bank or product by name, and never "buy", "invest in" or "put it in X". That is a licensed advisor\'s job (SEC-licensed in Thailand); if asked, say so kindly in one line, then help with what you can: making more money available to save inside HeyKip, and general ideas (an emergency fund, saving on payday, spending less than you earn). General money education is fine; a product or a pick is not.',
-  "Saving plan: context.moneyStyle is the plan the person chose; answer by ITS rules, not generic advice. kip = Kip's plan: saving first (goal + safety net), then rent and bills, then living (food, transport, health, household) sized to real Thai costs, then fun and shopping; a lowered budget gives its money to the goal. 503020 = 50/30/20: needs (rent, bills, food, transport, health, household) 50%, wants (shopping, fun) 30%, saving 20%; HeyKip keeps a promised monthly amount even above 20% (the extra goes to the safety net) and says so in styleNotes. jars = 6 Jars: necessities 55%, play 10%, education 10%, give 5%, long-term saving 10%, financial freedom 10% (HeyKip folds freedom into the safety net); bills and food are necessities, never play. savefirst = Save first: the saving leaves on payday and everything else is one free pot (spend_freely) — there are no categories to move between. context.styleNotes are what the plan said about THIS person's numbers: repeat them when relevant, never contradict them.",
+  "Saving plan: there is one plan, Kip's plan: saving first (goal + safety net), then rent and bills, then living (food, transport, health, household) sized to real Thai costs, then fun and shopping; a lowered budget gives its money to the goal. HeyKip has no money styles to switch between (no 50/30/20, 6 Jars or Save first): if asked, say so kindly and offer to change amounts instead (kind=change).",
 ];
 
 Deno.serve(async (req) => {

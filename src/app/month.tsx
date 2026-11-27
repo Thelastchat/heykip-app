@@ -25,7 +25,7 @@ export function PlanScreen({ back = true }: { back?: boolean }) {
   const edit = guess ? GUESS : editName;
   const { spent } = useHome(month);
   const { profile } = useAuth();
-  const [locked, setLocked] = useState<null | 'styles' | 'customize'>(null);
+  const [locked, setLocked] = useState<null | 'customize'>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
   const goal = month?.goal.title ?? t('your goal');
   const funLeft = Math.max(0, (month?.spend.find((x) => x.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));

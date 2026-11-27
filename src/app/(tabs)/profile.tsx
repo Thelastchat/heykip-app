@@ -19,7 +19,7 @@ import { PaySheet, RentSheet } from '@/components/profile/MoneySheets';
 import { Pill, SaveButton, Sheet, sheet } from '@/components/profile/Sheet';
 import { manageSubscription } from '@/lib/purchases';
 import { planNow, useAuth } from '@/lib/auth';
-import { billsTotal, dailyOf, STYLES, type MonthBudget } from '@/lib/budget';
+import { billsTotal, dailyOf, type MonthBudget } from '@/lib/budget';
 import { useHome } from '@/lib/home';
 import { getLang, t, useLang, type Lang } from '@/lib/i18n';
 import { ICON3D } from '@/lib/icons3d';
@@ -177,7 +177,6 @@ export default function Profile() {
       : t('Every month')
     : t('Changes · good month {amount}', { amount: row?.good_month_income ? baht(Number(row.good_month_income)) : '—' });
   const billCount = month?.bills.items?.length ?? 0;
-  const styleName = STYLES.find((s) => s.key === month?.style)?.name ?? t('Kip’s plan');
 
   // ---- Plus ----
   const plan = planNow(row?.plan, row?.trial_ends_at, row?.plan_until);
@@ -246,7 +245,6 @@ export default function Profile() {
               value={month ? baht(billsTotal(month)) : '—'}
               onPress={() => month && basics && setOpen('rent')}
             />
-            <SetRow icon="piggy" title={t('Money style')} sub={t('How your month is split')} value={styleName} soft onPress={() => router.push('/styles')} />
           </Glass>
         </RiseIn>
         <Text style={styles.note}>{t('Change one and Kip re-plans your month — you’ll see the new numbers first.')}</Text>

@@ -9,7 +9,7 @@
 // Logging (spends, money in) isn't here: it's saved straight away with Undo.
 import { applyOps } from '@/lib/monthops';
 import type { ChangeRow } from '@/components/TellKip';
-import { addBill, CATEGORY, lowerBudget, STYLES, withStyle, type BillType, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, lowerBudget, type BillType, type CatKey, type MonthBudget } from '@/lib/budget';
 import { BILL_TYPES, guessType, nextDue, yearlySetAside } from '@/lib/everymonth';
 import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
 import { periodKey } from '@/lib/home';
@@ -17,10 +17,9 @@ import { getLang, t } from '@/lib/i18n';
 import { DB_CAT_NAME, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { monthYear, ordinal } from '@/lib/setup/plan';
-import type { BudgetStyle } from '@/lib/setup/draft';
 
 export type AgentOp = {
-  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'style' | 'set_due';
+  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'set_due';
   from?: string;
   to?: string;
   category?: string;
@@ -31,7 +30,6 @@ export type AgentOp = {
   due_month?: number;
   /** add_bill / set_due: the day of the month it's due (1–31). */
   day?: number;
-  style?: string;
 };
 export type FixOp = { ref: string; op: 'delete' | 'category' | 'amount'; category?: string; amount?: number };
 export type RecentTx = { ref: string; id: string; name: string; amount: number; category: DbCat; at: string };
@@ -39,7 +37,6 @@ export type RecentTx = { ref: string; id: string; name: string; amount: number; 
 export type ChangePlan = { next: MonthBudget; take: number; rows: ChangeRow[] };
 export type FixPlan = { edits: { tx: RecentTx; op: FixOp['op']; category?: DbCat; amount?: number }[]; rows: ChangeRow[] };
 
-const STYLE_KEYS: BudgetStyle[] = ['kip', '503020', 'jars', 'savefirst'];
 const DB_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 
 /** "18th" (Thai: วันที่ 18). */
@@ -108,9 +105,6 @@ export function planChange(m: MonthBudget, goals: GoalLite[], ops: AgentOp[], no
       const cur = next.spend.find((s) => s.key === from)?.amount;
       if (cur === undefined || amount <= 0) return null;
       next = lowerBudget(next, from, Math.max(0, cur - amount), 'goal');
-    } else if (o.op === 'style') {
-      if (!STYLE_KEYS.includes(o.style as BudgetStyle) || o.style === next.style) return null;
-      next = withStyle(next, o.style as BudgetStyle);
     } else if (o.op === 'take_goal') {
       if (!main || amount <= 0 || take + amount > main.saved) return null;
       take += amount;
@@ -148,7 +142,6 @@ export function changeRows(a: MonthBudget, b: MonthBudget, goals: GoalLite[], ta
     rows.push({ icon: 'bill', title: t('Rent'), sub: t('Due day · reminder the day before'), from: a.rentDue ? nth(a.rentDue.day) : undefined, to: nth(b.rentDue.day) });
   const paidA = a.paid?.keys ?? [];
   for (const k of b.paid?.keys ?? []) if (!paidA.includes(k)) rows.push({ icon: 'bill', title: k === 'rent' ? t('Rent') : k.slice(5), sub: t('Marked paid'), to: '✓' });
-  if (a.style !== b.style) rows.push({ icon: null, title: t('Money style'), from: STYLES.find((s) => s.key === a.style)?.name, to: STYLES.find((s) => s.key === b.style)?.name ?? '' });
   const ga = a.goal.amount + a.goalExtra;
   const gb = b.goal.amount + b.goalExtra;
   const main = goals[0];

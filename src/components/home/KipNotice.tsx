@@ -31,6 +31,12 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
         ? n.late === 0
           ? t('{name} is due today', { name: billName })
           : t('{name} was due {date}', { name: billName, date: day(n.date) })
+        : n.kind === 'payday'
+          ? n.bank
+            ? t('Payday · your bank moves {amount} today', { amount: baht(n.amount) })
+            : t('Payday · move {amount} to savings', { amount: baht(n.amount) })
+        : n.kind === 'sweep'
+          ? t('{amount} spare so far this month', { amount: baht(n.amount) })
         : n.kind === 'renew'
           ? n.days === 1
             ? t('{name} renews tomorrow', { name: n.name })
@@ -47,6 +53,14 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const yes =
     n.kind === 'billdue'
       ? t('Paid')
+      : n.kind === 'payday'
+        ? n.bank
+          ? t('It moved')
+          : t('I moved it')
+      : n.kind === 'sweep'
+        ? n.goalId
+          ? t('Send to {goal}', { goal: n.goalName })
+          : t('Send to safety net')
       : n.kind === 'renew'
         ? t('Still using it')
       : n.kind === 'sub'
@@ -61,6 +75,12 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const no =
     n.kind === 'leftover' || n.kind === 'substop'
       ? t('Keep it')
+      : n.kind === 'payday'
+        ? n.bank
+          ? t('Not yet')
+          : t('Make it automatic')
+      : n.kind === 'sweep'
+        ? t('Keep it')
       : n.kind === 'renew'
         ? t('Cancel it')
       : n.kind === 'billdue'
@@ -102,6 +122,22 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
           </View>
           <Text style={styles.after}>{t('Then {category} lasts to payday at about {perDay} a day.', { category: t(CATEGORY[n.key].name), perDay: baht(n.perDayAfter) })}</Text>
         </>
+      ) : n.kind === 'payday' ? (
+        <Text style={styles.body}>
+          {n.parts.map((p) => `${p.label} ${baht(p.amount)}`).join(' · ')}
+          {'. '}
+          {n.bank
+            ? t('Did it reach your savings account?')
+            : t('Move it to a separate account now, before it gets spent.')}
+        </Text>
+      ) : n.kind === 'sweep' ? (
+        <Text style={styles.body}>
+          {rich('You’ve spent **{amount}** less than planned. Send it now, before it gets spent? Every day left still gets **{daily}**.', { amount: baht(n.amount), daily: baht(n.daily) }, B)}
+          {n.was && n.will && n.will.getTime() < n.was.getTime() ? ' ' : ''}
+          {n.was && n.will && n.will.getTime() < n.was.getTime()
+            ? rich('{goal} arrives **{will}** instead of {was}.', { goal: n.goalName, will: monthYear(n.will), was: monthYear(n.was) }, B)
+            : null}
+        </Text>
       ) : n.kind === 'renew' ? (
         <Text style={styles.body}>
           {n.yearly

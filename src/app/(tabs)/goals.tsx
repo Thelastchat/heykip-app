@@ -27,6 +27,9 @@ import { dayInMonth, monthYear, ordinal, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { savedOverTime, trimEmpty, type MoveLite } from '@/lib/savingHistory';
 import { SavedChart } from '@/components/goals/SavedChart';
+import { BankSheet } from '@/components/goals/BankSheet';
+import { BANKS, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
+import { safetyFull } from '@/lib/moneyin';
 import { Tour, type TourStop } from '@/components/Tour';
 import { tourSpot, useTourScroll } from '@/lib/tour';
 import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
@@ -71,13 +74,14 @@ const goalsTour = (): TourStop[] => [
 
 export default function Goals() {
   const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const { month } = useMonth();
   const { goals, spent, reload } = useHome(month);
   const [moves, setMoves] = useState<Move[]>([]);
   const [history, setHistory] = useState<MoveLite[] | null>(null);
   const [later, setLater] = useState<{ id: string; title: string; kind: string; goal_type: string | null; target_amount: number; monthly_amount: number | null }[]>([]);
   const [putOpen, setPutOpen] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
   const [plus, setPlus] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const isPlus = profile ? profile.plan !== 'free' : false;
@@ -141,6 +145,17 @@ export default function Goals() {
   const several = goals.length > 1;
   const everyPayday = month ? savingTotal(month) : 0;
   const savedAll = goals.reduce((a, g) => a + g.saved, 0);
+  // Payday made real: what the bank should move each payday — the goals' saving, plus the safety net until it's full.
+  const netFull = safetyFull(month, Number(profile?.safety_saved ?? 0));
+  const bankParts = month
+    ? [
+        ...goals.map((g) => ({ label: nameOf(g), amount: (split.get(g.id) ?? 0) + (netFull && g.id === goal?.id ? month.safety.amount : 0) })).filter((p) => p.amount > 0),
+        ...(!netFull && month.safety.amount > 0 && !month.goal.isSafetyNet ? [{ label: t('Safety net'), amount: month.safety.amount }] : []),
+      ]
+    : [];
+  const bankAmount = bankParts.reduce((a, p) => a + p.amount, 0);
+  const bank = profile?.bank_transfer ?? null;
+  const bankOff = !!bank && bank.amount !== bankAmount;
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = plusPitch(month, short, funLeft);
   const icon: Icon3D = goal ? (goal.goalType ? goalTypeIcon3D(goal.goalType) : goalIcon3D(goal.kind)) : 'piggy';
@@ -192,6 +207,37 @@ export default function Goals() {
             </View>
           </View>
         </RiseIn>
+
+        {/* payday made real: the bank moves it, Kip checks */}
+        {month && bankAmount > 0 && (
+          <RiseIn delay={80} style={{ paddingHorizontal: 20, marginTop: 24 }}>
+            <Squish onPress={() => setBankOpen(true)} style={styles.bankCard} accessibilityRole="button">
+              <Image source={ICON3D.income} style={{ width: 44, height: 44 }} contentFit="contain" />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {bank ? (
+                  <>
+                    <Text style={styles.potName}>
+                      {month.payday
+                        ? t('Your bank moves {amount} on the {day}', { amount: baht(bank.amount), day: ordinal(month.payday), n: month.payday })
+                        : t('Your bank moves {amount} every payday', { amount: baht(bank.amount) })}
+                    </Text>
+                    <Text style={[styles.sub, bankOff && { color: colors.orangeText }]}>
+                      {bankOff
+                        ? t('Your plan now saves {amount} — update it in your bank, then tap here', { amount: baht(bankAmount) })
+                        : t('{bank} · Kip checks it on payday', { bank: BANKS.find((b) => b.key === bank.bank)?.name ?? t('Your bank') })}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.potName}>{t('Make your saving happen by itself')}</Text>
+                    <Text style={styles.sub}>{t('Set your bank to move {amount} every payday, into a separate pocket', { amount: baht(bankAmount) })}</Text>
+                  </>
+                )}
+              </View>
+              <CaretRight size={16} color={colors.muted} />
+            </Squish>
+          </RiseIn>
+        )}
 
         {/* saving over time: one line that only goes up when you save */}
         {history && (
@@ -341,6 +387,22 @@ export default function Goals() {
 
       {/* First visit (approved coach marks) */}
       <Tour name="goals" stops={goalsTour} ready={!putOpen} scrollBy={tourScroll.scrollBy} />
+      {bankOpen && month && (
+        <BankSheet
+          amount={bankAmount}
+          day={month.payday}
+          parts={bankParts}
+          bank={bank?.bank}
+          onClose={() => setBankOpen(false)}
+          onDone={async (b: BankKey) => {
+            if (!profile) return;
+            const err = await saveBankTransfer(profile.id, { amount: bankAmount, day: month.payday, bank: b, at: new Date().toISOString(), ok: bank?.ok });
+            setBankOpen(false);
+            await refreshProfile();
+            flash(err ? t('Couldn’t save: {msg}', { msg: err }) : t('Set. On payday Kip checks it went through'));
+          }}
+        />
+      )}
       {putOpen && (
         <PutMoneySheet
           open
@@ -621,6 +683,7 @@ const styles = themed(() =>
     btnText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     sec: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 20, paddingTop: 32, paddingBottom: 12 },
     secTitle: { fontFamily: fonts.medium, fontSize: 19, letterSpacing: -0.3, color: colors.ink },
+    bankCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 24, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
     pot: { paddingVertical: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
     potName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
     potAmt: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },

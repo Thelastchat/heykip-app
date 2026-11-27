@@ -4,7 +4,7 @@ import { OwnCategory } from '@/components/categories/OwnCategory';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { CaretDown, CaretRight, Check, Lock, Plus } from 'phosphor-react-native';
+import { CaretRight, Check, Lock, Plus } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInLeft } from 'react-native-reanimated';
@@ -25,7 +25,6 @@ import {
   CATEGORY,
   isCustom,
   type CustomCat,
-  STYLES,
   billsTotal,
   dailyOf,
   addBill,
@@ -99,7 +98,7 @@ export function MonthScreen({
   spent?: Partial<Record<CatKey, number>>;
   /** Free users: changing amounts and money styles are Plus. Bills are facts, so adding one stays free. */
   isPlus?: boolean;
-  onLocked?: (f: 'styles' | 'customize') => void;
+  onLocked?: (f: 'customize') => void;
   /** Opened from Home's "Add to every month": the add sheet is open straight away. */
   openAdd?: boolean;
   /** Opened from Home's "Show Kip your subscriptions". */
@@ -147,7 +146,6 @@ export function MonthScreen({
   }
 
   const [from, to] = period(month.payday);
-  const style = STYLES.find((s) => s.key === month.style)!;
   const spending = spendingTotal(month);
   const saving = savingTotal(month);
   const bills = billsTotal(month);
@@ -175,16 +173,6 @@ export function MonthScreen({
           <ScreenHeader
             title={t('Your saving plan')}
             back={back}
-            right={
-              <Squish onPress={() => (isPlus ? router.push('/styles') : onLocked?.('styles'))} accessibilityRole="button" accessibilityLabel={t('Money style: {name}. Change', { name: style.name })}>
-                <Glass radius={999} innerStyle={styles.stylePill}>
-                  <Text allowFontScaling={false} style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>
-                    {style.name}
-                  </Text>
-                  {isPlus ? <CaretDown size={11} color={colors.ink} weight="bold" /> : <MiniLock />}
-                </Glass>
-              </Squish>
-            }
           />
         </View>
 
@@ -1008,7 +996,6 @@ const styles = themed(() =>
   StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
     muted: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center' },
-    stylePill: { height: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
     heroLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     big: { fontFamily: fonts.medium, fontSize: 46, letterSpacing: -2, lineHeight: 52, color: colors.ink, fontVariant: ['tabular-nums'], marginTop: 4 },
     flowBar: { flexDirection: 'row', gap: 3, height: 54, marginHorizontal: 18, marginTop: 18, borderRadius: 18, overflow: 'hidden' },

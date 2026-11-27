@@ -6,8 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
 import { nth } from '@/components/setup/kit';
-import { livingFor, livingTotal, plan as splitMonth, type Style } from '@/lib/brain';
-import { STYLES } from '@/lib/budget';
+import { livingFor, livingTotal } from '@/lib/brain';
 import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { useSetup, type MoneyStyle } from '@/lib/setup/draft';
@@ -73,7 +72,6 @@ export default function SetupThinking() {
                 : t('Nothing spare yet — every day under budget goes to {goal}', { goal: plan.short }),
             ms: 1600,
           },
-      { doing: t('Testing 4 money styles'), found: compareStyles(), ms: 1500 },
     ];
     if (draft.moneyStyle) out.push({ doing: t('Your payday habit'), found: HABIT[draft.moneyStyle](day), ms: 900 });
     const rules = leakRules(draft.leaks, i);
@@ -93,24 +91,6 @@ export default function SetupThinking() {
       });
     }
     return out;
-
-    function compareStyles(): string {
-      const res = STYLES.map((s) => ({ s, r: splitMonth(i, s.key as Style) }));
-      const kip = res.find((x) => x.s.key === 'kip')!.r;
-      if (monthly) {
-        const most = res.reduce((a, b) => (b.r.savedIn12 > a.r.savedIn12 ? b : a));
-        return most.s.key === 'kip'
-          ? t('Kip’s plan fits you best — fun stays {fun}', { fun: baht(kip.fun) })
-          : t('{style} saves {more} more a year; Kip’s plan keeps fun at {fun}', { style: most.s.name, more: baht(most.r.savedIn12 - kip.savedIn12), fun: baht(kip.fun) });
-      }
-      const fastest = res.filter((x) => x.r.goalMonths).reduce((a, b) => ((b.r.goalMonths ?? 999) < (a.r.goalMonths ?? 999) ? b : a), res[0]);
-      const diff = (kip.goalMonths ?? 0) - (fastest.r.goalMonths ?? 0);
-      return fastest.s.key !== 'kip' && diff > 0
-        ? diff > 1
-          ? t('{style} gets you there {n} months sooner — Kip’s plan keeps {daily} a day', { style: fastest.s.name, n: diff, daily: baht(kip.daily) })
-          : t('{style} gets you there {n} month sooner — Kip’s plan keeps {daily} a day', { style: fastest.s.name, n: diff, daily: baht(kip.daily) })
-        : t('Kip’s plan is already the fastest that still feels comfortable');
-    }
   }
 
   const [done, setDone] = useState(0);

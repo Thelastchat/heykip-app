@@ -5,6 +5,8 @@ import { startPurchases, stopPurchases } from './purchases';
 import { loadCustom } from './customCats';
 import { supabase } from './supabase';
 
+import type { BankTransfer } from '@/lib/bankTransfer';
+
 export type Profile = {
   id: string;
   display_name: string | null;
@@ -16,6 +18,8 @@ export type Profile = {
   ai_consent_at: string | null; // when they tapped Allow on "Before Kip reads for you"
   ai_off: boolean; // Privacy & data → Kip's AI turned off
   trial_ends_at?: string | null; // when the free trial ends (already loaded with the profile)
+  /** The payday transfer they set up in their own bank (see lib/bankTransfer.ts). */
+  bank_transfer?: BankTransfer | null;
 };
 
 type AuthState = {
@@ -44,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // The profiles row is created by a database trigger on sign-up (see the migration).
     const { data } = await supabase
       .from('profiles')
-      .select('id, display_name, avatar_url, onboarded, plan, trial_ends_at, plan_until, split_when_paid, ai_consent_at, ai_off, safety_saved')
+      .select('id, display_name, avatar_url, onboarded, plan, trial_ends_at, plan_until, split_when_paid, ai_consent_at, ai_off, safety_saved, bank_transfer')
       .eq('id', s.user.id)
       .maybeSingle();
     setProfile(data ? ({ ...data, plan: planNow(data.plan, data.trial_ends_at, data.plan_until) } as Profile) : null);

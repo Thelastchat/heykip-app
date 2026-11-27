@@ -4,10 +4,10 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 import { safetyNet } from '@/lib/brain';
-import { monthFrom, type MonthBudget } from '@/lib/budget';
+import { monthFrom, withStyle, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
-import { EMPTY_DRAFT, type BudgetStyle, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
+import { EMPTY_DRAFT, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
 import { inputsFrom } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { syncReminders } from '@/lib/reminders';
@@ -27,7 +27,7 @@ async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
     goodMonth: num(p.good_month_income),
     payday: p.payday,
     rent: num(p.rent),
-    budgetStyle: (p.budget_style ?? 'kip') as BudgetStyle,
+    budgetStyle: 'kip',
     goalTitle: g?.title ?? 'Savings',
     goalKind: (g?.kind ?? 'safety_net') as GoalKind,
     goalTarget: num(g?.target_amount),
@@ -67,7 +67,13 @@ function loadMonth(userId: string): Promise<MonthBudget | null> {
     const { data, error } = await supabase.from('profiles').select('budget').eq('id', userId).single();
     if (error) throw error;
     const saved = data?.budget as MonthBudget | null;
-    const next = saved?.v === 2 ? saved : await buildFromProfile(userId);
+    let next = saved?.v === 2 ? saved : await buildFromProfile(userId);
+    // Money styles are gone (27 Nov: one plan, Kip's): a month made with 50/30/20, 6 Jars or Save first is re-planned
+    // as Kip's plan once, keeping its bills, own categories and this month's payday move.
+    if (next && next.style !== 'kip') {
+      next = withStyle(next, 'kip', null);
+      await supabase.from('profiles').update({ budget: next, budget_style: 'kip' }).eq('id', userId);
+    }
     // A save made while this was loading wins over the slower load.
     if (shared.saves === savesAtStart && shared.userId === userId) {
       shared.month = next;

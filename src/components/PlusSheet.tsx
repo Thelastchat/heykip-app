@@ -7,7 +7,6 @@ import { Image } from 'expo-image';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
@@ -20,7 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { colors, fonts, themed, whiteA, blackA } from '@/theme';
 import { DragSheet } from '@/components/DragSheet';
 
-export type PlusFeature = 'styles' | 'talk' | 'customize' | 'automove' | 'goals';
+export type PlusFeature = 'talk' | 'customize' | 'automove' | 'goals';
 
 const perks = () => [t('All 4 money styles — switch any time'), t('Talk to Kip · “Can I buy this?”'), t('Payday auto-move & nudges'), t('Customize & locks · 3 goals · slip photos')];
 
@@ -218,42 +217,6 @@ function PlanCard({ on, onPress, name, price, per, line, tag }: { on: boolean; o
 
 // ---------- pictures for each feature (on black) ----------
 
-/** Two planes racing to the goal: the current style vs a faster one. */
-export function Race({ now, faster, tradeOff }: { now: { label: string; when: string }; faster: { label: string; when: string; share: number }; tradeOff?: string }) {
-  return (
-    <View style={{ gap: 12, marginTop: 4 }}>
-      <Lane label={now.label} when={now.when} share={1} color="rgba(255,255,255,0.22)" />
-      <Lane label={faster.label} when={faster.when} share={faster.share} color={colors.limeDeep} highlight />
-      {tradeOff ? <Text style={styles.trade}>{tradeOff}</Text> : null}
-    </View>
-  );
-}
-
-function Lane({ label, when, share, color, highlight }: { label: string; when: string; share: number; color: string; highlight?: boolean }) {
-  const [w, setW] = useState(0);
-  const p = useSharedValue(0);
-  useEffect(() => {
-    p.value = withDelay(350, withTiming(Math.max(0.08, Math.min(1, share)), { duration: 1300, easing: Easing.out(Easing.cubic) }));
-  }, [p, share]);
-  const fill = useAnimatedStyle(() => ({ width: w * p.value }));
-  const plane = useAnimatedStyle(() => ({ transform: [{ translateX: w * p.value - 34 }] }));
-  return (
-    <View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-        <Text style={styles.laneLabel}>{label}</Text>
-        <Text style={[styles.laneWhen, highlight && { color: colors.limeDeep }]}>{when}</Text>
-      </View>
-      <View style={styles.lane} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
-        <Animated.View style={[styles.laneFill, { backgroundColor: color }, fill]} />
-        <Animated.View style={[styles.plane, plane]}>
-          <Image source={ICON3D.plane} style={{ width: 40, height: 40 }} contentFit="contain" />
-        </Animated.View>
-      </View>
-    </View>
-  );
-}
-
-/** Payday, sorted: where the pay goes, as one bar. */
 export function PaySplit({ parts, note }: { parts: { label: string; amount: number; color: string; light?: boolean }[]; note?: string }) {
   return (
     <View style={{ gap: 10, marginTop: 4 }}>
@@ -369,9 +332,6 @@ const styles = themed(() =>
     trade: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: whiteA(0.55) },
     laneLabel: { fontFamily: fonts.regular, fontSize: 12, color: whiteA(0.6) },
     laneWhen: { fontFamily: fonts.medium, fontSize: 13, color: colors.onSolid, fontVariant: ['tabular-nums'] },
-    lane: { height: 26, borderRadius: 999, backgroundColor: whiteA(0.08) },
-    laneFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 999 },
-    plane: { position: 'absolute', top: -7, left: 0 },
     bub: { alignSelf: 'flex-start', maxWidth: '86%', borderRadius: 16, borderBottomLeftRadius: 5, backgroundColor: whiteA(0.1), paddingVertical: 9, paddingHorizontal: 12 },
     bubMe: { alignSelf: 'flex-end', borderBottomLeftRadius: 16, borderBottomRightRadius: 5, backgroundColor: colors.lime },
     bubText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.onSolid },
