@@ -380,11 +380,18 @@ export default function Talk() {
     return res.reason === 'plus' ? null : { text: error };
   }
 
+  /** "เมื่อวาน…": logged on the day they said (up to a month back, never ahead), at midday Thai time. */
+  function pastDay(day?: string): { occurred_at?: string } {
+    if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return {};
+    const at = new Date(`${day}T12:00:00+07:00`);
+    const ago = (Date.now() - at.getTime()) / 86_400_000;
+    return ago > -0.5 && ago < 31 ? { occurred_at: at.toISOString() } : {};
+  }
   async function saveItems(turn: Turn, items: Item[]) {
     if (!session || items.length === 0) return;
     const rows = items.map((it) => {
       const kind = isIn(it) ? 'income' : 'spend';
-      return { user_id: session.user.id, kind, amount: it.amount, category_id: ids[`${kind}:${it.category}`] ?? ids[`${kind}:other`] ?? null, note: it.name, source: 'typed' };
+      return { user_id: session.user.id, kind, amount: it.amount, category_id: ids[`${kind}:${it.category}`] ?? ids[`${kind}:other`] ?? null, note: it.name, source: 'typed', ...pastDay(it.day) };
     });
     const { data: saved, error } = await supabase.from('transactions').insert(rows).select('id, kind, amount, note');
     if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));

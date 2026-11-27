@@ -14,8 +14,8 @@ import type { KipKnows } from '@/lib/kipknows';
 export type DbCat = 'food' | 'transport' | 'shopping' | 'fun' | 'health_beauty' | 'home_bills' | 'travel' | 'family_pets' | 'giving' | 'learning' | 'installments' | 'other' | `c_${string}`;
 /** Money in: the database's income categories ('other' is shared with spending). */
 export type InCat = 'pay' | 'side_gigs' | 'gifts' | 'other';
-export type LogItem = { name: string; amount: number; category: DbCat; money?: 'in' | 'out' };
-export type InItem = { name: string; amount: number; category: InCat; money: 'in' };
+export type LogItem = { name: string; amount: number; category: DbCat; money?: 'in' | 'out'; /** another day they named (YYYY-MM-DD) */ day?: string };
+export type InItem = { name: string; amount: number; category: InCat; money: 'in'; day?: string };
 export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
 export type KipReply = {
   kind: 'log' | 'buy' | 'answer' | 'change' | 'fix' | 'slips';
