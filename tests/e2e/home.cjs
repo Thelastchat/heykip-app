@@ -106,6 +106,22 @@ module.exports = async function homeTests(browser) {
   });
 
   // ---------- 3. Payday ----------
+  scenario('Payday card · “move it now”, then “I moved it” records the saving once');
+  await safely(async () => {
+    const today = new Date().getDate();
+    const { db } = person({ plan: 'trial', payday: today });
+    const m = db.profiles[0].budget;
+    const page = await open(browser, { db, paydayCard: true });
+    const home = await sane(page, 'Home on payday');
+    await check(page, `Payday card asks to move ${fmt(X.savingTotal(m))}`, home.includes(`Payday · move ${fmt(X.savingTotal(m))} to savings`), () => home.slice(0, 600));
+    await tap(page, visible(page.getByRole('button', { name: 'I moved it', exact: true })), { wait: 2500 });
+    await check(page, `I moved it: ${fmt(m.goal.amount)} recorded in Japan`, Number(db.goals[0].saved_amount) === 5000 + m.goal.amount, () => ({ saved: db.goals[0].saved_amount }));
+    await check(page, 'I moved it: marked as moved for this pay month', !!db.profiles[0].budget.payMoved, () => db.profiles[0].budget.payMoved);
+    const after = await sane(page, 'Home after I moved it');
+    await check(page, 'The card doesn’t ask again', !after.includes('Payday · move'), () => after.slice(0, 600));
+    await page.close();
+  });
+
   scenario('Everyday · got paid → saving moves');
   await safely(async () => {
     const { db } = person({ plan: 'trial' });

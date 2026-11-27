@@ -26,7 +26,7 @@ const scenario = (name) => {
 };
 
 /** A fresh phone: chosen look and language, signed in or not, with this database behind it. */
-async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signedIn = true, path: p = '/', width = 390, tour = false, textStep = 0 } = {}) {
+async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signedIn = true, path: p = '/', width = 390, tour = false, textStep = 0, paydayCard = false } = {}) {
   // Each test is its own phone: a private browser context, so storage never leaks between tests.
   const ctx = await browser.newContext({ viewport: { width, height: 844 }, deviceScaleFactor: Number(process.env.DPR) || 1 });
   const page = await ctx.newPage();
@@ -40,16 +40,22 @@ async function open(browser, { db = makeDb(), look = 'light', lang = 'en', signe
   await install(page, db);
   await page.goto(BASE + '/');
   await page.evaluate(
-    ({ s, look, lang, signedIn, tour, uid, textStep }) => {
+    ({ s, look, lang, signedIn, tour, uid, textStep, paydayPk }) => {
       localStorage.clear();
       if (textStep) localStorage.setItem('heykip.textStep', String(textStep));
       // The first-use tour is its own test; everywhere else it's been seen already.
       if (!tour) for (const k of ['home.v2', 'plan.v1', 'goals.v1', 'add.v1']) localStorage.setItem('heykip.tour.' + k + '.' + uid, 'done');
       if (signedIn) localStorage.setItem('sb-qegkanosplyprrxuikia-auth-token', s);
+      // This payday's "did it move?" card is its own test; everywhere else it's been answered already (as if a
+      // test ran on the 1st or 2nd day of a pay month, the card would otherwise take Kip's line).
+      if (paydayPk) localStorage.setItem('heykip.notices.' + uid, JSON.stringify({ ['payday:' + paydayPk]: Date.now() + 40 * 86400000 }));
       localStorage.setItem('heykip.look', look);
       localStorage.setItem('heykip.lang', lang);
     },
-    { s: JSON.stringify(session), look, lang, signedIn, tour, uid: session.user.id, textStep },
+    {
+      s: JSON.stringify(session), look, lang, signedIn, tour, uid: session.user.id, textStep,
+      paydayPk: paydayCard ? null : require(process.env.EXPECT || '/tmp/heykip-expect.cjs').period(db.profiles?.[0]?.budget?.payday ?? null, new Date()).start.toDateString(),
+    },
   );
   await page.goto(BASE + p);
   await page.waitForTimeout(2500);

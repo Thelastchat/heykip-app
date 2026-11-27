@@ -217,7 +217,8 @@ export default function Home() {
   const cycleSaving = month ? savingThisCycle(month, safetySaved, now) : { goal: 0, safety: 0 };
   const paydayTotal = cycleSaving.goal + cycleSaving.safety;
   const bankT = profile?.bank_transfer ?? null;
-  const paydayConfirmed = !!month && (bankT?.ok === pk || (hidden[`payday:${pk}`] ?? 0) > now.getTime());
+  // Answered: the bank's transfer was confirmed, the card was answered, or (no bank) the saving was already moved in the app.
+  const paydayConfirmed = !!month && (bankT?.ok === pk || (hidden[`payday:${pk}`] ?? 0) > now.getTime() || (!bankT && savingMoved(month, now)));
   const paydayNotice: Notice | null =
     month && month.payday && P.dayIndex <= 2 && paydayTotal > 0 && !monthOver && !paydayConfirmed && !((hidden[`paydaylater:${pk}`] ?? 0) > now.getTime())
       ? {
