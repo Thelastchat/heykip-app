@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { KipStill } from '@/components/KipStill';
+import { Glass } from '@/components/glow/Glass';
 import { Squish } from '@/components/glow/motion';
 import { CATEGORY } from '@/lib/budget';
 import { monthLong, monthShort, rich, t } from '@/lib/i18n';
@@ -99,7 +100,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
             : t('Not now');
   const label = `${t('Kip noticed')}: ${title}`;
   return (
-    <View style={styles.card} accessibilityLabel={label}>
+    <Glass radius={26} innerStyle={styles.card}>
+      <View accessibilityLabel={label} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
         <Text style={styles.kicker}>{t('Kip noticed')}</Text>
@@ -210,7 +212,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
           </Squish>
         )}
       </View>
-    </View>
+      </View>
+    </Glass>
   );
 }
 
@@ -219,7 +222,8 @@ function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus:
   const name = monthLong(r.month.getMonth());
   const over = r.left < 0;
   return (
-    <View style={styles.card} accessibilityLabel={t('Payday recap: your {month}', { month: name })}>
+    <Glass radius={26} innerStyle={styles.card}>
+      <View accessibilityLabel={t('Payday recap: your {month}', { month: name })} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
         <Text style={styles.kicker}>{t('Payday recap')}</Text>
@@ -278,14 +282,15 @@ function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus:
           <Text style={styles.noT}>{t('Later')}</Text>
         </Squish>
       </View>
-    </View>
+      </View>
+    </Glass>
   );
 }
 
 /** After Do it: what changed, with Undo. */
 export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => void; busy: boolean }) {
   return (
-    <View style={styles.done}>
+    <Glass radius={999} innerStyle={styles.done}>
       <KipStill size={32} />
       <Text style={styles.doneT} numberOfLines={2}>
         <Text style={{ fontFamily: fonts.semibold }}>{t('Done')}</Text> · {text}
@@ -293,11 +298,10 @@ export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => vo
       <Squish style={[styles.undo, busy && { opacity: 0.5 }]} disabled={busy} onPress={onUndo} accessibilityRole="button" accessibilityLabel={t('Undo')}>
         <Text style={styles.undoT}>{t('Undo')}</Text>
       </Squish>
-    </View>
+    </Glass>
   );
 }
 
-const shadow = '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)';
 const styles = themed(() =>
   StyleSheet.create({
     two: { flexDirection: 'row', marginTop: 12, borderRadius: 16, backgroundColor: inkA(0.04), paddingHorizontal: 12, paddingVertical: 10 },
@@ -306,7 +310,9 @@ const styles = themed(() =>
     v: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
     lock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 44, marginTop: 10, borderRadius: 999, backgroundColor: inkA(0.05), paddingHorizontal: 16 },
     lockT: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-    card: { borderRadius: 26, backgroundColor: colors.paper, padding: 16, boxShadow: shadow },
+    // See-through like the other cards on Home (approved 27 Nov): the glow shows through, softened.
+    card: { padding: 16 },
+    cardIn: {},
     top: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     kicker: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted },
     title: { fontFamily: fonts.semibold, fontSize: 18, letterSpacing: -0.3, color: colors.ink, marginTop: 10 },
@@ -323,7 +329,7 @@ const styles = themed(() =>
     doT: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
     no: { height: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: inkA(0.05), alignItems: 'center', justifyContent: 'center' },
     noT: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    done: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingLeft: 8, paddingRight: 8, borderRadius: 999, backgroundColor: colors.paper, boxShadow: shadow },
+    done: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingLeft: 8, paddingRight: 8, },
     doneT: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
     undo: { height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: inkA(0.06), alignItems: 'center', justifyContent: 'center' },
     undoT: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },

@@ -737,17 +737,19 @@ export default function Home() {
               </View>
             </Squish>
           ) : (
-            <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
-              <KipStill size={32} />
-              <Text style={styles.kipText} numberOfLines={2 + textStep}>
-                <Text style={styles.kipName}>Kip </Text>
-                {say}
-              </Text>
-              <View style={styles.readBtn}>
-                <Text style={styles.readText}>{t('Read')}</Text>
-                <CaretRight size={12} color={colors.muted} weight="bold" />
-              </View>
-            </Squish>
+            <Glass radius={24}>
+              <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
+                <KipStill size={32} />
+                <Text style={styles.kipText} numberOfLines={2 + textStep}>
+                  <Text style={styles.kipName}>Kip </Text>
+                  {say}
+                </Text>
+                <View style={styles.readBtn}>
+                  <Text style={styles.readText}>{t('Read')}</Text>
+                  <CaretRight size={12} color={colors.muted} weight="bold" />
+                </View>
+              </Squish>
+            </Glass>
           )}
         </RiseIn>
 
@@ -1069,8 +1071,6 @@ const styles = themed(() =>
       paddingLeft: 12,
       paddingRight: 16,
       borderRadius: 24,
-      backgroundColor: colors.paper,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)',
     },
     kipText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
     readBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 },
