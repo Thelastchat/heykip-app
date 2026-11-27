@@ -61,11 +61,11 @@ export function AmountInput({ value, onChange, autoFocus, label }: { value: numb
   );
 }
 
-/** A choice pill: picked = lime with a black outline. */
+/** A choice pill: picked = filled lime, no outline (ก้อย's rule for every selected item). */
 export function Pill({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
     <Squish onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-      <Glass radius={999} tint={on ? colors.lime : undefined} innerStyle={[sheet.pill, on && sheet.on]}>
+      <Glass radius={999} tint={on ? colors.lime : undefined} innerStyle={sheet.pill}>
         <Text style={[sheet.pillText, on && { fontFamily: fonts.medium }]}>{label}</Text>
       </Glass>
     </Squish>
@@ -122,7 +122,6 @@ export const sheet = themed(() =>
     amountB: { fontFamily: fonts.regular, fontSize: 28, color: colors.muted, marginRight: 2 },
     pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
     pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
-    on: { borderWidth: 1.5, borderColor: colors.ink },
     deltaNow: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
     deltaWas: { fontFamily: fonts.regular, color: colors.faint, textDecorationLine: 'line-through' },
     save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },

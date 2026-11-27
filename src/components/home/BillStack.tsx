@@ -116,7 +116,7 @@ function GlyphIcon({ g, color = '#2A2A2A', size = 20 }: { g: Glyph; color?: stri
   );
 }
 
-export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: string, paid: boolean) => void }) {
+export function BillStack({ bills, onPaid, subs }: { bills: Bill[]; onPaid: (key: string, paid: boolean) => void; subs?: { n: number; perMonth: number } }) {
   // What's due next comes first (approved mockup); bills without a day keep their place after them, estimates last.
   const rank = (b: Bill) => (b.estimate ? 1e6 : b.due && !b.paid ? b.due.days : 1e5);
   const unpaid = bills.filter((b) => !b.paid).sort((a, b) => rank(a) - rank(b));
@@ -233,12 +233,23 @@ export function BillStack({ bills, onPaid }: { bills: Bill[]; onPaid: (key: stri
         </View>
         <Text style={styles.addText}>{t('Add to every month')}</Text>
       </Pressable>
-      {/* Subscriptions that never make a bank slip (approved mockup): Kip reads the phone's list */}
-      <Pressable onPress={() => router.push('/month?subs=1')} style={styles.subs} accessibilityRole="button" accessibilityLabel={t('Show Kip your subscriptions')}>
-        <KipStill size={22} />
-        <Text style={[styles.addText, { flex: 1 }]}>{t('Show Kip your subscriptions')}</Text>
-        <Text style={{ color: colors.faint, fontSize: 16 }}>›</Text>
-      </Pressable>
+      {/* Subscriptions (approved 27 Nov): once there are any, this opens the page with all of them; before that, Kip
+          reads the phone's list for the ones that never make a bank slip. */}
+      {subs && subs.n > 0 ? (
+        <Pressable onPress={() => router.push('/subscriptions' as never)} style={styles.subs} accessibilityRole="button" accessibilityLabel={t('Subscriptions')}>
+          <KipStill size={22} />
+          <Text style={[styles.addText, { flex: 1 }]}>
+            {t('Subscriptions')} <Text style={{ color: colors.muted }}>· {t('{amount} a month', { amount: baht(subs.perMonth) })}</Text>
+          </Text>
+          <Text style={{ color: colors.faint, fontSize: 16 }}>›</Text>
+        </Pressable>
+      ) : (
+        <Pressable onPress={() => router.push('/month?subs=1')} style={styles.subs} accessibilityRole="button" accessibilityLabel={t('Show Kip your subscriptions')}>
+          <KipStill size={22} />
+          <Text style={[styles.addText, { flex: 1 }]}>{t('Show Kip your subscriptions')}</Text>
+          <Text style={{ color: colors.faint, fontSize: 16 }}>›</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

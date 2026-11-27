@@ -46,6 +46,9 @@ const KNOWN: [RegExp, string][] = [
   [/jetts/, 'Jetts Fitness'],
 ];
 
+/** The services above by the name people know: anything here in Every month is a subscription you can cancel. */
+export const KNOWN_SUBS = new Set(KNOWN.map(([, name]) => name));
+
 /** A name to compare by (lower case, no codes or numbers) and a name to show. Empty when there's nothing to go on. */
 export function cleanName(raw: string | null | undefined): { key: string; name: string } {
   const s = (raw ?? '').toLowerCase().trim();

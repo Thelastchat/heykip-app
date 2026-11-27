@@ -25,6 +25,8 @@ import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
 import { dayInMonth, monthYear, ordinal, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { savedOverTime, trimEmpty, type MoveLite } from '@/lib/savingHistory';
+import { SavedChart } from '@/components/goals/SavedChart';
 import { Tour, type TourStop } from '@/components/Tour';
 import { tourSpot, useTourScroll } from '@/lib/tour';
 import { colors, fonts, glassA, inkA, pinColors, themed, whiteA, blackA } from '@/theme';
@@ -73,6 +75,7 @@ export default function Goals() {
   const { month } = useMonth();
   const { goals, spent, reload } = useHome(month);
   const [moves, setMoves] = useState<Move[]>([]);
+  const [history, setHistory] = useState<MoveLite[] | null>(null);
   const [later, setLater] = useState<{ id: string; title: string; kind: string; goal_type: string | null; target_amount: number; monthly_amount: number | null }[]>([]);
   const [putOpen, setPutOpen] = useState(false);
   const [plus, setPlus] = useState(false);
@@ -97,6 +100,24 @@ export default function Goals() {
       loadMoves();
     }, [loadMoves]),
   );
+  // Saving over time: every move into a goal or the safety net since 5 pay months ago (two small queries, this tab only).
+  const me = profile?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (!me) return;
+      const since = new Date(Date.now() - 190 * 86_400_000).toISOString();
+      Promise.all([
+        supabase.from('goal_moves').select('amount, moved_at').eq('user_id', me).gte('moved_at', since),
+        supabase.from('safety_moves').select('amount, created_at').eq('user_id', me).gte('created_at', since),
+      ]).then(([g, s]) =>
+        setHistory([
+          ...(g.data ?? []).map((m) => ({ amount: Number(m.amount), at: new Date(m.moved_at as string) })),
+          ...(s.data ?? []).map((m) => ({ amount: Number(m.amount), at: new Date(m.created_at as string) })),
+        ]),
+      );
+    }, [me]),
+  );
+
   // "For later": goals saved with no money yet (status someday). One small query, only on this tab.
   const uid = profile?.id;
   useFocusEffect(
@@ -171,6 +192,13 @@ export default function Goals() {
             </View>
           </View>
         </RiseIn>
+
+        {/* saving over time: one line that only goes up when you save */}
+        {history && (
+          <RiseIn delay={90} style={{ paddingHorizontal: 20, marginTop: 24 }}>
+            <SavedChart points={trimEmpty(savedOverTime(savedAll + Number(profile?.safety_saved ?? 0), history, month?.payday ?? null))} />
+          </RiseIn>
+        )}
 
         {/* the goal */}
         <RiseIn delay={120} style={{ paddingHorizontal: 20, marginTop: 24 }}>

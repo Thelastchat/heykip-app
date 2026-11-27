@@ -9,6 +9,8 @@
 //   billdue  — a bill with a due day is due today (or late) and isn't ticked: Kip asks if it's paid.
 //   sub / subprice / substop / substream — the subscription detective (subs.ts): a payment that repeats and isn't a
 //              bill yet, a bill that went up, one that stopped, and what streaming comes to in a year.
+//   renew    — Keep or cancel (subscriptions.ts): a subscription renews in 1–3 days. Still using it, or cancel it and
+//              let its money go to the goal.
 //   leftover — the pay month that just ended had money left over by what you logged. Kip asks (it can't see your
 //              bank) whether to put it toward your goal. Only when last month was logged well, early in the new month.
 import { addBill, CATEGORY, removeBill, type CatKey, type MonthBudget } from '@/lib/budget';
@@ -19,6 +21,7 @@ import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
 import { periodAt, periodKey, type Spent } from '@/lib/home';
 import { dueBills, nextDue } from '@/lib/billdue';
 import { applyOps } from '@/lib/monthops';
+import { renewalNotice, type Renewal } from '@/lib/subscriptions';
 
 /** Days of the pay month that must have passed before a pace means anything. */
 const MIN_DAYS = 4;
@@ -70,6 +73,7 @@ export type Notice =
   | { id: string; kind: 'substop'; name: string; amount: number; next: MonthBudget }
   | { id: string; kind: 'substream'; names: { name: string; amount: number }[]; perYear: number }
   | { id: string; kind: 'recap'; recap: Recap }
+  | Renewal
   | {
       id: string;
       kind: 'leftover';
@@ -244,6 +248,8 @@ export function noticesFor(
   const off2 = (id: string) => hidden[id] > now.getTime();
   const b = billNotice(m, now, off2);
   if (b) out.push(b);
+  const rn = renewalNotice(m, now, off2);
+  if (rn) out.push(rn);
   const subs = subNotices(m, tx, now).filter((n) => !off2(n.id));
   out.push(...subs.filter((n) => n.kind !== 'substream'));
   const l = last ? leftoverNotice(m, last, P, goals, now) : null;
@@ -259,6 +265,8 @@ export const LATER_MS = 3 * 86_400_000;
 export function laterFor(n: Notice, now = new Date()): number {
   const day = 86_400_000;
   if (n.kind === 'billdue' || n.kind === 'recap') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  // Still using it: quiet until the day after it renews (the next renewal asks again).
+  if (n.kind === 'renew') return new Date(n.date.getFullYear(), n.date.getMonth(), n.date.getDate() + 1).getTime();
   if (n.kind === 'sub') return now.getTime() + 365 * day;
   if (n.kind === 'substop') return now.getTime() + 60 * day;
   if (n.kind === 'substream') return now.getTime() + 182 * day;

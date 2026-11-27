@@ -31,6 +31,10 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
         ? n.late === 0
           ? t('{name} is due today', { name: billName })
           : t('{name} was due {date}', { name: billName, date: day(n.date) })
+        : n.kind === 'renew'
+          ? n.days === 1
+            ? t('{name} renews tomorrow', { name: n.name })
+            : t('{name} renews in {n} days', { name: n.name, n: n.days })
         : n.kind === 'sub'
           ? t('{name} looks like a subscription', { name: n.name })
           : n.kind === 'subprice'
@@ -43,6 +47,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const yes =
     n.kind === 'billdue'
       ? t('Paid')
+      : n.kind === 'renew'
+        ? t('Still using it')
       : n.kind === 'sub'
         ? t('Add it')
         : n.kind === 'subprice'
@@ -55,6 +61,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const no =
     n.kind === 'leftover' || n.kind === 'substop'
       ? t('Keep it')
+      : n.kind === 'renew'
+        ? t('Cancel it')
       : n.kind === 'billdue'
         ? t('Not yet')
         : n.kind === 'sub'
@@ -94,6 +102,12 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
           </View>
           <Text style={styles.after}>{t('Then {category} lasts to payday at about {perDay} a day.', { category: t(CATEGORY[n.key].name), perDay: baht(n.perDayAfter) })}</Text>
         </>
+      ) : n.kind === 'renew' ? (
+        <Text style={styles.body}>
+          {n.yearly
+            ? rich('**{amount}** for another year on {date}. Still using it? If not, cancel before then and its money goes to your saving.', { amount: baht(n.charge), date: day(n.date) }, B)
+            : rich('**{amount}** on {date}. Still using it? If not, cancel before then and **{amount} a month** goes to your saving.', { amount: baht(n.charge), date: day(n.date) }, B)}
+        </Text>
       ) : n.kind === 'billdue' ? (
         <Text style={styles.body}>{rich('**{amount}** is set aside for it. Paid already?', { amount: baht(n.amount) }, B)}</Text>
       ) : n.kind === 'sub' ? (
@@ -226,7 +240,7 @@ export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => vo
   return (
     <View style={styles.done}>
       <KipStill size={32} />
-      <Text style={styles.doneT} numberOfLines={1}>
+      <Text style={styles.doneT} numberOfLines={2}>
         <Text style={{ fontFamily: fonts.semibold }}>{t('Done')}</Text> · {text}
       </Text>
       <Squish style={[styles.undo, busy && { opacity: 0.5 }]} disabled={busy} onPress={onUndo} accessibilityRole="button" accessibilityLabel={t('Undo')}>

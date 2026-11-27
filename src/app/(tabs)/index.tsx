@@ -51,6 +51,8 @@ import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
 import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
+import { cancelSub, subsOf, subsTotal, type FreedTo, type Renewal } from '@/lib/subscriptions';
+import { CancelSheet, type CancelChoice } from '@/components/home/CancelSheet';
 import { useTextStep } from '@/lib/textSize';
 import { colors, fonts, inkA, themed, whiteA } from '@/theme';
 
@@ -78,6 +80,7 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState(new Date().toDateString());
   const [overOpen, setOverOpen] = useState(false);
   const [kipOpen, setKipOpen] = useState(false);
+  const [cancelFor, setCancelFor] = useState<Renewal | null>(null);
   // Tapping a day on the week opens that day (approved mockup) — everything spent, money in, and Add to this day.
   const [dayOpen, setDayOpen] = useState<Date | null>(null);
   const [paceOpen, setPaceOpen] = useState(false);
@@ -213,6 +216,43 @@ export default function Home() {
     // Undo stays for a while, then Kip's line (or the next card) is back.
     doneTimer.current = setTimeout(() => setKipDone(null), 12_000);
   }
+  /** Keep or cancel → "Cancel it": what its money would do, to the goal or back to fun money. */
+  function cancelChoice(n: Renewal): CancelChoice | null {
+    if (!month) return null;
+    const lites = goals.map(liteOf);
+    const toGoal = cancelSub(month, n.index, 'goal');
+    const toFun = cancelSub(month, n.index, 'fun');
+    const first = goals[0];
+    const will = first && first.kind !== 'monthly' ? (arrivals(lites, splitOf(toGoal.month, lites), month.payday ?? null).get(first.id) ?? null) : null;
+    const funKey = toFun.month.spend.find((s, i) => s.amount !== month.spend[i]?.amount)?.key;
+    const funWas = funKey ? (month.spend.find((s) => s.key === funKey)?.amount ?? 0) : 0;
+    return {
+      name: n.name,
+      perMonth: toGoal.freed,
+      goal: short,
+      was: goalDate,
+      will,
+      fun: funKey ? { was: funWas, now: funWas + toFun.freed } : null,
+    };
+  }
+  function cancelDone(n: Renewal, to: FreedTo) {
+    if (!month) return;
+    const before = month;
+    const r = cancelSub(month, n.index, to);
+    save(r.month);
+    setCancelFor(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    showDone(
+      to === 'goal'
+        ? t('{name} cancelled · {amount} a month to {goal}', { name: n.name, amount: baht(r.freed), goal: short })
+        : t('{name} cancelled · {amount} a month back to fun', { name: n.name, amount: baht(r.freed) }),
+      async () => {
+        save(before);
+        return null;
+      },
+    );
+  }
+
   async function doNotice(n: Notice) {
     if (!month || noticeBusy) return;
     if (n.kind === 'runout') {
@@ -256,6 +296,12 @@ export default function Home() {
     }
     if (n.kind === 'substream') {
       hide(n.id, laterFor(n, new Date()));
+      return;
+    }
+    if (n.kind === 'renew') {
+      // Still using it: quiet until it has renewed; the next renewal asks again.
+      hide(n.id, laterFor(n, new Date()));
+      flash(t('Kept. Kip asks again before the next one'));
       return;
     }
     if (n.kind === 'recap') {
@@ -326,6 +372,8 @@ export default function Home() {
 
   // Everything put away so far: every goal plus the safety net. The one number on Home that only goes up.
   const totalSaved = goals.reduce((a, g) => a + g.saved, 0) + safetySaved;
+  const subsNow = subsOf(month);
+  const subsLine = { n: subsNow.length, perMonth: subsTotal(subsNow).perMonth };
   // Where the plan is at the start of today — the same line "under plan" is measured against, so the numbers agree.
   const planSoFar = Math.max(0, spent.total - pace);
   // Payday (and the day after): the month's saving has just gone in — Kip says so before anything else.
@@ -578,7 +626,7 @@ export default function Home() {
               isPlus={isPlus}
               onLocked={() => setSheet('talk')}
               onDo={() => doNotice(notice)}
-              onLater={() => hide(notice.id, laterFor(notice, new Date()))}
+              onLater={() => (notice.kind === 'renew' ? setCancelFor(notice) : hide(notice.id, laterFor(notice, new Date())))}
             />
           ) : paydaySaved ? (
             <Squish style={styles.payday} onPress={() => router.push('/goals')} accessibilityRole="button">
@@ -742,7 +790,7 @@ export default function Home() {
           <RiseIn delay={480} style={{ paddingHorizontal: 20 }}>
             <View ref={tourSpot('bills')} collapsable={false}>
               <Section title={t('Monthly bills')} right={t('{n} of {total} paid', { n: bills.filter((b) => b.paid).length, total: bills.length })} inset={false} />
-              <BillStack bills={bills} onPaid={setPaid} />
+              <BillStack bills={bills} onPaid={setPaid} subs={subsLine} />
             </View>
           </RiseIn>
         )}
@@ -766,6 +814,9 @@ export default function Home() {
           onCat={(k) => setCatOpen(k)}
           onClose={() => setPaceOpen(false)}
         />
+      )}
+      {cancelFor && cancelChoice(cancelFor) && (
+        <CancelSheet c={cancelChoice(cancelFor)!} onClose={() => setCancelFor(null)} onDone={(to) => cancelDone(cancelFor, to)} />
       )}
       {recapOpen && month && (
         <RecapSheet
