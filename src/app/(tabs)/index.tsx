@@ -234,6 +234,8 @@ export default function Home() {
         }
       : null;
   const [bankOpen, setBankOpen] = useState(false);
+  // Bigger text: Kip's line gets a line more per step, so what fits at Default is never cut off.
+  const textStep = useTextStep();
   // "+฿x this month" on a goal: only money that really went in — this payday's share once it moved, and the weekly
   // sweeps (they go to the first goal).
   const payMoved = !!month && savingMoved(month, now);
@@ -727,7 +729,7 @@ export default function Home() {
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />
-              <Text style={styles.kipText} numberOfLines={2}>
+              <Text style={styles.kipText} numberOfLines={2 + textStep}>
                 <Text style={styles.kipName}>Kip </Text>
                 {say}
               </Text>
