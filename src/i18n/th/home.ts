@@ -12,6 +12,17 @@ const th: Record<string, string> = {
 
   // ---------- Home: top ----------
   'day logged': 'วันติดกัน',
+  '{amount} under plan so far this month': 'เดือนนี้ใช้น้อยกว่าแผน {amount} แล้ว',
+  '{amount} saved in total': 'เก็บได้ทั้งหมด {amount}',
+  saved: 'เก็บแล้ว',
+  'Payday! {amount} went to {goal}': 'เงินเดือนออก! เก็บเข้า {goal} แล้ว {amount}',
+  'That’s {saved} saved — on track for {date}.': 'เก็บได้ {saved} แล้ว ถึงเป้าทัน {date}',
+  'That’s {saved} saved so far.': 'ตอนนี้เก็บได้ {saved} แล้ว',
+  '+{amount} this month': 'เดือนนี้ +{amount}',
+  'Inside the plan — the line is where the plan is today': 'ยังอยู่ในแผน · ขีดดำคือแผนของวันนี้',
+  'Ahead of the plan — the line is where the plan is today': 'ใช้เร็วกว่าแผน · ขีดดำคือแผนของวันนี้',
+  'You’re doing great. Keep this up and {goal} stays on track for {date}.': 'เก่งมาก ใช้แบบนี้ต่อไป {goal} ถึงเป้าทัน {date} แน่นอน',
+  'You’re doing great. Keep this up and {goal} stays on track.': 'เก่งมาก ใช้แบบนี้ต่อไป {goal} ไปได้ตามแผนแน่นอน',
   'days logged': 'วันติดกัน',
   'Log today to start a streak': 'จดวันนี้ เริ่มสตรีคกันเลย',
   'Profile and settings': 'โปรไฟล์และการตั้งค่า',

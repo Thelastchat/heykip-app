@@ -3,7 +3,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { CalendarBlank, CaretRight, Flame, LockSimple, Plus } from 'phosphor-react-native';
+import { CalendarBlank, CaretRight, Flame, LockSimple, Plus, TrendDown } from 'phosphor-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -21,7 +21,7 @@ import { SlipFinder } from '@/components/home/SlipFinder';
 import { homeTour, Tour } from '@/components/Tour';
 import { tourSpot, useTourScroll } from '@/lib/tour';
 import { WeekStrip } from '@/components/home/WeekStrip';
-import { PaceChart } from '@/components/home/PaceChart';
+import { Kip } from '@/components/Kip';
 import { PaceSheet } from '@/components/home/PaceSheet';
 import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
@@ -324,6 +324,11 @@ export default function Home() {
     flash(t('Undone — back how it was.'));
   }
 
+  // Everything put away so far: every goal plus the safety net. The one number on Home that only goes up.
+  const totalSaved = goals.reduce((a, g) => a + g.saved, 0) + safetySaved;
+  // Payday (and the day after): the month's saving has just gone in — Kip says so before anything else.
+  const paydaySaved = P.dayIndex <= 1 && goalPerMonth > 0 && !monthOver;
+
   // Kip's line: one whole sentence per case, so Thai word order stays natural.
   const say =
     overMonth > 0
@@ -334,6 +339,11 @@ export default function Home() {
           : t('A big day — that’s okay. I spread the {amount} over the next {n} days, so {goal} stays on track.', { amount: baht(overToday), n: daysAfter, goal: short })
         : spent.total === 0
           ? t('Your plan is running. Tell me what you spend and I’ll keep {goal} on track.', { goal: short })
+          : pace < 0 && overToday <= 0
+            ? // The yellow line above already says how far under they are; Kip says what it means for the goal.
+              goalDate
+              ? t('You’re doing great. Keep this up and {goal} stays on track for {date}.', { goal: short, date: monthYear(goalDate) })
+              : t('You’re doing great. Keep this up and {goal} stays on track.', { goal: short })
           : pace <= 0
             ? goalDate
               ? t('You’re doing great — {amount} under pace. {goal} is on track for {date}.', { amount: baht(-pace), goal: short, date: monthYear(goalDate) })
@@ -474,6 +484,15 @@ export default function Home() {
               {streak > 0 ? (streak > 1 ? t('days logged') : t('day logged')) : t('Log today to start a streak')}
             </Text>
           </View>
+          {totalSaved > 0 && (
+            <Squish style={styles.savedPill} onPress={() => router.push('/goals')} accessibilityRole="button" accessibilityLabel={t('{amount} saved in total', { amount: baht(totalSaved) })}>
+              <Image source={ICON3D.piggy} style={{ width: 22, height: 22 }} contentFit="contain" />
+              <Text style={styles.savedText}>
+                <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>{baht(totalSaved)} </Text>
+                {t('saved')}
+              </Text>
+            </Squish>
+          )}
         </RiseIn>
 
         <RiseIn delay={60}>
@@ -545,34 +564,15 @@ export default function Home() {
           )}
         </RiseIn>
 
-        {/* the pay month as one line, with the plan as a safe zone (approved mockup G2) */}
-        {spendBudget > 0 && (
-          <RiseIn delay={160} style={{ paddingHorizontal: 20, marginTop: 20 }}>
-            <Pressable ref={tourSpot('month')} style={styles.paceCard} onPress={() => setPaceOpen(true)} accessibilityRole="button" accessibilityLabel={t('This pay month — see the details')}>
-              <View style={styles.paceHead}>
-                <Text style={styles.weekLbl}>{t('This pay month')}</Text>
-                <Text style={styles.paceSpent}>{t('{amount} spent', { amount: baht(line.spent) })}</Text>
-              </View>
-              <PaceChart pace={line} budget={spendBudget} total={P.total} start={P.start} />
-            </Pressable>
+        {/* the win, said out loud: how far under the plan they are so far this pay month */}
+        {pace < 0 && !monthOver && overToday <= 0 && isTodaySelected && (
+          <RiseIn delay={150} style={{ paddingHorizontal: 20, marginTop: 14, flexDirection: 'row' }}>
+            <View style={styles.under}>
+              <TrendDown size={14} color={colors.onAccent} weight="bold" />
+              <Text style={styles.underText}>{t('{amount} under plan so far this month', { amount: baht(-pace) })}</Text>
+            </View>
           </RiseIn>
         )}
-
-        <RiseIn delay={200} style={{ paddingHorizontal: 20, marginTop: 24 }}>
-          <View ref={tourSpot('week')} collapsable={false}>
-            <View style={styles.weekHead}>
-              <Text style={styles.weekLbl}>{t('This week')}</Text>
-              <Squish style={styles.calBtn} accessibilityRole="button" onPress={() => router.push('/calendar' as never)}>
-                <CalendarBlank size={15} color={colors.ink} />
-                <Text style={styles.calText}>{t('Full calendar')}</Text>
-              </Squish>
-            </View>
-            <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setDayOpen(d)} now={now} />
-          </View>
-        </RiseIn>
-
-        {/* Kip finding slips: only when there's something to set up or something new */}
-        <SlipFinder isPlus={isPlus} />
 
         {/* Kip: one line on Home; tap to read the whole thing. When Kip notices something, the line becomes a card. */}
         <RiseIn delay={240} style={{ paddingHorizontal: 20, marginTop: 16 }}>
@@ -589,6 +589,16 @@ export default function Home() {
               onDo={() => doNotice(notice)}
               onLater={() => hide(notice.id, laterFor(notice, new Date()))}
             />
+          ) : paydaySaved ? (
+            <Squish style={styles.payday} onPress={() => router.push('/goals')} accessibilityRole="button">
+              <Kip mood="celebrate" size={56} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.paydayTitle}>{t('Payday! {amount} went to {goal}', { amount: baht(goalPerMonth), goal: short })}</Text>
+                <Text style={styles.paydayText}>
+                  {goalDate ? t('That’s {saved} saved — on track for {date}.', { saved: baht(goal?.saved ?? 0), date: monthYear(goalDate) }) : t('That’s {saved} saved so far.', { saved: baht(goal?.saved ?? 0) })}
+                </Text>
+              </View>
+            </Squish>
           ) : (
             <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
               <KipStill size={32} />
@@ -611,7 +621,7 @@ export default function Home() {
             {goals.map((g) => (
               <GoalCard
                 key={g.id}
-                g={{ ...g, perMonth: split.get(g.id) ?? 0, arrives: arrive.get(g.id) ?? null }}
+                g={{ ...g, perMonth: split.get(g.id) ?? 0, arrives: arrive.get(g.id) ?? null, added: split.get(g.id) ?? 0 }}
                 width={Math.min(312, width - 60)}
                 onPress={() => router.push('/goals')}
                 accessibilityLabel={
@@ -630,6 +640,42 @@ export default function Home() {
             )}
           </ScrollView>
         </RiseIn>
+
+        {/* the pay month, small: spent so far against the plan's line. Tap for the whole chart. */}
+        {spendBudget > 0 && (
+          <RiseIn delay={300} style={{ paddingHorizontal: 20, marginTop: 28 }}>
+            <Pressable ref={tourSpot('month')} style={styles.paceRow} onPress={() => setPaceOpen(true)} accessibilityRole="button" accessibilityLabel={t('This pay month — see the details')}>
+              <View style={styles.paceHead}>
+                <Text style={styles.weekLbl}>{t('This pay month')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={styles.paceSpent}>{t('{amount} spent', { amount: baht(line.spent) })}</Text>
+                  <CaretRight size={12} color={colors.muted} weight="bold" />
+                </View>
+              </View>
+              <View style={styles.paceTrack}>
+                <View style={[styles.paceFill, { width: `${Math.min(100, Math.max(2, (line.spent / spendBudget) * 100))}%`, backgroundColor: line.inside ? colors.limeDeep : colors.orange }]} />
+                <View style={[styles.paceMark, { left: `${Math.min(100, (line.planToday / spendBudget) * 100)}%` }]} />
+              </View>
+              <Text style={styles.paceNote}>{line.inside ? t('Inside the plan — the line is where the plan is today') : t('Ahead of the plan — the line is where the plan is today')}</Text>
+            </Pressable>
+          </RiseIn>
+        )}
+
+        <RiseIn delay={200} style={{ paddingHorizontal: 20, marginTop: 24 }}>
+          <View ref={tourSpot('week')} collapsable={false}>
+            <View style={styles.weekHead}>
+              <Text style={styles.weekLbl}>{t('This week')}</Text>
+              <Squish style={styles.calBtn} accessibilityRole="button" onPress={() => router.push('/calendar' as never)}>
+                <CalendarBlank size={15} color={colors.ink} />
+                <Text style={styles.calText}>{t('Full calendar')}</Text>
+              </Squish>
+            </View>
+            <WeekStrip start={P.start} end={P.end} byDay={spent.byDay} daily={dailyPlan} selected={selectedDay} onSelect={(d) => setDayOpen(d)} now={now} />
+          </View>
+        </RiseIn>
+
+        {/* Kip finding slips: only when there's something to set up or something new */}
+        <SlipFinder isPlus={isPlus} />
 
         {/* left to spend */}
         <RiseIn delay={360}>
@@ -843,8 +889,19 @@ const styles = themed(() =>
     hello: { paddingHorizontal: 20, paddingTop: 20, fontFamily: fonts.regular, fontSize: 30, lineHeight: 36, letterSpacing: -0.9, color: colors.ink },
     l1: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 4 },
     l2: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
-    paceCard: { borderRadius: 32, backgroundColor: colors.paper, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
-    paceHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 48 },
+    paceRow: { borderRadius: 24, backgroundColor: colors.paper, paddingHorizontal: 18, paddingVertical: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
+    paceHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    paceTrack: { height: 8, borderRadius: 4, backgroundColor: inkA(0.07) },
+    paceFill: { height: 8, borderRadius: 4 },
+    paceMark: { position: 'absolute', top: -4, width: 2, height: 16, borderRadius: 1, backgroundColor: colors.ink },
+    paceNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 10 },
+    under: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: colors.lime },
+    underText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onAccent },
+    savedPill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingLeft: 8, paddingRight: 14, borderRadius: 18, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 6px 18px rgba(0,0,0,0.05)' },
+    savedText: { fontFamily: fonts.regular, fontSize: 14, color: colors.muted },
+    payday: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 28, backgroundColor: colors.paper, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.06)' },
+    paydayTitle: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 22, color: colors.ink },
+    paydayText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
     paceSpent: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
     weekHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     weekLbl: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },

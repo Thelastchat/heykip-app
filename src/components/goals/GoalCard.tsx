@@ -26,6 +26,8 @@ export type GoalCardData = {
   saved: number;
   perMonth: number;
   arrives: Date | null;
+  /** What went in this pay month (Home): shown as a small "+฿x this month". */
+  added?: number;
   /** A goal with an amount and a date, even before the amount is typed (New goal's preview). */
   dated?: boolean;
 };
@@ -103,7 +105,11 @@ export function GoalCard({
                 </View>
                 {g.target > 0 ? (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={styles.small}>{t('{amount} a month', { amount: baht(g.perMonth) })}</Text>
+                    {g.added ? (
+                      <Text style={[styles.small, { fontFamily: fonts.medium, color: colors.onAccent }]}>{t('+{amount} this month', { amount: baht(g.added) })}</Text>
+                    ) : (
+                      <Text style={styles.small}>{t('{amount} a month', { amount: baht(g.perMonth) })}</Text>
+                    )}
                     <Text style={styles.small}>{t('of {amount}', { amount: baht(g.target) })}</Text>
                   </View>
                 ) : null}
