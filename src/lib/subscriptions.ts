@@ -61,7 +61,11 @@ export function subsOf(m: MonthBudget | null, now = new Date()): Sub[] {
     .sort((a, c) => c.perMonth - a.perMonth);
 }
 
-export const subsTotal = (subs: Sub[]) => ({ perMonth: subs.reduce((a, s) => a + s.perMonth, 0), perYear: subs.reduce((a, s) => a + s.perYear, 0) });
+/** What they really cost: a year, and that year ÷ 12 (so the two always agree; a yearly one's set-aside is rounded up). */
+export const subsTotal = (subs: Sub[]) => {
+  const perYear = subs.reduce((a, s) => a + s.perYear, 0);
+  return { perMonth: Math.round(perYear / 12), perYear };
+};
 
 /** Kip asks this many days before a subscription renews (the day before at the latest). */
 export const ASK_DAYS = 3;

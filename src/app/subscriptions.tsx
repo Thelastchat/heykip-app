@@ -109,7 +109,7 @@ export default function Subscriptions() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.amt}>{s.yearly ? t('{amount} a year', { amount: baht(s.charge) }) : baht(s.charge)}</Text>
-                  {s.yearly && <Text style={styles.sub}>{t('{amount} a month', { amount: baht(s.perMonth) })}</Text>}
+                  {s.yearly && <Text style={styles.sub}>{t('{amount} a month set aside', { amount: baht(s.perMonth) })}</Text>}
                 </View>
               </View>
             ))}

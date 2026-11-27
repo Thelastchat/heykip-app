@@ -100,7 +100,7 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
             : t('Not now');
   const label = `${t('Kip noticed')}: ${title}`;
   return (
-    <Glass radius={26} tint={glassA(0.78)} innerStyle={styles.card}>
+    <Glass radius={24} tint={glassA(0.78)} innerStyle={styles.card}>
       <View accessibilityLabel={label} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
@@ -222,7 +222,7 @@ function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus:
   const name = monthLong(r.month.getMonth());
   const over = r.left < 0;
   return (
-    <Glass radius={26} tint={glassA(0.78)} innerStyle={styles.card}>
+    <Glass radius={24} tint={glassA(0.78)} innerStyle={styles.card}>
       <View accessibilityLabel={t('Payday recap: your {month}', { month: name })} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
@@ -314,7 +314,7 @@ const styles = themed(() =>
     card: { padding: 16 },
     cardIn: {},
     top: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    kicker: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted },
+    kicker: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
     title: { fontFamily: fonts.semibold, fontSize: 18, letterSpacing: -0.3, color: colors.ink, marginTop: 10 },
     body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink, marginTop: 4 },
     box: { marginTop: 12, borderRadius: 16, backgroundColor: inkA(0.04), paddingHorizontal: 12, paddingVertical: 2 },
@@ -323,7 +323,7 @@ const styles = themed(() =>
     name: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
     was: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
     now: { minWidth: 64, textAlign: 'right', fontFamily: fonts.semibold, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
-    after: { fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 18, color: colors.muted, marginTop: 8 },
+    after: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 8 },
     btns: { flexDirection: 'row', gap: 8, marginTop: 12 },
     do: { flex: 1, height: 44, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     doT: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
@@ -345,8 +345,8 @@ function plusTitle(p: PlusNote) {
 }
 /** Where its money comes from — or goes, once it ended. */
 function plusBody(p: PlusNote, goal: string) {
-  if (p.kind === 'gone') return t('The {amount} a month it took goes to {goal} now.', { amount: baht(p.perMonth), goal });
-  const aside = p.yearly ? t('Kip sets aside {amount} a month for the next year.', { amount: baht(p.perMonth) }) + ' ' : '';
+  if (p.kind === 'gone') return t('The {amount} a month set aside for it goes to {goal} now.', { amount: baht(p.perMonth), goal });
+  const aside = p.yearly ? t('Set aside {amount} a month for next year’s renewal.', { amount: baht(p.perMonth) }) + ' ' : '';
   const from =
     p.fromFun > 0 && p.fromGoal > 0
       ? t('It comes from fun money ({fun}) and {goal}’s saving ({goalAmount}).', { fun: baht(p.fromFun), goal, goalAmount: baht(p.fromGoal) })
@@ -354,6 +354,6 @@ function plusBody(p: PlusNote, goal: string) {
         ? t('It comes from {goal}’s saving.', { goal })
         : p.fromFun > 0
           ? t('It comes from fun money.')
-          : t('Kip’s bill guess already covered it, so nothing else changes.');
+          : t('It uses money already set aside for bills, so nothing else changes.');
   return aside + (p.kind === 'changed' && p.charge < (p.was ?? 0) ? t('The difference goes to {goal}.', { goal }) : from);
 }
