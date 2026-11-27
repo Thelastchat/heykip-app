@@ -41,9 +41,11 @@ export function Blink({ on, color = colors.orange }: { on: boolean; color?: stri
 
 /** What they're saying, live: the last couple of words are still settling, so they're softer. */
 export function LiveWords({ text, style }: { text: string; style?: object }) {
+  // Thai has no spaces between words, so a short run is one "word": keep it firm rather than fading the lot.
   const words = text.trim().split(/\s+/).filter(Boolean);
-  const firm = words.slice(0, Math.max(0, words.length - 2)).join(' ');
-  const soft = words.slice(Math.max(0, words.length - 2)).join(' ');
+  const cut = words.length >= 3 ? words.length - 2 : words.length;
+  const firm = words.slice(0, cut).join(' ');
+  const soft = words.slice(cut).join(' ');
   return (
     <Text style={style}>
       {firm ? `${firm} ` : ''}

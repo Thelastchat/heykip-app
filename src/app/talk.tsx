@@ -6,7 +6,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { ArrowUp, Keyboard, Microphone, X } from 'phosphor-react-native';
+import { ArrowUp, Microphone, X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { KeyboardSafe } from '@/components/KeyboardSafe';
 import { Kip } from '@/components/Kip';
 import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
-import { Blink, LangSwitch, LiveWords, Waves } from '@/components/talk/VoiceBits';
+import { VoiceStage } from '@/components/talk/VoiceStage';
 import { SlipRangeCard } from '@/components/talk/SlipRangeCard';
 import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
@@ -224,10 +224,23 @@ export default function Talk() {
     voice.cancel();
     listen(l);
   }
+  // Mockup screenshots only (a web build made with EXPO_PUBLIC_VOICE_DEMO=1): the page sets the voice moment.
+  const [demo, setDemo] = useState<{ phase: 'listening' | 'thinking' | 'speaking'; text?: string; level?: number } | null>(null);
+  useEffect(() => {
+    if (process.env.EXPO_PUBLIC_VOICE_DEMO !== '1') return;
+    const id = setInterval(() => {
+      const d = (globalThis as { __VOICE_DEMO?: typeof demo & { lang?: VoiceLang } }).__VOICE_DEMO ?? null;
+      setDemo(d);
+      if (d?.lang) setLang(d.lang);
+    }, 300);
+    return () => clearInterval(id);
+  }, []);
   const thinking = turns.some((x) => x.state === 'thinking');
-  const phase: 'off' | 'listening' | 'thinking' | 'speaking' = !voiceOn ? 'off' : speaking ? 'speaking' : voice.state === 'idle' || thinking ? 'thinking' : 'listening';
-  const kipMood = phase === 'speaking' ? 'talk' : phase === 'thinking' ? 'think' : 'listen';
-  const hearing = phase === 'listening' ? voice.text.trim() : '';
+  const voiceShown = voiceOn || !!demo;
+  const phase: 'off' | 'listening' | 'thinking' | 'speaking' =
+    demo?.phase ?? (!voiceOn ? 'off' : speaking ? 'speaking' : voice.state === 'idle' || thinking ? 'thinking' : 'listening');
+  const hearing = demo ? (demo.text ?? '') : phase === 'listening' ? voice.text.trim() : '';
+  const level = demo?.level ?? voice.level;
 
   function flash(msg: string) {
     setToast(msg);
@@ -442,6 +455,27 @@ export default function Talk() {
     reload();
   }
 
+  function answerFor(turn: Turn, noLine = false) {
+    return (
+      <Answer
+        noLine={noLine}
+        turn={turn}
+        reply={turn.reply!}
+        month={month}
+        plan={turn.plan ?? null}
+        goal={{ name: short, arrives, icon: goalIcon }}
+        goalInfo={goalInfo}
+        spent={spent}
+        onUndo={() => undoLog(turn)}
+        onSaveAnyway={() => saveItems(turn, (turn.reply?.items as Item[]) ?? [])}
+        onBuy={(item, plan) => buyIt(turn, item, plan)}
+        onNotNow={() => update(turn.id, { dismissed: true })}
+        onDo={() => (turn.change ? doChange(turn) : doFix(turn))}
+        onUndoChange={() => undoChange(turn)}
+      />
+    );
+  }
+
   return (
     <KeyboardSafe style={{ flex: 1 }} done={false}>
       <GlowBackground />
@@ -451,35 +485,44 @@ export default function Talk() {
             <X size={16} color={colors.ink} weight="bold" />
           </Glass>
         </Pressable>
+        {voiceShown ? null : (
         <Glass radius={999} innerStyle={styles.status}>
-          {phase === 'listening' ? <Blink on /> : <View style={[styles.dot, (thinking || phase === 'speaking') && { backgroundColor: colors.orange }]} />}
+          <View style={[styles.dot, thinking && { backgroundColor: colors.orange }]} />
           <Text style={styles.statusText}>
-            {phase === 'listening'
-              ? t('Listening')
-              : phase === 'speaking'
-                ? t('Kip is talking')
-                : thinking
-                  ? t('Thinking…')
-                  : !isPlus
-                    ? t('Kip · Plus feature')
-                    : outOfKip
-                      ? t('Kip · back at midnight')
-                      : kipLeft !== null && kipLeft <= 5
-                        ? t('Kip · {n} left today', { n: kipLeft })
-                        : 'Kip'}
+            {thinking
+              ? t('Thinking…')
+              : !isPlus
+                ? t('Kip · Plus feature')
+                : outOfKip
+                  ? t('Kip · back at midnight')
+                  : kipLeft !== null && kipLeft <= 5
+                    ? t('Kip · {n} left today', { n: kipLeft })
+                    : 'Kip'}
           </Text>
         </Glass>
-        {voiceOn ? (
-          <Pressable onPress={() => switchLang(lang === 'th-TH' ? 'en-US' : 'th-TH')} accessibilityRole="button" accessibilityLabel={t('Switch language')}>
-            <Glass radius={999}>
-              <LangSwitch th={lang === 'th-TH'} />
-            </Glass>
-          </Pressable>
-        ) : (
-          <View style={{ width: 44 }} />
         )}
+        <View style={{ width: 44 }} />
       </View>
 
+      {voiceShown ? (
+        <VoiceStage
+          phase={phase === 'off' ? 'thinking' : phase}
+          level={level}
+          hearing={hearing}
+          youSaid={turns.at(-1)?.me ?? ''}
+          kipSaid={turns.at(-1)?.reply?.reply ?? ''}
+          th={lang === 'th-TH'}
+          card={(() => {
+            const last = turns.at(-1);
+            return last?.state === 'done' && last.reply && last.reply.kind !== 'answer' ? answerFor(last, true) : null;
+          })()}
+          bottom={Math.max(insets.bottom, 12) + 4}
+          onPrimary={tapKip}
+          onKeyboard={endVoice}
+          onLang={() => switchLang(lang === 'th-TH' ? 'en-US' : 'th-TH')}
+        />
+      ) : (
+        <>
       <ScrollView
         ref={scroll}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16, flexGrow: 1 }}
@@ -488,25 +531,12 @@ export default function Talk() {
         {turns.length === 0 && (
           <RiseIn style={{ alignItems: 'center', marginTop: 12 }}>
             <Text style={styles.h1}>{t('What did you spend today?')}</Text>
-            <Pressable onPress={tapKip} style={styles.stage} accessibilityRole="button" accessibilityLabel={voiceOn ? t('Send now') : t('Tap Kip to talk')}>
-              <Waves size={200} level={voice.level} on={phase === 'listening'} />
-              <Kip mood={kipMood} size={168} />
+            <Pressable onPress={tapKip} style={styles.stage} accessibilityRole="button" accessibilityLabel={t('Tap Kip to talk')}>
+              <Kip mood="listen" size={168} />
             </Pressable>
-            {voiceOn ? (
-              hearing ? (
-                <LiveWords text={hearing} style={styles.said} />
-              ) : (
-                <Text style={[styles.sub, styles.hint]}>
-                  {phase === 'listening' ? (lang === 'th-TH' ? 'พูดได้เลย เช่น “ข้าวมันไก่ 60 วิน 40”' : 'Just say it, like “Chicken rice 60, Grab 80”') : ' '}
-                </Text>
-              )
-            ) : (
-              <>
-                <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
-                <Text style={styles.tapKip}>{t('Or tap Kip and just say it')}</Text>
-              </>
-            )}
-            {n && !voiceOn && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
+            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
+            <Text style={styles.tapKip}>{t('Or tap Kip and just say it')}</Text>
+            {n && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
           </RiseIn>
         )}
 
@@ -518,33 +548,12 @@ export default function Talk() {
             {turn.state === 'thinking' && <KipLine mood="think" text={t('Let me look…')} />}
             {turn.state === 'error' && !turn.limit && <KipLine mood="careful" text={turn.error ?? ''} />}
             {turn.state === 'error' && turn.limit && <OutOfKip />}
-            {turn.state === 'done' && turn.reply && (
-              <Answer
-                turn={turn}
-                reply={turn.reply}
-                month={month}
-                plan={turn.plan ?? null}
-                goal={{ name: short, arrives, icon: goalIcon }}
-                goalInfo={goalInfo}
-                spent={spent}
-                onUndo={() => undoLog(turn)}
-                onSaveAnyway={() => saveItems(turn, (turn.reply?.items as Item[]) ?? [])}
-                onBuy={(item, plan) => buyIt(turn, item, plan)}
-                onNotNow={() => update(turn.id, { dismissed: true })}
-                onDo={() => (turn.change ? doChange(turn) : doFix(turn))}
-                onUndoChange={() => undoChange(turn)}
-              />
-            )}
+            {turn.state === 'done' && turn.reply && answerFor(turn)}
           </View>
         ))}
-        {turns.length > 0 && hearing ? (
-          <View style={[styles.me, styles.meLive]}>
-            <LiveWords text={hearing} style={styles.meText} />
-          </View>
-        ) : null}
       </ScrollView>
 
-      {turns.length === 0 && !voiceOn && (
+      {turns.length === 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -561,28 +570,6 @@ export default function Talk() {
         </ScrollView>
       )}
 
-      {voiceOn ? (
-        <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-          <Glass radius={30} style={{ flex: 1 }} innerStyle={styles.dock}>
-            {turns.length > 0 && (
-              <Pressable onPress={tapKip} style={styles.dockKip} accessibilityRole="button" accessibilityLabel={phase === 'speaking' ? t('Cut in') : t('Send now')}>
-                <Waves size={52} level={voice.level} on={phase === 'listening'} />
-                <Kip mood={kipMood} size={52} />
-              </Pressable>
-            )}
-            <Pressable onPress={tapKip} style={{ flex: 1, paddingLeft: turns.length > 0 ? 0 : 10 }} accessibilityRole="button">
-              <Text style={styles.dockText} numberOfLines={2}>
-                {phase === 'listening' ? t('Pause and Kip answers · tap Kip to send now') : phase === 'speaking' ? t('Tap Kip to cut in') : t('One moment…')}
-              </Text>
-            </Pressable>
-          </Glass>
-          <Pressable onPress={endVoice} accessibilityRole="button" accessibilityLabel={t('Stop talking and type')}>
-            <Glass radius={30} innerStyle={styles.dockBtn}>
-              <Keyboard size={22} color={colors.ink} weight="bold" />
-            </Glass>
-          </Pressable>
-        </View>
-      ) : (
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel={t('Talk to Kip out loud')}>
           <Glass radius={24} innerStyle={styles.mic}>
@@ -608,6 +595,7 @@ export default function Talk() {
           <ArrowUp size={20} color={text.trim() ? colors.paper : colors.muted} weight="bold" />
         </Squish>
       </View>
+        </>
       )}
 
       {moneyIn && (
@@ -693,6 +681,7 @@ function ChangeCard({ rows, preview, faded }: { rows: ChangeRow[]; preview: bool
 }
 
 function Answer({
+  noLine,
   turn,
   reply,
   month,
@@ -707,6 +696,8 @@ function Answer({
   onDo,
   onUndoChange,
 }: {
+  /** Talking out loud: Kip's words are already the big caption, so the card comes alone. */
+  noLine?: boolean;
   turn: Turn;
   reply: KipReply;
   month: ReturnType<typeof useMonth>['month'];
@@ -728,7 +719,7 @@ function Answer({
     if (!p) return <KipLine mood="careful" text={t('Hmm, that doesn’t fit your plan right now. Try saying it another way?')} />;
     return (
       <>
-        <KipLine text={reply.reply} />
+        {!noLine && <KipLine text={reply.reply} />}
         <ChangeCard rows={p.rows} preview={!turn.done} faded={!!turn.replaced || !!turn.dismissed} />
         {turn.undone ? (
           <Text style={[styles.sub, { textAlign: 'center' }]}>{t('Undone — back how it was.')}</Text>
@@ -790,7 +781,7 @@ function Answer({
     );
     return (
       <>
-        <KipLine text={reply.reply} />
+        {!noLine && <KipLine text={reply.reply} />}
         <Glass radius={24} innerStyle={{ padding: 16, gap: 12 }}>
           {ins.length > 0 && (
             <>
@@ -852,7 +843,7 @@ function Answer({
   if (reply.kind === 'slips' && reply.slips && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.from) && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.to)) {
     return (
       <>
-        <KipLine text={reply.reply} />
+        {!noLine && <KipLine text={reply.reply} />}
         <SlipRangeCard from={reply.slips.from} to={reply.slips.to} />
       </>
     );
@@ -936,7 +927,7 @@ function Answer({
     );
   }
 
-  return <KipLine text={reply.reply} />;
+  return noLine ? null : <KipLine text={reply.reply} />;
 }
 
 const styles = themed(() =>
@@ -985,14 +976,7 @@ const styles = themed(() =>
     outPill: { height: 36, paddingHorizontal: 16, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     outPillText: { fontFamily: fonts.medium, fontSize: 13, color: colors.paper },
     stage: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginVertical: 4 },
-    said: { fontFamily: fonts.medium, fontSize: 21, lineHeight: 30, color: colors.ink, textAlign: 'center', paddingHorizontal: 20 },
-    hint: { textAlign: 'center', paddingHorizontal: 20, fontSize: 15, lineHeight: 21 },
     tapKip: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink, marginTop: 10 },
-    meLive: { opacity: 0.85 },
-    dock: { height: 60, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 6, paddingRight: 16 },
-    dockKip: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
-    dockText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-    dockBtn: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
     toast: { position: 'absolute', alignSelf: 'center', backgroundColor: colors.ink, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, maxWidth: '90%' },
     toastText: { fontFamily: fonts.regular, fontSize: 13, color: colors.paper, textAlign: 'center' },
   }),
