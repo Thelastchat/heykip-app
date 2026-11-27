@@ -162,8 +162,8 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       K.enum = K.enum.filter((k: string) => k !== 'find');
       delete kipTool.input_schema.properties.find;
     }
-    // Tappable follow-ups ("ถามต่อ") only for builds that show them.
-    if (!can.includes('next')) delete kipTool.input_schema.properties.next;
+    // Tappable follow-ups ("ถามต่อ") only for builds that show them, and never out loud (faster, and the voice screen has none).
+    if (!can.includes('next') || voice) delete kipTool.input_schema.properties.next;
     // Saving less for the goal (and the goal's date moving) needs an app that knows how to show and save it.
     if (!can.includes('less_goal')) {
       const O = kipTool.input_schema.properties.ops.items.properties.op;
