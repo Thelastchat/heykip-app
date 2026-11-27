@@ -9,10 +9,10 @@
 // Logging (spends, money in) isn't here: it's saved straight away with Undo.
 import { applyOps } from '@/lib/monthops';
 import type { ChangeRow } from '@/components/TellKip';
-import { addBill, CATEGORY, lowerBudget, type BillType, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, lowerBudget, withPaidLog, type BillType, type CatKey, type MonthBudget } from '@/lib/budget';
 import { BILL_TYPES, guessType, nextDue, yearlySetAside } from '@/lib/everymonth';
 import { arrivals, splitOf, type GoalLite } from '@/lib/goals';
-import { periodKey } from '@/lib/home';
+import { period, periodKey } from '@/lib/home';
 import { getLang, t } from '@/lib/i18n';
 import { DB_CAT_NAME, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
@@ -99,7 +99,7 @@ export function planChange(m: MonthBudget, goals: GoalLite[], ops: AgentOp[], no
       const pk = periodKey(next.payday, now);
       const keys = next.paid?.period === pk ? next.paid.keys : [];
       if (keys.includes(k)) return null;
-      next = { ...next, paid: { period: pk, keys: [...keys, k] } };
+      next = { ...next, paid: { period: pk, keys: [...keys, k] }, paidLog: withPaidLog(next, k, true, period(next.payday, now).start, now) };
     } else if (o.op === 'to_goal') {
       const from = (o.from ?? 'fun') as CatKey;
       const cur = next.spend.find((s) => s.key === from)?.amount;

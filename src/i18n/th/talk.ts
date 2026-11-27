@@ -244,6 +244,15 @@ const th: Record<string, string> = {
   'Save anyway': 'บันทึกอยู่ดี',
   Skip: 'ข้าม',
   'Replaced by the one below.': 'ใช้อันล่างแทนแล้ว',
+  // ---- Looking back (kind=find) ----
+  'I couldn’t find it since {date}.': 'ตั้งแต่ {date} ยังไม่เจอเลย',
+  'If it’s paid but not logged yet, tell me how much and I’ll log it.': 'ถ้าจ่ายแล้วแต่ยังไม่ได้ลง บอกจำนวนมาได้เลย เดี๋ยว Kip ลงให้',
+  'Last one was {date}: {name}, {amount}.': 'ล่าสุดวันที่ {date} — {name} {amount}',
+  '{count} times since {date}, {total} in all.': 'ตั้งแต่ {date} มี {count} ครั้ง รวม {total}',
+  'Since {date}': 'ตั้งแต่ {date}',
+  '{n} found': 'เจอ {n} รายการ',
+  'Ticked paid': 'ติ๊กว่าจ่ายแล้ว',
+  '+{n} more': 'อีก {n} รายการ',
 };
 
 export default th;

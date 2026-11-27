@@ -134,6 +134,8 @@ export type MonthBudget = {
   spend: { key: CatKey; amount: number }[];
   /** Bills marked paid this month (cleared when a new month starts). */
   paid?: { period: string; keys: string[] };
+  /** Every bill ticked paid, with the day (kept about a year), so Kip can say when something was paid. */
+  paidLog?: PaidEntry[];
   /** The pay cycle whose saving has already moved to the goal and safety net (once per cycle). */
   payMoved?: string;
   /** Taken back from this cycle's goal saving / the safety net to cover going over — added to spending money. */
@@ -227,10 +229,37 @@ function keepOwn(m: MonthBudget, own: { key: CatKey; amount: number }): MonthBud
   return { ...m, spend: [...spend, { key: own.key, amount: own.amount - left }] };
 }
 
+/** A bill ticked paid: its key (rent / item:<name>), name, amount and the day (YYYY-MM-DD, the phone's time). */
+export type PaidEntry = { key: string; name: string; amount: number; on: string };
+
+const dayOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/**
+ * The paid-bill history after ticking `key` paid (or unticking it): a tick adds today's entry, an untick takes back
+ * this cycle's entry for that bill (a mistaken tap leaves no trace). At most 80 entries, none older than 400 days.
+ */
+export function withPaidLog(m: MonthBudget, key: string, paid: boolean, cycleStart: Date, now = new Date()): PaidEntry[] {
+  const since = dayOf(new Date(now.getTime() - 400 * 86_400_000));
+  let log = (m.paidLog ?? []).filter((e) => e.on >= since);
+  const start = dayOf(cycleStart);
+  if (paid) {
+    if (!log.some((e) => e.key === key && e.on >= start)) {
+      const item = key.startsWith('item:') ? (m.bills.items ?? []).find((b) => `item:${b.name}` === key) : null;
+      const amount = key === 'rent' ? m.bills.rent : item ? (item.yearly ? item.yearly.total : item.amount) : 0;
+      if (key === 'rent' || item) log = [...log, { key, name: key === 'rent' ? 'rent' : item!.name, amount, on: dayOf(now) }];
+    }
+  } else {
+    const i = log.map((e) => e.key === key && e.on >= start).lastIndexOf(true);
+    if (i >= 0) log = log.filter((_, j) => j !== i);
+  }
+  return log.slice(-80);
+}
+
 /** What any re-plan keeps: the "always" choice, bills marked paid, this cycle's payday move, covers, the goal split. */
 export const keepOnReplan = (m: MonthBudget) => ({
   alwaysFreedTo: m.alwaysFreedTo,
   ...(m.paid ? { paid: m.paid } : {}),
+  ...(m.paidLog ? { paidLog: m.paidLog } : {}),
   ...(m.payMoved ? { payMoved: m.payMoved } : {}),
   ...(m.covers ? { covers: m.covers } : {}),
   ...(m.goals ? { goals: m.goals } : {}),

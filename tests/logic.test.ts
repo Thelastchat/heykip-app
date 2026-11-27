@@ -28,6 +28,8 @@ import { spareNow, sweptIn, withSweep } from '../src/lib/sweep';
 import { needsRenew } from '../src/lib/bankTransfer';
 import { syncPlusBill } from '../src/lib/plusBill';
 import { PLUS_BILL } from '../src/lib/subscriptions';
+import { findAnswer, findRange, findRows, findWords } from '../src/lib/find';
+import { withPaidLog } from '../src/lib/budget';
 import { living, livingTotal } from '../src/lib/brain';
 import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
@@ -1384,6 +1386,59 @@ for (let n = 0; n < 2000; n++) {
     check('Plus bill: yearly sets aside total ÷ 12 (฿10 steps)', plusOf(y)?.yearly?.total === 899 && plusOf(y)?.amount === 80, () => plusOf(y));
     const g = syncPlusBill(a, 'free', null, now)!;
     check('Plus bill: when Plus ends the bill goes and its money goes to the goal', !plusOf(g) && g.goalExtra >= a.goalExtra && g.plusNote?.kind === 'gone', () => g.plusNote);
+  }
+}
+
+// ---------- Looking back: "when did I pay my phone?" (kind=find) ----------
+{
+  const now = new Date(2026, 10, 28, 15, 0, 0);
+  const at = (daysAgo: number, h = 12) => new Date(now.getTime() - daysAgo * 86_400_000 + (h - 15) * 3600_000).toISOString();
+  const tx = [
+    { note: 'TRUE MOVE H', amount: 399, occurred_at: at(14), kind: 'spend' },
+    { note: 'ค่า โทรศัพท์', amount: 399, occurred_at: at(44), kind: 'spend' },
+    { note: 'True Move-H', amount: 399, occurred_at: at(75), kind: 'spend' },
+    { note: 'ค่าโทรศัพท์', amount: 399, occurred_at: at(130), kind: 'spend' },
+    { note: 'Starbucks', amount: 145, occurred_at: at(3), kind: 'spend' },
+    { note: 'เงินเดือน', amount: 18000, occurred_at: at(3), kind: 'income' },
+    { note: null, amount: 70, occurred_at: at(2), kind: 'spend' },
+  ];
+  const q = { words: ['โทรศัพท์', 'ค่าโทร', 'TRUE', 'TrueMove', 'AIS', 'a', 'tv'] };
+  const rows = findRows(tx, [], q, {}, now);
+  check('Find: words too short to mean anything are dropped', !findWords(q).includes('a') && !findWords(q).includes('tv'), () => findWords(q));
+  check('Find: matches notes however they are spaced or cased (slip names too)', rows.length === 3, () => rows);
+  check('Find: newest first', rows.every((r, i) => i === 0 || rows[i - 1].on >= r.on), () => rows.map((r) => r.on));
+  check('Find: only the last 90 days when no days were said', !rows.some((r) => r.amount === 399 && r.on < findRange(q, now).from), () => findRange(q, now));
+  check('Find: Starbucks and pay never match the phone', !rows.some((r) => /Starbucks|เงินเดือน/.test(r.name)), () => rows);
+  const ans = findAnswer(rows, q, now);
+  check('Find: the answer names the latest day and amount, and adds up the rest', /14 Nov/.test(ans) && /฿399/.test(ans) && /3 times/.test(ans) && /฿1,197/.test(ans), () => ans);
+  const wide = findRows(tx, [], { ...q, from: '2026-01-01', to: '2027-03-01' }, {}, now);
+  check('Find: a range they said is used (and never runs past today)', wide.length === 4 && findRange({ words: [], from: '2026-01-01', to: '2027-03-01' }, now).to === '2026-11-28', () => wide.length);
+  const none = findRows(tx, [], { words: ['Netflix'] }, {}, now);
+  check('Find: nothing found says so and offers to log it — never a made-up date', none.length === 0 && /couldn’t find/.test(findAnswer(none, { words: ['Netflix'] }, now)), () => findAnswer(none, { words: ['Netflix'] }, now));
+  const money = findRows(tx, [], { words: ['เงินเดือน', 'starbucks'] }, {}, now);
+  check('Find: money in and money out never add up into one total', !/18,145/.test(findAnswer(money, { words: [] }, now)), () => findAnswer(money, { words: [] }, now));
+
+  // Bills ticked paid are remembered with the day, so Kip can answer from them too.
+  for (let k = 0; k < 300; k++) {
+    const i = person();
+    if (!i) continue;
+    const m0 = month(i, 'kip', pick([null, 1, 25]));
+    const withAis = addBill(m0, 'AIS', 459, { type: 'phone' }).month;
+    const start = new Date(now.getTime() - 10 * 86_400_000);
+    const log1 = withPaidLog(withAis, 'item:AIS', true, start, now);
+    check('Paid log: ticking a bill paid keeps the day and amount', log1.length === 1 && log1[0].on === '2026-11-28' && log1[0].amount === 459, () => log1);
+    const log2 = withPaidLog({ ...withAis, paidLog: log1 }, 'item:AIS', true, start, now);
+    check('Paid log: ticking it twice in a cycle keeps one entry', log2.length === 1, () => log2);
+    const log3 = withPaidLog({ ...withAis, paidLog: log1 }, 'item:AIS', false, start, now);
+    check('Paid log: unticking takes this cycle’s entry back', log3.length === 0, () => log3);
+    const found = findRows([], log1, { words: ['โทรศัพท์', 'มือถือ'] }, { 'item:AIS': 'phone' }, now);
+    check('Find: a ticked phone bill is found by "phone" even when it is called AIS', found.length === 1 && found[0].from === 'bill', () => found);
+    const both = findRows([{ note: 'AIS', amount: 459, occurred_at: now.toISOString(), kind: 'spend' }], log1, { words: ['AIS'] }, {}, now);
+    check('Find: a bill paid by slip and ticked paid shows once', both.length === 1, () => both);
+    const viaKip = planChange(withAis, [], [{ op: 'pay_bill', name: 'AIS' }], now);
+    check('Paid log: Kip’s "paid it" (pay_bill) remembers the day too', !!viaKip && (viaKip.next.paidLog ?? []).some((e) => e.key === 'item:AIS'), () => viaKip?.next.paidLog);
+    const old = withPaidLog({ ...withAis, paidLog: [{ key: 'item:AIS', name: 'AIS', amount: 459, on: '2025-01-01' }] }, 'rent', true, start, now);
+    check('Paid log: entries older than about a year are let go', !old.some((e) => e.on === '2025-01-01'), () => old);
   }
 }
 

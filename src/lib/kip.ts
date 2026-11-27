@@ -18,8 +18,10 @@ export type LogItem = { name: string; amount: number; category: DbCat; money?: '
 export type InItem = { name: string; amount: number; category: InCat; money: 'in'; day?: string };
 export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
 export type KipReply = {
-  kind: 'log' | 'buy' | 'answer' | 'change' | 'fix' | 'slips';
+  kind: 'log' | 'buy' | 'answer' | 'change' | 'fix' | 'slips' | 'find';
   reply: string;
+  /** kind=find: what to look for in everything they logged (the app searches and answers from the real rows). */
+  find?: { words: string[]; from?: string; to?: string };
   /** kind=slips: the days to read slips for (YYYY-MM-DD, Thai time, both included). */
   slips?: { from: string; to: string };
   /** Kip messages left today (after this one), from the server */
@@ -159,6 +161,9 @@ export function kipContext(
   };
 }
 
+/** What this build can show, so the server only uses kinds it knows (older builds send nothing). */
+const KIP_CAN = ['find'];
+
 export async function askKip(
   text: string,
   context: object,
@@ -166,7 +171,7 @@ export async function askKip(
   /** They're talking out loud: Kip answers in one or two short spoken sentences. */
   voice = false,
 ): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
-  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history, voice, speak: voice } });
+  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history, voice, speak: voice, can: KIP_CAN } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };

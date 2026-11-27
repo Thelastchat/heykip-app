@@ -60,6 +60,8 @@ import { defaultVoiceLang, saveVoiceLang, savedVoiceLang, useVoice, voiceModule,
 import { loggedToday } from '@/lib/checkin';
 import { hush, say } from '@/lib/kipSpeak';
 import { customCats } from '@/lib/customCats';
+import { findAnswer, findDay, findRange, findRows, type FindQuery, type FoundRow } from '@/lib/find';
+import { typeOf } from '@/lib/everymonth';
 import { colors, fonts, inkA, themed } from '@/theme';
 
 type Turn = {
@@ -89,6 +91,8 @@ type Turn = {
   replaced?: boolean;
   /** Kip's 50 for today are used up */
   limit?: boolean;
+  /** find: what the app found in everything they logged (Kip's line is written from these rows) */
+  found?: { rows: FoundRow[]; from: string };
 };
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
@@ -309,6 +313,29 @@ export default function Talk() {
       });
   }
 
+  /** Look back through everything they logged (and every bill they ticked paid) for what Kip says to look for. */
+  async function lookUp(q: FindQuery): Promise<{ rows: FoundRow[]; from: string; answer: string }> {
+    const { from, to } = findRange(q);
+    const start = new Date(`${from}T00:00:00`).toISOString();
+    const end = new Date(new Date(`${to}T00:00:00`).getTime() + 86_400_000).toISOString();
+    const { data, error } = session
+      ? await supabase
+          .from('transactions')
+          .select('note, amount, occurred_at, kind')
+          .eq('user_id', session.user.id)
+          .gte('occurred_at', start)
+          .lt('occurred_at', end)
+          .not('note', 'is', null)
+          .order('occurred_at', { ascending: false })
+          .limit(1000)
+      : { data: null, error: true };
+    // Offline: what Home already has (about the last 4 months) is still worth searching.
+    const rows = (error ? null : data) ?? tx;
+    const types = Object.fromEntries((month?.bills.items ?? []).map((b) => [`item:${b.name}`, typeOf(b)]));
+    const found = findRows(rows as never, month?.paidLog ?? [], q, types);
+    return { rows: found, from, answer: findAnswer(found, q) };
+  }
+
   /** Send to Kip. Resolves with what Kip said back (for talking out loud: with his voice), or null if nothing was sent. */
   async function send(said = text): Promise<{ text: string; voice?: Spoken } | null> {
     const msg = said.trim();
@@ -357,6 +384,14 @@ export default function Talk() {
         const dupe = alreadyLogged(reply.items as Item[], rec);
         if (dupe) update(id, { dupe });
         else saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
+      }
+      // "When did I pay…": the app searches and Kip's line becomes the answer from the real rows. (Out loud, the
+      // answer is spoken fresh — the server only had "let me look".)
+      if (reply.kind === 'find' && reply.find) {
+        const f = await lookUp(reply.find);
+        update(id, { reply: { ...reply, reply: f.answer }, found: { rows: f.rows, from: f.from } });
+        setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
+        return { text: f.answer };
       }
       setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
       return { text: reply.reply, voice: spoken };
@@ -697,6 +732,35 @@ function ChangeCard({ rows, preview, faded }: { rows: ChangeRow[]; preview: bool
   );
 }
 
+/** What Kip found: the latest few (newest first), with the day; the rest as "+n more". */
+function FindCard({ rows, from }: { rows: FoundRow[]; from: string }) {
+  const shown = rows.slice(0, 5);
+  return (
+    <Glass radius={24} innerStyle={{ paddingHorizontal: 16, paddingVertical: 6 }}>
+      <View style={[styles.secRow, { paddingTop: 8, paddingBottom: 4 }]}>
+        <Text style={styles.cap}>{t('Since {date}', { date: findDay(from) })}</Text>
+        <Text style={styles.cap}>{t('{n} found', { n: rows.length })}</Text>
+      </View>
+      {shown.map((r, i) => (
+        <View key={`${r.on}-${i}`} style={[styles.chRow, i > 0 && { borderTopWidth: 1, borderTopColor: inkA(0.06) }]}>
+          <Text style={styles.findDay}>{findDay(r.on)}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.itemName} numberOfLines={1}>
+              {r.name}
+            </Text>
+            {r.from === 'bill' && <Text style={styles.sub}>{t('Ticked paid')}</Text>}
+          </View>
+          <Text style={[styles.itemAmt, r.money === 'in' && { color: colors.lavenderText }]}>
+            {r.money === 'in' ? '+' : ''}
+            {baht(r.amount)}
+          </Text>
+        </View>
+      ))}
+      {rows.length > shown.length && <Text style={[styles.sub, { paddingBottom: 10 }]}>{t('+{n} more', { n: rows.length - shown.length })}</Text>}
+    </Glass>
+  );
+}
+
 function Answer({
   noLine,
   turn,
@@ -857,6 +921,15 @@ function Answer({
     );
   }
 
+  if (reply.kind === 'find') {
+    return (
+      <>
+        {!noLine && <KipLine text={reply.reply} />}
+        {turn.found && turn.found.rows.length > 0 && <FindCard rows={turn.found.rows} from={turn.found.from} />}
+      </>
+    );
+  }
+
   if (reply.kind === 'slips' && reply.slips && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.from) && /^\d{4}-\d{2}-\d{2}$/.test(reply.slips.to)) {
     return (
       <>
@@ -972,6 +1045,7 @@ const styles = themed(() =>
     price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
     chRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
     from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    findDay: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, minWidth: 52, fontVariant: ['tabular-nums'] },
     todayLine: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
     doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
     undo: { borderRadius: 999, backgroundColor: inkA(0.05), paddingHorizontal: 12, paddingVertical: 6 },

@@ -24,7 +24,7 @@ import type { MoneyIn } from '@/lib/moneyin';
 import { Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { budgetKey, monthNumbers, period, periodKey, useHome } from '@/lib/home';
-import { addBill, type MonthBudget } from '@/lib/budget';
+import { addBill, withPaidLog, type MonthBudget } from '@/lib/budget';
 import { loadCatchUp, type CatchRow } from '@/lib/catchup';
 import { matchBill, type BillMatch } from '@/lib/everymonth';
 import { dayShort, monthShort, rich, t } from '@/lib/i18n';
@@ -227,7 +227,12 @@ export default function Slips() {
     if (month && (willPay.length || willAdd.length)) {
       let m: MonthBudget = month;
       for (const b of willAdd) m = addBill(m, b.name, b.amount, { type: b.type }).month;
-      if (willPay.length) m = { ...m, paid: { period: pk, keys: [...new Set([...paidKeys, ...willPay.map((b) => b.key)])] } };
+      if (willPay.length) {
+        const start = period(m.payday).start;
+        let log = m.paidLog;
+        for (const b of willPay) log = withPaidLog({ ...m, paidLog: log }, b.key, true, start);
+        m = { ...m, paid: { period: pk, keys: [...new Set([...paidKeys, ...willPay.map((b) => b.key)])] }, paidLog: log };
+      }
       await saveMonth(m);
       next = m;
     }

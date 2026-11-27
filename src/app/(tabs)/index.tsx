@@ -27,7 +27,7 @@ import { KipStill } from '@/components/KipStill';
 import { KipSheet } from '@/components/home/KipSheet';
 import { KipDone, KipNotice } from '@/components/home/KipNotice';
 import { DaySheet } from '@/components/DaySheet';
-import { addBill, CATEGORY, savingTotal, type CatKey, type MonthBudget } from '@/lib/budget';
+import { addBill, CATEGORY, savingTotal, withPaidLog, type CatKey, type MonthBudget } from '@/lib/budget';
 import { useAuth } from '@/lib/auth';
 import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, period, periodKey, useHome, type HomeGoal } from '@/lib/home';
@@ -580,7 +580,7 @@ export default function Home() {
     // A yearly item paid in (or after) the month it's due starts its next year: due again in a year, total ÷ 12 a month.
     const item = (month.bills.items ?? []).find((b) => `item:${b.name}` === key);
     const base = paid && item?.yearly && monthsToDue(item.yearly.due, now) <= 1 ? rollYearly(month, item.name, now) : month;
-    save({ ...base, paid: { period: pk, keys: [...keys] } } as MonthBudget);
+    save({ ...base, paid: { period: pk, keys: [...keys] }, paidLog: withPaidLog(month, key, paid, P.start, now) } as MonthBudget);
     if (paid && !quiet) flash(t('{name} marked paid', { name: bills.find((b) => b.key === key)?.name ?? t('Bill') }));
   }
 
