@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { startPurchases, stopPurchases } from './purchases';
 import { loadCustom } from './customCats';
+import { avatarSrc } from '@/lib/photos';
 import { supabase } from './supabase';
 
 import type { BankTransfer } from '@/lib/bankTransfer';
@@ -51,7 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('id, display_name, avatar_url, onboarded, plan, trial_ends_at, plan_until, split_when_paid, ai_consent_at, ai_off, safety_saved, bank_transfer')
       .eq('id', s.user.id)
       .maybeSingle();
-    setProfile(data ? ({ ...data, plan: planNow(data.plan, data.trial_ends_at, data.plan_until) } as Profile) : null);
+    // The photo is private: what the app shows is a short-lived signed link, never the stored address.
+    const avatar = data?.avatar_url ? await avatarSrc(data.avatar_url) : null;
+    setProfile(data ? ({ ...data, avatar_url: avatar, plan: planNow(data.plan, data.trial_ends_at, data.plan_until) } as Profile) : null);
   }, []);
 
   useEffect(() => {

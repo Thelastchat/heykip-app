@@ -74,6 +74,9 @@ const th: Record<string, string> = {
   'Keeping it safe': 'ดูแลให้ปลอดภัย',
   'Encrypted connections, and every row is locked to your own account.': 'ส่งข้อมูลแบบเข้ารหัส และทุกรายการล็อกไว้ให้เฉพาะเจ้าของบัญชี',
   'If your data is ever leaked, we tell the PDPC within 72 hours, and tell you quickly if it could affect you.': 'ถ้าข้อมูลรั่วไหล เราจะแจ้ง สคส. ภายใน 72 ชั่วโมง และแจ้งให้รู้โดยเร็วถ้าอาจกระทบคุณ',
+  'Google turns Kip’s replies into his voice when you talk to him out loud — only Kip’s words go, nothing else about you (servers outside Thailand).': 'Google เปลี่ยนคำตอบของ Kip เป็นเสียงตอนคุยด้วยเสียง ส่งไปแค่คำพูดของ Kip ไม่มีข้อมูลอื่นของคุณ (เซิร์ฟเวอร์อยู่นอกประเทศไทย)',
+  'RevenueCat checks your Plus subscription with Apple. It gets your account number and what you bought, never your money or spending.': 'RevenueCat ตรวจการสมัคร Plus กับ Apple ได้แค่เลขบัญชีผู้ใช้กับสิ่งที่ซื้อ ไม่เห็นเงินหรือรายจ่ายของคุณ',
+  'Your sign-in is kept in your iPhone’s Keychain, and your photos are private to you.': 'การเข้าสู่ระบบเก็บไว้ใน Keychain ของ iPhone และรูปของคุณเห็นได้แค่คุณคนเดียว',
 };
 
 export default th;

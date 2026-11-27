@@ -45,6 +45,8 @@ export default function PrivacyPolicy() {
           'Anthropic’s AI reads what you type or say to Kip and the slips you send, only when you allow it (servers in the USA). It deletes it within 30 days — longer only if its safety checks flag misuse — and doesn’t use it to train AI.',
         ),
         t('Apple turns your voice into words when you tap the mic (Apple’s speech recognition).'),
+        t('Google turns Kip’s replies into his voice when you talk to him out loud — only Kip’s words go, nothing else about you (servers outside Thailand).'),
+        t('RevenueCat checks your Plus subscription with Apple. It gets your account number and what you bought, never your money or spending.'),
         t('So your data does leave Thailand — each of them is bound to protect it.'),
       ],
     },
@@ -63,6 +65,7 @@ export default function PrivacyPolicy() {
       title: t('Keeping it safe'),
       lines: [
         t('Encrypted connections, and every row is locked to your own account.'),
+        t('Your sign-in is kept in your iPhone’s Keychain, and your photos are private to you.'),
         t('If your data is ever leaked, we tell the PDPC within 72 hours, and tell you quickly if it could affect you.'),
       ],
     },

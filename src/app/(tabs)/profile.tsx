@@ -30,7 +30,7 @@ import { phoneNotifications, remindersOn, setRemindersOn } from '@/lib/reminders
 import type { Basics, GoalNow } from '@/lib/replan';
 import { shortName } from '@/lib/setup/plan';
 import { useLook } from '@/lib/look';
-import { smallPhoto } from '@/lib/photos';
+import { avatarSrc, smallPhoto } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts, glassA, inkA, themed, whiteA } from '@/theme';
 
@@ -96,7 +96,7 @@ export default function Profile() {
       .select('display_name, avatar_url, plan, trial_ends_at, plan_until, income_type, monthly_income, slow_month_income, good_month_income, payday, rent, checkin_time')
       .eq('id', uid)
       .single();
-    if (data) setRow(data as Row);
+    if (data) setRow({ ...(data as Row), avatar_url: await avatarSrc(data.avatar_url) });
   }, [uid]);
   useEffect(() => {
     load();
@@ -470,7 +470,9 @@ function MeSheet({
   async function saveMe() {
     setBusy(true);
     setError(null);
-    let url = photo;
+    // What's stored is the photo's place in the private bucket (avatars/<account>/<file>), never a link.
+    let stored: string | null | undefined = photo === avatar ? undefined : null;
+    let shown = photo;
     if (photo && photo !== avatar && !photo.startsWith('http')) {
       const small = await smallPhoto(photo, 400);
       const path = `${uid}/avatar-${Date.now()}.${small.ext}`;
@@ -479,13 +481,21 @@ function MeSheet({
         setBusy(false);
         return setError(t('Couldn’t upload your photo: {msg}', { msg: e.message }));
       }
-      url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+      stored = `avatars/${path}`;
+      shown = await avatarSrc(stored);
     }
-    const fields = { display_name: n.trim(), avatar_url: url };
+    const fields = { display_name: n.trim(), ...(stored !== undefined ? { avatar_url: stored } : {}) };
     const { error: e } = await supabase.from('profiles').update(fields).eq('id', uid);
     setBusy(false);
     if (e) return setError(t('Couldn’t save: {msg}', { msg: e.message }));
-    onSaved(fields);
+    // A replaced or removed photo doesn't linger in storage.
+    if (stored !== undefined) {
+      const keep = stored ? stored.split('/').pop() : null;
+      const { data: files } = await supabase.storage.from('avatars').list(uid, { limit: 100 });
+      const old = (files ?? []).filter((f) => f.name !== keep).map((f) => `${uid}/${f.name}`);
+      if (old.length) supabase.storage.from('avatars').remove(old).catch(() => {});
+    }
+    onSaved({ display_name: fields.display_name, avatar_url: shown });
   }
 
   return (

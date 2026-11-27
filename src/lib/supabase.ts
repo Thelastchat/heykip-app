@@ -1,8 +1,9 @@
 import 'react-native-url-polyfill/auto';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
+
+import { sessionStorage } from '@/lib/secureSession';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 // Publishable key (sb_publishable_…): safe to ship in the app, Row Level Security protects the data.
@@ -12,7 +13,8 @@ export const supabaseConfigured = Boolean(url && publishableKey);
 
 export const supabase = createClient(url || 'http://localhost', publishableKey || 'missing-key', {
   auth: {
-    storage: AsyncStorage,
+    // The session (it can sign in as this person) is kept in the iOS Keychain, not a plain file.
+    storage: sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
