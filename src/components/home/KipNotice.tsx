@@ -8,6 +8,7 @@ import { KipStill } from '@/components/KipStill';
 import { Squish } from '@/components/glow/motion';
 import { CATEGORY } from '@/lib/budget';
 import { monthLong, monthShort, rich, t } from '@/lib/i18n';
+import type { PlusNote } from '@/lib/plusBill';
 import { CAT_ICON3D, ICON3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
 import type { Notice } from '@/lib/notice';
@@ -31,6 +32,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
         ? n.late === 0
           ? t('{name} is due today', { name: billName })
           : t('{name} was due {date}', { name: billName, date: day(n.date) })
+        : n.kind === 'plus'
+          ? plusTitle(n.note)
         : n.kind === 'payday'
           ? n.bank
             ? t('Payday · your bank moves {amount} today', { amount: baht(n.amount) })
@@ -53,6 +56,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const yes =
     n.kind === 'billdue'
       ? t('Paid')
+      : n.kind === 'plus'
+        ? t('Got it')
       : n.kind === 'payday'
         ? n.bank
           ? t('It moved')
@@ -75,6 +80,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
   const no =
     n.kind === 'leftover' || n.kind === 'substop'
       ? t('Keep it')
+      : n.kind === 'plus'
+        ? t('See subscriptions')
       : n.kind === 'payday'
         ? n.bank
           ? t('Not yet')
@@ -122,6 +129,8 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
           </View>
           <Text style={styles.after}>{t('Then {category} lasts to payday at about {perDay} a day.', { category: t(CATEGORY[n.key].name), perDay: baht(n.perDayAfter) })}</Text>
         </>
+      ) : n.kind === 'plus' ? (
+        <Text style={styles.body}>{plusBody(n.note, n.goalName)}</Text>
       ) : n.kind === 'payday' ? (
         <Text style={styles.body}>
           {n.parts.map((p) => `${p.label} ${baht(p.amount)}`).join(' · ')}
@@ -320,3 +329,25 @@ const styles = themed(() =>
     undoT: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
   }),
 );
+
+/** HeyKip Plus's bill changed by itself: what it costs now. */
+function plusTitle(p: PlusNote) {
+  const price = p.yearly ? t('{amount} a year', { amount: baht(p.charge) }) : t('{amount} a month', { amount: baht(p.charge) });
+  if (p.kind === 'gone') return t('HeyKip Plus has ended');
+  if (p.kind === 'changed') return t('HeyKip Plus is now {price} (was {was})', { price, was: baht(p.was ?? 0) });
+  return t('HeyKip Plus is a bill now · {price}', { price });
+}
+/** Where its money comes from — or goes, once it ended. */
+function plusBody(p: PlusNote, goal: string) {
+  if (p.kind === 'gone') return t('The {amount} a month it took goes to {goal} now.', { amount: baht(p.perMonth), goal });
+  const aside = p.yearly ? t('Kip sets aside {amount} a month for the next year.', { amount: baht(p.perMonth) }) + ' ' : '';
+  const from =
+    p.fromFun > 0 && p.fromGoal > 0
+      ? t('It comes from fun money ({fun}) and {goal}’s saving ({goalAmount}).', { fun: baht(p.fromFun), goal, goalAmount: baht(p.fromGoal) })
+      : p.fromGoal > 0
+        ? t('It comes from {goal}’s saving.', { goal })
+        : p.fromFun > 0
+          ? t('It comes from fun money.')
+          : t('Kip’s bill guess already covered it, so nothing else changes.');
+  return aside + (p.kind === 'changed' && p.charge < (p.was ?? 0) ? t('The difference goes to {goal}.', { goal }) : from);
+}

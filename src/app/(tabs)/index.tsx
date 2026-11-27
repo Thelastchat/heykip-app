@@ -242,7 +242,9 @@ export default function Home() {
   const payMoved = !!month && savingMoved(month, now);
   const sweptNow = month && !month.goal.isSafetyNet ? sweptIn(month, now) : 0;
   const addedTo = (id: string) => (payMoved ? (split.get(id) ?? 0) : 0) + (goals[0]?.id === id ? sweptNow : 0);
-  const allNotices = paydayNotice ? [paydayNotice, ...notices] : notices;
+  // HeyKip Plus's bill changed by itself (paid, new price, ended): Kip says what it costs and where the money came from.
+  const plusNotice: Notice | null = month?.plusNote ? { id: 'plus', kind: 'plus', note: month.plusNote, goalName: month.goal.isSafetyNet ? t('Safety net') : short } : null;
+  const allNotices = [plusNotice, paydayNotice, ...notices].filter((x): x is Notice => !!x);
   const notice = kipDone ? null : allNotices[0];
   function showDone(text: string, undo: () => Promise<string | null>) {
     if (doneTimer.current) clearTimeout(doneTimer.current);
@@ -397,6 +399,11 @@ export default function Home() {
       // Still using it: quiet until it has renewed; the next renewal asks again.
       hide(n.id, laterFor(n, new Date()));
       flash(t('Kept. Kip asks again before the next one'));
+      return;
+    }
+    if (n.kind === 'plus') {
+      // Got it: the note is read; the bill stays where it is.
+      save({ ...month, plusNote: undefined });
       return;
     }
     if (n.kind === 'recap') {
@@ -710,7 +717,9 @@ export default function Home() {
               onLater={() =>
                 notice.kind === 'renew'
                   ? setCancelFor(notice)
-                  : notice.kind === 'payday'
+                  : notice.kind === 'plus'
+                    ? (save({ ...month!, plusNote: undefined }), router.push('/subscriptions'))
+                    : notice.kind === 'payday'
                     ? notice.bank
                       ? hide(`paydaylater:${pk}`, laterFor(notice, new Date()))
                       : setBankOpen(true)

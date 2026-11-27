@@ -55,4 +55,17 @@ export default {
   '{amount} sent to {goal}': 'ส่ง {amount} เข้า {goal} แล้ว',
   // ---- Setup ----
   '{perDay} a day · lowest ฿100 living at home': 'วันละ {perDay} · อยู่บ้านต่ำสุดวันละ ฿100',
+  // ---- HeyKip Plus as a bill ----
+  'HeyKip Plus has ended': 'HeyKip Plus หมดแล้ว',
+  'HeyKip Plus is now {price} (was {was})': 'HeyKip Plus ตอนนี้ {price} (จาก {was})',
+  'HeyKip Plus is a bill now · {price}': 'HeyKip Plus เป็นบิลแล้ว · {price}',
+  'The {amount} a month it took goes to {goal} now.': 'เงินเดือนละ {amount} ที่เคยใช้จ่าย Plus ไปเข้า {goal} แทนแล้ว',
+  'Kip sets aside {amount} a month for the next year.': 'Kip กันไว้เดือนละ {amount} สำหรับปีหน้า',
+  'It comes from fun money ({fun}) and {goal}’s saving ({goalAmount}).': 'มาจากเงินใช้เล่น ({fun}) และเงินเก็บ {goal} ({goalAmount})',
+  'It comes from {goal}’s saving.': 'มาจากเงินเก็บ {goal}',
+  'It comes from fun money.': 'มาจากเงินใช้เล่น',
+  'Kip’s bill guess already covered it, so nothing else changes.': 'ใช้เงินที่ Kip กันไว้เผื่อบิลอยู่แล้ว ส่วนอื่นไม่เปลี่ยน',
+  'The difference goes to {goal}.': 'ส่วนต่างไปเข้า {goal}',
+  'See subscriptions': 'ดู Subscriptions',
+  'Kip adds it to your bills when it starts': 'พอเริ่มจ่ายจริง Kip จะใส่เป็นบิลให้',
 };

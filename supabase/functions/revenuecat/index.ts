@@ -36,7 +36,13 @@ type RcEvent = {
   environment?: string;
   transferred_from?: string[];
   transferred_to?: string[];
+  /** What the person paid, in their own currency (0 for a free trial). */
+  price_in_purchased_currency?: number | null;
+  currency?: string | null;
 };
+
+/** Events that carry what was really charged (a cancellation or billing issue repeats no new price). */
+const CHARGED = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'PRODUCT_CHANGE', 'NON_RENEWING_PURCHASE']);
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -114,18 +120,24 @@ Deno.serve(async (req) => {
       if (now.plan !== 'free' && ends < currentEnd) return json({ ok: true, ignored: 'older notice' });
       const trial = event.period_type === 'TRIAL';
       const paid = /year/i.test(event.product_id ?? '') ? 'yearly' : 'monthly';
+      // HeyKip Plus as a bill: the price Apple really charged (an intro price, then the full one at the next renewal).
+      const amount = Number(event.price_in_purchased_currency ?? 0);
+      const price =
+        !trial && CHARGED.has(event.type) && amount > 0 && event.currency
+          ? { plus_price: { amount: Math.round(amount * 100) / 100, currency: event.currency, period: paid, renews_at: ends.toISOString() } }
+          : {};
       const { error } = await admin
         .from('profiles')
-        .update(trial ? { plan: 'trial', trial_ends_at: ends.toISOString(), trial_used: true, plan_until: null } : { plan: paid, plan_until: ends.toISOString(), trial_used: true })
+        .update(trial ? { plan: 'trial', trial_ends_at: ends.toISOString(), trial_used: true, plan_until: null } : { plan: paid, plan_until: ends.toISOString(), trial_used: true, ...price })
         .eq('id', id);
       if (error) return json({ error: error.message }, 500);
-      return json({ ok: true, plan: trial ? 'trial' : paid });
+      return json({ ok: true, plan: trial ? 'trial' : paid, price: 'plus_price' in price });
     }
 
     if (event.type === 'EXPIRATION') {
       // Only if nothing newer has come in since (a renewal that arrived first keeps Plus on).
       if (ends && ends < currentEnd) return json({ ok: true, ignored: 'superseded' });
-      const { error } = await admin.from('profiles').update({ plan: 'free', plan_until: null }).eq('id', id);
+      const { error } = await admin.from('profiles').update({ plan: 'free', plan_until: null, plus_price: null }).eq('id', id);
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true, plan: 'free' });
     }

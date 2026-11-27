@@ -5,12 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { safetyNet } from '@/lib/brain';
 import { monthFrom, withStyle, type MonthBudget } from '@/lib/budget';
-import { useAuth } from '@/lib/auth';
+import { planNow, useAuth } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { EMPTY_DRAFT, type GoalKind, type SetupDraft } from '@/lib/setup/draft';
 import { inputsFrom } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { syncReminders } from '@/lib/reminders';
+import { syncPlusBill, type PlusPrice } from '@/lib/plusBill';
 
 async function buildFromProfile(userId: string): Promise<MonthBudget | null> {
   const [{ data: p }, { data: g }] = await Promise.all([
@@ -64,7 +65,7 @@ function loadMonth(userId: string): Promise<MonthBudget | null> {
   const savesAtStart = shared.saves;
   shared.userId = userId;
   const p = (async () => {
-    const { data, error } = await supabase.from('profiles').select('budget').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('budget, plan, trial_ends_at, plan_until, plus_price').eq('id', userId).single();
     if (error) throw error;
     const saved = data?.budget as MonthBudget | null;
     let next = saved?.v === 2 ? saved : await buildFromProfile(userId);
@@ -73,6 +74,14 @@ function loadMonth(userId: string): Promise<MonthBudget | null> {
     if (next && next.style !== 'kip') {
       next = withStyle(next, 'kip', null);
       await supabase.from('profiles').update({ budget: next, budget_style: 'kip' }).eq('id', userId);
+    }
+    // HeyKip Plus is a bill at what Apple really charges, once it's paid (plusBill.ts).
+    if (next) {
+      const synced = syncPlusBill(next, planNow(data?.plan, data?.trial_ends_at, data?.plan_until), data?.plus_price as PlusPrice | null);
+      if (synced) {
+        next = synced;
+        await supabase.from('profiles').update({ budget: next }).eq('id', userId);
+      }
     }
     // A save made while this was loading wins over the slower load.
     if (shared.saves === savesAtStart && shared.userId === userId) {

@@ -26,6 +26,8 @@ import { cancelSub, renewalNotice, subsOf } from '../src/lib/subscriptions';
 import { savedOverTime } from '../src/lib/savingHistory';
 import { spareNow, sweptIn, withSweep } from '../src/lib/sweep';
 import { needsRenew } from '../src/lib/bankTransfer';
+import { syncPlusBill } from '../src/lib/plusBill';
+import { PLUS_BILL } from '../src/lib/subscriptions';
 import { living, livingTotal } from '../src/lib/brain';
 import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
@@ -1355,6 +1357,34 @@ for (let n = 0; n < 2000; n++) {
   check('Renew: reminder from the 11th month', needsRenew(b('bbl'), new Date(2026, 11, 26)), () => ({}));
   check('Renew: never for banks that repeat without an end', !needsRenew(b('kplus'), new Date(2028, 0, 1)), () => ({}));
   check('Renew: setting it again starts the year over', !needsRenew({ ...b('bbl'), at: new Date(2026, 11, 26).toISOString() }, new Date(2027, 0, 25)), () => ({}));
+}
+
+// ---------- HeyKip Plus as a bill: at what Apple charged, like any bill; never in the free week ----------
+{
+  const plusOf = (m: MonthBudget) => (m.bills.items ?? []).find((b) => b.name === PLUS_BILL);
+  const now = new Date(2026, 10, 27, 12);
+  const renews = (months: number) => new Date(2026, 10 + months, 27, 12).toISOString();
+  for (let k = 0; k < 800; k++) {
+    const i = person();
+    if (!i) continue;
+    const m0 = month(i, 'kip', pick([null, 1, 25]));
+    const price = pick([59, 99, 129]);
+    check('Plus bill: none in the free week', syncPlusBill(m0, 'trial', null, now) === null, () => ({}));
+    check('Plus bill: none for Free', syncPlusBill(m0, 'free', null, now) === null, () => ({}));
+    check('Plus bill: another currency is left alone', syncPlusBill(m0, 'monthly', { amount: 2.99, currency: 'USD', period: 'monthly', renews_at: renews(1) }, now) === null, () => ({}));
+    const a = syncPlusBill(m0, 'monthly', { amount: price, currency: 'THB', period: 'monthly', renews_at: renews(1) }, now)!;
+    check('Plus bill: monthly is added at the price charged', plusOf(a)?.amount === price && a.plusNote?.kind === 'added', () => plusOf(a));
+    check('Plus bill: the month still adds up (or no more over than before)', jobs(a) <= Math.max(a.income, jobs(m0)), () => ({ jobs: jobs(a), income: a.income }));
+    check('Plus bill: living costs and the safety net are untouched', a.safety.amount === m0.safety.amount && ['food', 'transport', 'health_beauty', 'other'].every((c) => (a.spend.find((x) => x.key === c)?.amount ?? 0) === (m0.spend.find((x) => x.key === c)?.amount ?? 0)), () => ({}));
+    check('Plus bill: the note says where it came from', a.plusNote!.fromFun + a.plusNote!.fromGoal <= price, () => a.plusNote);
+    check('Plus bill: same price again changes nothing', syncPlusBill(a, 'monthly', { amount: price, currency: 'THB', period: 'monthly', renews_at: renews(1) }, now) === null, () => ({}));
+    const b = syncPlusBill(a, 'monthly', { amount: price + 30, currency: 'THB', period: 'monthly', renews_at: renews(2) }, now)!;
+    check('Plus bill: a new price replaces the old one (one bill, not two)', (b.bills.items ?? []).filter((x) => x.name === PLUS_BILL).length === 1 && plusOf(b)?.amount === price + 30 && b.plusNote?.was === price, () => b.plusNote);
+    const y = syncPlusBill(m0, 'yearly', { amount: 899, currency: 'THB', period: 'yearly', renews_at: renews(12) }, now)!;
+    check('Plus bill: yearly sets aside total ÷ 12 (฿10 steps)', plusOf(y)?.yearly?.total === 899 && plusOf(y)?.amount === 80, () => plusOf(y));
+    const g = syncPlusBill(a, 'free', null, now)!;
+    check('Plus bill: when Plus ends the bill goes and its money goes to the goal', !plusOf(g) && g.goalExtra >= a.goalExtra && g.plusNote?.kind === 'gone', () => g.plusNote);
+  }
 }
 
 // ---------- report ----------

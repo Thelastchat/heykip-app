@@ -140,6 +140,8 @@ export type MonthBudget = {
   covers?: { period: string; goal: number; safety: number; today?: { day: string; amount: number } };
   /** Spare spending money sent to the goal by the weekly sweep, per pay month (period key → amount). */
   swept?: Record<string, number>;
+  /** HeyKip Plus's bill changed by itself (added, new price, ended): what Kip tells them on Home, until "Got it". */
+  plusNote?: import('@/lib/plusBill').PlusNote;
   /** More goals (Plus): how the goal saving is split, in pin order. Missing = all to the first goal. */
   goals?: { id: string; amount: number }[];
   /** Rent's due day and reminder (without one, rent is due on payday and has no reminder). */

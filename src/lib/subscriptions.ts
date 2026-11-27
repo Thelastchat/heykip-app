@@ -50,9 +50,13 @@ export function subsOf(m: MonthBudget | null, now = new Date()): Sub[] {
     .map(({ b, index }) => {
       const yearly = !!b.yearly;
       const charge = yearly ? b.yearly!.total : b.amount;
-      const perMonth = yearly ? Math.round(b.yearly!.total / 12) : b.amount;
+      // A month: what the plan really puts aside for it (a yearly one's set-aside, in ฿10 steps), so it matches Kip.
+      const perMonth = b.amount;
       const d = due.get(b.name);
-      return { index, name: b.name, charge, perMonth, perYear: yearly ? charge : charge * 12, yearly, day: b.day ?? null, next: d ? (nextDue(d, m.payday, now)?.date ?? null) : null, plus: b.name === PLUS_BILL };
+      // Renews: the next charge from today. A day already gone this month has renewed by itself (it's not "late").
+      const n = d ? nextDue(d, m.payday, now) : null;
+      const next = d && n && n.days < 0 ? (nextDue({ ...d, paid: true }, m.payday, now)?.date ?? null) : (n?.date ?? null);
+      return { index, name: b.name, charge, perMonth, perYear: yearly ? charge : charge * 12, yearly, day: b.day ?? null, next, plus: b.name === PLUS_BILL };
     })
     .sort((a, c) => c.perMonth - a.perMonth);
 }

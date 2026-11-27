@@ -91,6 +91,7 @@ export default function Subscriptions() {
                   <Text style={styles.sub}>
                     {yearPrice ? t('Free until {date}, then {price} a year', { date: dm(trialEnds), price: yearPrice }) : t('Free until {date}', { date: dm(trialEnds) })}
                   </Text>
+                  <Text style={styles.sub}>{t('Kip adds it to your bills when it starts')}</Text>
                 </View>
                 <Text style={styles.amt}>฿0</Text>
               </View>
