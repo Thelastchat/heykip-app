@@ -79,9 +79,9 @@ const tool = {
           properties: {
             op: {
               type: 'string',
-              enum: ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'set_due'],
+              enum: ['move', 'set', 'add_bill', 'remove_bill', 'pay_bill', 'to_goal', 'take_goal', 'set_due', 'less_goal'],
               description:
-                'move = amount from one budget category to another this month; set = a category budget to a new amount; add_bill = a new bill every month (or every year with due_month); remove_bill = delete a bill they added; pay_bill = mark a bill paid this month (rent or one in context.bills); to_goal = move amount from a category (usually fun) to the goal saving this month; take_goal = take money out of the goal’s savings; set_due = set the day of the month a bill (or rent) is due, e.g. "Netflix is on the 18th"',
+                'move = amount from one budget category to another this month; set = a category budget to a new amount; add_bill = a new bill every month (or every year with due_month); remove_bill = delete a bill they added; pay_bill = mark a bill paid this month (rent or one in context.bills); to_goal = move amount from a category (usually fun) to the goal saving this month; take_goal = take money out of the goal’s savings; set_due = set the day of the month a bill (or rent) is due, e.g. "Netflix is on the 18th"; less_goal = save `amount` LESS for the goal every month and give it to the budget `to` (the goal arrives later — the app shows the new date)',
             },
             from: { type: 'string', enum: BUDGET_CATS },
             to: { type: 'string', enum: BUDGET_CATS },
@@ -126,7 +126,7 @@ const tool = {
       reply: {
         type: 'string',
         description:
-          'kind=answer: 1–3 short, warm sentences, in their language, using only numbers from the context. Never invent numbers. kind=log: one short friendly line. kind=buy: one short neutral line that never says yes or no ("เดี๋ยวดูให้ว่าไหวไหม" / "Let’s see if it fits") — the app works it out from the real numbers and shows the answer. kind=change/fix: one short line saying what WILL change and to tap Do it ("Here’s what changes — tap Do it"); never say it is done or added (no แล้ว/done) — nothing changes until they tap Do it. The app shows the numbers. kind=slips: one short line ("Sure — I’ll look through your bank albums for 1–26 Nov."); the app finds and shows the slips. If you can’t do what they ask (send or pay money, anything outside this app), use kind=answer and say kindly what you can do.',
+          'kind=answer: 1–3 short, warm sentences, in their language, using only numbers from the context. Never invent numbers. kind=log: one short friendly line. kind=buy: one short neutral line that never says yes or no ("เดี๋ยวดูให้ว่าไหวไหม" / "Let’s see if it fits") — the app works it out from the real numbers and shows the answer. kind=change/fix: one short line saying what WILL change and to tap Do it ("Here’s what changes — tap Do it"; the button is "จัดเลย" in Thai: "กดจัดเลยได้เลย"); never say it is done or added (no แล้ว/done) — nothing changes until they tap Do it. The app shows the numbers. kind=slips: one short line ("Sure — I’ll look through your bank albums for 1–26 Nov."); the app finds and shows the slips. If you can’t do what they ask (send or pay money, anything outside this app), use kind=answer and say kindly what you can do.',
       },
     },
     required: ['kind', 'reply'],
@@ -155,6 +155,11 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       const K = kipTool.input_schema.properties.kind;
       K.enum = K.enum.filter((k: string) => k !== 'find');
       delete kipTool.input_schema.properties.find;
+    }
+    // Saving less for the goal (and the goal's date moving) needs an app that knows how to show and save it.
+    if (!can.includes('less_goal')) {
+      const O = kipTool.input_schema.properties.ops.items.properties.op;
+      O.enum = O.enum.filter((k: string) => k !== 'less_goal');
     }
     if (own.length) {
       const P = kipTool.input_schema.properties;
@@ -185,7 +190,7 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
       'You can change their plan in HeyKip (kind=change) and fix what they logged (kind=fix). You cannot send, transfer or pay real money, or touch their bank: say so kindly if asked.',
       'You CAN read their bank slips: the app looks only in the bank albums they chose on this phone (K PLUS, SCB…), reads each slip and lets them check it before saving. When they ask about their slips for any days, use kind=slips. Never say you cannot read slips. One slip at a time from a photo they pick also works on the + screen (Slip).',
-      'No amount, no log: when they say they paid or bought something but not how much ("จ่ายค่าโทรศัพท์แล้ว", "bought lunch"), never log it and never say you will. If it matches a bill in context.bills (same thing, e.g. phone, internet, Netflix), use kind=change with pay_bill for that bill and ASK in reply whether it was that bill and its amount ("ค่าโทรศัพท์ ฿399 ตามบิลใช่ไหม? กด Do it ได้เลย"). Otherwise use kind=answer and ask how much it was (and what it was, if unclear).',
+      'No amount, no log: when they say they paid or bought something but not how much ("จ่ายค่าโทรศัพท์แล้ว", "bought lunch"), never log it and never say you will. If it matches a bill in context.bills (same thing, e.g. phone, internet, Netflix), use kind=change with pay_bill for that bill and ASK in reply whether it was that bill and its amount ("ค่าโทรศัพท์ ฿399 ตามบิลใช่ไหม? ถ้าใช่กดจัดเลยได้เลย"). Otherwise use kind=answer and ask how much it was (and what it was, if unclear).',
       'Changing the plan: money for a change comes only from what is LEFT (unspent) in a category (context.categories[].left), never more. Take from wants first (shopping, fun, learning, giving, their own wants); never from needs (food, transport, health_beauty, other, their own needs such as pet food) unless they named that category themselves. Never move money into or out of rent, bills or the safety net with move/set.',
       'Ask before you guess: when a change is unclear (how much, or from where / to where — e.g. "ย้ายค่ากินมาได้ไหม", "อยากชอปปิงเยอะกว่านี้"), use kind=answer and ask ONE short question that offers concrete options from their numbers (e.g. "อยากเพิ่มช้อปปิ้งอีกเท่าไหร่? เอามาจากเที่ยวเล่นที่ยังเหลือ ฿1,890 ได้นะ"). Options you offer come only from wants (shopping, fun, learning, giving, their own wants), never from the budget they want more of (more shopping never comes from shopping) — never suggest taking from food, transport, health, household or their own needs. To LOWER a budget ("ลดค่ากินลงหน่อย"), ask how much and say the money it frees goes to their goal; never turn it into a different change. Propose kind=change only when you know the amount and where it comes from.',
       'Your proposals: a kind=change you made shows on their screen as before → after numbers, waiting for Do it. The history shows it as (Proposed: … — not done yet). If they ask about a number on it ("why is cat food 0?"), that number is YOUR proposal, not their real budget: say so plainly, and offer a better proposal or ask what they prefer. Never tell them their screen is wrong.',
@@ -194,6 +199,11 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       'context.paceThisMonth "X baht faster than plan" means they are spending ahead of plan: never say they are on plan or on track then; "under plan" means doing well. Say months like ธ.ค. 2027 / Dec 2027, never 2027-12.',
       'context.saving.goal and context.saving.safetyNet are what goes in EACH MONTH (not totals or targets); context.goalSaved is what the goal has so far.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
+      ...(can.includes('less_goal')
+        ? [
+            'More than the wants can give: when they want more for a budget than what is left in their wants, or ask whether that is all they can change ("ปรับได้แค่นี้หรอ"), say plainly what the wants can give AND that more can come from saving less for their goal each month — the goal then arrives later, and the app shows the new date before Do it. Use less_goal only when they choose it (they say to save less, or that the goal can come later, or pick that option). less_goal is every month, not just this one. Never take from the safety net.',
+          ]
+        : []),
       ...(can.includes('find') ? ['Looking things up: context.recent is only the latest few items. For anything further back, use kind=find; the app searches everything they logged and answers with the real dates and amounts, so your reply is one short line ("เดี๋ยวหาให้นะ" / "Let me look"). Never guess a date or an amount you were not given.'] : []),
       'Only mention budget categories that are in context.categories (their real ones), never others.',
       CAT_NAMES,
@@ -306,6 +316,13 @@ function checkChange(r: ChangeReply, said: string, ctx: Ctx): ChangeReply | null
             : `${from.name} only has ${fmt(from.left)} left, so that’s the most it can give. Move ${fmt(from.left)}?${offer(o.from, o.to)}`,
         };
       }
+    }
+    if (o.op === 'less_goal') {
+      const per = Number((ctx as { saving?: { goal?: number } })?.saving?.goal ?? 0);
+      const to = cat(o.to);
+      if (!to || amount <= 0) return { kind: 'answer', reply: th ? 'อยากเก็บเข้าเป้าน้อยลงเดือนละเท่าไหร่ แล้วให้ไปเพิ่มหมวดไหนดี?' : 'How much less a month for your goal, and which budget gets it?' };
+      if (amount > per)
+        return { kind: 'answer', reply: th ? `ตอนนี้เก็บเข้าเป้าเดือนละ ${fmt(per)} ลดได้ไม่เกินนั้นนะ จะลด ${fmt(per)} เลยไหม?` : `You save ${fmt(per)} a month for your goal, so that’s the most it can give. Use all ${fmt(per)}?` };
     }
     if (o.op === 'set') {
       const c = cat(o.category);

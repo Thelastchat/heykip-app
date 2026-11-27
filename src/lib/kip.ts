@@ -162,7 +162,7 @@ export function kipContext(
 }
 
 /** What this build can show, so the server only uses kinds it knows (older builds send nothing). */
-const KIP_CAN = ['find'];
+const KIP_CAN = ['find', 'less_goal'];
 
 export async function askKip(
   text: string,

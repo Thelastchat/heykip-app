@@ -4,7 +4,8 @@
 //
 // Two kinds of change:
 //   change — the plan: move money between budgets, set a budget, add / remove / pay a bill (monthly or yearly),
-//            move fun money to the goal for this month, switch money style, take money out of the goal.
+//            move fun money to the goal for this month, switch money style, take money out of the goal, or save less
+//            for the goal each month to give a budget more (the goal's date moves, shown before Do it).
 //   fix    — things already logged: delete one, change its category or amount.
 // Logging (spends, money in) isn't here: it's saved straight away with Undo.
 import { applyOps } from '@/lib/monthops';
@@ -16,10 +17,10 @@ import { period, periodKey } from '@/lib/home';
 import { getLang, t } from '@/lib/i18n';
 import { DB_CAT_NAME, type DbCat } from '@/lib/kip';
 import { baht } from '@/lib/money';
-import { monthYear, ordinal } from '@/lib/setup/plan';
+import { isoDay, monthYear, ordinal } from '@/lib/setup/plan';
 
 export type AgentOp = {
-  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'set_due';
+  op: 'move' | 'set' | 'add_bill' | 'remove_bill' | 'pay_bill' | 'to_goal' | 'take_goal' | 'set_due' | 'less_goal';
   from?: string;
   to?: string;
   category?: string;
@@ -34,7 +35,8 @@ export type AgentOp = {
 export type FixOp = { ref: string; op: 'delete' | 'category' | 'amount'; category?: string; amount?: number };
 export type RecentTx = { ref: string; id: string; name: string; amount: number; category: DbCat; at: string };
 
-export type ChangePlan = { next: MonthBudget; take: number; rows: ChangeRow[] };
+/** due: the main goal's new arrival date (YYYY-MM-DD, null = no date), when the change moves it. */
+export type ChangePlan = { next: MonthBudget; take: number; rows: ChangeRow[]; due?: { id: string; to: string | null } };
 export type FixPlan = { edits: { tx: RecentTx; op: FixOp['op']; category?: DbCat; amount?: number }[]; rows: ChangeRow[] };
 
 const DB_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
@@ -105,12 +107,38 @@ export function planChange(m: MonthBudget, goals: GoalLite[], ops: AgentOp[], no
       const cur = next.spend.find((s) => s.key === from)?.amount;
       if (cur === undefined || amount <= 0) return null;
       next = lowerBudget(next, from, Math.max(0, cur - amount), 'goal');
+    } else if (o.op === 'less_goal') {
+      // "More shopping, I'm fine reaching Japan later": the goal saves `amount` less each month and that budget gets
+      // it. Money moved in this month from a lowered budget (goalExtra) goes back first. The safety net never moves.
+      const to = o.to as CatKey;
+      const per = next.goal.amount + next.goalExtra;
+      if (next.goal.isSafetyNet || !next.spend.some((s) => s.key === to) || amount <= 0 || amount > per) return null;
+      const fromExtra = Math.min(next.goalExtra, amount);
+      const base = next.goal.amount - (amount - fromExtra);
+      next = {
+        ...next,
+        goalExtra: next.goalExtra - fromExtra,
+        goal: { ...next.goal, amount: base },
+        goalPerMonth: base,
+        spend: next.spend.map((s) => (s.key === to ? { ...s, amount: s.amount + amount } : s)),
+      };
     } else if (o.op === 'take_goal') {
       if (!main || amount <= 0 || take + amount > main.saved) return null;
       take += amount;
     } else return null;
   }
-  return { next, take, rows: changeRows(m, next, goals, take, now) };
+  return { next, take, rows: changeRows(m, next, goals, take, now), due: dueAfter(m, next, goals, take, now) };
+}
+
+/** The main goal's arrival after a change, when it moves (so Home and the goal show the same date as the card). */
+function dueAfter(a: MonthBudget, b: MonthBudget, goals: GoalLite[], take: number, now: Date): ChangePlan['due'] {
+  const main = goals[0];
+  if (!main || main.kind === 'monthly') return undefined;
+  const before = arrivals(goals, splitOf(a, goals), a.payday, now).get(main.id) ?? null;
+  const lites = goals.map((g) => (g.id === main.id ? { ...g, saved: g.saved - take } : g));
+  const after = arrivals(lites, splitOf(b, lites), b.payday, now).get(main.id) ?? null;
+  if ((before?.getTime() ?? 0) === (after?.getTime() ?? 0)) return undefined;
+  return { id: main.id, to: after ? isoDay(after) : null };
 }
 
 /** Every number that changed, then what it does to the main goal. */

@@ -85,8 +85,9 @@ type Turn = {
   change?: ChangePlan | null;
   fix?: FixPlan | null;
   done?: boolean;
-  /** change: the month before, for Undo */
+  /** change: the month before, for Undo (and the goal's date before, when the change moved it) */
   before?: MonthBudget;
+  beforeDue?: string | null;
   /** change / fix: a newer one came ("actually make it ฿279"), so this one can't be done any more */
   replaced?: boolean;
   /** Kip's 50 for today are used up */
@@ -459,8 +460,11 @@ export default function Talk() {
       if (error) return flash(t('Couldn’t save: {msg}', { msg: error.message }));
     }
     if (turn.change.next !== month) save(turn.change.next);
+    // The goal's date moves with it, so Home shows the same date the card did.
+    const due = turn.change.due;
+    if (due) await supabase.from('goals').update({ due_date: due.to }).eq('id', due.id);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    update(turn.id, { done: true, before });
+    update(turn.id, { done: true, before, beforeDue: due ? (goal?.due ?? null) : undefined });
     reload();
   }
   async function undoChange(turn: Turn) {
@@ -470,6 +474,7 @@ export default function Talk() {
       if (error) return flash(t('Couldn’t undo: {msg}', { msg: error.message }));
     }
     save(turn.before);
+    if (turn.change.due && turn.beforeDue !== undefined) await supabase.from('goals').update({ due_date: turn.beforeDue }).eq('id', turn.change.due.id);
     update(turn.id, { undone: true });
     reload();
   }

@@ -1227,6 +1227,38 @@ for (let n = 0; n < 2000; n++) {
     const catBefore = amt(both, 'c_cat');
     both = addBill(both, 'Gym', 99999).month;
     check('Own category: a big new bill never takes money from a need of their own', amt(both, 'c_cat') === catBefore, () => ({ s, before: catBefore, after: amt(both, 'c_cat') }));
+    // Raising a budget (by hand on Month, or Kip's "set") never cuts a need of their own — cat food stayed ฿0 (28 Nov).
+    const shop = amt(both, 'shopping');
+    const raised = raiseBudget(both, 'shopping', shop + pick([500, 2000, 99999]));
+    check('Own category: raising another budget never cuts a need of their own', amt(raised, 'c_cat') === catBefore, () => ({ s, before: catBefore, after: amt(raised, 'c_cat') }));
+    check('Own category: raising a budget still adds up', near(jobs(raised), jobs(both)) && !negative(raised), () => ({ s, spend: raised.spend }));
+  }
+}
+
+// ---------- Kip: save less for the goal to give a budget more (less_goal) ----------
+{
+  const now = new Date(2026, 10, 28, 12);
+  for (let n = 0; n < 1500; n++) {
+    const i = person(pick(['trip', 'trip', 'emergency']));
+    if (!i) continue;
+    const m = month(i, 'kip', pick([null, 1, 25]));
+    if (m.goal.isSafetyNet) continue;
+    const per = m.goal.amount + m.goalExtra;
+    if (per < 200) continue;
+    const g = { id: 'g1', kind: 'trip', target: Math.max(per * 6, 30000), saved: int(0, 5000), due: null, monthly: null };
+    const amount = Math.max(10, Math.round((per * pick([0.1, 0.5, 1])) / 10) * 10);
+    const r = planChange(m, [g], [{ op: 'less_goal', to: 'shopping', amount: Math.min(amount, per) }], now);
+    check('Less for the goal: it fits when it is no more than the goal saves a month', !!r, () => ({ per, amount }));
+    if (!r) continue;
+    const a = Math.min(amount, per);
+    check('Less for the goal: shopping gets exactly that much more', amt(r.next, 'shopping') === amt(m, 'shopping') + a, () => ({ a, was: amt(m, 'shopping'), now: amt(r.next, 'shopping') }));
+    check('Less for the goal: the goal saves exactly that much less', r.next.goal.amount + r.next.goalExtra === per - a, () => ({ per, a }));
+    check('Less for the goal: the month still adds up and nothing goes below zero', near(jobs(r.next), m.income) && !negative(r.next), () => ({}));
+    check('Less for the goal: the safety net and living costs never move', r.next.safety.amount === m.safety.amount && ['food', 'transport', 'health_beauty', 'other'].every((k) => amt(r.next, k as CatKey) === amt(m, k as CatKey)), () => ({}));
+    check('Less for the goal: the card shows the goal saving less and its new date', r.rows.some((x) => x.title === 'Saving a month' && x.warn) && r.rows.some((x) => x.icon === 'plane'), () => r.rows);
+    check('Less for the goal: the goal’s date moves later (or has no date at ฿0)', !r.due || r.due.to === null || r.due.to >= now.toISOString().slice(0, 10), () => r.due);
+    check('Less for the goal: kept on a re-plan (goalPerMonth follows)', r.next.goalPerMonth === r.next.goal.amount, () => ({ gpm: r.next.goalPerMonth, amount: r.next.goal.amount }));
+    check('Less for the goal: more than it saves is refused', planChange(m, [g], [{ op: 'less_goal', to: 'shopping', amount: per + 10 }], now) === null, () => ({}));
   }
 }
 

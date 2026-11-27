@@ -387,9 +387,9 @@ export function removeBill(m: MonthBudget, index: number): MonthBudget {
 /** Living-cost categories Kip won't push below a realistic floor when taking money for another category. */
 const FLOOR: Partial<Record<CatKey, number>> = { food: 4500, transport: 1000, health_beauty: 500, other: 500 };
 
-/** A budget went up: take from fun money first (shopping, fun, learning, giving), in proportion.
+/** A budget went up: take from fun money first (shopping, fun, learning, giving, their own wants), in proportion.
  *  Only if that isn't enough, take from living costs — never below their realistic floor.
- *  Never from bills, the goal or the safety net. */
+ *  Never from bills, the goal, the safety net or their own needs. */
 export function takePlan(m: MonthBudget, key: CatKey, to: number): { from: CatKey; was: number; now: number }[] {
   const cur = m.spend.find((s) => s.key === key)?.amount ?? 0;
   let left = Math.max(0, to - cur);
@@ -406,7 +406,8 @@ export function takePlan(m: MonthBudget, key: CatKey, to: number): { from: CatKe
     });
     left -= got;
   };
-  const others = m.spend.filter((s) => s.key !== key);
+  // The person's own needs (cat food, medicine…) are never cut to pay for something else: Kip doesn't know their floor.
+  const others = m.spend.filter((s) => s.key !== key && !(isCustom(s.key) && CATEGORY[s.key]?.need !== false));
   takeFrom(others.filter((s) => !(s.key in FLOOR)).map((s) => ({ key: s.key, spare: s.amount })));
   takeFrom(others.filter((s) => s.key in FLOOR).map((s) => ({ key: s.key, spare: Math.max(0, s.amount - (FLOOR[s.key] ?? 0)) })));
   return others.filter((s) => cuts.get(s.key)).map((s) => ({ from: s.key, was: s.amount, now: s.amount - (cuts.get(s.key) ?? 0) }));
