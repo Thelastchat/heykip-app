@@ -127,7 +127,9 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
           {n.parts.map((p) => `${p.label} ${baht(p.amount)}`).join(' · ')}
           {'. '}
           {n.bank
-            ? t('Did it reach your savings account?')
+            ? n.renew
+              ? t('Did it reach your savings account? Bangkok Bank stops after 12 — set it again soon.')
+              : t('Did it reach your savings account?')
             : t('Move it to a separate account now, before it gets spent.')}
         </Text>
       ) : n.kind === 'sweep' ? (

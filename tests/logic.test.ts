@@ -25,6 +25,7 @@ import { kipKnows } from '../src/lib/kipknows';
 import { cancelSub, renewalNotice, subsOf } from '../src/lib/subscriptions';
 import { savedOverTime } from '../src/lib/savingHistory';
 import { spareNow, sweptIn, withSweep } from '../src/lib/sweep';
+import { needsRenew } from '../src/lib/bankTransfer';
 import { living, livingTotal } from '../src/lib/brain';
 import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
@@ -1344,6 +1345,16 @@ for (let n = 0; n < 2000; n++) {
   }
   const minWage: Inputs = { income: 9000, rent: 0, bills: 300, goal: { type: 'trip', title: 'Japan', target: 20000, saved: 0, months: null, monthly: null } };
   check('At home on minimum wage (฿9,000, no rent): there is room to save', verdict(minWage).kind !== 'noRoom', () => verdict(minWage));
+}
+
+// ---------- Bangkok Bank's transfer runs 12 times at most: Kip reminds from the 11th month, only for that bank ----------
+{
+  const at = '2026-01-25T03:00:00.000Z';
+  const b = (bank: 'bbl' | 'kplus') => ({ amount: 3900, day: 25, bank, at });
+  check('Renew: no reminder in the first 10 months', !needsRenew(b('bbl'), new Date(2026, 10, 20)), () => ({}));
+  check('Renew: reminder from the 11th month', needsRenew(b('bbl'), new Date(2026, 11, 26)), () => ({}));
+  check('Renew: never for banks that repeat without an end', !needsRenew(b('kplus'), new Date(2028, 0, 1)), () => ({}));
+  check('Renew: setting it again starts the year over', !needsRenew({ ...b('bbl'), at: new Date(2026, 11, 26).toISOString() }, new Date(2027, 0, 25)), () => ({}));
 }
 
 // ---------- report ----------

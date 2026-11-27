@@ -33,7 +33,7 @@ import { dayShort, t } from '@/lib/i18n';
 import { monthNumbers, overCover, period, periodKey, useHome, type HomeGoal } from '@/lib/home';
 import { cover as coverMonth, moveSaving, savingMoved, savingThisCycle } from '@/lib/moneyin';
 import { BankSheet } from '@/components/goals/BankSheet';
-import { BANKS, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
+import { BANKS, needsRenew, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
 import { arrivals, MAX_GOALS, splitOf } from '@/lib/goals';
 import { dueLabel, guessType, monthsToDue, readyOf, rollYearly, typeName, typeOf } from '@/lib/everymonth';
 import { liteOf } from '@/components/goals/bits';
@@ -231,6 +231,7 @@ export default function Home() {
           ],
           bank: bankT ? (BANKS.find((b) => b.key === bankT.bank)?.name ?? null) : null,
           moved: savingMoved(month, now),
+          renew: needsRenew(bankT, now),
         }
       : null;
   const [bankOpen, setBankOpen] = useState(false);

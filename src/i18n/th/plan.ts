@@ -22,6 +22,19 @@ export default {
     'ตั้งให้ธนาคารโอนเงินเก็บเองทุกวันเงินเดือนออก HeyKip ไม่แตะบัญชีธนาคารของคุณ คุณตั้งเองครั้งเดียวในแอปธนาคาร',
   'Which bank app?': 'ใช้แอปธนาคารไหน',
   'Done, it’s set': 'ตั้งแล้ว',
+  'In K PLUS: Transfer → your savings account → “ตั้งโอนล่วงหน้า” (schedule) → “รายเดือน” (monthly). {amount}, {when}.':
+    'ใน K PLUS: โอนเงิน → เลือกบัญชีเก็บเงินของคุณ → “ตั้งโอนล่วงหน้า” → “รายเดือน” โอน {amount} {when}',
+  'In SCB EASY: Transfer → your savings account → “ตั้งรายการล่วงหน้า” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.':
+    'ใน SCB EASY: โอนเงิน → เลือกบัญชีเก็บเงินของคุณ → “ตั้งรายการล่วงหน้า” → “ทุกเดือน” โอน {amount} {when}',
+  'In Krungthai NEXT: Transfer → your savings account → turn on “ตั้งรายการล่วงหน้า” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.':
+    'ใน Krungthai NEXT: โอนเงิน → เลือกบัญชีเก็บเงินของคุณ → เปิด “ตั้งรายการล่วงหน้า” → “ทุกเดือน” โอน {amount} {when}',
+  'In Bangkok Bank: Transfer → your savings account → “ตั้งรายการล่วงหน้า” (schedule) → “รายเดือน” (monthly). {amount}, {when}.':
+    'ในแอปธนาคารกรุงเทพ: โอนเงิน → เลือกบัญชีเก็บเงินของคุณ → “ตั้งรายการล่วงหน้า” → “รายเดือน” โอน {amount} {when}',
+  'In krungsri app: Transfer → your savings account → “ตั้งเวลา” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.':
+    'ใน krungsri app: โอนเงิน → เลือกบัญชีเก็บเงินของคุณ → “ตั้งเวลา” → “ทุกเดือน” โอน {amount} {when}',
+  'Bangkok Bank repeats it 12 times at most. Kip reminds you to set it again in a year.': 'ธนาคารกรุงเทพตั้งซ้ำได้สูงสุด 12 ครั้ง ครบปี Kip จะเตือนให้ตั้งใหม่',
+  'Menu names are from the bank’s own steps and can change when its app updates.': 'ชื่อเมนูมาจากขั้นตอนของธนาคาร อาจเปลี่ยนได้เมื่อแอปอัปเดต',
+  'Bangkok Bank stops after 12 transfers — set it again, then tap here': 'ธนาคารกรุงเทพโอนครบ 12 ครั้งแล้วจะหยุด ตั้งใหม่แล้วกดตรงนี้',
   // ---- Home: payday ----
   'Payday · your bank moves {amount} today': 'เงินเดือนออก · วันนี้ธนาคารโอน {amount} ให้',
   'Payday · move {amount} to savings': 'เงินเดือนออก · ย้าย {amount} ไปเก็บ',
@@ -29,6 +42,7 @@ export default {
   'I moved it': 'ย้ายแล้ว',
   'Make it automatic': 'ตั้งให้ย้ายเอง',
   'Did it reach your savings account?': 'เงินเข้าบัญชีเก็บแล้วหรือยัง',
+  'Did it reach your savings account? Bangkok Bank stops after 12 — set it again soon.': 'เงินเข้าบัญชีเก็บแล้วหรือยัง ธนาคารกรุงเทพโอนครบ 12 ครั้งแล้วจะหยุด อย่าลืมตั้งใหม่นะ',
   'Move it to a separate account now, before it gets spent.': 'ย้ายไปบัญชีแยกตอนนี้เลย ก่อนจะเผลอใช้',
   // ---- Home: weekly sweep ----
   '{amount} spare so far this month': 'เดือนนี้เหลือเกินแผนมาแล้ว {amount}',

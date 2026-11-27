@@ -78,7 +78,7 @@ export type Notice =
   | { id: string; kind: 'substream'; names: { name: string; amount: number }[]; perYear: number }
   | { id: string; kind: 'recap'; recap: Recap }
   | Renewal
-  | { id: string; kind: 'payday'; amount: number; parts: { label: string; amount: number }[]; bank: string | null; moved: boolean }
+  | { id: string; kind: 'payday'; amount: number; parts: { label: string; amount: number }[]; bank: string | null; moved: boolean; renew?: boolean }
   | { id: string; kind: 'sweep'; amount: number; goalId: string | null; goalName: string; daily: number; was: Date | null; will: Date | null }
   | {
       id: string;

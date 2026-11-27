@@ -28,7 +28,7 @@ import { supabase } from '@/lib/supabase';
 import { savedOverTime, trimEmpty, type MoveLite } from '@/lib/savingHistory';
 import { SavedChart } from '@/components/goals/SavedChart';
 import { BankSheet } from '@/components/goals/BankSheet';
-import { BANKS, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
+import { BANKS, needsRenew, saveBankTransfer, type BankKey } from '@/lib/bankTransfer';
 import { safetyFull } from '@/lib/moneyin';
 import { Tour, type TourStop } from '@/components/Tour';
 import { tourSpot, useTourScroll } from '@/lib/tour';
@@ -156,6 +156,7 @@ export default function Goals() {
   const bankAmount = bankParts.reduce((a, p) => a + p.amount, 0);
   const bank = profile?.bank_transfer ?? null;
   const bankOff = !!bank && bank.amount !== bankAmount;
+  const bankRenew = needsRenew(bank);
   const funLeft = Math.max(0, (month?.spend.find((s) => s.key === 'fun')?.amount ?? 0) - (spent.byCat.fun ?? 0));
   const pitch = plusPitch(month, short, funLeft);
   const icon: Icon3D = goal ? (goal.goalType ? goalTypeIcon3D(goal.goalType) : goalIcon3D(goal.kind)) : 'piggy';
@@ -221,8 +222,10 @@ export default function Goals() {
                         ? t('Your bank moves {amount} on the {day}', { amount: baht(bank.amount), day: ordinal(month.payday), n: month.payday })
                         : t('Your bank moves {amount} every payday', { amount: baht(bank.amount) })}
                     </Text>
-                    <Text style={[styles.sub, bankOff && { color: colors.orangeText }]}>
-                      {bankOff
+                    <Text style={[styles.sub, (bankOff || bankRenew) && { color: colors.orangeText }]}>
+                      {bankRenew
+                        ? t('Bangkok Bank stops after 12 transfers — set it again, then tap here')
+                        : bankOff
                         ? t('Your plan now saves {amount} — update it in your bank, then tap here', { amount: baht(bankAmount) })
                         : t('{bank} · Kip checks it on payday', { bank: BANKS.find((b) => b.key === bank.bank)?.name ?? t('Your bank') })}
                     </Text>

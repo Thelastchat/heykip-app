@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Pill, SaveButton, Sheet } from '@/components/profile/Sheet';
-import { BANKS, type BankKey } from '@/lib/bankTransfer';
+import { BANKS, RENEWS_YEARLY, type BankKey } from '@/lib/bankTransfer';
 import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
 import { ordinal } from '@/lib/setup/plan';
@@ -30,18 +30,28 @@ export function BankSheet({
 }) {
   const [bank, setBank] = useState<BankKey | null>(was ?? null);
   const when = day ? t('on the {day}, every month', { day: ordinal(day), n: day }) : t('every payday');
-  const make = bank === 'make';
-  const steps = make
-    ? [
-        t('In MAKE, make a Cloud Pocket just for saving, like “Japan”.'),
-        t('Use Schedule Transfer: {amount} into that pocket, {when}.', { amount: baht(amount), when }),
-        t('Come back and tap Done. On payday Kip checks it went through.'),
-      ]
-    : [
-        t('Open a separate savings account or pocket, just for saving, so it isn’t mixed with spending money.'),
-        t('Find the scheduled (repeating) transfer in your bank app and set {amount} into it, {when}.', { amount: baht(amount), when }),
-        t('Come back and tap Done. On payday Kip checks it went through.'),
-      ];
+  const sep = t('Open a separate savings account or pocket, just for saving, so it isn’t mixed with spending money.');
+  const back = t('Come back and tap Done. On payday Kip checks it went through.');
+  const money = { amount: baht(amount), when };
+  // The menu path inside each bank app, where we've checked it (see bankTransfer.ts).
+  const path: Partial<Record<BankKey, string>> = {
+    kplus: t('In K PLUS: Transfer → your savings account → “ตั้งโอนล่วงหน้า” (schedule) → “รายเดือน” (monthly). {amount}, {when}.', money),
+    scb: t('In SCB EASY: Transfer → your savings account → “ตั้งรายการล่วงหน้า” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.', money),
+    ktb: t('In Krungthai NEXT: Transfer → your savings account → turn on “ตั้งรายการล่วงหน้า” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.', money),
+    bbl: t('In Bangkok Bank: Transfer → your savings account → “ตั้งรายการล่วงหน้า” (schedule) → “รายเดือน” (monthly). {amount}, {when}.', money),
+    krungsri: t('In krungsri app: Transfer → your savings account → “ตั้งเวลา” (schedule) → “ทุกเดือน” (every month). {amount}, {when}.', money),
+  };
+  const steps = !bank
+    ? []
+    : bank === 'make'
+      ? [t('In MAKE, make a Cloud Pocket just for saving, like “Japan”.'), t('Use Schedule Transfer: {amount} into that pocket, {when}.', money), back]
+      : [
+          sep,
+          path[bank] ?? t('Find the scheduled (repeating) transfer in your bank app and set {amount} into it, {when}.', money),
+          ...(RENEWS_YEARLY.includes(bank) ? [t('Bangkok Bank repeats it 12 times at most. Kip reminds you to set it again in a year.')] : []),
+          back,
+        ];
+  const named = !!bank && (bank === 'make' || !!path[bank]);
 
   return (
     <Sheet open onClose={onClose} title={t('Make it happen by itself')} sub={t('Set your bank to move your saving every payday. HeyKip never touches your bank — you set it once, in your bank app.')}>
@@ -66,6 +76,7 @@ export function BankSheet({
               <Text style={styles.stepText}>{s}</Text>
             </View>
           ))}
+          {named && <Text style={styles.note}>{t('Menu names are from the bank’s own steps and can change when its app updates.')}</Text>}
         </View>
       )}
       <SaveButton label={t('Done, it’s set')} disabled={!bank} onPress={() => bank && onDone(bank)} />
@@ -85,6 +96,7 @@ const styles = themed(() =>
     step: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
     num: { width: 24, height: 24, borderRadius: 12, backgroundColor: inkA(0.08), alignItems: 'center', justifyContent: 'center' },
     numText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, paddingLeft: 36 },
     stepText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.ink },
   }),
 );
