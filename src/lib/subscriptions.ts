@@ -79,21 +79,35 @@ export function renewalNotice(m: MonthBudget, now = new Date(), skip: (id: strin
   return null;
 }
 
-export type FreedTo = 'goal' | 'fun';
+/** Where a cancelled subscription's money goes: a goal (any pinned one), the safety net while it isn't full, or fun. */
+export type FreedTo = { to: 'goal'; goalId?: string } | { to: 'safety' } | { to: 'fun' };
 
-/** The plan after cancelling: the bill is gone and its money goes to the goal, or back to fun money. */
-export function cancelSub(m: MonthBudget, index: number, to: FreedTo): { month: MonthBudget; freed: number } {
+/**
+ * The plan after cancelling. removeBill gives the money to the month's goal saving, which goes to the first goal;
+ * from there it can go to another pinned goal (its share of the split grows), to the safety net, or back to fun.
+ * Every baht still has one job: whatever goes somewhere else comes off the goal saving first.
+ */
+export function cancelSub(m: MonthBudget, index: number, dest: FreedTo): { month: MonthBudget; freed: number } {
   const before = m.goalExtra;
   const next = removeBill(m, index);
-  const freed = next.goalExtra - before;
-  if (to === 'goal' || freed <= 0) return { month: next, freed: Math.max(0, freed) };
+  const freed = Math.max(0, next.goalExtra - before);
+  if (freed <= 0) return { month: next, freed: 0 };
+  if (dest.to === 'goal') {
+    // The first goal gets the goal saving's rest already; another goal gets its own share raised.
+    if (!dest.goalId) return { month: next, freed };
+    const goals = next.goals ?? [];
+    const has = goals.some((g) => g.id === dest.goalId);
+    return {
+      month: { ...next, goals: has ? goals.map((g) => (g.id === dest.goalId ? { ...g, amount: g.amount + freed } : g)) : [...goals, { id: dest.goalId, amount: freed }] },
+      freed,
+    };
+  }
+  const back = { ...next, goalExtra: before };
+  if (dest.to === 'safety') return { month: { ...back, safety: { ...back.safety, amount: back.safety.amount + freed } }, freed };
   // Back to fun: the fun budget (or the one free pot in Save first), else the first want there is.
-  const key: CatKey | undefined = (['fun', 'spend_freely', 'shopping'] as CatKey[]).find((k) => next.spend.some((s) => s.key === k));
+  const key: CatKey | undefined = (['fun', 'spend_freely', 'shopping'] as CatKey[]).find((k) => back.spend.some((s) => s.key === k));
   if (!key) return { month: next, freed };
-  return {
-    month: { ...next, goalExtra: before, spend: next.spend.map((s) => (s.key === key ? { ...s, amount: s.amount + freed } : s)) },
-    freed,
-  };
+  return { month: { ...back, spend: back.spend.map((s) => (s.key === key ? { ...s, amount: s.amount + freed } : s)) }, freed };
 }
 
 /** Where you go to cancel. Apple and Google have one page for every subscription bought through them. */

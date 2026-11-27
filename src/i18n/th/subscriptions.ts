@@ -10,8 +10,6 @@ export default {
   '**{amount}** on {date}. Still using it? If not, cancel before then and **{amount} a month** goes to your saving.':
     'ตัด **{amount}** วันที่ {date} ยังใช้อยู่ไหม ถ้าไม่ได้ใช้ ยกเลิกก่อนวันนั้น แล้ว **เดือนละ {amount}** จะไปเป็นเงินเก็บแทน',
   'Kept. Kip asks again before the next one': 'โอเค เก็บไว้ รอบหน้า Kip จะถามอีกที',
-  '{name} cancelled · {amount} a month to {goal}': 'ยกเลิก {name} แล้ว · เดือนละ {amount} ไปที่ {goal}',
-  '{name} cancelled · {amount} a month back to fun': 'ยกเลิก {name} แล้ว · เดือนละ {amount} กลับไปเป็นเงินเที่ยวเล่น',
 
   // ---- Cancel it ----
   'Cancel {name}': 'ยกเลิก {name}',
@@ -29,9 +27,14 @@ export default {
   'To {goal}': 'เข้า {goal}',
   'Arrives {will} instead of {was}': 'ถึงเป้า {will} เร็วกว่าเดิม (จาก {was})',
   '+{amount} a month to your saving': 'เงินเก็บเพิ่มเดือนละ {amount}',
+  'To the safety net': 'เข้าเงินสำรองฉุกเฉิน',
+  'Full around {will} instead of {was}': 'เต็มประมาณ {will} เร็วกว่าเดิม (จาก {was})',
+  '+{amount} a month until it’s full': 'เพิ่มเดือนละ {amount} จนกว่าจะเต็ม',
+  '{name} cancelled · {amount} a month to {where}': 'ยกเลิก {name} แล้ว · เดือนละ {amount} ไปที่ {where}',
+  'the safety net': 'เงินสำรองฉุกเฉิน',
+  'fun money': 'เงินเที่ยวเล่น',
   'Back to fun money': 'กลับไปเป็นเงินเที่ยวเล่น',
   '{was} → {now} a month': 'เดือนละ {was} → {now}',
-  '{goal} saving a month': 'เงินเก็บ {goal} ต่อเดือน',
 
   // ---- The Subscriptions page ----
   'A month': 'ต่อเดือน',

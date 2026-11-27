@@ -49,7 +49,7 @@ import { recapFor, type Recap, type Suggestion } from '@/lib/recap';
 import { RecapSheet } from '@/components/home/RecapSheet';
 import { paceOf } from '@/lib/pace';
 import { typeInfo } from '@/lib/setup/goalTypes';
-import { monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
+import { dayInMonth, monthYear, monthsFromNow, ordinal, parseDay, shortName } from '@/lib/setup/plan';
 import { supabase } from '@/lib/supabase';
 import { cancelSub, subsOf, subsTotal, type FreedTo, type Renewal } from '@/lib/subscriptions';
 import { CancelSheet, type CancelChoice } from '@/components/home/CancelSheet';
@@ -216,23 +216,31 @@ export default function Home() {
     // Undo stays for a while, then Kip's line (or the next card) is back.
     doneTimer.current = setTimeout(() => setKipDone(null), 12_000);
   }
-  /** Keep or cancel → "Cancel it": what its money would do, to the goal or back to fun money. */
+  /** Keep or cancel → "Cancel it": what its money would do in each place it can go. */
   function cancelChoice(n: Renewal): CancelChoice | null {
     if (!month) return null;
     const lites = goals.map(liteOf);
-    const toGoal = cancelSub(month, n.index, 'goal');
-    const toFun = cancelSub(month, n.index, 'fun');
-    const first = goals[0];
-    const will = first && first.kind !== 'monthly' ? (arrivals(lites, splitOf(toGoal.month, lites), month.payday ?? null).get(first.id) ?? null) : null;
-    const funKey = toFun.month.spend.find((s, i) => s.amount !== month.spend[i]?.amount)?.key;
+    const arriveAfter = (m: MonthBudget, id: string) => arrivals(lites, splitOf(m, lites), month.payday ?? null).get(id) ?? null;
+    const freed = cancelSub(month, n.index, { to: 'goal' }).freed;
+    const fun = cancelSub(month, n.index, { to: 'fun' }).month;
+    const funKey = fun.spend.find((s, i) => s.amount !== month.spend[i]?.amount)?.key;
     const funWas = funKey ? (month.spend.find((s) => s.key === funKey)?.amount ?? 0) : 0;
+    // The safety net, while it isn't full: when it fills at today's monthly amount, and with this added.
+    const saved = Number(profile?.safety_saved ?? 0);
+    const need = month.safety.target - saved;
+    const fullIn = (per: number) => (per > 0 ? dayInMonth(now.getFullYear(), now.getMonth() + Math.ceil(need / per), month.payday ?? 1) : null);
+    const safety = !month.goal.isSafetyNet && month.safety.target > 0 && need > 0 ? { was: fullIn(month.safety.amount), will: fullIn(month.safety.amount + freed) } : null;
     return {
       name: n.name,
-      perMonth: toGoal.freed,
-      goal: short,
-      was: goalDate,
-      will,
-      fun: funKey ? { was: funWas, now: funWas + toFun.freed } : null,
+      perMonth: freed,
+      goals: goals.map((g, i) => ({
+        id: g.id,
+        name: g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never),
+        was: g.kind === 'monthly' ? null : (arrive.get(g.id) ?? null),
+        will: g.kind === 'monthly' ? null : arriveAfter(cancelSub(month, n.index, { to: 'goal', goalId: i === 0 ? undefined : g.id }).month, g.id),
+      })),
+      safety,
+      fun: funKey ? { was: funWas, now: funWas + freed } : null,
     };
   }
   function cancelDone(n: Renewal, to: FreedTo) {
@@ -242,10 +250,17 @@ export default function Home() {
     save(r.month);
     setCancelFor(null);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const where =
+      to.to === 'goal'
+        ? (() => {
+            const g = to.goalId ? goals.find((x) => x.id === to.goalId) : goals[0];
+            return g ? (g.kind === 'monthly' ? g.title : shortName(g.title, g.kind as never)) : short;
+          })()
+        : to.to === 'safety'
+          ? t('the safety net')
+          : t('fun money');
     showDone(
-      to === 'goal'
-        ? t('{name} cancelled · {amount} a month to {goal}', { name: n.name, amount: baht(r.freed), goal: short })
-        : t('{name} cancelled · {amount} a month back to fun', { name: n.name, amount: baht(r.freed) }),
+      t('{name} cancelled · {amount} a month to {where}', { name: n.name, amount: baht(r.freed), where }),
       async () => {
         save(before);
         return null;

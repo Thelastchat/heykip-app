@@ -1,11 +1,12 @@
 // "Cancel it" from Keep or cancel (approved 27 Nov): Kip can't cancel for you, so step 1 opens the right place —
 // Apple's or Google's page for every subscription bought through them, or says where to look on the service itself.
-// Step 2, once it's cancelled: where its money goes. The goal is first (cancelling pays the goal), with the new
-// arrival date; fun money is the other choice. Nothing changes until Done, and Home's Undo puts it back.
+// Step 2, once it's cancelled: where its money goes — each pinned goal with its new arrival date (the first goal is
+// picked to start with: cancelling pays the goal), the safety net while it isn't full, or fun money. Nothing changes
+// until Done, and Home's Undo puts it back.
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 
-import { Delta, Pill, SaveButton, Sheet } from '@/components/profile/Sheet';
+import { Pill, SaveButton, Sheet } from '@/components/profile/Sheet';
 import { Squish } from '@/components/glow/motion';
 import { t } from '@/lib/i18n';
 import { baht } from '@/lib/money';
@@ -16,18 +17,20 @@ import { colors, fonts, inkA, themed } from '@/theme';
 export type CancelChoice = {
   name: string;
   perMonth: number;
-  goal: string;
-  /** the goal's arrival now, and after the money moves (null: a monthly saver, no date) */
-  was: Date | null;
-  will: Date | null;
+  /** every pinned goal, first goal first, with its arrival now and after (null: a monthly saver, no date) */
+  goals: { id: string; name: string; was: Date | null; will: Date | null }[];
+  /** the safety net while it isn't full: when it fills now and after */
+  safety: { was: Date | null; will: Date | null } | null;
   /** fun money a month now, and with this back */
   fun: { was: number; now: number } | null;
 };
 
+const keyOf = (d: FreedTo) => (d.to === 'goal' ? `goal:${d.goalId ?? ''}` : d.to);
+
 export function CancelSheet({ c, onClose, onDone, startAt = 'how' }: { c: CancelChoice; onClose: () => void; onDone: (to: FreedTo) => void; startAt?: 'how' | 'where' }) {
   const [step, setStep] = useState<'how' | 'where'>(startAt);
   const [via, setVia] = useState<PaidVia>(Platform.OS === 'android' ? 'google' : 'apple');
-  const [to, setTo] = useState<FreedTo>('goal');
+  const [to, setTo] = useState<FreedTo>({ to: 'goal' });
   const store = via === 'apple' ? 'App Store' : 'Google Play';
 
   if (step === 'how')
@@ -51,26 +54,35 @@ export function CancelSheet({ c, onClose, onDone, startAt = 'how' }: { c: Cancel
       </Sheet>
     );
 
-  const sooner = c.was && c.will && c.will.getTime() !== c.was.getTime();
+  const moved = (was: Date | null, will: Date | null) => !!was && !!will && will.getTime() !== was.getTime();
+  const picked = keyOf(to);
   return (
     <Sheet open onClose={onClose} title={t('{amount} a month is free', { amount: baht(c.perMonth) })} sub={t('{name} is cancelled. Where should its money go?', { name: c.name })}>
-      <Option
-        on={to === 'goal'}
-        onPress={() => setTo('goal')}
-        title={t('To {goal}', { goal: c.goal })}
-        line={sooner ? t('Arrives {will} instead of {was}', { will: monthYear(c.will!), was: monthYear(c.was!) }) : t('+{amount} a month to your saving', { amount: baht(c.perMonth) })}
-      />
-      {c.fun && (
-        <Option on={to === 'fun'} onPress={() => setTo('fun')} title={t('Back to fun money')} line={t('{was} → {now} a month', { was: baht(c.fun.was), now: baht(c.fun.now) })} />
-      )}
-      {to === 'goal' && sooner && (
-        <Delta
-          rows={[
-            { label: t('{goal} saving a month', { goal: c.goal }), was: null, now: `+${baht(c.perMonth)}` },
-            { label: t('{goal} arrives', { goal: c.goal }), was: monthYear(c.was!), now: monthYear(c.will!) },
-          ]}
+      {c.goals.map((g, i) => {
+        const d: FreedTo = { to: 'goal', goalId: i === 0 ? undefined : g.id };
+        return (
+          <Option
+            key={g.id}
+            on={picked === keyOf(d)}
+            onPress={() => setTo(d)}
+            title={t('To {goal}', { goal: g.name })}
+            line={moved(g.was, g.will) ? t('Arrives {will} instead of {was}', { will: monthYear(g.will!), was: monthYear(g.was!) }) : t('+{amount} a month to your saving', { amount: baht(c.perMonth) })}
+          />
+        );
+      })}
+      {c.safety && (
+        <Option
+          on={picked === 'safety'}
+          onPress={() => setTo({ to: 'safety' })}
+          title={t('To the safety net')}
+          line={
+            moved(c.safety.was, c.safety.will)
+              ? t('Full around {will} instead of {was}', { will: monthYear(c.safety.will!), was: monthYear(c.safety.was!) })
+              : t('+{amount} a month until it’s full', { amount: baht(c.perMonth) })
+          }
         />
       )}
+      {c.fun && <Option on={picked === 'fun'} onPress={() => setTo({ to: 'fun' })} title={t('Back to fun money')} line={t('{was} → {now} a month', { was: baht(c.fun.was), now: baht(c.fun.now) })} />}
       <SaveButton label={t('Done')} onPress={() => onDone(to)} />
     </Sheet>
   );

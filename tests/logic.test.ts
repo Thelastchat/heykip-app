@@ -22,6 +22,8 @@ import { recapContext, recapFor } from '../src/lib/recap';
 import { cleanName, findPriceChanges, findRepeats, findStopped, foundSubs, streamingTotal } from '../src/lib/subs';
 import { dateIn, dueBills, nextDue as nextBillDue, remindersFor } from '../src/lib/billdue';
 import { kipKnows } from '../src/lib/kipknows';
+import { cancelSub, renewalNotice, subsOf } from '../src/lib/subscriptions';
+import { savedOverTime } from '../src/lib/savingHistory';
 import { KIP_MOODS, startSim, stepKip } from '../src/components/kip/motion';
 
 // ---------- tiny test kit ----------
@@ -1243,6 +1245,65 @@ for (let n = 0; n < 2000; n++) {
       check('Check-in: every night ahead says what Home will show that day (nothing logged in between)', nights[ymd(d)] === Math.max(0, Math.round(home)), () => ({ now, d, same }));
       check('Check-in: never a negative amount', nights[ymd(d)] >= 0, () => ({ d }));
     }
+  }
+}
+
+// ---------- Subscriptions: cancelling pays the goal (or the safety net, or fun) ----------
+{
+  const SUBS = [['Netflix', 419], ['Spotify', 139], ['YouTube Premium', 179], ['iCloud+', 35], ['Jetts Fitness', 1299], ['ChatGPT', 690]] as const;
+  for (let n = 0; n < 1500; n++) {
+    const i = person();
+    if (!i) continue;
+    const s = pick(STYLES);
+    let m = month(i, s);
+    for (const [name, amount] of SUBS.slice(0, int(1, SUBS.length))) {
+      const r = addBill(m, name, amount, { day: int(1, 28) });
+      if (r.short === 0) m = r.month;
+    }
+    const subs = subsOf(m);
+    check('Subscriptions: every added one is found (none of rent, phone or internet)', subs.length === (m.bills.items ?? []).length, () => ({ items: m.bills.items?.map((b) => b.name) }));
+    if (!subs.length) continue;
+    const sub = pick(subs);
+    const pot = (x: MonthBudget, k: CatKey) => x.spend.find((q) => q.key === k)?.amount ?? 0;
+    const funKey = (['fun', 'spend_freely', 'shopping'] as CatKey[]).find((k) => m.spend.some((q) => q.key === k));
+    for (const dest of [{ to: 'goal' }, { to: 'goal', goalId: 'g2' }, { to: 'safety' }, { to: 'fun' }] as const) {
+      const r = cancelSub(m, sub.index, dest);
+      check('Cancel: the month still adds up (bills + saving + spending ≤ pay, as before)', jobs(r.month) <= Math.max(m.income, jobs(m)) + 10, () => ({ s, dest, was: jobs(m), now: jobs(r.month) }));
+      check('Cancel: the bill is gone and nothing goes below zero', !(r.month.bills.items ?? []).some((b) => b.name === sub.name) && !negative(r.month), () => ({ s, dest, name: sub.name }));
+      check('Cancel: what it frees is never more than the bill was', r.freed >= 0 && r.freed <= sub.perMonth, () => ({ s, freed: r.freed, bill: sub.perMonth }));
+      check('Cancel: rent and other bills are untouched', r.month.bills.rent === m.bills.rent && r.month.bills.guess === m.bills.guess, () => ({ s, dest }));
+      if (dest.to === 'goal' && !('goalId' in dest)) check('Cancel → goal: the goal saving grows by exactly what was freed', goalTotal(r.month) === goalTotal(m) + r.freed, () => ({ s, freed: r.freed }));
+      if (dest.to === 'goal' && 'goalId' in dest) {
+        const lites: GoalLite[] = [
+          { id: 'g1', kind: 'trip', target: 60000, saved: 0, due: null, monthly: null },
+          { id: 'g2', kind: 'gadget', target: 30000, saved: 0, due: null, monthly: null },
+        ];
+        const was = splitOf(m, lites), now = splitOf(r.month, lites);
+        check('Cancel → second goal: only that goal gets more, the first keeps its share', (now.get('g1') ?? 0) === (was.get('g1') ?? 0) && (now.get('g2') ?? 0) === (was.get('g2') ?? 0) + r.freed, () => ({ s, was: [...was], now: [...now], freed: r.freed }));
+      }
+      if (dest.to === 'safety') check('Cancel → safety net: it grows by what was freed, the goal saving stays', r.month.safety.amount === m.safety.amount + r.freed && goalTotal(r.month) === goalTotal(m), () => ({ s, freed: r.freed }));
+      if (dest.to === 'fun' && funKey) check('Cancel → fun: fun money grows by what was freed, the goal saving stays', pot(r.month, funKey) === pot(m, funKey) + r.freed && goalTotal(r.month) === goalTotal(m), () => ({ s, freed: r.freed }));
+    }
+    // Keep or cancel: only 1–3 days before, never on the day itself, never for HeyKip.
+    const now = new Date(2026, pick([0, 5, 10, 11]), int(1, 28), 10);
+    const r = renewalNotice(m, now);
+    if (r) check('Keep or cancel: asks 1 to 3 days before it renews', r.days >= 1 && r.days <= 3, () => ({ now, r }));
+  }
+}
+
+// ---------- Saving over time ----------
+{
+  for (let n = 0; n < 1500; n++) {
+    const payday = pick([null, 1, 15, 25, 28, 31]);
+    const now = new Date(2026, int(0, 11), int(1, 28), 12);
+    const moves = Array.from({ length: int(0, 12) }, () => ({ amount: pick([500, 1500, 4300, -2000]), at: new Date(now.getTime() - int(0, 200) * 86_400_000) }));
+    const nowTotal = Math.max(0, moves.reduce((a, m) => a + m.amount, 0)) + int(0, 20000);
+    const pts = savedOverTime(nowTotal, moves, payday, 5, now);
+    check('Saving over time: ends at today’s total', pts[pts.length - 1].total === Math.round(nowTotal) && !!pts[pts.length - 1].now, () => ({ pts }));
+    check('Saving over time: never below ฿0', pts.every((p) => p.total >= 0), () => ({ pts }));
+    check('Saving over time: months in order, one per pay month', pts.every((p, k) => k === 0 || p.at > pts[k - 1].at), () => ({ pts }));
+    const onlyIn = moves.every((m) => m.amount > 0);
+    if (onlyIn) check('Saving over time: with only money going in, the line never goes down', pts.every((p, k) => k === 0 || p.total >= pts[k - 1].total), () => ({ pts }));
   }
 }
 
