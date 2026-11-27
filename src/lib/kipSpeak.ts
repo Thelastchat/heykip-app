@@ -1,10 +1,12 @@
-// Kip talking back out loud, in his own voice (approved 27 Nov): Google's Gemini 2.5 Flash TTS, voice Fenrir, made
-// by the kip-voice function — Plus only, 15 spoken replies a day. Only the words Kip is about to say go to Google.
+// Kip talking back out loud, in his own voice (approved 27 Nov): Google's Chirp 3 HD, voice Fenrir. The kip call
+// itself returns the spoken answer (one trip); kip-voice is only used when the server didn't send it (older server).
+// Plus only, 15 spoken replies a day. Only the words Kip is about to say go to Google.
 // When the voice is used up or can't be reached, Kip simply answers in text (never a robot fallback voice).
 import { requireOptionalNativeModule } from 'expo';
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import type { Spoken } from '@/lib/kip';
 import { supabase } from '@/lib/supabase';
 
 type AudioLib = typeof import('expo-audio');
@@ -50,17 +52,26 @@ let current: { player: Player; done: () => void } | null = null;
 let turn = 0;
 
 /** Say it in Kip's voice. Resolves when he has finished, was cut off, or couldn't speak. */
-export async function say(text: string): Promise<Said> {
+export async function say(text: string, ready?: Spoken): Promise<Said> {
   const A = audio();
   const lang = langOf(text);
   const words = forSpeaking(text, lang);
   if (!A || !words) return { said: 'off' };
   const mine = ++turn;
 
-  const { data, error } = await supabase.functions.invoke('kip-voice', { body: { text: words, lang } });
-  if (error) return { said: (error as { context?: { status?: number } }).context?.status === 429 ? 'limit' : 'off' };
-  const b64 = (data as { audio?: string } | null)?.audio;
-  const left = (data as { left?: number } | null)?.left;
+  let b64: string | undefined;
+  let left: number | undefined;
+  if (ready) {
+    // Already spoken by the kip call. No audio means used up today, or Google couldn't — then text only.
+    if (!ready.audio) return { said: ready.said ?? 'off' };
+    b64 = ready.audio;
+    left = ready.left;
+  } else {
+    const { data, error } = await supabase.functions.invoke('kip-voice', { body: { text: words, lang } });
+    if (error) return { said: (error as { context?: { status?: number } }).context?.status === 429 ? 'limit' : 'off' };
+    b64 = (data as { audio?: string } | null)?.audio;
+    left = (data as { left?: number } | null)?.left;
+  }
   if (!b64 || mine !== turn) return { said: 'off', left }; // cut off while the voice was being made
 
   let uri = `data:audio/mpeg;base64,${b64}`;

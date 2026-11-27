@@ -4,6 +4,8 @@
 // It remembers the conversation (the last few turns, sent by the app). Plus only.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+import { hasVoice, langOf, speak, warmVoice } from '../_shared/tts.ts';
+
 const CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const IN_CATS = ['pay', 'side_gigs', 'gifts', 'other'];
 const BUDGET_CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'learning', 'giving', 'other', 'spend_freely'];
@@ -152,7 +154,8 @@ Deno.serve(async (req) => {
     const key = Deno.env.get('ANTHROPIC_API_KEY');
     if (!key) return json({ error: 'no key' }, 503);
 
-    const { text, context, history, voice } = await req.json();
+    // speak: newer builds want the answer spoken in this same call (older builds still call kip-voice after).
+    const { text, context, history, voice, speak: wantsVoice } = await req.json();
     const own = ownCats((context as { own?: unknown } | undefined)?.own, (context as { categories?: unknown } | undefined)?.categories);
     // Their own categories join the lists Kip may pick from.
     const kipTool = JSON.parse(JSON.stringify(tool));
@@ -175,25 +178,43 @@ Deno.serve(async (req) => {
       { role: 'assistant', content: String(h.kip ?? '').slice(0, 300) || '…' },
     ]);
 
-    const system = [
+    // Talking out loud (voice=true): this call also speaks the answer, so the app makes one trip, not two (27 Nov).
+    // The voice allowance (Plus, 15 a day) is checked and Google is signed in to while Kip is still thinking.
+    const speaking = !!voice && !!wantsVoice && hasVoice();
+    const voiceGate = speaking ? sb.rpc('voice_allow') : null;
+    if (speaking) warmVoice();
+
+    // Kip's rules are the same for everyone, so they're cached at Anthropic (faster, cheaper); what changes per
+    // person or per message comes after the cache mark.
+    const rules = [
       'You are Kip, a friendly money buddy in HeyKip, a saving app for young Thais. Short, warm, honest. Never preachy.',
       ...VOICE,
       'Reply in the language the person used (Thai or English); if it is mixed or unclear, use the app language. Amounts are Thai baht.',
-      `The app is set to ${(context as { language?: string } | undefined)?.language === 'th' ? 'Thai' : 'English'}. In Thai, sound like a friend texting (casual: ได้เลย, นะ, ไหวมั้ย), never formal (no ท่าน, กรุณา). Kip and HeyKip stay in English letters.`,
+      'In Thai, sound like a friend texting (casual: ได้เลย, นะ, ไหวมั้ย), never formal (no ท่าน, กรุณา). Kip and HeyKip stay in English letters.',
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
       'You can change their plan in HeyKip (kind=change) and fix what they logged (kind=fix). You cannot send, transfer or pay real money, or touch their bank: say so kindly if asked.',
       'You CAN read their bank slips: the app looks only in the bank albums they chose on this phone (K PLUS, SCB…), reads each slip and lets them check it before saving. When they ask about their slips for any days, use kind=slips. Never say you cannot read slips. One slip at a time from a photo they pick also works on the + screen (Slip).',
       'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
       CAT_NAMES,
-      ownLine(own),
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',
+    ].join('\n');
+    const now = [
+      `The app is set to ${(context as { language?: string } | undefined)?.language === 'th' ? 'Thai' : 'English'}.`,
+      ownLine(own),
       voice
         ? 'They are TALKING to you out loud and you answer out loud: reply must be ONE or TWO short spoken sentences (under 25 words, under about 80 Thai characters), plain words, no lists, no emoji, no symbols. Say only the key number.'
         : '',
       `The person's month right now (JSON): ${JSON.stringify(context ?? {}).slice(0, 8000)}`,
-    ].join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const system = [
+      { type: 'text', text: rules, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: now },
+    ];
 
+    const t0 = Date.now();
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -202,13 +223,25 @@ Deno.serve(async (req) => {
     });
     if (!r.ok) return json({ error: 'kip is busy', detail: (await r.text()).slice(0, 300) }, 502);
     const out = await r.json();
+    console.log('kip ms', Date.now() - t0, 'cache read', out.usage?.cache_read_input_tokens ?? 0, 'written', out.usage?.cache_creation_input_tokens ?? 0);
     const use = (out.content ?? []).find((c: { type: string }) => c.type === 'tool_use');
     if (!use) return json({ error: 'no reply' }, 502);
+
+    // Speak while the count below is read. voice: audio (base64 MP3) + spoken replies left · limit · off.
+    const reply = String((use.input as { reply?: string }).reply ?? '');
+    const spoken = (async () => {
+      if (!voiceGate || !reply) return undefined;
+      const gate = await voiceGate;
+      const g = String(gate.data ?? '');
+      if (gate.error || !g.startsWith('ok')) return { said: g === 'limit' ? 'limit' : 'off' };
+      const audio = await speak(reply, langOf(reply)).catch(() => null);
+      return audio ? { audio, left: Number(g.split(':')[1] ?? 0) } : { said: 'off' };
+    })();
     // How many Kip messages are left today (Thai time), so the app can say so near the end — never a surprise.
-    const { data: me } = await sb.from('profiles').select('ai_day, ai_count').eq('id', u.user.id).single();
+    const [{ data: me }, said2] = await Promise.all([sb.from('profiles').select('ai_day, ai_count').eq('id', u.user.id).single(), spoken]);
     const today = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
     const left = me && me.ai_day === today ? Math.max(0, 50 - Number(me.ai_count)) : 50;
-    return json({ ...use.input, left });
+    return json({ ...use.input, left, ...(said2 ? { voice: said2 } : {}) });
   } catch (e) {
     return json({ error: String(e).slice(0, 200) }, 500);
   }

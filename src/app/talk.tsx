@@ -50,6 +50,7 @@ import {
   type InItem,
   type KipReply,
   type LogItem,
+  type Spoken,
 } from '@/lib/kip';
 import { baht } from '@/lib/money';
 import { useMonth } from '@/lib/month';
@@ -179,7 +180,8 @@ export default function Talk() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     live.current = true;
     setVoiceOn(true);
-    const problem = await voice.start(l, { pauseMs: 1300, giveUpMs: 12_000 });
+    // 0.8 s of quiet ends their turn (was 1.3 s): the biggest part of the wait people feel (approved 27 Nov).
+    const problem = await voice.start(l, { pauseMs: 800, giveUpMs: 12_000 });
     if (problem) {
       endVoice();
       flash(problem === 'denied' ? t('I need the microphone — turn it on for HeyKip in Settings.') : t('Listening isn’t working right now — type it instead?'));
@@ -187,11 +189,11 @@ export default function Talk() {
   }
   /** One turn of the call: send what they said, Kip says his answer out loud, then listens again. */
   async function talkTurn(heard: string) {
-    const said = await send(heard);
+    const answer = await send(heard);
     if (!live.current) return;
-    if (!said) return endVoice();
+    if (!answer) return endVoice();
     setSpeaking(true);
-    const r = await say(said);
+    const r = await say(answer.text, answer.voice);
     setSpeaking(false);
     // Today's 15 spoken replies are used: say so once, then Kip carries on in text.
     if (r.said === 'limit' && !voiceRested.current) {
@@ -300,8 +302,8 @@ export default function Talk() {
       });
   }
 
-  /** Send to Kip. Resolves with what Kip said back (for talking out loud), or null if nothing was sent. */
-  async function send(said = text): Promise<string | null> {
+  /** Send to Kip. Resolves with what Kip said back (for talking out loud: with his voice), or null if nothing was sent. */
+  async function send(said = text): Promise<{ text: string; voice?: Spoken } | null> {
     const msg = said.trim();
     if (!msg) return null;
     if (!isPlus) {
@@ -328,7 +330,8 @@ export default function Talk() {
     );
     // Every answer is worked out once, from the month as it was when Kip answered.
     if (res.ok) {
-      const reply = { ...res.reply, items: clean(res.reply.items) };
+      const { voice: spoken, ...rest } = res.reply; // the audio isn't kept in the conversation
+      const reply = { ...rest, items: clean(rest.items) };
       if (typeof reply.left === 'number') setKipLeft(reply.left);
       const lites = goals.map(liteOf);
       // A new change replaces any earlier one still waiting for "Do it" — only the latest can be done.
@@ -349,7 +352,7 @@ export default function Talk() {
         else saveItems({ id, me: msg, state: 'done' }, reply.items as Item[]);
       }
       setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
-      return reply.reply;
+      return { text: reply.reply, voice: spoken };
     }
     const error =
           res.reason === 'consent'
@@ -367,7 +370,7 @@ export default function Talk() {
     if (res.reason === 'limit') setKipLeft(0);
     if (res.reason === 'plus') setLocked(true);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
-    return res.reason === 'plus' ? null : error;
+    return res.reason === 'plus' ? null : { text: error };
   }
 
   async function saveItems(turn: Turn, items: Item[]) {

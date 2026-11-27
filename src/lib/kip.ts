@@ -28,7 +28,10 @@ export type KipReply = {
   buy?: LogItem;
   ops?: AgentOp[];
   fixes?: FixOp[];
+  /** Talking out loud: the answer already spoken by the server (one trip) — audio, or why there's none. */
+  voice?: Spoken;
 };
+export type Spoken = { audio?: string; left?: number; said?: 'limit' | 'off' };
 
 /** Category names, translated each time they're read. */
 export const DB_CAT_NAME: Record<DbCat, string> = {
@@ -163,7 +166,7 @@ export async function askKip(
   /** They're talking out loud: Kip answers in one or two short spoken sentences. */
   voice = false,
 ): Promise<{ ok: true; reply: KipReply } | { ok: false; reason: 'plus' | 'consent' | 'nokey' | 'busy' | 'offline' | 'limit' }> {
-  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history, voice } });
+  const { data, error } = await supabase.functions.invoke('kip', { body: { text, context, history, voice, speak: voice } });
   if (error) {
     const status = (error as { context?: { status?: number } }).context?.status;
     if (status === 402) return { ok: false, reason: 'plus' };
