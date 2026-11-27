@@ -4,7 +4,7 @@
 // It remembers the conversation (the last few turns, sent by the app). Plus only.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-import { hasVoice, langOf, speak, warmVoice } from '../_shared/tts.ts';
+import { hasVoice, langOf, speak, warmVoice } from './tts.ts';
 
 const CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const IN_CATS = ['pay', 'side_gigs', 'gifts', 'other'];

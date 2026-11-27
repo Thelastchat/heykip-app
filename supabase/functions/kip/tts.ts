@@ -1,4 +1,4 @@
-// Kip's voice, shared by kip (answers and speaks in one call) and kip-voice (older app builds).
+// Kip's voice, used by kip (answers and speaks in one call) and kip-voice (older app builds; its tts.ts links here).
 // Google Chirp 3 HD, voice Fenrir, a little faster than normal (approved 27 Nov: about 1 s to make, vs 3–5 s for
 // Gemini TTS). Only the words Kip is about to say go to Google — nothing else about the person.
 // Google sign-in: a service account (GOOGLE_TTS_SA, its JSON key) or an API key (GOOGLE_TTS_KEY), both only in secrets.

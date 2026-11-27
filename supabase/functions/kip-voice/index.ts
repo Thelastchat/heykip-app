@@ -1,9 +1,9 @@
-// Kip's voice for older app builds: turns one of Kip's replies into speech (the voice is in ../_shared/tts.ts).
+// Kip's voice for older app builds: turns one of Kip's replies into speech (the voice is in ../kip/tts.ts).
 // Newer builds get the voice inside the kip call itself, which saves a round trip.
 // Plus only, 15 a day (voice_allow, counted on the server).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-import { hasVoice, speak } from '../_shared/tts.ts';
+import { hasVoice, speak } from './tts.ts';
 
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
