@@ -56,7 +56,7 @@ import { cancelSub, subsOf, subsTotal, type FreedTo, type Renewal } from '@/lib/
 import { sweptIn, withSweep } from '@/lib/sweep';
 import { CancelSheet, type CancelChoice } from '@/components/home/CancelSheet';
 import { useTextStep } from '@/lib/textSize';
-import { colors, fonts, inkA, themed, whiteA } from '@/theme';
+import { colors, fonts, glassA, inkA, themed, whiteA } from '@/theme';
 
 /** ฿ drawn smaller next to a big number. */
 // The baht sign at about half the number's size: big enough to read, small enough to let the number lead.
@@ -737,7 +737,7 @@ export default function Home() {
               </View>
             </Squish>
           ) : (
-            <Glass radius={24}>
+            <Glass radius={24} tint={glassA(0.78)}>
               <Squish style={styles.kipLine} onPress={() => setKipOpen(true)} accessibilityRole="button" accessibilityLabel={t('Kip says: {text}', { text: say })}>
                 <KipStill size={32} />
                 <Text style={styles.kipText} numberOfLines={2 + textStep}>

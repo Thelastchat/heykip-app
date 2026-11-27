@@ -15,7 +15,7 @@ import { baht } from '@/lib/money';
 import type { Notice } from '@/lib/notice';
 import type { Recap } from '@/lib/recap';
 import { monthYear, ordinal } from '@/lib/setup/plan';
-import { colors, fonts, inkA, themed } from '@/theme';
+import { colors, fonts, glassA, inkA, themed } from '@/theme';
 
 const B = (s: string) => <Text style={{ fontFamily: fonts.semibold, color: colors.ink }}>{s}</Text>;
 const O = (s: string) => <Text style={{ fontFamily: fonts.semibold, color: colors.orangeText }}>{s}</Text>;
@@ -100,7 +100,7 @@ export function KipNotice({ notice: n, index, count, busy, isPlus = false, onDo,
             : t('Not now');
   const label = `${t('Kip noticed')}: ${title}`;
   return (
-    <Glass radius={26} innerStyle={styles.card}>
+    <Glass radius={26} tint={glassA(0.78)} innerStyle={styles.card}>
       <View accessibilityLabel={label} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
@@ -222,7 +222,7 @@ function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus:
   const name = monthLong(r.month.getMonth());
   const over = r.left < 0;
   return (
-    <Glass radius={26} innerStyle={styles.card}>
+    <Glass radius={26} tint={glassA(0.78)} innerStyle={styles.card}>
       <View accessibilityLabel={t('Payday recap: your {month}', { month: name })} style={styles.cardIn}>
       <View style={styles.top}>
         <KipStill size={26} />
@@ -290,7 +290,7 @@ function RecapCard({ r, isPlus, onRead, onLater, onLocked }: { r: Recap; isPlus:
 /** After Do it: what changed, with Undo. */
 export function KipDone({ text, onUndo, busy }: { text: string; onUndo: () => void; busy: boolean }) {
   return (
-    <Glass radius={999} innerStyle={styles.done}>
+    <Glass radius={999} tint={glassA(0.78)} innerStyle={styles.done}>
       <KipStill size={32} />
       <Text style={styles.doneT} numberOfLines={2}>
         <Text style={{ fontFamily: fonts.semibold }}>{t('Done')}</Text> · {text}
