@@ -187,7 +187,7 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       'You CAN read their bank slips: the app looks only in the bank albums they chose on this phone (K PLUS, SCB…), reads each slip and lets them check it before saving. When they ask about their slips for any days, use kind=slips. Never say you cannot read slips. One slip at a time from a photo they pick also works on the + screen (Slip).',
       'No amount, no log: when they say they paid or bought something but not how much ("จ่ายค่าโทรศัพท์แล้ว", "bought lunch"), never log it and never say you will. If it matches a bill in context.bills (same thing, e.g. phone, internet, Netflix), use kind=change with pay_bill for that bill and ASK in reply whether it was that bill and its amount ("ค่าโทรศัพท์ ฿399 ตามบิลใช่ไหม? กด Do it ได้เลย"). Otherwise use kind=answer and ask how much it was (and what it was, if unclear).',
       'Changing the plan: money for a change comes only from what is LEFT (unspent) in a category (context.categories[].left), never more. Take from wants first (shopping, fun, learning, giving, their own wants); never from needs (food, transport, health_beauty, other, their own needs such as pet food) unless they named that category themselves. Never move money into or out of rent, bills or the safety net with move/set.',
-      'Ask before you guess: when a change is unclear (how much, or from where / to where — e.g. "ย้ายค่ากินมาได้ไหม", "อยากชอปปิงเยอะกว่านี้"), use kind=answer and ask ONE short question that offers concrete options from their numbers (e.g. "อยากเพิ่มช้อปปิ้งอีกเท่าไหร่? เอามาจากเที่ยวเล่นที่ยังเหลือ ฿1,890 ได้นะ"). Options you offer come only from wants (shopping, fun, learning, giving, their own wants) — never suggest taking from food, transport, health, household or their own needs. To LOWER a budget ("ลดค่ากินลงหน่อย"), ask how much and say the money it frees goes to their goal; never turn it into a different change. Propose kind=change only when you know the amount and where it comes from.',
+      'Ask before you guess: when a change is unclear (how much, or from where / to where — e.g. "ย้ายค่ากินมาได้ไหม", "อยากชอปปิงเยอะกว่านี้"), use kind=answer and ask ONE short question that offers concrete options from their numbers (e.g. "อยากเพิ่มช้อปปิ้งอีกเท่าไหร่? เอามาจากเที่ยวเล่นที่ยังเหลือ ฿1,890 ได้นะ"). Options you offer come only from wants (shopping, fun, learning, giving, their own wants), never from the budget they want more of (more shopping never comes from shopping) — never suggest taking from food, transport, health, household or their own needs. To LOWER a budget ("ลดค่ากินลงหน่อย"), ask how much and say the money it frees goes to their goal; never turn it into a different change. Propose kind=change only when you know the amount and where it comes from.',
       'Your proposals: a kind=change you made shows on their screen as before → after numbers, waiting for Do it. The history shows it as (Proposed: … — not done yet). If they ask about a number on it ("why is cat food 0?"), that number is YOUR proposal, not their real budget: say so plainly, and offer a better proposal or ask what they prefer. Never tell them their screen is wrong.',
       'If they repeat themselves or sound annoyed, your last reply did not help: say it differently and more simply, and ask what they mean if needed. Never repeat the same reply.',
       'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
@@ -280,8 +280,9 @@ function checkChange(r: ChangeReply, said: string, ctx: Ctx): ChangeReply | null
   const named = (k?: string) => !!k && ((SAYS[k]?.test(said) ?? false) || said.includes(cat(k)?.name ?? '\u0000'));
   // The biggest wants with money left, as options to offer.
   const wants = cats.filter((c) => !isNeed(c.key) && c.left > 0).sort((a, b) => b.left - a.left);
-  const offer = (except?: string) => {
-    const w = wants.filter((c) => c.key !== except).slice(0, 2);
+  // Never the budget the money is going to, nor the one it's coming from.
+  const offer = (...except: (string | undefined)[]) => {
+    const w = wants.filter((c) => !except.includes(c.key)).slice(0, 2);
     if (!w.length) return '';
     return th ? ` เอามาจาก${w.map((c) => `${c.name}ที่ยังเหลือ ${fmt(c.left)}`).join(' หรือ')}ได้นะ` : ` It could come from ${w.map((c) => `${c.name} (${fmt(c.left)} left)`).join(' or ')}.`;
   };
@@ -301,8 +302,8 @@ function checkChange(r: ChangeReply, said: string, ctx: Ctx): ChangeReply | null
         return {
           kind: 'answer',
           reply: th
-            ? `${from.name}เหลือใช้ได้อีกแค่ ${fmt(from.left)} ย้ายได้ไม่เกินนั้นนะ จะย้าย ${fmt(from.left)} ไหม?${offer(o.from)}`
-            : `${from.name} only has ${fmt(from.left)} left, so that’s the most it can give. Move ${fmt(from.left)}?${offer(o.from)}`,
+            ? `${from.name}เหลือใช้ได้อีกแค่ ${fmt(from.left)} ย้ายได้ไม่เกินนั้นนะ จะย้าย ${fmt(from.left)} ไหม?${offer(o.from, o.to)}`
+            : `${from.name} only has ${fmt(from.left)} left, so that’s the most it can give. Move ${fmt(from.left)}?${offer(o.from, o.to)}`,
         };
       }
     }

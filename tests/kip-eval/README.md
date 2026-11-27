@@ -7,3 +7,5 @@ To run: deploy `run-function.ts` as a temporary edge function together with a co
 What to look for: no log without an amount they said; proposals only from what's left and never from needs unless named; vague requests become one question with options; the reply is in the message's language; "can I buy" never says yes/no (the app decides); Kip owns its own proposals in follow-ups.
 
 27–28 Nov 2026 results: run 1 found 9 problems (English replies in Thai, credit-card question refused, "can I buy" saying yes when it didn't fit, needs offered as options, "cut food" misread, "added" before Do it, rent without a name, yesterday logged as today, "on plan" while ahead of plan). All fixed by run 3.
+
+28 Nov (brain v19–v20, live): the cat-food follow-ups ("ปรับได้แค่นี้หรอ แล้วอะไรคืออาหารแมวเหลือศูนย์") now own the proposal instead of saying the screen is wrong, and `find` comes back for "when did I pay my phone" and "Starbucks last month" with the right words and days. Fixed in v20: Kip offered the budget they wanted more of as the place to take it from ("more shopping … from shopping").
