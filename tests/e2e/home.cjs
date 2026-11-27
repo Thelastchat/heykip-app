@@ -803,7 +803,7 @@ module.exports = async function homeTests(browser) {
       () => before.slice(-500),
     );
     const d = new Date(Date.now() + 3 * 86_400_000).getDate();
-    await tap(page, visible(page.getByRole('radio', { name: d === 31 ? 'Last day of the month' : `Day ${d}` })), { wait: 300 });
+    await tap(page, visible(page.getByRole('radio', { name: d === 31 ? 'Last day of the month' : `Day ${d}`, exact: true })), { wait: 300 });
     const after = await screenText(page);
     await check(page, 'Picking a day shows Remind me (Day before by default) and when it goes off', /Remind me/.test(after) && /9:00 on \d+ [A-Z][a-z]{2}, then every month/.test(after), () =>
       after.slice(-500),
