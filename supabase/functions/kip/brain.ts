@@ -42,9 +42,9 @@ const tool = {
     properties: {
       kind: {
         type: 'string',
-        enum: ['log', 'buy', 'answer', 'change', 'fix', 'slips'],
+        enum: ['log', 'buy', 'answer', 'change', 'fix', 'slips', 'find'],
         description:
-          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal); fix = they want to delete or correct something already logged (context.recent); slips = they ask you to read, find, check or log their bank slips / สลิป for some days; answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
+          'log = they are telling you money they spent and/or money they got (pay, side gigs, gifts); buy = they ask if they can afford something; change = they want to change their plan (move money between budgets, set a budget, add/remove/pay a bill, put fun money toward the goal this month, take money out of the goal); fix = they want to delete or correct something already logged (context.recent); slips = they ask you to read, find, check or log their bank slips / สลิป for some days; find = they ask about money in the past that is not in this month\'s numbers or context.recent — when, how much or how often they paid or bought something ("จ่ายค่าโทรศัพท์ไปวันไหน", "เดือนที่แล้วกิน Starbucks กี่ครั้ง", "last time I paid internet"); answer = any other question. A follow-up like "actually make it 279" refers to the conversation so far: repeat the earlier change or log with the new number.',
       },
       items: {
         type: 'array',
@@ -109,6 +109,13 @@ const tool = {
           required: ['ref', 'op'],
         },
       },
+      find: {
+        type: 'object',
+        description:
+          'kind=find: what to look for in everything they logged. words = every way it could be written in a note or on a bank slip, Thai and English, including company and brand names (phone → โทรศัพท์, มือถือ, ค่าโทร, AIS, TRUE, TrueMove, dtac; internet → เน็ต, อินเทอร์เน็ต, 3BB, AIS Fibre, True Online; electricity → ค่าไฟ, การไฟฟ้า, MEA, PEA; coffee → กาแฟ, Starbucks, Café Amazon). from/to = YYYY-MM-DD in Thai time; nothing said = the last 90 days up to context.today.',
+        properties: { words: { type: 'array', items: { type: 'string' } }, from: { type: 'string' }, to: { type: 'string' } },
+        required: ['words'],
+      },
       slips: {
         type: 'object',
         description:
@@ -139,10 +146,16 @@ export type Thought = { input: Record<string, unknown>; ms: number; usage?: Reco
  * Kip thinking: what they said (with the conversation so far and their month) → one structured reply, checked.
  * Used by the kip function, and by a test function that runs made-up people through it (never real data).
  */
-export async function think({ text, context, history, voice, key }: { text: unknown; context: unknown; history: unknown; voice: boolean; key: string }): Promise<Thought> {
+export async function think({ text, context, history, voice, key, can = [] }: { text: unknown; context: unknown; history: unknown; voice: boolean; key: string; can?: string[] }): Promise<Thought> {
     const own = ownCats((context as { own?: unknown } | undefined)?.own, (context as { categories?: unknown } | undefined)?.categories);
     // Their own categories join the lists Kip may pick from.
     const kipTool = JSON.parse(JSON.stringify(tool));
+    // Looking things up needs an app that can show the results (it says so in `can`); older builds never get kind=find.
+    if (!can.includes('find')) {
+      const K = kipTool.input_schema.properties.kind;
+      K.enum = K.enum.filter((k: string) => k !== 'find');
+      delete kipTool.input_schema.properties.find;
+    }
     if (own.length) {
       const P = kipTool.input_schema.properties;
       const keys = own.map((o) => o.key);
@@ -181,6 +194,7 @@ export async function think({ text, context, history, voice, key }: { text: unkn
       'context.paceThisMonth "X baht faster than plan" means they are spending ahead of plan: never say they are on plan or on track then; "under plan" means doing well. Say months like ธ.ค. 2027 / Dec 2027, never 2027-12.',
       'context.saving.goal and context.saving.safetyNet are what goes in EACH MONTH (not totals or targets); context.goalSaved is what the goal has so far.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
+      ...(can.includes('find') ? ['Looking things up: context.recent is only the latest few items. For anything further back, use kind=find; the app searches everything they logged and answers with the real dates and amounts, so your reply is one short line ("เดี๋ยวหาให้นะ" / "Let me look"). Never guess a date or an amount you were not given.'] : []),
       'Only mention budget categories that are in context.categories (their real ones), never others.',
       CAT_NAMES,
       'Thai hints: ข้าว/อาหาร/ชา/กาแฟ → food, วิน/แกร็บ/BTS/รถ → transport, เสื้อ/ช้อปปี้/ลาซาด้า → shopping, หนัง/ปาร์ตี้/เกม → fun. ได้เงิน/เงินเข้า/เงินเดือนออก/รับงาน → money in.',

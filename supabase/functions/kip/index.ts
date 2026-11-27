@@ -32,8 +32,9 @@ Deno.serve(async (req) => {
     if (!key) return json({ error: 'no key' }, 503);
 
     // speak: newer builds want the answer spoken in this same call (older builds still call kip-voice after).
-    const { text, context, history, voice, speak: wantsVoice } = await req.json();
-    const thought = await think({ text, context, history, voice: !!voice, key });
+    // can: what this app build knows how to show (older builds send nothing).
+    const { text, context, history, voice, speak: wantsVoice, can } = await req.json();
+    const thought = await think({ text, context, history, voice: !!voice, key, can: Array.isArray(can) ? can.map(String) : [] });
     if ('error' in thought) return json({ error: thought.error, detail: thought.detail }, thought.error === 'empty' ? 400 : 502);
     const use = { input: thought.input };
 

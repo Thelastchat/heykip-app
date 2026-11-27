@@ -43,7 +43,7 @@ export function warmVoice() {
 }
 
 /** Thai or English, from the words (any Thai letter → Thai). */
-export const langOf = (text: string): 'th-TH' | 'en-US' => (/[฀-๿]/.test(text) ? 'th-TH' : 'en-US');
+export const langOf = (text: string): 'th-TH' | 'en-US' => (/[\u0E00-\u0E7F]/.test(text) ? 'th-TH' : 'en-US');
 
 /** As it should sound: "฿1,250" → "1,250 บาท" / "1,250 baht", no emoji or quote marks read aloud. */
 export function forSpeaking(text: string, lang: 'th-TH' | 'en-US') {
