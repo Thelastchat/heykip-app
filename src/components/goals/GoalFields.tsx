@@ -137,7 +137,7 @@ const styles = themed(() =>
     choiceSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
     drow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, paddingVertical: 14 },
     dk: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    dwas: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    dwas: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
     dnow: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, fontVariant: ['tabular-nums'] },
   }),
 );

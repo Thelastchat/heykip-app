@@ -1049,7 +1049,7 @@ const styles = themed(() =>
     itemAmt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
     price: { fontFamily: fonts.medium, fontSize: 24, letterSpacing: -0.6, color: colors.ink, fontVariant: ['tabular-nums'] },
     chRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
     findDay: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, minWidth: 52, fontVariant: ['tabular-nums'] },
     todayLine: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, marginTop: 2, fontVariant: ['tabular-nums'] },
     doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },

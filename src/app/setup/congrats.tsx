@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Kip } from '@/components/Kip';
@@ -22,6 +23,7 @@ const CONFETTI = [colors.lime, colors.orange, colors.sky, colors.lavender, color
 export default function SetupCongrats() {
   const { draft } = useSetup();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
   const plan = makePlan(draft);
   const monthly = draft.goalKind === 'monthly';
   // What Kip will actually do with their answers: the payday habit, then their money leaks.
@@ -60,7 +62,8 @@ export default function SetupCongrats() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 40, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
       <GlowBackground mood="fast" />
-      <Confetti />
+      {/* Falling confetti is skipped when the phone asks for less motion (Settings → Accessibility → Reduce Motion). */}
+      {!reduceMotion && <Confetti />}
       {/* Back to the check-in, in case a number was wrong (the thinking screen replaced itself, so it's skipped). */}
       <View style={{ position: 'absolute', left: 20, top: insets.top + 8 }}>
         <BackButton size={46} />

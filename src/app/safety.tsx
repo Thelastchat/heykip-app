@@ -401,7 +401,7 @@ const styles = themed(() =>
     rowTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
     small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
     amt: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink, fontVariant: ['tabular-nums'] },
-    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.faint, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'], marginRight: 6 },
+    from: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'], marginRight: 6 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, justifyContent: 'center' },
     chip: { height: 38, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center' },
     chipOn: { borderWidth: 1.5, borderColor: colors.ink },

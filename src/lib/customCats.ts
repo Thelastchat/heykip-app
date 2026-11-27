@@ -14,6 +14,29 @@ export type Custom = { id: string; key: CustomCat; name: string; icon: Icon3D; n
 
 /** The icons someone can pick for their own category (the whole yellow set). */
 export const PICKABLE: Icon3D[] = ['fun', 'music', 'game', 'coffee', 'pet', 'gift', 'book', 'gym', 'baby', 'heart', 'shop', 'bowl', 'car', 'house', 'plane', 'phone', 'piggy', 'bill', 'shield'];
+/** What each pickable icon is, for screen readers (VoiceOver says the name, not just "radio button"). */
+export const ICON_NAME: Record<string, string> = {
+  fun: 'Fun icon',
+  music: 'Music icon',
+  game: 'Games icon',
+  coffee: 'Coffee icon',
+  pet: 'Pet icon',
+  gift: 'Gift icon',
+  book: 'Book icon',
+  gym: 'Gym icon',
+  baby: 'Baby icon',
+  heart: 'Heart icon',
+  shop: 'Shopping bag icon',
+  bowl: 'Food bowl icon',
+  car: 'Car icon',
+  house: 'House icon',
+  plane: 'Plane icon',
+  phone: 'Phone icon',
+  piggy: 'Piggy bank icon',
+  bill: 'Bill icon',
+  shield: 'Shield icon',
+};
+
 export const MAX_CUSTOM = 5;
 
 let list: Custom[] = [];

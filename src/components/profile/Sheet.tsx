@@ -123,7 +123,7 @@ export const sheet = themed(() =>
     pill: { height: 36, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
     pillText: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink },
     deltaNow: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink, fontVariant: ['tabular-nums'] },
-    deltaWas: { fontFamily: fonts.regular, color: colors.faint, textDecorationLine: 'line-through' },
+    deltaWas: { fontFamily: fonts.regular, color: colors.muted, textDecorationLine: 'line-through' },
     save: { height: 56, borderRadius: 999, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
     saveText: { fontFamily: fonts.medium, fontSize: 16, color: colors.paper },
     field: { fontFamily: fonts.regular, fontSize: 17, color: colors.ink, height: 52, paddingHorizontal: 16 },

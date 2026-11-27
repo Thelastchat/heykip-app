@@ -14,7 +14,7 @@ import { Squish } from '@/components/glow/motion';
 import { Delta, SaveButton, Sheet } from '@/components/profile/Sheet';
 import { useAuth } from '@/lib/auth';
 import { CATEGORY, type CatKey } from '@/lib/budget';
-import { addToMonth, createCustom, customCats, defaultFrom, guessIcon, guessNeed, MAX_CUSTOM, PICKABLE, type Custom } from '@/lib/customCats';
+import { addToMonth, createCustom, customCats, defaultFrom, guessIcon, guessNeed, ICON_NAME, MAX_CUSTOM, PICKABLE, type Custom } from '@/lib/customCats';
 import { t } from '@/lib/i18n';
 import { CAT_ICON3D, ICON3D, type Icon3D } from '@/lib/icons3d';
 import { baht } from '@/lib/money';
@@ -84,7 +84,7 @@ export function CreateCategory({ onClose, onCreated }: { onClose: () => void; on
           <Text style={styles.cap}>{t('Icon')}</Text>
           <View style={styles.icons}>
             {PICKABLE.map((i) => (
-              <Pressable key={i} onPress={() => setIcon(i)} style={[styles.icon, i === shownIcon && styles.iconOn]} accessibilityRole="radio" accessibilityState={{ selected: i === shownIcon }}>
+              <Pressable key={i} onPress={() => setIcon(i)} style={[styles.icon, i === shownIcon && styles.iconOn]} accessibilityRole="radio" accessibilityLabel={t(ICON_NAME[i] ?? i)} accessibilityState={{ selected: i === shownIcon }}>
                 <Image source={ICON3D[i]} style={{ width: 34, height: 34 }} contentFit="contain" />
               </Pressable>
             ))}

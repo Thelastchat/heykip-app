@@ -580,7 +580,7 @@ const styles = themed(() =>
     row: { padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
     sug: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: inkA(0.08) },
     sugText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 19, color: colors.ink },
-    billTick: { width: 26, height: 26, borderRadius: 9, borderWidth: 1.5, borderColor: colors.faint, alignItems: 'center', justifyContent: 'center' },
+    billTick: { width: 26, height: 26, borderRadius: 9, borderWidth: 1.5, borderColor: inkA(0.5), alignItems: 'center', justifyContent: 'center' },
     billTickOn: { backgroundColor: colors.lime, borderColor: colors.onAccent },
     mini: { width: 44, height: 60, borderRadius: 8, borderWidth: 1, borderColor: inkA(0.08), backgroundColor: colors.paper },
     name: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
