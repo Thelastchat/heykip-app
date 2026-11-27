@@ -123,6 +123,12 @@ const tool = {
         properties: { from: { type: 'string' }, to: { type: 'string' } },
         required: ['from', 'to'],
       },
+      next: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Always: 2 or 3 short things they might tap next, in the language of this message, written the way THEY would type them ("เหลือใช้วันนี้เท่าไหร่", "What did I spend most on?"), at most about 30 Thai characters or 40 English ones. Each must be something you can answer from the context or do in HeyKip right after this reply (log, check if something fits, change the plan, look back, read slips). Never repeat what they just asked, never something you cannot do (paying, investing), and never an amount or item they did not mention (no made-up examples like "coffee 60") — use their own bills, goal and categories from the context instead.',
+      },
       reply: {
         type: 'string',
         description:
@@ -156,6 +162,8 @@ export async function think({ text, context, history, voice, key, can = [] }: { 
       K.enum = K.enum.filter((k: string) => k !== 'find');
       delete kipTool.input_schema.properties.find;
     }
+    // Tappable follow-ups ("ถามต่อ") only for builds that show them.
+    if (!can.includes('next')) delete kipTool.input_schema.properties.next;
     // Saving less for the goal (and the goal's date moving) needs an app that knows how to show and save it.
     if (!can.includes('less_goal')) {
       const O = kipTool.input_schema.properties.ops.items.properties.op;

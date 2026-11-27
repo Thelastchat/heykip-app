@@ -6,7 +6,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { ArrowUp, Microphone, X } from 'phosphor-react-native';
+import { ArrowUp, CaretRight, Microphone, X } from 'phosphor-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { useAiConsent } from '@/components/AiConsent';
 import { PlusSheet } from '@/components/PlusSheet';
 import { VoiceStage } from '@/components/talk/VoiceStage';
 import { SlipRangeCard } from '@/components/talk/SlipRangeCard';
+import { TypingDots } from '@/components/talk/TypingDots';
 import { plusPitch } from '@/components/plusPitch';
 import { Glass } from '@/components/glow/Glass';
 import { GlowBackground } from '@/components/glow/GlowBackground';
@@ -98,7 +99,22 @@ type Turn = {
 type Item = LogItem | InItem;
 type GoalInfo = { id: string; name: string; arrives: string | null; icon: keyof typeof ICON3D; saved: number; target: number; perMonth: number } | null;
 /** Suggestion chips — a function so they follow the app's language. */
-const suggestions = () => [t('Chicken rice 60, Thai tea 45 and Grab 80'), t('Got paid 18,000 today'), t('Can I buy a shirt for 890?'), t('How am I doing this month?'), 'ข้าวกะเพรา 70 กาแฟ 55'];
+/** The first cards: questions about THEIR money, never an example with made-up amounts (ก้อย, 28 Nov). */
+const suggestions = (bill?: string) => [
+  t('How am I doing this month?'),
+  t('How much is left today?'),
+  bill ? t('When did I last pay {bill}?', { bill }) : t('What did I spend most on this month?'),
+  t('I want more for shopping'),
+  t('What bills are due soon?'),
+];
+/** When Kip didn't suggest anything to ask next, these always work. */
+const fallbackNext = () => [t('How much is left today?'), t('How am I doing this month?'), t('What did I spend most on this month?')];
+/** What to show under Kip's latest answer: his own suggestions (short, at most 3), never what they just asked. */
+function nextFor(turn: Turn): string[] {
+  const said = turn.me.trim().toLowerCase();
+  const own = (Array.isArray(turn.reply?.next) ? turn.reply!.next : []).map((x) => String(x ?? '').trim()).filter((x) => x && x.length <= 60);
+  return [...new Set(own.length ? own : fallbackNext())].filter((x) => x.toLowerCase() !== said).slice(0, 3);
+}
 const SPEND_CATS: DbCat[] = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'home_bills', 'travel', 'family_pets', 'giving', 'learning', 'installments', 'other'];
 const IN_CATS: InCat[] = ['pay', 'side_gigs', 'gifts', 'other'];
 
@@ -586,14 +602,25 @@ export default function Talk() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         {chatTurns.length === 0 && (
-          <RiseIn style={{ alignItems: 'center', marginTop: 12 }}>
-            <Text style={styles.h1}>{t('What did you spend today?')}</Text>
+          <RiseIn style={{ alignItems: 'center', marginTop: 4 }}>
             <Pressable onPress={tapKip} style={styles.stage} accessibilityRole="button" accessibilityLabel={t('Tap Kip to talk')}>
-              <Kip mood="listen" size={168} />
+              <Kip mood="listen" size={168} plain shadow />
             </Pressable>
-            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 20 }]}>{t('Type it like you’d text a friend: what you spent, money that came in, or “Can I buy…?”')}</Text>
-            <Text style={styles.tapKip}>{t('Or tap Kip and just say it')}</Text>
-            {n && <Text style={styles.left}>{t('{amount} left today', { amount: baht(n.leftToday) })}</Text>}
+            <Glass radius={999} innerStyle={styles.hello}>
+              <Text style={styles.helloText}>{first ? t('Hi {name}, I’m Kip', { name: first }) : t('Hi, I’m Kip')}</Text>
+            </Glass>
+            <Text style={[styles.h1, { marginTop: 12 }]}>{t('What can I help with?')}</Text>
+            <Text style={[styles.sub, { textAlign: 'center', paddingHorizontal: 24, marginTop: 6 }]}>{t('Tell me what you spent, ask about your money, or tap me and just say it.')}</Text>
+            <View style={styles.cards}>
+              {suggestions(month?.bills.items?.[0]?.name).map((s, i) => (
+                <Squish key={s} onPress={() => send(s)} style={i === 4 ? styles.cardWide : styles.cardHalf} accessibilityRole="button">
+                  <Glass radius={22} innerStyle={styles.card}>
+                    <Text style={styles.cardText}>{s}</Text>
+                    <CaretRight size={14} color={colors.muted} weight="bold" />
+                  </Glass>
+                </Squish>
+              ))}
+            </View>
           </RiseIn>
         )}
 
@@ -602,30 +629,31 @@ export default function Talk() {
             <View style={styles.me}>
               <Text style={styles.meText}>{turn.me}</Text>
             </View>
-            {turn.state === 'thinking' && <KipLine mood="think" text={t('Let me look…')} />}
+            {turn.state === 'thinking' && <KipLine mood="think" typing />}
             {turn.state === 'error' && !turn.limit && <KipLine mood="careful" text={turn.error ?? ''} />}
             {turn.state === 'error' && turn.limit && <OutOfKip />}
             {turn.state === 'done' && turn.reply && answerFor(turn)}
+            {/* Something to ask next, always — under Kip's latest answer only. */}
+            {turn.state === 'done' && turn.reply && turn.id === chatTurns.at(-1)?.id && !thinking && (
+              <View style={styles.nextRow}>
+                <Text style={styles.nextLabel} numberOfLines={1}>
+                  {t('Ask next')}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8, paddingRight: 20, paddingVertical: 8 }}>
+                  {nextFor(turn).map((q) => (
+                    <Squish key={q} onPress={() => send(q)} accessibilityRole="button">
+                      <Glass radius={999} innerStyle={styles.sug}>
+                        <Text style={styles.sugText}>{q}</Text>
+                        <CaretRight size={12} color={colors.muted} weight="bold" />
+                      </Glass>
+                    </Squish>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
-
-      {chatTurns.length === 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={{ flexGrow: 0 }}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
-          {suggestions().map((s) => (
-            <Squish key={s} onPress={() => send(s)} accessibilityRole="button">
-              <Glass radius={999} innerStyle={styles.sug}>
-                <Text style={styles.sugText}>{s}</Text>
-              </Glass>
-            </Squish>
-          ))}
-        </ScrollView>
-      )}
 
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
         <Pressable onPress={() => listen()} accessibilityRole="button" accessibilityLabel={t('Talk to Kip out loud')}>
@@ -702,12 +730,13 @@ function OutOfKip() {
   );
 }
 
-function KipLine({ text, mood = 'happy' }: { text: string; mood?: 'happy' | 'think' | 'careful' }) {
+/** Kip's words in the chat. His eyes stay his own (no smiles or droops), with a soft shadow under him. */
+function KipLine({ text = '', mood = 'happy', typing }: { text?: string; mood?: 'happy' | 'think' | 'careful'; typing?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-      <Kip mood={mood} size={40} />
-      <Glass radius={20} style={{ flex: 1 }} innerStyle={styles.kipBub}>
-        <Text style={styles.kipText}>{text}</Text>
+      <Kip mood={mood} size={40} plain shadow />
+      <Glass radius={20} style={typing ? undefined : { flex: 1 }} innerStyle={styles.kipBub}>
+        {typing ? <TypingDots /> : <Text style={styles.kipText}>{text}</Text>}
       </Glass>
     </View>
   );
@@ -1059,7 +1088,16 @@ const styles = themed(() =>
     darkText: { fontFamily: fonts.medium, fontSize: 15, color: colors.paper },
     light: { height: 48, alignItems: 'center', justifyContent: 'center' },
     lightText: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
-    sug: { height: 36, paddingHorizontal: 12, justifyContent: 'center' },
+    sug: { height: 36, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    nextRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: -20, marginVertical: -6, paddingLeft: 48 },
+    nextLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, flexShrink: 0 },
+    hello: { height: 30, paddingHorizontal: 14, justifyContent: 'center' },
+    helloText: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+    cards: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20, alignSelf: 'stretch' },
+    cardHalf: { width: '48.5%' },
+    cardWide: { width: '100%' },
+    card: { minHeight: 64, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cardText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, lineHeight: 20, color: colors.ink },
     sugText: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink },
     bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 8 },
     mic: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },

@@ -253,6 +253,17 @@ const th: Record<string, string> = {
   '{n} found': 'เจอ {n} รายการ',
   'Ticked paid': 'ติ๊กว่าจ่ายแล้ว',
   '+{n} more': 'อีก {n} รายการ',
+  // ---- Chat: start, typing, ask next (28 Nov) ----
+  'When did I last pay {bill}?': 'จ่าย{bill}ล่าสุดวันไหน?',
+  'What bills are due soon?': 'บิลอะไรใกล้ถึงกำหนดบ้าง?',
+  'I want more for shopping': 'อยากชอปปิงเยอะกว่านี้',
+  'How much is left today?': 'วันนี้เหลือใช้เท่าไหร่?',
+  'What did I spend most on this month?': 'เดือนนี้ใช้อะไรเยอะสุด?',
+  'Hi {name}, I’m Kip': 'สวัสดี {name} Kip เอง',
+  'Hi, I’m Kip': 'สวัสดี Kip เอง',
+  'What can I help with?': 'วันนี้ให้ Kip ช่วยอะไรดี',
+  'Tell me what you spent, ask about your money, or tap me and just say it.': 'บอกว่าใช้อะไรไป ถามเรื่องเงิน หรือแตะ Kip แล้วพูดได้เลย',
+  'Ask next': 'ถามต่อ',
 };
 
 export default th;

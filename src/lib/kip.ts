@@ -20,6 +20,8 @@ export const isIn = (it: LogItem | InItem): it is InItem => it.money === 'in';
 export type KipReply = {
   kind: 'log' | 'buy' | 'answer' | 'change' | 'fix' | 'slips' | 'find';
   reply: string;
+  /** 2–3 things they might ask next, shown as chips under Kip's answer ("ถามต่อ"). */
+  next?: string[];
   /** kind=find: what to look for in everything they logged (the app searches and answers from the real rows). */
   find?: { words: string[]; from?: string; to?: string };
   /** kind=slips: the days to read slips for (YYYY-MM-DD, Thai time, both included). */
@@ -162,7 +164,7 @@ export function kipContext(
 }
 
 /** What this build can show, so the server only uses kinds it knows (older builds send nothing). */
-const KIP_CAN = ['find', 'less_goal'];
+const KIP_CAN = ['find', 'less_goal', 'next'];
 
 export async function askKip(
   text: string,

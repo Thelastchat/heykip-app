@@ -97,6 +97,14 @@ export function eyesFor(t: number, mood: KipMood): EyeShape {
   }
 }
 
+/** Kip's own eyes, never changed by mood: they wander slowly around, like he's looking at you and then the screen. */
+export function plainEyes(t: number, seed: number): EyeShape {
+  'worklet';
+  const dx = 0.016 * Math.sin(t * 0.55 + seed) + 0.006 * Math.sin(t * 1.7 + seed * 2);
+  const dy = 0.01 * Math.sin(t * 0.41 + seed * 1.3);
+  return { w: EYE.w, h: EYE.h, top: EYE.top, dx, dy };
+}
+
 /** 1 = eyes open, dips toward 0.08 during a 140 ms blink that started at `blinkAt`. */
 export function blinkAmount(t: number, blinkAt: number): number {
   'worklet';
