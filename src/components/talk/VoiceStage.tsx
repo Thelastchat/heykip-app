@@ -1,5 +1,6 @@
 // Talking with Kip out loud (Nov 27 redesign): one big Kip in the middle and one clear line saying whose turn it is.
-// Your turn = yellow rings that move with your voice + your words appearing. Kip thinking = three dots. Kip's turn =
+// Light comes out from behind Kip in the colour of whose turn it is (KipLight). Your turn = lime light that grows with
+// your voice + your words appearing. Kip thinking = three dots. Kip's turn =
 // black sound bars + his words as a caption. One big button does the obvious thing for that moment (send now · cut
 // in), the keyboard goes back to typing, and ไทย/EN switches the language Kip listens in.
 import { ArrowUp, HandPalm, Keyboard } from 'phosphor-react-native';
@@ -9,7 +10,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepe
 
 import { Kip, type KipMood } from '@/components/Kip';
 import { Glass } from '@/components/glow/Glass';
-import { LiveWords, Waves } from '@/components/talk/VoiceBits';
+import { KipLight, LiveWords } from '@/components/talk/VoiceBits';
 import { t } from '@/lib/i18n';
 import { colors, fonts, inkA, themed } from '@/theme';
 
@@ -49,7 +50,7 @@ export function VoiceStage({
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <Pressable onPress={onPrimary} style={[styles.stage, small && styles.stageSmall]} accessibilityRole="button" accessibilityLabel={phase === 'speaking' ? t('Cut in') : t('Send now')}>
-          <Waves size={small ? 150 : 210} level={level} on={phase === 'listening'} />
+          <KipLight size={small ? 240 : 320} phase={phase} level={level} />
           <Kip mood={mood} size={small ? 124 : 176} />
         </Pressable>
 
@@ -159,7 +160,7 @@ function Bar({ delay }: { delay: number }) {
 
 const styles = themed(() =>
   StyleSheet.create({
-    body: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 28, paddingBottom: 16 },
+    body: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 48, paddingBottom: 16 },
     stage: { width: 260, height: 260, alignItems: 'center', justifyContent: 'center' },
     stageSmall: { width: 190, height: 190 },
     turnRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, height: 32 },

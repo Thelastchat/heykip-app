@@ -12,6 +12,10 @@ const BUDGET_CATS = ['food', 'transport', 'shopping', 'fun', 'health_beauty', 'l
 const BILL_TYPES = ['rent', 'utilities', 'phone', 'internet', 'streaming', 'fitness', 'insurance', 'loan', 'family', 'other'];
 const MODEL = 'claude-haiku-5-5';
 
+/** Did they say an amount? Digits (Thai or Arabic) or a number word (สิบ, ร้อย… / ten, hundred…). */
+const saidAmount = (s: string) =>
+  /[0-9๐-๙฿]|บาท|baht|สิบ|ร้อย|พัน|หมื่น|แสน|ล้าน|ครึ่ง|\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|grand)\b/i.test(s);
+
 const CAT_NAMES =
   'Category names: each key is a row the person sees on screen (English / Thai), and they may say any part of its name, in either language, with or without "&", plural or misspelt: food = "Food & drinks" / "อาหารและเครื่องดื่ม" (food, drinks, eating, meals, coffee, ข้าว, กิน); transport = "Transport" / "เดินทาง" (getting around, BTS, MRT, Grab, bike taxi, รถ, วิน); shopping = "Shopping" / "ช้อปปิ้ง" (clothes, gadgets, online, ช้อป); fun = "Fun" / "เที่ยวเล่น" (going out, movies, parties, เที่ยว); health_beauty = "Health & beauty" / "สุขภาพและความงาม" (health, beauty, pharmacy, haircut, skincare, สุขภาพ, ความงาม); learning = "Learning" / "เรียนรู้" (courses, books, เรียน); giving = "Giving" / "ให้คนอื่น" (gifts, donations, ทำบุญ); other = "Household & other" / "ของใช้ในบ้านและอื่นๆ" (household, home, laundry, small things, other, ของใช้, ในบ้าน, อื่นๆ); spend_freely = "Spend freely" / "ใช้ได้อิสระ". Match what they said to the key yourself. Never say a category does not exist or is not in the plan when what they said fits one of these names. Only when it truly fits none (or two equally), ask which one, naming the categories the way the app shows them (never keys like health_beauty or spend_freely).';
 
@@ -52,12 +56,12 @@ const tool = {
       },
       items: {
         type: 'array',
-        description: 'kind=log: each amount of money that went out or came in',
+        description: 'kind=log: each amount of money that went out or came in. Only amounts the person actually said (in this message or earlier in this conversation) — never guess, never take one from their plan or bills.',
         items: {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'short name in the language they used, e.g. "Chicken rice", "ข้าวมันไก่", "เงินเดือน"' },
-            amount: { type: 'number', description: 'always positive' },
+            amount: { type: 'number', description: 'always positive; exactly the amount they said' },
             money: { type: 'string', enum: ['out', 'in'], description: 'out = they spent it; in = they received it (salary, freelance, gift, refund, sold something)' },
             category: {
               type: 'string',
@@ -194,6 +198,7 @@ Deno.serve(async (req) => {
       'You only understand what they mean; the app does all money maths. In answers, only use numbers given in the context.',
       'You can change their plan in HeyKip (kind=change) and fix what they logged (kind=fix). You cannot send, transfer or pay real money, or touch their bank: say so kindly if asked.',
       'You CAN read their bank slips: the app looks only in the bank albums they chose on this phone (K PLUS, SCB…), reads each slip and lets them check it before saving. When they ask about their slips for any days, use kind=slips. Never say you cannot read slips. One slip at a time from a photo they pick also works on the + screen (Slip).',
+      'No amount, no log: when they say they paid or bought something but not how much ("จ่ายค่าโทรศัพท์แล้ว", "bought lunch"), never log it and never say you will. If it matches a bill in context.bills (same thing, e.g. phone, internet, Netflix), use kind=change with pay_bill for that bill and ASK in reply whether it was that bill and its amount ("ค่าโทรศัพท์ ฿399 ตามบิลใช่ไหม? กด Do it ได้เลย"). Otherwise use kind=answer and ask how much it was (and what it was, if unclear).',
       'Only kind=change and kind=fix change anything, and only after they tap Do it. In kind=answer never say you changed, set, saved or updated something. If they ask for something you have no change for (e.g. a fixed daily limit), say what you can do instead.',
       'What you know besides the month: context.dueDays (each bill with a due day, dueIn = days from today, below 0 = late and unpaid), context.lastMonths (the last pay months: spent, by category, most often logged — answer "what did I spend most on" from these, never guess), context.noticed (subscriptions = repeat payments the app found that are not bills yet: offer add_bill with their name, amount and day; priceChanges and stopped = bills to mention when relevant). A bill is only "due" if it is in dueDays; if it has no day, say you do not know and offer set_due.',
       CAT_NAMES,
@@ -226,6 +231,18 @@ Deno.serve(async (req) => {
     console.log('kip ms', Date.now() - t0, 'cache read', out.usage?.cache_read_input_tokens ?? 0, 'written', out.usage?.cache_creation_input_tokens ?? 0);
     const use = (out.content ?? []).find((c: { type: string }) => c.type === 'tool_use');
     if (!use) return json({ error: 'no reply' }, 502);
+
+    // Safety net for "no amount, no log": a log needs a number they said (here or in their last message).
+    const lastMe = String((Array.isArray(history) ? history : []).slice(-1)[0]?.me ?? '');
+    const input = use.input as { kind?: string; reply?: string; items?: { name?: string }[] };
+    if (input.kind === 'log' && !saidAmount(said) && !saidAmount(lastMe)) {
+      const name = String(input.items?.[0]?.name ?? '').trim();
+      const th = /[\u0E00-\u0E7F]/.test(said);
+      use.input = {
+        kind: 'answer',
+        reply: th ? (name ? `${name.startsWith('ค่า') ? name : `ค่า${name}`}เท่าไหร่? บอกจำนวนมาได้เลย เดี๋ยว Kip ลงให้` : 'เท่าไหร่? บอกจำนวนมาได้เลย เดี๋ยว Kip ลงให้') : name ? `How much was ${name}? Tell me and I’ll log it.` : 'How much was it? Tell me and I’ll log it.',
+      };
+    }
 
     // Speak while the count below is read. voice: audio (base64 MP3) + spoken replies left · limit · off.
     const reply = String((use.input as { reply?: string }).reply ?? '');

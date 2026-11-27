@@ -1,10 +1,50 @@
 // Talking with Kip out loud, right inside Talk (like a call, no extra screen): the yellow rings that breathe out from
 // behind Kip while he listens, the blinking dot, and your words appearing as you say them.
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { colors, fonts, themed } from '@/theme';
+
+/**
+ * Light coming out from behind Kip while you talk out loud (27 Nov: "big in the middle, with light coming out").
+ * One soft glow, a different colour for each turn so it's clear at a glance: lime = your turn (it brightens and grows
+ * with your voice), lavender = Kip's thinking (a slow breath), orange = Kip's talking (a pulse like a voice).
+ */
+export function KipLight({ size, phase, level }: { size: number; phase: 'listening' | 'thinking' | 'speaking'; level: number }) {
+  const id = `kl${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const color = phase === 'listening' ? colors.limeDeep : phase === 'thinking' ? colors.lavender : colors.orange;
+  const pulse = useSharedValue(0);
+  const loud = useSharedValue(0);
+  useEffect(() => {
+    const ms = phase === 'speaking' ? 420 : phase === 'thinking' ? 1400 : 1800;
+    pulse.value = 0;
+    pulse.value = withRepeat(withSequence(withTiming(1, { duration: ms, easing: Easing.inOut(Easing.quad) }), withTiming(0, { duration: ms, easing: Easing.inOut(Easing.quad) })), -1);
+  }, [phase, pulse]);
+  useEffect(() => {
+    loud.value = withSpring(phase === 'listening' ? level : 0, { damping: 14, stiffness: 120 });
+  }, [level, phase, loud]);
+  const a = useAnimatedStyle(() => ({
+    opacity: 0.75 + pulse.value * 0.2 + loud.value * 0.05,
+    transform: [{ scale: 0.92 + pulse.value * (phase === 'speaking' ? 0.08 : 0.05) + loud.value * 0.22 }],
+  }));
+  return (
+    <Animated.View style={[{ position: 'absolute', width: size, height: size }, a]} pointerEvents="none">
+      <Svg width={size} height={size}>
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={color} stopOpacity={phase === 'speaking' ? 0.55 : 0.9} />
+            <Stop offset="0.4" stopColor={color} stopOpacity={phase === 'speaking' ? 0.3 : 0.5} />
+            <Stop offset="0.72" stopColor={color} stopOpacity={0.12} />
+            <Stop offset="1" stopColor={color} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${id})`} />
+      </Svg>
+    </Animated.View>
+  );
+}
 
 /** Two soft yellow rings breathing out from behind Kip — bigger when you're louder. `size` is the ring at rest. */
 export function Waves({ size, level, on }: { size: number; level: number; on: boolean }) {

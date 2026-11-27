@@ -65,6 +65,8 @@ import { colors, fonts, inkA, themed } from '@/theme';
 type Turn = {
   id: number;
   me: string;
+  /** Said out loud: it lives on the voice screen, not in the typed chat (27 Nov). */
+  voice?: boolean;
   state: 'thinking' | 'done' | 'error';
   reply?: KipReply;
   plan?: BuyPlan | null;
@@ -227,7 +229,7 @@ export default function Talk() {
     listen(l);
   }
   // Mockup screenshots only (a web build made with EXPO_PUBLIC_VOICE_DEMO=1): the page sets the voice moment.
-  const [demo, setDemo] = useState<{ phase: 'listening' | 'thinking' | 'speaking'; text?: string; level?: number } | null>(null);
+  const [demo, setDemo] = useState<{ phase: 'listening' | 'thinking' | 'speaking'; text?: string; level?: number; you?: string; kip?: string } | null>(null);
   useEffect(() => {
     if (process.env.EXPO_PUBLIC_VOICE_DEMO !== '1') return;
     const id = setInterval(() => {
@@ -239,6 +241,11 @@ export default function Talk() {
   }, []);
   const thinking = turns.some((x) => x.state === 'thinking');
   const voiceShown = voiceOn || !!demo;
+  // The typed chat shows typed turns. What was said out loud stays on the voice screen — unless it still needs them
+  // (a change waiting for Do it, a maybe-already-logged item waiting for Save anyway), so nothing gets lost.
+  const chatTurns = turns.filter(
+    (x) => !x.voice || ((x.reply?.kind === 'change' || x.reply?.kind === 'fix') && !x.done && !x.dismissed && !x.replaced) || (!!x.dupe && !x.saved && !x.dismissed),
+  );
   const phase: 'off' | 'listening' | 'thinking' | 'speaking' =
     demo?.phase ?? (!voiceOn ? 'off' : speaking ? 'speaking' : voice.state === 'idle' || thinking ? 'thinking' : 'listening');
   const hearing = demo ? (demo.text ?? '') : phase === 'listening' ? voice.text.trim() : '';
@@ -314,7 +321,7 @@ export default function Talk() {
     Haptics.selectionAsync().catch(() => {});
     const id = nextId.current++;
     setText('');
-    setTurns((ts) => [...ts, { id, me: msg, state: 'thinking' }]);
+    setTurns((ts) => [...ts, { id, me: msg, state: 'thinking', voice: live.current }]);
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 60);
     const rec = await loadRecent();
     const res = await askKip(
@@ -512,8 +519,8 @@ export default function Talk() {
           phase={phase === 'off' ? 'thinking' : phase}
           level={level}
           hearing={hearing}
-          youSaid={turns.at(-1)?.me ?? ''}
-          kipSaid={turns.at(-1)?.reply?.reply ?? ''}
+          youSaid={demo?.you ?? turns.at(-1)?.me ?? ''}
+          kipSaid={demo?.kip ?? turns.at(-1)?.reply?.reply ?? ''}
           th={lang === 'th-TH'}
           card={(() => {
             const last = turns.at(-1);
@@ -531,7 +538,7 @@ export default function Talk() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        {turns.length === 0 && (
+        {chatTurns.length === 0 && (
           <RiseIn style={{ alignItems: 'center', marginTop: 12 }}>
             <Text style={styles.h1}>{t('What did you spend today?')}</Text>
             <Pressable onPress={tapKip} style={styles.stage} accessibilityRole="button" accessibilityLabel={t('Tap Kip to talk')}>
@@ -543,7 +550,7 @@ export default function Talk() {
           </RiseIn>
         )}
 
-        {turns.map((turn) => (
+        {chatTurns.map((turn) => (
           <View key={turn.id} style={{ gap: 10 }}>
             <View style={styles.me}>
               <Text style={styles.meText}>{turn.me}</Text>
@@ -556,7 +563,7 @@ export default function Talk() {
         ))}
       </ScrollView>
 
-      {turns.length === 0 && (
+      {chatTurns.length === 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
